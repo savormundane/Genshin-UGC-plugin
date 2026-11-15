@@ -1,18 +1,68 @@
 # Genshin-UGC
 
-版本：3.6.0
+**3.6.1 · 《原神》千星奇域开发工具包**
 
-面向《原神》千星奇域的开发工具包，包含五个核心Skill、共享参考资料、统一CLI与18项本地MCP操作。
+五个核心 Skill、可追溯平台资料、统一 CLI、18 项本地 MCP 操作，以及随包的离线工具与可选模拟器。
 
-| 技术领域 | 能力 |
+| 领域 | 可以做什么 |
 | --- | --- |
-| Editor | 工程对象、实体与模板、组件配置、平台规则和资源关联 |
+| Editor | 工程对象、实体与模板、组件规则、资源关联 |
 | Graph Code | 节点图、复合节点、端口类型、执行流与数据流、编译 |
-| Client Lua | 控件API、输入、生命周期、动画和单文件源码装配 |
-| GIL | 原生容器检查、语义差异、安全修改、挂载、组装与回读 |
-| Assets | 图像与图元转换、颜色和几何检查、成本分析与软件预览 |
+| Client Lua | 控件 API、输入、生命周期、动画、单文件源码装配 |
+| GIL | 容器检查、语义差异、安全修改、挂载、组装与回读 |
+| Assets | 图像与图元转换、颜色和几何检查、成本分析、软件预览 |
 
-共享工具覆盖协议、多人状态、存储、诊断、实验和可重建交付；包含可选Beyond模拟器及Ayaya无界面工具链。使用入口见[资料索引](references/README.md)，环境与CLI调用见[运行环境](references/runtime-environment.md)。
+协议、多人状态、存储、诊断和可重建交付由共享工具支持。入口见[资料索引](references/README.md)。这是社区工具，不是官方编辑器或官方 MCP 服务。
+
+## 快速安装
+
+完整工具链当前支持 **Windows x64**。先安装 Python 3.10–3.12、Node.js 22+，以及 Codex 或 Claude Code；安装器不会替你安装全局软件。
+
+在 PowerShell 中运行一条命令：
+
+```powershell
+& ([scriptblock]::Create((Invoke-RestMethod 'https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v3.6.1/install.ps1'))) -Agent codex
+```
+
+Claude Code 将末尾参数改成 `-Agent claude-code`。首次会询问现有项目目录和独立输出目录，也可传入 `-Project`、`-Outputs` 和 `-Python`。Python 依赖首次安装需要联网；使用锁定版本并安装到插件专用环境。
+
+安装器下载固定版本 ZIP、校验 SHA-256、保留完整目录、配置运行环境，并调用客户端原生插件安装入口。不会仅复制 Skill，也不会修改其他插件的配置。安装后重启客户端；客户端仍可能要求启用或信任本地 MCP。
+
+喜欢先检查脚本，可以从 [Release](https://github.com/savormundane/Genshin-UGC-plugin/releases/tag/v3.6.1) 下载 `install.ps1`、完整 ZIP 和 `SHA256SUMS.txt`，查看脚本后执行：
+
+```powershell
+.\install.ps1 -Agent codex -Archive .\Genshin-UGC-3.6.1-windows-x64.zip -Sha256 '<SHA256SUMS.txt 中的 ZIP 摘要>'
+```
+
+## 首次使用
+
+1. 确认客户端能发现五个 Skill 和本插件 MCP 工具。
+2. 请 Agent 查询一个已知 API 或对指定项目做诊断，再执行文件制作。
+3. 输出写入安装时选择的独立目录；原始 GIL 不作为默认覆盖目标。
+
+也可解压 ZIP 后直接使用 CLI，配置方法见[独立运行环境](references/runtime-environment.md)与[安装说明](references/installation.md)。
+
+## 支持环境与验证边界
+
+| 项目 | 边界 |
+| --- | --- |
+| Windows x64 | 完整包的目标平台；包含平台相关模拟器依赖 |
+| Codex | 原生插件注册；实际加载以当前客户端检查为准 |
+| Claude Code | 提供原生插件适配；未实测的客户端版本不宣称已验证 |
+| 其他客户端或系统 | 可阅读资料、按需使用工具；不承诺完整运行兼容 |
+
+静态检查、离线 Lua／节点模型、软件预览、编辑器导入、游戏宿主表现和用户验收分别判断。安装器的 MCP 查询与 PNG 检查不代表游戏实测，也不证明所有 API 都被模拟器实现。
+
+## 更新与卸载
+
+安装不会后台自动更新。新版本发布后，运行该版本安装命令；每个版本保留独立目录，拒绝覆盖已有同版本目录。详细的回退、卸载、失败重试和手动安装见[安装说明](references/installation.md)。
+
+## 常见问题
+
+- **找不到 Python？** 使用 `-Python '你的 Python 可执行文件路径'`；Windows 应用商店占位命令不等于已安装解释器。
+- **客户端没有发现插件？** 重启客户端，检查其插件列表和 MCP 状态；不要把命令返回成功视为宿主加载证明。
+- **输出目录为什么不能在项目里？** 当前 MCP 的读取与写入根目录合同要求两者分离。
+- **可以直接加载任意 PNG 或模拟全部游戏行为吗？** 不可以；转换和原生字段支持以已校准格式及官方 API 为依据，未知部分明确拒绝或保留待验。
 
 ## 致谢与来源
 
@@ -35,3 +85,4 @@
 部分第三方文件目前尚未核实再分发授权，不能据此视为GPL内容；具体范围、来源与状态见[第三方声明](THIRD_PARTY_NOTICES.md)及[来源清单](PUBLIC_SOURCES.json)。公开可下载、署名或收录均不表示原作者背书。
 
 如发现来源、署名或许可记录存在遗漏，请通过[Issue](https://github.com/savormundane/Genshin-UGC-plugin/issues)提供相关文件路径和依据，以便核实、更正或移除。
+
