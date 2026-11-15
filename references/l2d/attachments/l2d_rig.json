@@ -1,0 +1,350 @@
+{
+ "canvas": {
+  "w": 411,
+  "h": 600
+ },
+ "period": 3.6,
+ "amp": 3.6,
+ "draw_order": "文件名编号从大到小（数字越小越靠上层）",
+ "note": "呼吸：breath=sin(2πt/T)；部件按权重 w 跟随；软物用 sin(2π(t-delay)/T) 做次级运动；旋转绕 pivot",
+ "parts": [
+  {
+   "num": 26,
+   "file": "part_0026_后飘带.png",
+   "name": "后飘带",
+   "group": "ribbon",
+   "w": 1.2,
+   "delay": 0.26,
+   "rot": 3.6,
+   "pivot": [
+    160,
+    300
+   ]
+  },
+  {
+   "num": 25,
+   "file": "part_0025_back-hair.png",
+   "name": "back-hair",
+   "group": "hairBack",
+   "w": 1.1,
+   "delay": 0.14,
+   "rot": 2.2,
+   "pivot": [
+    190,
+    95
+   ]
+  },
+  {
+   "num": 24,
+   "file": "part_0024_R-arm.png",
+   "name": "R-arm",
+   "group": "armR",
+   "w": 0.9,
+   "delay": 0.12,
+   "rot": -1.6,
+   "pivot": [
+    258,
+    318
+   ]
+  },
+  {
+   "num": 23,
+   "file": "part_0023_back-cloth.png",
+   "name": "back-cloth",
+   "group": "body",
+   "w": 1.0,
+   "delay": 0.06,
+   "rot": 0.0,
+   "pivot": [
+    214,
+    380
+   ]
+  },
+  {
+   "num": 22,
+   "file": "part_0022_R-leg.png",
+   "name": "R-leg",
+   "group": "legs",
+   "w": 0.22,
+   "delay": 0.06,
+   "rot": 0.0,
+   "pivot": [
+    240,
+    392
+   ]
+  },
+  {
+   "num": 21,
+   "file": "part_0021_L-leg.png",
+   "name": "L-leg",
+   "group": "legs",
+   "w": 0.22,
+   "delay": 0.06,
+   "rot": 0.0,
+   "pivot": [
+    200,
+    392
+   ]
+  },
+  {
+   "num": 20,
+   "file": "part_0020_pantsi.png",
+   "name": "pantsi",
+   "group": "body",
+   "w": 0.55,
+   "delay": 0.06,
+   "rot": 0.0,
+   "pivot": [
+    229,
+    390
+   ]
+  },
+  {
+   "num": 19,
+   "file": "part_0019_L-arm.png",
+   "name": "L-arm",
+   "group": "armL",
+   "w": 0.9,
+   "delay": 0.12,
+   "rot": 1.6,
+   "pivot": [
+    166,
+    312
+   ]
+  },
+  {
+   "num": 18,
+   "file": "part_0018_L-tail.png",
+   "name": "L-tail",
+   "group": "tailL",
+   "w": 1.1,
+   "delay": 0.2,
+   "rot": -3.2,
+   "pivot": [
+    168,
+    236
+   ]
+  },
+  {
+   "num": 17,
+   "file": "part_0017_Hair-accessory.png",
+   "name": "Hair-accessory",
+   "group": "bangs",
+   "w": 1.7,
+   "delay": 0.16,
+   "rot": 2.6,
+   "pivot": [
+    300,
+    245
+   ]
+  },
+  {
+   "num": 16,
+   "file": "part_0016_R-tail.png",
+   "name": "R-tail",
+   "group": "tailR",
+   "w": 1.1,
+   "delay": 0.2,
+   "rot": 3.2,
+   "pivot": [
+    286,
+    200
+   ]
+  },
+  {
+   "num": 15,
+   "file": "part_0015_衣服.png",
+   "name": "衣服",
+   "group": "body",
+   "w": 1.0,
+   "delay": 0.06,
+   "rot": 0.0,
+   "pivot": [
+    214,
+    300
+   ]
+  },
+  {
+   "num": 14,
+   "file": "part_0014_scarf.png",
+   "name": "scarf",
+   "group": "body",
+   "w": 1.05,
+   "delay": 0.08,
+   "rot": 0.0,
+   "pivot": [
+    216,
+    302
+   ]
+  },
+  {
+   "num": 13,
+   "file": "part_0013_face.png",
+   "name": "face",
+   "group": "head",
+   "w": 1.55,
+   "delay": 0.04,
+   "rot": 0.0,
+   "pivot": [
+    207,
+    300
+   ]
+  },
+  {
+   "num": 12,
+   "file": "part_0012_R-eye-white.png",
+   "name": "R-eye-white",
+   "group": "head",
+   "w": 1.55,
+   "delay": 0.04,
+   "rot": 0.0,
+   "pivot": [
+    207,
+    300
+   ]
+  },
+  {
+   "num": 11,
+   "file": "part_0011_R-eye.png",
+   "name": "R-eye",
+   "group": "head",
+   "w": 1.55,
+   "delay": 0.04,
+   "rot": 0.0,
+   "pivot": [
+    207,
+    300
+   ]
+  },
+  {
+   "num": 10,
+   "file": "part_0010_L-eye-white.png",
+   "name": "L-eye-white",
+   "group": "head",
+   "w": 1.55,
+   "delay": 0.04,
+   "rot": 0.0,
+   "pivot": [
+    207,
+    300
+   ]
+  },
+  {
+   "num": 9,
+   "file": "part_0009_L-eye.png",
+   "name": "L-eye",
+   "group": "head",
+   "w": 1.55,
+   "delay": 0.04,
+   "rot": 0.0,
+   "pivot": [
+    207,
+    300
+   ]
+  },
+  {
+   "num": 8,
+   "file": "part_0008_R-睫毛和眼线.png",
+   "name": "R-睫毛和眼线",
+   "group": "head",
+   "w": 1.55,
+   "delay": 0.04,
+   "rot": 0.0,
+   "pivot": [
+    207,
+    300
+   ]
+  },
+  {
+   "num": 7,
+   "file": "part_0007_L-眼线.png",
+   "name": "L-眼线",
+   "group": "head",
+   "w": 1.55,
+   "delay": 0.04,
+   "rot": 0.0,
+   "pivot": [
+    207,
+    300
+   ]
+  },
+  {
+   "num": 6,
+   "file": "part_0006_L-睫毛.png",
+   "name": "L-睫毛",
+   "group": "head",
+   "w": 1.55,
+   "delay": 0.04,
+   "rot": 0.0,
+   "pivot": [
+    207,
+    300
+   ]
+  },
+  {
+   "num": 4,
+   "file": "part_0004_mouth.png",
+   "name": "mouth",
+   "group": "head",
+   "w": 1.55,
+   "delay": 0.04,
+   "rot": 0.0,
+   "pivot": [
+    207,
+    300
+   ]
+  },
+  {
+   "num": 3,
+   "file": "part_0003_R-眉毛.png",
+   "name": "R-眉毛",
+   "group": "head",
+   "w": 1.55,
+   "delay": 0.04,
+   "rot": 0.0,
+   "pivot": [
+    207,
+    300
+   ]
+  },
+  {
+   "num": 2,
+   "file": "part_0002_L-眉毛.png",
+   "name": "L-眉毛",
+   "group": "head",
+   "w": 1.55,
+   "delay": 0.04,
+   "rot": 0.0,
+   "pivot": [
+    207,
+    300
+   ]
+  },
+  {
+   "num": 1,
+   "file": "part_0001_前发.png",
+   "name": "前发",
+   "group": "bangs",
+   "w": 1.65,
+   "delay": 0.08,
+   "rot": 0.9,
+   "pivot": [
+    200,
+    120
+   ]
+  },
+  {
+   "num": 0,
+   "file": "part_0000_头发花装饰.png",
+   "name": "头发花装饰",
+   "group": "bangs",
+   "w": 1.7,
+   "delay": 0.12,
+   "rot": -1.6,
+   "pivot": [
+    150,
+    120
+   ]
+  }
+ ]
+}

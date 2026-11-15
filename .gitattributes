@@ -1,0 +1,2 @@
+# Source and vendor manifests bind exact bytes, including existing line endings.
+* -text

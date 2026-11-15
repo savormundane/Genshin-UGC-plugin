@@ -1,0 +1,2039 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>GEIMG 图元级动态预览（Lua 运行时模拟）</title>
+<style>
+:root{
+  --bg:#12141a; --panel:#1b1e26; --panel2:#232733; --line:#333849;
+  --fg:#e6e8ef; --dim:#98a0b4; --acc:#5aa9ff; --ok:#4ecb8a; --warn:#ffb84d; --bad:#ff6b6b;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font:13px/1.5 "Microsoft YaHei","Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--fg);overflow:hidden}
+#app{display:flex;flex-direction:column;height:100%}
+
+/* 顶栏 */
+#top{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line);flex:0 0 auto;flex-wrap:wrap}
+#top h1{font-size:14px;margin:0 8px 0 0;font-weight:600}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{background:var(--panel2);color:var(--dim);border:0;padding:5px 10px;cursor:pointer;font:inherit}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--acc);color:#08101c;font-weight:600}
+button.act{background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:5px 10px;cursor:pointer;font:inherit}
+button.act:hover{border-color:var(--acc);color:var(--acc)}
+button.act.pri{background:var(--acc);color:#08101c;border-color:var(--acc);font-weight:600}
+.spacer{flex:1}
+
+/* 主体三栏 */
+#main{flex:1;display:flex;min-height:0}
+#left{width:250px;flex:0 0 250px;background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;overflow-x:hidden;padding:10px}
+#center{flex:1;position:relative;min-width:0;background:
+  linear-gradient(45deg,#1a1d24 25%,transparent 25%,transparent 75%,#1a1d24 75%),
+  linear-gradient(45deg,#1a1d24 25%,#15181e 25%,#15181e 75%,#1a1d24 75%);
+  background-size:24px 24px;background-position:0 0,12px 12px;
+  display:flex;align-items:center;justify-content:center;overflow:hidden}
+#right{width:290px;flex:0 0 290px;background:var(--panel);border-left:1px solid var(--line);overflow-y:auto;overflow-x:hidden;padding:10px}
+#cv{display:block;position:relative;box-shadow:0 0 0 1px var(--line),0 8px 32px #0008;image-rendering:auto}
+#mag{position:absolute;left:10px;bottom:10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px;display:none}
+#mag.on{display:block}
+#mag .row{display:flex;gap:6px}
+#mag canvas{display:block;border-radius:4px;image-rendering:pixelated}
+#mag .cap{font-size:11px;color:var(--dim);text-align:center;margin-top:3px}
+
+/* 屏幕文字：状态 + 功能（快捷键）。都压在画布左上，不抢鼠标 */
+#hud{position:absolute;left:10px;top:10px;max-width:52%;padding:7px 9px;border-radius:7px;
+  background:rgba(10,12,17,.74);border:1px solid #3a4152;color:#cfd6e4;
+  font:11px/1.55 Consolas,monospace;white-space:pre;pointer-events:none}
+#hud b{color:var(--acc);font-weight:600}
+#hud .k{display:inline-block;min-width:15px;padding:0 4px;margin-right:4px;border-radius:4px;
+  background:#2b3346;color:#e6e8ef;text-align:center}
+#hud .hi{color:var(--warn);font-weight:600}
+/* H 键：完整功能表 */
+#helpVeil{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+  background:rgba(8,10,14,.82);z-index:5}
+#helpVeil.on{display:flex}
+#helpVeil .box{background:#171b24;border:1px solid #3a4152;border-radius:10px;padding:16px 20px;
+  color:#e6e8ef;font:13px/1.7 "Microsoft YaHei",system-ui,sans-serif;max-width:640px}
+#helpVeil h3{margin:0 0 8px;font-size:15px}
+#helpVeil table{border-collapse:collapse;width:100%}
+#helpVeil td{padding:2px 10px 2px 0;vertical-align:top}
+#helpVeil td:first-child{width:74px;color:var(--acc);font-family:Consolas,monospace;font-weight:600}
+#helpVeil .note{margin-top:10px}
+
+/* 面板控件 */
+h2{font-size:12px;color:var(--dim);font-weight:600;margin:14px 0 6px;letter-spacing:.05em;text-transform:uppercase}
+h2:first-child{margin-top:0}
+.field{display:flex;align-items:center;gap:6px;margin:6px 0;min-width:0}
+.field label{flex:0 0 82px;color:var(--dim);font-size:12px}
+.field input[type=range]{flex:1;min-width:0;accent-color:var(--acc)}
+.field .val{flex:0 0 46px;text-align:right;font-variant-numeric:tabular-nums;font-size:12px}
+.field select{flex:1;min-width:0;background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:5px;padding:3px 5px;font:inherit}
+.field button{flex:1;min-width:0}
+.chk{display:flex;align-items:center;gap:6px;margin:6px 0;cursor:pointer}
+.chk input{accent-color:var(--acc)}
+.note{font-size:11px;color:var(--dim);background:var(--panel2);border-left:2px solid var(--line);padding:5px 7px;border-radius:0 4px 4px 0;margin:8px 0;overflow-wrap:anywhere}
+.note.warn{border-left-color:var(--warn)}
+.note.ok{border-left-color:var(--ok)}
+
+/* 指标 */
+table.kv{width:100%;border-collapse:collapse;font-size:12px}
+table.kv td{padding:2px 0;vertical-align:top}
+table.kv td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+table.kv tr.sep td{border-top:1px solid var(--line);padding-top:5px}
+.pill{display:inline-block;padding:1px 6px;border-radius:9px;font-size:11px;background:var(--panel2);color:var(--dim)}
+.pill.ok{background:#1c3b2c;color:var(--ok)}
+.pill.bad{background:#3b1c1c;color:var(--bad)}
+.pill.warn{background:#3b301c;color:var(--warn)}
+
+/* 预设动作按钮 */
+.btnrow{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0}
+.btnrow button{background:var(--panel2);color:var(--dim);border:1px solid var(--line);border-radius:6px;
+  padding:4px 9px;cursor:pointer;font:inherit;font-size:12px}
+.btnrow button:hover{border-color:var(--acc);color:var(--acc)}
+.btnrow button.on{background:var(--acc);color:#08101c;border-color:var(--acc);font-weight:600}
+.btnrow button.act2{background:#2a2440;color:#c9b6ff;border-color:#4a3d78}
+.btnrow button.act2:hover{border-color:#c9b6ff;color:#e2d8ff}
+.chline{display:flex;align-items:center;gap:5px;margin:3px 0;min-width:0}
+.chline label{flex:0 0 62px;color:var(--dim);font-size:12px}
+.chline input[type=range]{flex:1;min-width:0;accent-color:var(--acc)}
+.chline .val{flex:0 0 40px;text-align:right;font-size:11px;font-variant-numeric:tabular-nums}
+
+/* 部件表 */
+table.parts{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+table.parts th{color:var(--dim);font-weight:500;text-align:left;padding:3px 2px;position:sticky;top:0;background:var(--panel);font-size:11px}
+table.parts td{padding:2px;border-top:1px solid #262a35;overflow:hidden}
+table.parts tr.off{opacity:.35}
+table.parts col.c0{width:26px}
+table.parts col.c1{width:auto}
+table.parts col.c2{width:34px}
+table.parts col.c3,table.parts col.c4,table.parts col.c5{width:42px}
+table.parts input[type=number]{width:100%;background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:1px 2px;font:inherit;font-size:11px}
+table.parts input[type=checkbox]{accent-color:var(--acc)}
+.nm{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:bottom}
+
+/* 底部 */
+#bottom{flex:0 0 auto;background:var(--panel);border-top:1px solid var(--line);padding:7px 12px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+#curves{background:var(--panel2);border-radius:5px}
+#log{flex:1;min-width:0;height:56px;overflow-y:auto;overflow-x:hidden;background:#0e1015;border:1px solid var(--line);border-radius:5px;padding:4px 7px;font:11px/1.45 Consolas,monospace;color:var(--dim);word-break:break-all}
+#log b{color:var(--acc);font-weight:400}
+#log .ok{color:var(--ok)}
+#log .wn{color:var(--warn)}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="top">
+    <h1>GEIMG 图元级动态预览</h1>
+    <span class="pill" id="statPill">加载中…</span>
+    <div class="seg" id="viewSeg">
+      <button data-view="shapes" class="on">图元重建</button>
+      <button data-view="ref">原 PNG</button>
+      <button data-view="onion">叠影对照</button>
+      <button data-view="diff">差异</button>
+      <button data-view="side">并排</button>
+    </div>
+    <button class="act pri" id="playBtn">暂停</button>
+    <button class="act" id="magBtn">放大镜</button>
+    <span class="spacer"></span>
+    <button class="act" id="expLua">导出 Lua</button>
+    <button class="act" id="expRig">导出 rig</button>
+    <button class="act" id="expPng">导出 PNG</button>
+  </div>
+
+  <div id="main">
+    <!-- 左：硬边处理 -->
+    <div id="left">
+      <h2>硬边处理</h2>
+      <div class="note">源 PNG 的 alpha 是<b>严格二值</b>（0/255，无抗锯齿），而拟合出的图元带抗锯齿与半透明。
+        这里的处理就是把重建结果拉回硬边。</div>
+      <div class="note warn"><b>主要杠杆是「贴图边缘」</b>：软边→硬边可把半透明像素从约 2000 压到约 690。
+        alpha 三个滑杆只调不透明度分布，对边缘硬度影响很小（实测 ±5%）。</div>
+
+      <div class="field"><label for="texMode">贴图边缘</label>
+        <select id="texMode">
+          <option value="hard">硬边（二值贴图，游戏内可实现）</option>
+          <option value="hardbl">硬边 + 双线性</option>
+          <option value="soft">软边（抗锯齿）</option>
+        </select>
+      </div>
+      <label class="chk"><input type="checkbox" id="snapPx" checked>像素对齐（位置/尺寸取整）</label>
+
+      <h2>图元 alpha</h2>
+      <div class="field"><label for="dropT">丢淡阈值</label><input type="range" id="dropT" min="0" max="0.5" step="0.005" value="0.06"><span class="val" id="dropV">0.06</span></div>
+      <div class="field"><label for="snapT">提纯阈值</label><input type="range" id="snapT" min="0.5" max="1" step="0.01" value="0.85"><span class="val" id="snapV">0.85</span></div>
+      <div class="field"><label for="gamma">alpha 增益</label><input type="range" id="gamma" min="0.2" max="2" step="0.05" value="1"><span class="val" id="gammaV">1.00</span></div>
+      <div class="note">控件数主要由<b>拟合时的 max_shapes</b> 决定。这套数据里绝大多数图元本就不透明，
+        后处理丢淡只能砍掉约 <b>3%</b>（6370 → 6186），想真正减控件要重拟合。</div>
+
+      <h2>合成后处理</h2>
+      <div class="field"><label for="compT">alpha 阈值</label><input type="range" id="compT" min="0" max="0.95" step="0.01" value="0"><span class="val" id="compV">关</span></div>
+      <div class="note warn"><b>游戏内做不到</b>：Lua 只能逐个控件 alpha 混合，无法对合成结果再做阈值。
+        这一项只用于看“硬边的理论上限”。</div>
+      <div class="note ok">轮廓外的浅色描边**在数据阶段就修掉了**：按原图硬 alpha 剔掉溢出的图元，
+        再把跨出轮廓的图元缩回轮廓内（`attachments/l2d_edge_clean.py`），并把贴轮廓的图元颜色按原图真值调暗。
+        所以这里不需要再加轮廓遮罩 —— 用的就是最终要进 Lua 的那份数据（Lua 侧没有掩膜，只能靠这一步）。</div>
+
+      <h2>实测指标</h2>
+      <table class="kv" id="metrics"></table>
+      <div class="note ok" id="verdict"></div>
+
+      <h2>预设</h2>
+      <div class="field"><button class="act" id="presetRaw">原样（不处理）</button></div>
+      <div class="field"><button class="act" id="presetHard">硬边（推荐）</button></div>
+      <div class="field"><button class="act" id="presetLua">硬边 + 丢淡（图元 -3%）</button></div>
+    </div>
+
+    <!-- 中：画布 -->
+    <div id="center">
+      <canvas id="cv"></canvas>
+      <div id="hud"></div>
+      <div id="helpVeil"><div class="box" id="helpBox"></div></div>
+      <div id="mag">
+        <div class="row">
+          <canvas id="magA" width="168" height="224"></canvas>
+          <canvas id="magB" width="168" height="224"></canvas>
+        </div>
+        <div class="cap">左：原 PNG ｜ 右：图元重建 · 4× </div>
+      </div>
+    </div>
+
+    <!-- 右：部件 + 运行时 -->
+    <div id="right">
+      <h2>Lua 运行时模拟</h2>
+      <div class="field"><label for="budget">每帧预算</label><input type="range" id="budget" min="1" max="400" step="1" value="40"><span class="val" id="budgetV">40</span></div>
+      <label class="chk"><input type="checkbox" id="perShape">逐图元变换（真实开销，突发采样）</label>
+      <table class="kv" id="runtime"></table>
+      <div class="note" id="luaHint"></div>
+
+      <h2>呼吸动作</h2>
+      <div class="field"><label for="period">周期 s</label><input type="range" id="period" min="1.2" max="8" step="0.1" value="3.6"><span class="val" id="periodV">3.6</span></div>
+      <div class="field"><label for="baseAmp">基准幅度</label><input type="range" id="baseAmp" min="0" max="14" step="0.1" value="1.2"><span class="val" id="baseAmpV">1.2</span></div>
+      <div class="field"><label for="ampScale">整体倍率</label><input type="range" id="ampScale" min="0" max="3" step="0.05" value="1"><span class="val" id="ampScaleV">1.00</span></div>
+      <div class="field"><label for="speed">播放速度</label><input type="range" id="speed" min="0" max="3" step="0.05" value="1"><span class="val" id="speedV">1.00</span></div>
+      <label class="chk"><input type="checkbox" id="secondary" checked>次级运动（发丝/飘带延迟）</label>
+      <div class="field"><label for="phase">相位</label><input type="range" id="phase" min="0" max="1" step="0.001" value="0.25"><span class="val" id="phaseV">0.25</span></div>
+
+      <h2>视点跟随</h2>
+      <label class="chk"><input type="checkbox" id="gazeOn" checked>跟随鼠标</label>
+      <div class="field"><label for="gazeAmp">跟随强度</label><input type="range" id="gazeAmp" min="0" max="2.5" step="0.05" value="1"><span class="val" id="gazeAmpV">1.00</span></div>
+      <div class="field"><label for="bodyAmp">身体转动</label><input type="range" id="bodyAmp" min="0" max="16" step="0.5" value="6"><span class="val" id="bodyAmpV">6.0</span></div>
+      <div class="field"><label for="depthK">立体压缩</label><input type="range" id="depthK" min="0" max="0.8" step="0.02" value="0.25"><span class="val" id="depthKV">0.25</span></div>
+      <div class="field"><label for="swing">头部摆幅</label><input type="range" id="swing" min="0" max="24" step="0.5" value="6"><span class="val" id="swingV">6.0</span></div>
+      <div class="field"><label for="yawMax">头部转角</label><input type="range" id="yawMax" min="0" max="20" step="0.5" value="7"><span class="val" id="yawMaxV">7.0</span></div>
+      <label class="chk"><input type="checkbox" id="irisMask" checked>虹膜掩膜裁剪</label>
+      <div class="field"><button class="act" id="gazeCenter">回到中心</button></div>
+      <table class="kv" id="gazeStat"></table>
+      <div class="note">鼠标移到画布上即生效（以画布中心为原点）。<b>虹膜</b>在眼白里滑动，
+        <b>头/五官</b>跟着转、<b>发丝</b>用滞后值甩在后面、<b>全身</b>绕脚底小幅倾 —— 层次和"摆动"通道一致。
+        <b>关键在遮挡</b>：眼白的上沿本来就被睫毛盖住，所以只按眼白裁剪会让虹膜动不了；
+        实际掩膜取的是 <b>眼白 ∪ 睫毛 ∪ 眼线</b>，虹膜滑到边缘是被裁断而不是压到皮肤上。</div>
+
+      <h2>预设动作</h2>
+      <div id="presetRow" class="btnrow"></div>
+      <div id="actRow" class="btnrow"></div>
+      <div class="field"><label for="motionScale">总幅度</label><input type="range" id="motionScale" min="0" max="3" step="0.05" value="1"><span class="val" id="motionScaleV">1.00</span></div>
+      <div class="field"><label for="chAmp">动作强度</label><input type="range" id="chAmp" min="0" max="2.5" step="0.05" value="1"><span class="val" id="chAmpV">1.00</span></div>
+      <div id="chRow"></div>
+      <div class="note">通道按<b>部件组</b>给权重（组来自 rig.json）：<b>摆动</b>绕脚底旋转，所以腿脚几乎不动、上半身才倾；
+        发丝/飘带用各自的 delay 做滞后，甩起来比身体慢半拍。<b>摇头/点头/惊讶/摆臂</b>是一次性动作，包络快起慢落。
+        这些全部只是「每帧改 anchoredPosition / localRotation / sizeDelta」，Lua 侧同一套就能跑。</div>
+
+      <h2>眨眼</h2>
+      <label class="chk"><input type="checkbox" id="blinkAuto" checked>自动眨眼</label>
+      <div class="field"><label for="blDur">闭合时长 s</label><input type="range" id="blDur" min="0.06" max="0.4" step="0.005" value="0.15"><span class="val" id="blDurV">0.150</span></div>
+      <div class="field"><label for="blGapMin">最短间隔 s</label><input type="range" id="blGapMin" min="0.5" max="8" step="0.1" value="2.2"><span class="val" id="blGapMinV">2.2</span></div>
+      <div class="field"><label for="blGapMax">最长间隔 s</label><input type="range" id="blGapMax" min="0.6" max="15" step="0.1" value="5.2"><span class="val" id="blGapMaxV">5.2</span></div>
+      <div class="field"><label for="blClose">闭合幅度</label><input type="range" id="blClose" min="0.3" max="1" step="0.01" value="0.92"><span class="val" id="blCloseV">0.92</span></div>
+      <div class="field"><label for="blAt">闭合位置</label><input type="range" id="blAt" min="0.3" max="1" step="0.01" value="0.78"><span class="val" id="blAtV">0.78</span></div>
+      <div class="field"><label for="blBrow">眉毛跟随</label><input type="range" id="blBrow" min="0" max="1" step="0.02" value="0"><span class="val" id="blBrowV">0.00</span></div>
+      <div class="field"><label for="blFade">眼内容淡出</label><input type="range" id="blFade" min="0" max="1" step="0.02" value="1"><span class="val" id="blFadeV">1.00</span></div>
+      <div class="field"><label for="blSkew">左右错开 ms</label><input type="range" id="blSkew" min="0" max="80" step="2" value="12"><span class="val" id="blSkewV">12</span></div>
+      <div class="field"><label for="blManual">手动闭合</label><input type="range" id="blManual" min="0" max="1" step="0.01" value="0"><span class="val" id="blManualV">0.00</span></div>
+      <div class="field"><button class="act" id="blOnce">眨一下</button><button class="act" id="blHold">保持闭眼</button></div>
+      <table class="kv" id="blinkStat"></table>
+      <div class="note">眼内容（虹膜+眼白）绕<b>闭合位置</b>做纵向压缩，眼睑线（睫毛/眼线）同步下移到同一处 ——
+        两者落在同一条线上，才读得出"闭上"。几何全部从图元数据推出，没有手填的坐标。</div>
+
+      <h2>部件（26）</h2>
+      <table class="parts" id="partsTbl">
+        <colgroup><col class="c0"><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"></colgroup>
+        <thead><tr><th>显</th><th>部件</th><th>图元</th><th>w</th><th>延迟</th><th>旋转</th></tr></thead>
+        <tbody id="partsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="bottom">
+    <canvas id="curves" width="240" height="52"></canvas>
+    <span class="pill" id="curveLbl">蓝 身体 · 绿 发丝 · 橙 飘带</span>
+    <div id="log"></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+window.__errs = [];
+window.addEventListener("error", e => {
+  const msg = String((e.error && e.error.stack) || e.message);
+  window.__errs.push(msg);
+  try { logLine("JS 错误：" + msg, "wn"); } catch(_) {}
+});
+const DATA = /*__DATA__*/;
+
+/* ══════════════ 1. 解析（与 Lua 的 decode 同一套坐标语义） ══════════════ */
+const CW = DATA.canvas.w, CH = DATA.canvas.h;
+
+function parseRow(row){
+  const p = row.split("|");
+  if(p.length !== 7) return null;
+  const t = p[0], x = +p[1], y = +p[2], w = +p[3], h = +p[4], rotDeg = +p[5];
+  const n = parseInt(p[6], 16);                 // RRGGBBAA
+  return {
+    t, x, y, w, h,
+    rad: -rotDeg * Math.PI / 180,               // 画布是 Y 向下，故取反
+    r: (n >>> 24) & 255, g: (n >>> 16) & 255, b: (n >>> 8) & 255, a: n & 255
+  };
+}
+
+const PARTS = DATA.parts.map(p => {
+  const items = p.raw.split("\n").filter(s => s.length).map(parseRow).filter(Boolean);
+  const x0 = Math.min(...items.map(s => s.x - Math.max(s.w, s.h)));
+  const y0 = Math.min(...items.map(s => s.y - Math.max(s.w, s.h)));
+  const x1 = Math.max(...items.map(s => s.x + Math.max(s.w, s.h)));
+  const y1 = Math.max(...items.map(s => s.y + Math.max(s.w, s.h)));
+  return Object.assign({}, p, {items, bbox:[x0, y0, x1, y1], visible:true, baked:null});
+});
+
+// ── 头部柱面（内部形变用）──
+// 头部件组：这些部件绕头部柱面做形变，而不是整层平移
+const HEAD_GROUPS = { head:1, bangs:1, hairBack:1, tailL:1, tailR:1 };
+// 层间深度系数：眼球在球面最前摆最多、后发/发尾在后摆最少 → 层间视差（立体感来源）
+function wrapK(p){
+  const r = (p.role || "").split(":")[0];   // role 形如 "iris:eyeL"，比之前要去掉左右
+
+  if(r === "iris") return 1.30;
+  if(r === "eye" || r === "lid" || r === "brow") return 1.14;
+  if(r === "mouth") return 1.10;
+  if(p.group === "hairBack") return 0.85;
+  if(p.group === "tailL" || p.group === "tailR") return 0.80;
+  if(p.group === "bangs") return 1.05;
+  return 1.0;
+}
+const HEAD = { ready:false, hx:0, hy:0, rx:0, ry:0 };
+(function measureHead(){
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for(const p of PARTS){
+    p.wrap = !!HEAD_GROUPS[p.group];
+    p.kw = wrapK(p);
+    if(!p.wrap) continue;
+    for(const it of p.items){
+      if(it.x < x0) x0 = it.x;
+      if(it.x > x1) x1 = it.x;
+      if(it.y < y0) y0 = it.y;
+      if(it.y > y1) y1 = it.y;
+    }
+  }
+  if(x1 < x0) return;
+  HEAD.hx = (x0 + x1) / 2; HEAD.hy = (y0 + y1) / 2;
+  HEAD.rx = (x1 - x0) / 2; HEAD.ry = (y1 - y0) / 2;
+  HEAD.ready = true;
+})();
+
+/** 生成当前视点下的形变位移场；返回 (shape, k) => [dx, dy] 或 null */
+function makeWarp(){
+  const gx = S.gazeOn ? GZ.x : 0, gy = S.gazeOn ? GZ.y : 0;
+  if(!HEAD.ready || (Math.abs(gx) < 1e-4 && Math.abs(gy) < 1e-4)) return null;
+  const ms = S.motionScale === undefined ? 1 : S.motionScale;
+  return (it, k) => {
+    const a = gx * S.yawMax * k * Math.PI / 180 * ms;
+    const b = -gy * S.pitchMax * k * Math.PI / 180 * ms;
+    const w = it.x - HEAD.hx, zw = HEAD.rx * HEAD.rx - w * w;
+    const z = zw > 0 ? Math.sqrt(zw) : 0;
+    const u = it.y - HEAD.hy, zv = HEAD.ry * HEAD.ry - u * u;
+    const z2 = zv > 0 ? Math.sqrt(zv) : 0;
+    return [ w * (Math.cos(a) - 1) + (z / HEAD.rx) * S.swing * k * gx * ms,
+             u * (Math.cos(b) - 1) + (z2 / HEAD.ry) * S.swingY * k * (-gy) * ms ];
+  };
+}
+
+/* ── 躯干骨骼：连续位移场 ──
+   与 Lua 侧同一套公式（attachments/templates/geimg_anim.template.lua 的 torsoRamp/torsoDx）。
+   为什么不用"给部件不同的权重"：相邻部件权重不同就一定会开缝 —— 上一版身体转 1.6°、
+   腿只转 0.48°，200px 力臂上就是 4px 裂缝（腰部被撕开过）。
+   这里改成 (x,y) 的连续函数，位移只随高度平滑变化，部件边界这个概念直接消失。 */
+const BODY = Object.assign({
+  bodyAmp: 6.0, depthK: 0.25, tiltK: 0.10, headKeep: 0.25,
+  yHip: 480, yNeck: 303, yTop: 60, cxTorso: 214, rxTorso: 100
+}, DATA.body || {});
+
+/** 扭转斜坡，三段：髋以下=0（腿脚钉住）→ 脖子=1（胸口最多）→ 头顶=headKeep。
+ *  第三段让脖子把大部分转角吃掉：头自己已经有一整套柱面形变，再叠加满幅整体平移
+ *  就变成"整颗头在横滑"——正是被否掉的那个效果。 */
+function torsoRamp(y){
+  if(y >= BODY.yHip) return 0;
+  if(y <= BODY.yNeck){
+    const span2 = BODY.yNeck - BODY.yTop;
+    if(span2 <= 1) return BODY.headKeep;
+    const t2 = Math.min(1, (BODY.yNeck - y) / span2);
+    return 1 + (BODY.headKeep - 1) * t2;
+  }
+  const span = BODY.yHip - BODY.yNeck;
+  return span <= 1 ? 1 : (BODY.yHip - y) / span;
+}
+function torsoField(x, y, gx){
+  const out = [0, 0];
+  if(!gx) return out;
+  const s = torsoRamp(y);
+  if(s <= 0) return out;
+  let d = 0;
+  if(BODY.rxTorso > 1) d = Math.max(-1, Math.min(1, (x - BODY.cxTorso) / BODY.rxTorso));
+  out[0] = gx * BODY.bodyAmp * s * (1 + BODY.depthK * d);
+  out[1] = -gx * BODY.bodyAmp * BODY.depthK * BODY.tiltK * s * d;
+  return out;
+}
+/** 该部件吃不吃躯干场。
+ *  判据是**部件顶端在髋线之上**（bbox[1] = 最小 y），不是底端 ——
+ *  写成 bbox[3] > yHip 会把脸/前发/手臂/围巾全判成"在髋线以下"，
+ *  整个身体转动就只剩腿和后布在动（实测踩过：围巾不跟身体动就是这个原因）。 */
+function torsoActive(part){
+  return BODY.bodyAmp !== 0 && part.bbox[1] < BODY.yHip;
+}
+
+const TOTAL = PARTS.reduce((s, p) => s + p.items.length, 0);
+const TOTAL_ORDER = PARTS.slice().sort((a, b) => b.num - a.num);   // 数字小的在上层
+
+/* ══════════════ 2. 贴图与临时画布 ══════════════ */
+function makeDisc(size, binary){
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  const g = c.getContext("2d");
+  g.fillStyle = "#fff";
+  g.beginPath();
+  g.arc(size / 2, size / 2, size / 2 - 1, 0, Math.PI * 2);
+  g.fill();
+  if(binary){                                   // 二值化：模拟素材库里的硬边白圆
+    const d = g.getImageData(0, 0, size, size), px = d.data;
+    for(let i = 3; i < px.length; i += 4) px[i] = px[i] > 127 ? 255 : 0;
+    g.putImageData(d, 0, 0);
+  }
+  return c;
+}
+const DISC = makeDisc(256, true);               // 硬边白圆贴图
+
+const scratchPool = {};
+function scratch(n){
+  if(!scratchPool[n]){
+    const c = document.createElement("canvas");
+    c.width = c.height = n;
+    scratchPool[n] = c;
+  }
+  return scratchPool[n];
+}
+function bucket(n){
+  n = Math.max(32, Math.ceil(n));
+  return n <= 32 ? 32 : n <= 64 ? 64 : n <= 128 ? 128 : n <= 256 ? 256 : 512;
+}
+/* 矩形临时画布（眼部掩膜不是正方形，不能复用上面那个方形池） */
+const rectPool = {};
+function rectScratch(w, h){
+  const k = w + "x" + h;
+  if(!rectPool[k]){
+    const c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    rectPool[k] = c;
+  }
+  return rectPool[k];
+}
+const EYEMASK = {};                            // 每只眼的虹膜裁剪掩膜
+
+/* ══════════════ 3. 处理与烘焙 ══════════════ */
+const S = {
+  texMode:"hard", snapPx:true, dropT:0.06, snapT:0.85, gamma:1.0, compT:0,
+  period:3.6, baseAmp:1.2, ampScale:1, speed:1, secondary:true, phase:0.25,
+  playing:true, view:"shapes", perShape:false, budget:40, t:0, mag:false,
+  blDur:0.15, blGapMin:2.2, blGapMax:5.2, maxClose:0.92, closeAt:0.78,
+  browFollow:0, blinkFade:1, blSkew:12, blManual:0,
+  // 动作通道：0/1 开关（eyeOpen 可正可负），chAmp 是总强度
+  ch:{ sway:0, turn:0, nod:0, wind:0, armR:0, talk:0, eyeOpen:0, browRaise:0 },
+  chAmp:1,
+  gazeOn:true, gazeAmp:1, irisMask:true, motionScale:1, bodyAmp:6,
+  yawMax:7, pitchMax:5, swing:6, swingY:4
+};
+let BT = 0;                                   // 眨眼的独立单调时钟
+
+/* ── 视点跟随 ──
+   鼠标位置 → 归一化方向 (gx, gy) ∈ [-1,1]² → 各部位按权重联动。
+   虹膜用**掩膜裁剪**（见 EYEMASK），否则一移就压在皮肤上穿帮。 */
+const GZ = { tx:0, ty:0, x:0, y:0, lagX:0, lagY:0, inside:false };
+
+/** 视点按部件组的权重：头 1、发丝更大且用滞后值、身体小幅、腿几乎不动 */
+// 实心部位（身体/手臂/腿）给同一个值，否则相邻图层错开会露缝；
+// 腿给 0 —— 实测期望效果里下半身位移是 0px
+const GAZE_W = {
+  head:0, bangs:0, hairBack:0, tailL:0, tailR:0, ribbon:1.40,   // 头部交给柱面形变
+  body:0.35, armL:0.35, armR:0.35, legs:0
+};
+const GAZE_LAG_GROUPS = { bangs:1, hairBack:1, tailL:1, tailR:1, ribbon:1 };
+const GAZE = {
+  dx:0.7, dy:0.8, rot:0.15,      // 头部位移/旋转幅度（按视频实测校准：身体基本钉住）
+  leanRot:0.12, leanPivot:[205, 588],   // 身体绕脚底的附加倾角
+  leanSkip:{ legs:true },          // 腿不参与倾角：脚要钉在地上（实测期望效果下半身 0px）
+  irisDx:5.0, irisDy:3.2,         // 虹膜位移（掩膜开启时；越界部分被裁掉）
+  // 无掩膜时虹膜可用的位移范围：从原图 alpha 量出来的"整块都在合法区内"的上限。
+  // 注意它严重不对称（左 5/右 0/上 3/下 0），因为虹膜上/右侧本来就贴着边界。
+  irisSafe: (() => {
+    const raw = (DATA.blink && DATA.blink.iris_safe) || {};
+    const out = {};
+    for(const k in raw) out[k] = raw[k].strict || {left:0, right:0, up:0, down:0};
+    return out;
+  })()
+};
+
+/** 虹膜本帧的位移。
+ *  masked=true  → 用完整幅度，越界部分由掩膜裁掉
+ *  masked=false → 按实测的安全范围做**非对称**限幅（左 5 / 右 0 / 上 3 / 下 0），
+ *                 宁可某几个方向不动，也不让虹膜压到皮肤上 */
+function irisOffset(side, masked){
+  // GZ.y > 0 = 光标在上方；向上看虹膜要向上，而源图 Y 向下 → 竖直取负
+  if(masked) return [GZ.x * GAZE.irisDx * S.gazeAmp, -GZ.y * GAZE.irisDy * S.gazeAmp];
+  const sf = GAZE.irisSafe[side] || {left:0, right:0, up:0, down:0};
+  return [GZ.x >= 0 ? GZ.x * sf.right : GZ.x * sf.left,
+          GZ.y >= 0 ? -GZ.y * sf.up : -GZ.y * sf.down];
+}
+
+function onGazeMove(ev){
+  const r = cv.getBoundingClientRect();
+  // 以画面中心为原点归一化；用画面尺寸的一半做分母，边缘即 ±1
+  let nx = (ev.clientX - r.left - r.width / 2) / (r.width / 2);
+  let ny = (ev.clientY - r.top - r.height / 2) / (r.height / 2);
+  const m = Math.hypot(nx, ny);
+  if(m > 1){ nx /= m; ny /= m; }            // 限制在单位圆内，斜向不会过冲
+  GZ.tx = Math.max(-1, Math.min(1, nx));
+  // 统一约定：GZ.y > 0 = 光标在角色**上方**（与 Lua 的 GetCursorUIPos 一致，
+  // 那个是左下原点、Y 向上）。屏幕 clientY 是向下的，所以这里取反。
+  GZ.ty = Math.max(-1, Math.min(1, -ny));
+  GZ.inside = true;
+}
+function tickGaze(dt){
+  if(!S.gazeOn){ GZ.tx = GZ.ty = 0; }
+  const k = Math.min(1, dt * 9);            // 眼睛/头跟得快
+  const kl = Math.min(1, dt * 4);           // 发丝跟得慢 → 自然滞后
+  GZ.x += (GZ.tx - GZ.x) * k;
+  GZ.y += (GZ.ty - GZ.y) * k;
+  GZ.lagX += (GZ.x - GZ.lagX) * kl;
+  GZ.lagY += (GZ.y - GZ.lagY) * kl;
+  if(Math.abs(GZ.x) < 1e-4 && Math.abs(GZ.y) < 1e-4 &&
+     Math.abs(GZ.lagX) < 1e-4 && Math.abs(GZ.lagY) < 1e-4){
+    GZ.x = GZ.y = GZ.lagX = GZ.lagY = 0;
+  }
+}
+function gazeActive(){
+  return S.gazeOn && (GZ.x || GZ.y || GZ.lagX || GZ.lagY || GZ.tx || GZ.ty);
+}
+
+/** 按当前处理参数算出真正要渲染的图元（等价于改 Lua 的 RAW 表） */
+function treated(part){
+  if(part._tr) return part._tr;              // 缓存：头部重烘每次要跑 1869 个图元，不缓存光分配就占大半
+  const out = [];
+  for(const s of part.items){
+    let a = s.a / 255;
+    if(a < S.dropT) continue;
+    if(a >= S.snapT) a = 1;
+    if(S.gamma !== 1) a = Math.pow(a, S.gamma);
+    if(a <= 0.002) continue;
+    let x = s.x, y = s.y, w = s.w, h = s.h;
+    if(S.snapPx){                               // SetAnchoredPosition/SetSizeDelta 取整
+      w = Math.max(1, Math.round(w)); h = Math.max(1, Math.round(h));
+      x = Math.round(x); y = Math.round(y);
+    }
+    out.push({t:s.t, x, y, w, h, rad:s.rad, r:s.r, g:s.g, b:s.b, a});
+  }
+  part._tr = out;
+  return out;
+}
+
+/** 把一个图元画进 2D 上下文（软边 / 硬边贴图） */
+function paint(g, s, smoothing){
+  if(S.texMode === "soft"){
+    g.fillStyle = `rgba(${s.r},${s.g},${s.b},${s.a})`;
+    g.beginPath();
+    g.ellipse(s.x, s.y, s.w / 2, s.h / 2, s.rad, 0, Math.PI * 2);
+    g.fill();
+    return;
+  }
+  const ext = Math.ceil(Math.max(s.w, s.h) * 1.42) + 2;
+  const n = bucket(ext);
+  const sc = scratch(n), sg = sc.getContext("2d");
+  sg.setTransform(1, 0, 0, 1, 0, 0);
+  sg.globalCompositeOperation = "source-over";
+  sg.clearRect(0, 0, n, n);
+  sg.save();
+  sg.translate(n / 2, n / 2);
+  sg.rotate(s.rad);
+  sg.imageSmoothingEnabled = smoothing;
+  sg.drawImage(DISC, -s.w / 2, -s.h / 2, s.w, s.h);
+  sg.restore();
+  sg.globalCompositeOperation = "source-in";
+  sg.fillStyle = `rgba(${s.r},${s.g},${s.b},${s.a})`;
+  sg.fillRect(0, 0, n, n);
+  sg.globalCompositeOperation = "source-over";
+  g.drawImage(sc, 0, 0, n, n, s.x - n / 2, s.y - n / 2, n, n);
+}
+
+/** 把一个部件烘焙成一张贴图（模拟 Lua 里这一批控件已经建好） */
+function bakePart(part, warp){
+  const items = treated(part);
+  if(!items.length) return null;
+  const pad = (warp && part.wrap) ? 8 : 0;      // 形变会把图元推出原 bbox，留余量
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for(const s of items){
+    const e = Math.max(s.w, s.h) * 0.71 + 1 + pad;
+    x0 = Math.min(x0, s.x - e); x1 = Math.max(x1, s.x + e);
+    y0 = Math.min(y0, s.y - e); y1 = Math.max(y1, s.y + e);
+  }
+  x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0));
+  x1 = Math.min(CW, Math.ceil(x1)); y1 = Math.min(CH, Math.ceil(y1));
+  const w = Math.max(1, x1 - x0), h = Math.max(1, y1 - y0);
+
+  const c = document.createElement("canvas");
+  c.width = w; c.height = h;
+  const g = c.getContext("2d");
+  g.translate(-x0, -y0);
+  const sm = S.texMode === "hardbl";
+  for(const s of items){
+    if(warp && part.wrap){
+      const off = warp(s, part.kw);
+      if(off) paint(g, {t:s.t, x:s.x + off[0], y:s.y + off[1], w:s.w, h:s.h,
+                        rad:s.rad, r:s.r, g:s.g, b:s.b, a:s.a}, sm);
+      else paint(g, s, sm);
+    } else {
+      paint(g, s, sm);
+    }
+  }
+
+  if(S.compT > 0){                              // 仅离线的合成后 alpha 阈值
+    const d = g.getImageData(0, 0, w, h), px = d.data;
+    const k = 6;                                // 过渡带宽度（约 1/6 px）
+    for(let i = 3; i < px.length; i += 4){
+      const v = px[i] / 255;
+      const t = Math.min(1, Math.max(0, (v - S.compT) * k + 0.5));
+      px[i] = Math.round(t * 255);
+    }
+    g.putImageData(d, 0, 0);
+  }
+  return {canvas:c, bx:x0, by:y0, count:items.length};
+}
+
+function rebake(){
+  const t0 = performance.now();
+  for(const p of PARTS) p.baked = bakePart(p);   // 一律烘静止姿态，形变放到绘制时做
+  buildEyeMasks();
+  RT.bakeMs = performance.now() - t0;
+}
+
+/** 对已烘好的贴图做**分列位移**（头部形变）。
+ *  位移场可分离：Δx 只与 x 有关，所以横向切 ~14px 一列、每列整体挪 Δx。
+ *  代价 = 每部件十几次 drawImage，而不是上千次图元绘制。
+ *  偏移取整 → 列间既不留缝也不重叠，不会重复混合。 */
+function drawPartColumns(g, part, warp, base){
+  const b = part.baked, W = b.canvas.width, H = b.canvas.height;
+  // 列宽取**整数**：小数列宽 + 整数偏移会让 drawImage 重采样，留下竖缝
+  const N = Math.max(1, Math.min(20, Math.round(W / 14)));
+  const sw = Math.max(1, Math.floor(W / N));
+  const cy = b.by + H / 2;
+  const bx = base ? base[0] : 0, by = base ? base[1] : 0;
+  for(let x0 = 0; x0 < W; x0 += sw){
+    const w = Math.min(sw, W - x0);
+    const off = warp({x: b.bx + x0 + w / 2, y: cy}, part.kw);
+    // 亚像素偏移 + 0.5px 重叠：取整会在列间留下 1px 跳变（放大能看到竖缝）；
+    // 重叠的那半像素由后画的列盖住，肉眼看不出重复混合
+    // 目标坐标必须加上贴图原点 (b.bx, b.by) —— 单张 drawImage 版本是靠那两个参数定位的，
+    // 忘了加就会把整块头画到画布左上角
+    g.drawImage(b.canvas, x0, 0, w, H,
+                b.bx + x0 + off[0] + bx, b.by + off[1] + by, w + 0.5, H);
+  }
+}
+
+/** 对已烘好的贴图做**分条位移**（躯干扭转）。
+ *  躯干场只与 y 有关（外加一项很轻的、随 x 的伪深度），所以纵向切 ~14px 一条、
+ *  每条整体挪一个位移。条内是刚性平移，条间错开 —— 14px 时肉眼分辨不出（与头部同法）。 */
+function drawPartBands(g, part, gx, k, base){
+  const b = part.baked, W = b.canvas.width, H = b.canvas.height;
+  const N = Math.max(1, Math.min(48, Math.round(H / 14)));
+  const sh = Math.max(1, Math.floor(H / N));
+  const cx = b.bx + W / 2;
+  const bx = base ? base[0] : 0, by = base ? base[1] : 0;
+  for(let y0 = 0; y0 < H; y0 += sh){
+    const h = Math.min(sh, H - y0);
+    const off = torsoField(cx, b.by + y0 + h / 2, gx * k);
+    g.drawImage(b.canvas, 0, y0, W, h,
+                b.bx + off[0] + bx, b.by + y0 + off[1] + by, W, h + 0.5);
+  }
+}
+
+/** 头部件整体吃一次躯干场（在部件中心处采样，不加剪切）。
+ *  头的躯干段本来就设计成"脖子吸收大部分转角"，所以整块平移就是它的正确行为；
+ *  头自己的方向感由分列位移（柱面绕）提供。 */
+function headBodyOffset(part, gx, k){
+  if(!gx || !torsoActive(part)) return [0, 0];
+  const cy = (part.bbox[1] + part.bbox[3]) / 2;
+  return torsoField((part.bbox[0] + part.bbox[2]) / 2, cy, gx * k);
+}
+
+
+/* ══════════════ 4. 运动 ══════════════
+   每个部件的变换 = 呼吸 + 各通道贡献之和。
+   通道按**部件组**给权重（组来自 rig.json），个别通道按部件编号定向（如摆臂只动 R-arm）。
+   `pivot` 有值表示"绕该全局点旋转"：位移由部件自身 pivot 绕该点转过后的位置差算出，
+   所以靠近轴心的部件（腿脚）几乎不动，只有上半身会倾。 */
+const TAU = Math.PI * 2;
+
+const CHANNELS = {
+  sway: { T:5.2, label:"摆动", pivot:[205, 588], rot:0.7, lag:true,
+          g:{ body:1, head:1, bangs:1.05, hairBack:1.2, tailL:1.3, tailR:1.3, ribbon:1.35,
+              armL:0.85, armR:0.85, legs:0.3 } },
+  turn: { T:7.6, label:"转头", dx:2.2, rot:0.4, lag:true, d0:0.05,
+          g:{ head:1, bangs:1, hairBack:0.3, tailL:0.12, tailR:0.12, ribbon:0.1, body:0.05 } },
+  nod:  { T:6.4, label:"轻点头", dy:1.0, rot:0.5, lag:true,
+          g:{ head:1, bangs:1, hairBack:0.35, tailL:0.15, tailR:0.15, ribbon:0.12, body:0.08 } },
+  wind: { T:3.1, label:"风吹", dx:3.0, dy:0.8, rot:1.8, lag:true,
+          g:{ head:0.15, bangs:1, hairBack:1.15, tailL:1.2, tailR:1.2, ribbon:1.25,
+              body:0.1, armL:0.1, armR:0.1 } },
+  armR: { T:2.4, label:"摆臂", rot:5, p:{ 24:1 } }        // 绕肩点（部件自身 pivot）
+};
+
+/** 梯形脉冲：快起、保持、稍慢落。u=0..1 是动作进度 */
+function pulse(u, a, w){
+  if(u <= a || u >= a + w) return 0;
+  return Math.max(0, Math.min((u - a) / (0.25 * w), 1, (a + w - u) / (0.35 * w)));
+}
+/** 一次性动作：dur 秒的包络，贡献叠加在连续通道之上 */
+const ACTIONS = {
+  shake:    { label:"摇头", dur:1.15, ch:{ turn: u => 1.5 * Math.sin(TAU * 2.4 * u) * Math.sin(Math.PI * u) } },
+  nodOnce:  { label:"点头", dur:1.05, ch:{ nod:  u => 1.8 * Math.sin(TAU * 2.0 * u) * Math.sin(Math.PI * u) } },
+  surprise: { label:"惊讶", dur:1.6,  ch:{ eyeOpen: u => 1.5 * pulse(u, 0.05, 0.34),
+                                           browRaise: u => 1.5 * pulse(u, 0.05, 0.34),
+                                           nod: u => -1.6 * pulse(u, 0.05, 0.34) } },
+  wave:     { label:"摆臂", dur:1.8,  ch:{ armR: u => Math.sin(TAU * 2.6 * u) * Math.sin(Math.PI * u) } }
+};
+
+const PRESETS = {
+  idle:     { label:"待机",     ch:{} },
+  swayIdle: { label:"摆动待机", ch:{ sway:1 } },
+  talk:     { label:"说话",     ch:{ talk:1, nod:0.7 } },
+  wind:     { label:"风吹",     ch:{ wind:1, sway:0.8 } },
+  smile:    { label:"眯眼笑",   ch:{ eyeOpen:-1 } },
+  allOff:   { label:"全停",     ch:{} }
+};
+
+const ACTIVE = [];                  // 正在播放的一次性动作 [{name, t0}]
+const CH_NAMES = Object.keys(CHANNELS).concat(["talk", "eyeOpen", "browRaise"]);
+
+/** 通道在某时刻的值（连续开关 × 强度 + 一次性动作叠加） */
+function channelOf(name){
+  let v = (S.ch[name] || 0) * S.chAmp;
+  for(const a of ACTIVE){
+    const A = ACTIONS[a.name];
+    if(A && A.ch[name]){
+      const u = (S.t - a.t0) / A.dur;
+      if(u >= 0 && u <= 1) v += A.ch[name](u);
+    }
+  }
+  return v;
+}
+function tickActions(){
+  for(let i = ACTIVE.length - 1; i >= 0; i--){
+    if(S.t - ACTIVE[i].t0 > ACTIONS[ACTIVE[i].name].dur) ACTIVE.splice(i, 1);
+  }
+}
+function playAction(name){
+  ACTIVE.push({name, t0:S.t});
+  logLine(`动作：${ACTIONS[name].label}`);
+  DIRTY = true;
+}
+function applyPresetChannels(key){
+  const P = PRESETS[key];
+  for(const n in CHANNELS) S.ch[n] = P.ch[n] || 0;
+  S.ch.talk = P.ch.talk || 0;
+  S.ch.eyeOpen = P.ch.eyeOpen || 0;
+  S.ch.browRaise = 0;
+  S.chAmp = 1;
+  ACTIVE.length = 0;
+  lastPresetLabel = P.label;         // 屏幕文字里显示当前预设
+  syncChannelUI();
+  logLine(`预设动作：${P.label}`, "ok");
+  DIRTY = true;
+}
+
+function motionOf(part){
+  const g = part.group;
+  let dx = 0, dy = 0, rot = 0;
+
+  // 呼吸（沿用原约定）
+  const dBreath = S.secondary ? (part.delay || 0) : 0;
+  const vB = Math.sin(TAU * (S.t - dBreath) / S.period);
+  dy += -S.baseAmp * S.ampScale * part.w * vB;
+  rot += part.rot * vB;
+
+  // 其它通道
+  for(const name in CHANNELS){
+    const ch = CHANNELS[name];
+    const amp = channelOf(name);
+    if(!amp) continue;
+    const w = (ch.p && ch.p[part.num] !== undefined) ? ch.p[part.num] : (ch.g ? (ch.g[g] || 0) : 0);
+    if(!w) continue;
+    const d = (ch.lag && S.secondary ? (part.delay || 0) : 0) + (ch.d0 || 0);
+    const v = Math.sin(TAU * (S.t - d) / ch.T);
+    if(ch.pivot){                       // 绕全局轴心旋转：位移由部件 pivot 转过后算出
+      const deg = amp * w * (ch.rot || 0) * v;
+      const th = deg * Math.PI / 180, c = Math.cos(th), s = Math.sin(th);
+      const rx = part.pivot[0] - ch.pivot[0], ry = part.pivot[1] - ch.pivot[1];
+      dx += rx * c - ry * s - rx;
+      dy += rx * s + ry * c - ry;
+      rot += deg;
+    } else {
+      dx += amp * w * (ch.dx || 0) * v;
+      dy += amp * w * (ch.dy || 0) * v;
+      rot += amp * w * (ch.rot || 0) * v;
+    }
+  }
+
+  // 视点跟随：软物用滞后值（发丝比头慢半拍）
+  if(S.gazeOn){
+    const w = GAZE_W[g] || 0;
+    if(w){
+      const gx = GAZE_LAG_GROUPS[g] ? GZ.lagX : GZ.x;
+      const gy = GAZE_LAG_GROUPS[g] ? GZ.lagY : GZ.y;
+      dx += gx * w * GAZE.dx * S.gazeAmp;
+      dy += gy * w * GAZE.dy * S.gazeAmp;
+      rot += gx * w * GAZE.rot * S.gazeAmp;
+    }
+    // 全身绕脚底的小幅倾角：上半身才有位移，腿脚几乎不动
+    const th = (GAZE.leanSkip && GAZE.leanSkip[g])
+      ? 0 : GZ.x * GAZE.leanRot * S.gazeAmp * Math.PI / 180;
+    if(Math.abs(th) > 1e-6){
+      const c = Math.cos(th), s = Math.sin(th);
+      const rx = part.pivot[0] - GAZE.leanPivot[0], ry = part.pivot[1] - GAZE.leanPivot[1];
+      dx += rx * c - ry * s - rx;
+      dy += rx * s + ry * c - ry;
+      rot += th * 180 / Math.PI;
+    }
+  }
+  const k = S.motionScale !== undefined ? S.motionScale : 1;
+  return {vB, dx: dx * k, dy: dy * k, rot: rot * k};
+}
+
+/** 眼/眉/嘴的额外变换（睁大、眯、抬眉、说话）。每帧算一次 */
+function faceExtra(){
+  const eo = channelOf("eyeOpen");
+  const talkOn = Math.max(0, channelOf("talk"));
+  // 说话时嘴的开合要**不规则**：两个不同周期的正弦叠加，听起来才像在讲话
+  const osc = talkOn > 0
+    ? Math.max(0, 0.62 * Math.sin(TAU * S.t / 0.21) + 0.38 * Math.sin(TAU * S.t / 0.34 + 1.7))
+    : 0;
+  return {
+    so: Math.max(0.4, Math.min(1.6, 1 + eo * 0.30)),   // 眼睛纵向缩放：睁大 / 眯
+    browDy: -channelOf("browRaise") * 4.2,             // 正 = 上抬
+    talk: Math.min(1, talkOn * osc)
+  };
+}
+
+/* ── 眨眼 ──
+   用独立的单调时钟 BT 驱动（不受呼吸相位滑杆拖动影响）。
+   闭合剖面：前 40% 时间闭合、后 60% 张开 —— 真人也是闭得快、睁得慢。 */
+const BL = DATA.blink;
+const BLINK = { auto:true, manual:0, hold:false, next:1.6, events:[], count:0, vL:0, vR:0 };
+
+function scheduleBlink(now){
+  BLINK.events.push(now);
+  if(Math.random() < BL.doubleChance) BLINK.events.push(now + S.blDur + 0.085);
+  BLINK.count++;
+  BLINK.next = now + S.blGapMin + Math.random() * Math.max(0, S.blGapMax - S.blGapMin);
+}
+/** 某只眼在时刻 now 的闭合量（0=睁 1=闭） */
+function blinkAt(now, skew){
+  let v = 0;
+  for(const t0 of BLINK.events){
+    const u = (now - t0 - skew) / S.blDur;
+    if(u <= 0 || u >= 1) continue;
+    v = Math.max(v, u < 0.4 ? 0.5 - 0.5 * Math.cos(Math.PI * u / 0.4)
+                            : 0.5 + 0.5 * Math.cos(Math.PI * (u - 0.4) / 0.6));
+  }
+  return v;
+}
+function tickBlink(dt){
+  BT += dt * S.speed;
+  BLINK.events = BLINK.events.filter(t0 => BT - t0 < S.blDur + 0.3);
+  if(BLINK.auto && BT >= BLINK.next) scheduleBlink(BT);
+  const manual = BLINK.hold ? 1 : S.blManual;
+  BLINK.vL = Math.max(blinkAt(BT, 0), manual);
+  BLINK.vR = Math.max(blinkAt(BT, S.blSkew / 1000), manual);
+}
+/** 该部件在眨眼里的角色 → 目标闭合线（画布坐标 Y） */
+function closeTargetY(side){
+  const e = BL.eyes[side];
+  return e.top + S.closeAt * (e.bot - e.top);
+}
+function blinkOf(part){
+  if(!part.role) return null;
+  const [kind, side] = part.role.split(":");
+  if(kind === "mouth" || !side || !BL.eyes[side]) return null;   // 嘴不参与眨眼
+  return {kind, side, v: side === "eyeL" ? BLINK.vL : BLINK.vR};
+}
+/** 把眨眼 + 睁大/眯 + 抬眉 写进 2D 上下文（在呼吸变换之后调用）。
+ *  眼内容除了压缩还会**淡出** —— 因为这里没有真正的遮挡关系，眼白压扁后仍会留下一条
+ *  淡色带；淡出是 2D 傀儡的常规做法，Lua 侧对应改 imageColor 的 alpha，同样可实现。 */
+function applyBlink(ctx, part, fx, skipFade){
+  const b = blinkOf(part);
+  if(!b) return false;
+  const e = BL.eyes[b.side];
+  const cy = (e.top + e.bot) / 2;
+  const openScale = Math.abs(fx.so - 1) > 0.002;
+  const did = openScale || b.v > 0.002;
+  if(!did) return false;
+  const ty = closeTargetY(b.side);
+  const isContent = b.kind === "eye" || b.kind === "iris";
+  if(isContent || b.kind === "lid"){
+    if(openScale){                              // 睁大 / 眯：绕眼睛中线
+      ctx.translate(0, cy);
+      ctx.scale(1, fx.so);
+      ctx.translate(0, -cy);
+    }
+    if(isContent){
+      if(b.v > 0.002){
+        const sc = Math.max(0.02, 1 - S.maxClose * b.v);
+        ctx.translate(0, ty);
+        ctx.scale(1, sc);
+        ctx.translate(0, -ty);
+        if(!skipFade && S.blinkFade > 0) ctx.globalAlpha *= Math.max(0, 1 - S.blinkFade * b.v);
+      }
+    } else {
+      // 眼睑线：先随睁大/眯移动，再下移到闭合线
+      const lidOpen = cy + (e.lidCy - cy) * fx.so;
+      ctx.translate(0, b.v * (ty - lidOpen));
+    }
+  } else if(b.kind === "brow"){
+    ctx.translate(0, b.v * S.browFollow * (ty - e.lidCy) + fx.browDy);
+  }
+  return true;
+}
+
+/** 说话：嘴绕自身中线纵向张开 */
+function applyMouth(ctx, part, fx){
+  return false;          // 嘴保持静态：纵向拉伸会变成"厚嘴唇"，不好看（用户反馈）
+  if(part.role !== "mouth" || fx.talk <= 0.01) return false;
+  const m = BL.mouth;
+  ctx.translate(0, m.cy);
+  ctx.scale(1, 1 + fx.talk * 0.95);
+  ctx.translate(0, -m.cy);
+  return true;
+}
+
+/* ══════════════ 5. 渲染 ══════════════ */
+const cv = document.getElementById("cv");
+const ctx = cv.getContext("2d");
+let DPR = 1, VIEW = {zoom:1, ox:0, oy:0};
+
+function resize(){
+  const r = document.getElementById("center").getBoundingClientRect();
+  DPR = window.devicePixelRatio || 1;
+  const fit = Math.max(0.05, Math.min((r.width - 40) / CW, (r.height - 40) / CH));
+  cv.width = Math.round(CW * fit * DPR);
+  cv.height = Math.round(CH * fit * DPR);
+  cv.style.width = (CW * fit) + "px";
+  cv.style.height = (CH * fit) + "px";
+  VIEW.zoom = fit;
+}
+window.addEventListener("resize", () => { resize(); draw(); });
+
+const off = document.createElement("canvas");
+off.width = CW; off.height = CH;
+const octx = off.getContext("2d");
+
+/* 叠影用的两张蒙版：红=只有原图、蓝=只有重建、品红=两者重合。
+   做法是各自染成一个纯色剪影，再用 lighter 相加 —— 相加才能让重合区出现第三种颜色。 */
+const maskA = document.createElement("canvas"), maskB = document.createElement("canvas");
+maskA.width = maskA.height = maskB.width = maskB.height = CW;
+const ma = maskA.getContext("2d"), mb = maskB.getContext("2d");
+function tintMask(g, drawFn, color){
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalCompositeOperation = "source-over";
+  g.clearRect(0, 0, CW, CH);
+  drawFn(g);
+  g.globalCompositeOperation = "source-in";
+  g.fillStyle = color;
+  g.fillRect(0, 0, CW, CH);
+  g.globalCompositeOperation = "source-over";
+}
+
+/** 合成当前视图用的 411×600 位图 */
+function composeScene(){
+  octx.setTransform(1, 0, 0, 1, 0, 0);
+  octx.clearRect(0, 0, CW, CH);
+
+  if(S.view === "ref"){
+    if(REF_IMG.complete) octx.drawImage(REF_IMG, 0, 0);
+    return off;
+  }
+  if(S.view === "onion"){
+    tintMask(ma, g => { if(REF_IMG.complete) g.drawImage(REF_IMG, 0, 0); }, "rgba(230,40,40,.9)");
+    tintMask(mb, g => drawParts(g), "rgba(40,90,235,.9)");
+    octx.globalCompositeOperation = "source-over";
+    octx.drawImage(maskA, 0, 0);
+    octx.globalCompositeOperation = "lighter";
+    octx.drawImage(maskB, 0, 0);
+    octx.globalCompositeOperation = "source-over";
+    return off;
+  }
+
+  if(S.perShape){
+    drawPartsPerShape(octx);
+  } else {
+    drawParts(octx);
+  }
+
+  if(S.view === "diff"){
+    const a = octx.getImageData(0, 0, CW, CH);
+    const b = refData();
+    const px = a.data;
+    for(let i = 0; i < px.length; i += 4){
+      if(b[i + 3] < 128){ px[i] = px[i+1] = px[i+2] = px[i+3] = 0; continue; }
+      const db = Math.abs(px[i] - b[i]), dg = Math.abs(px[i+1] - b[i+1]), dr = Math.abs(px[i+2] - b[i+2]);
+      const d = Math.min(1, Math.sqrt(dr*dr + dg*dg + db*db) / 200);
+      px[i]   = Math.round(255 * Math.min(1, 3 * d));
+      px[i+1] = Math.round(255 * (d < .5 ? 2 * d : 2 - 2 * d));
+      px[i+2] = Math.round(255 * Math.max(0, 1 - 2.5 * d));
+      px[i+3] = 255;
+    }
+    octx.putImageData(a, 0, 0);
+  }
+  return off;
+}
+
+let WARPF = null;                    // 本帧的形变位移场（每帧只算一次）
+function drawParts(g){
+  const fx = faceExtra();
+  WARPF = (S.gazeOn && HEAD.ready) ? makeWarp() : null;
+  const gx = S.gazeOn ? GZ.x : 0;
+  const ms = S.motionScale === undefined ? 1 : S.motionScale;
+  BODY.bodyAmp = S.bodyAmp === undefined ? BODY.bodyAmp : S.bodyAmp;
+  for(const part of TOTAL_ORDER){
+    if(!part.visible || !part.baked) continue;
+    const m = motionOf(part);
+    const side = part.role && part.role.startsWith("iris:") ? part.role.split(":")[1] : null;
+    const headPart = part.wrap;
+    const bodyPart = !headPart && torsoActive(part) && gx !== 0;
+    g.save();
+    if(headPart && WARPF){
+      // 头：柱面绕（分列）+ 躯干场整块平移（脖子已吸收大部分转角）
+      const base = headBodyOffset(part, gx, ms);
+      partTransform(g, part, m, fx, side ? {irisSide:side} : {});
+      drawPartColumns(g, part, WARPF, base);
+    } else if(bodyPart){
+      // 躯干/手臂/腿：连续场 → 分条位移（条内刚性、条间平滑错开）
+      partTransform(g, part, m, fx, side ? {irisSide:side} : {});
+      drawPartBands(g, part, gx, ms, null);
+    } else if(side && S.gazeOn && S.irisMask && EYEMASK[side]){
+      drawMaskedIris(g, part, m, fx, side);      // 虹膜：走掩膜裁剪，避免压到皮肤
+    } else {
+      partTransform(g, part, m, fx, side ? {irisSide:side} : {});
+      g.drawImage(part.baked.canvas, part.baked.bx, part.baked.by);
+    }
+    g.restore();
+  }
+}
+
+/** 部件级变换（呼吸/通道/眨眼/嘴），虹膜额外叠加视点位移 */
+function partTransform(g, part, m, fx, opt){
+  const o = opt || {};
+  g.translate(part.pivot[0] + m.dx, part.pivot[1] + m.dy);
+  if(Math.abs(m.rot) > 1e-6) g.rotate(m.rot * Math.PI / 180);
+  g.translate(-part.pivot[0], -part.pivot[1]);
+  applyBlink(g, part, fx, o.skipFade);
+  applyMouth(g, part, fx);
+  if(o.irisSide && S.gazeOn){                   // 虹膜叠加视点位移
+    const [ix, iy] = irisOffset(o.irisSide, !!o.masked);
+    g.translate(ix, iy);
+  }
+}
+
+/** 虹膜单独渲染：先按当前变换画到临时画布，再用"眼白∪睫毛∪眼线"裁掉越界部分，
+ *  最后整块贴回。这样虹膜滑到边缘时是被裁断，而不是压到皮肤上 —— 这才是正确的遮挡关系。 */
+function drawMaskedIris(g, part, m, fx, side){
+  const mask = EYEMASK[side];
+  const sc = rectScratch(mask.canvas.width, mask.canvas.height);
+  const sg = sc.getContext("2d");
+  sg.setTransform(1, 0, 0, 1, 0, 0);
+  sg.globalCompositeOperation = "source-over";
+  sg.globalAlpha = 1;
+  sg.clearRect(0, 0, sc.width, sc.height);
+  sg.setTransform(1, 0, 0, 1, -mask.bx, -mask.by);      // 画布坐标 → 掩膜局部坐标
+  partTransform(sg, part, m, fx, {irisSide:side, skipFade:true, masked:true});
+  sg.drawImage(part.baked.canvas, part.baked.bx, part.baked.by);
+  sg.setTransform(1, 0, 0, 1, 0, 0);
+  sg.globalCompositeOperation = "destination-in";       // 裁成合法区
+  sg.drawImage(mask.canvas, 0, 0);
+  sg.globalCompositeOperation = "source-over";
+  g.drawImage(sc, mask.bx, mask.by);                    // 眨眼淡出交给外层 globalAlpha
+}
+
+/** 建眼部的裁剪掩膜：合法区 = 眼白 ∪ 睫毛 ∪ 眼线。要在烘焙之后调用。 */
+function buildEyeMasks(){
+  for(const key in EYEMASK) delete EYEMASK[key];
+  for(const side of ["eyeL", "eyeR"]){
+    const need = ["eye", "lid"].map(k => PARTS.find(p => p.role === k + ":" + side)).filter(Boolean);
+    const iris = PARTS.find(p => p.role === "iris:" + side);
+    if(!iris || !need.length) continue;
+    const all = need.concat([iris]).filter(p => p.baked);
+    if(all.length < 2) continue;
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for(const p of all){
+      x0 = Math.min(x0, p.baked.bx); y0 = Math.min(y0, p.baked.by);
+      x1 = Math.max(x1, p.baked.bx + p.baked.canvas.width);
+      y1 = Math.max(y1, p.baked.by + p.baked.canvas.height);
+    }
+    const pad = 8;                                       // 给虹膜留出滑动余量
+    x0 = Math.max(0, Math.floor(x0 - pad)); y0 = Math.max(0, Math.floor(y0 - pad));
+    x1 = Math.min(CW, Math.ceil(x1 + pad)); y1 = Math.min(CH, Math.ceil(y1 + pad));
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, x1 - x0); c.height = Math.max(1, y1 - y0);
+    const g = c.getContext("2d");
+    for(const p of need){                                // 只画"底色+眼睑线"，不画虹膜
+      if(!p.baked) continue;
+      g.drawImage(p.baked.canvas, p.baked.bx - x0, p.baked.by - y0);
+    }
+    EYEMASK[side] = {canvas:c, bx:x0, by:y0};
+  }
+}
+
+/** 逐图元写 anchoredPosition（真实开销） */
+function drawPartsPerShape(g){
+  let sm = S.texMode === "hardbl";
+  const fx = faceExtra();
+  const warp = makeWarp();
+  for(const part of TOTAL_ORDER){
+    if(!part.visible) continue;
+    const m = motionOf(part);
+    const b = blinkOf(part);
+    const isMouth = part.role === "mouth";
+    const px = part.pivot[0], py = part.pivot[1];
+    const ca = Math.cos(m.rot * Math.PI / 180), sa = Math.sin(m.rot * Math.PI / 180);
+    for(const s of part.items){
+      let a = s.a / 255;
+      if(a < S.dropT) continue;
+      if(a >= S.snapT) a = 1;
+      if(S.gamma !== 1) a = Math.pow(a, S.gamma);
+      if(a <= 0.002) continue;
+      let x = s.x, y = s.y, w = s.w, h = s.h, rad = s.rad;
+      // 眨眼 / 睁大眯：等价于改 sizeDelta + anchoredPosition
+      if(b && (b.v > 0.002 || Math.abs(fx.so - 1) > 0.002)){
+        const e = BL.eyes[b.side], cy = (e.top + e.bot) / 2, ty = closeTargetY(b.side);
+        const isContent = b.kind === "eye" || b.kind === "iris";
+        if(isContent || b.kind === "lid"){
+          if(Math.abs(fx.so - 1) > 0.002){ y = cy + (y - cy) * fx.so; }
+          if(isContent && b.v > 0.002){
+            const sc = Math.max(0.02, 1 - S.maxClose * b.v);
+            y = ty + (y - ty) * sc;
+            h = Math.max(0.5, h * sc);
+            if(S.blinkFade > 0) a *= Math.max(0, 1 - S.blinkFade * b.v);
+          }
+        } else if(b.kind === "brow"){
+          y += b.v * S.browFollow * (ty - e.lidCy) + fx.browDy;
+        }
+      }
+      // 视点：只给虹膜加位移。这条路径（逐图元诊断模式）不模拟掩膜裁剪，
+      // 所以 masked 传 false，位移按实测安全范围做非对称限幅，宁可少动也不穿帮。
+      if(S.gazeOn && b && b.kind === "iris"){
+        const [ix, iy] = irisOffset(b.side, false);
+        x += ix; y += iy;
+      }
+      // 嘴保持静态（原来是按 talk 纵向张开，会让嘴唇显得很厚）
+      if(warp && part.wrap){
+        const off = warp(s, part.kw);
+        if(off){ x += off[0]; y += off[1]; }
+      }
+      if(S.snapPx){ w = Math.max(1, Math.round(w)); h = Math.max(1, Math.round(h)); }
+      const dx0 = s.x - px, dy0 = s.y - py;
+      x = px + m.dx + dx0 * ca - dy0 * sa + (x - s.x);
+      y = py + m.dy + dx0 * sa + dy0 * ca + (y - s.y);
+      if(S.snapPx){ x = Math.round(x); y = Math.round(y); }
+      paint(g, {t:s.t, x, y, w, h, rad, r:s.r, g:s.g, b:s.b, a}, sm);
+    }
+  }
+}
+
+function draw(){
+  composeScene();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  const z = VIEW.zoom * DPR;
+  ctx.imageSmoothingEnabled = true;
+  if(S.view === "side"){
+    ctx.drawImage(off, 0, 0, CW, CH, 0, 0, CW * z / 2, CH * z);
+    if(REF_IMG.complete) ctx.drawImage(REF_IMG, 0, 0, CW, CH, CW * z / 2 + 4 * DPR, 0, CW * z / 2, CH * z);
+    return;
+  }
+  ctx.drawImage(off, 0, 0, CW, CH, 0, 0, CW * z, CH * z);
+}
+
+/* ══════════════ 6. 指标（对着参考图算，边拖动边看） ══════════════ */
+const REF_IMG = new Image();
+REF_IMG.onload = () => { refData(true); recompute(); draw(); };
+REF_IMG.src = DATA.ref;
+
+let _refData = null;
+function refData(reset){
+  if(reset) _refData = null;
+  if(!_refData){
+    const c = document.createElement("canvas");
+    c.width = CW; c.height = CH;
+    const g = c.getContext("2d");
+    g.drawImage(REF_IMG, 0, 0);
+    _refData = g.getImageData(0, 0, CW, CH).data;
+  }
+  return _refData;
+}
+let REF_M = null;
+function refMetrics(){
+  const b = refData();
+  let solid = 0, band = 0, sum = 0;
+  for(let i = 0; i < b.length; i += 4){
+    const a = b[i + 3];
+    if(a > 127) solid++;
+    if(a > 25 && a < 230){ band++; sum += a; }
+  }
+  return {solid, band};
+}
+
+let M = null;
+function recompute(){
+  if(!REF_IMG.complete) return;
+  if(!REF_M) REF_M = refMetrics();
+  const b = refData();
+  if(!M) M = {};
+  const c = document.createElement("canvas");
+  c.width = CW; c.height = CH;
+  const g = c.getContext("2d");
+  const saveT = S.t;
+  S.t = 0;                                       // 指标在静态姿态下算
+  const items = [];
+  for(const part of PARTS){
+    if(!part.visible) continue;
+    const t2 = treated(part);
+    for(const s of t2) items.push({s, part});
+  }
+  const mp = {};
+  for(const part of TOTAL_ORDER) mp[part.num] = part;
+  for(const {s, part} of items) paint(g, s, S.texMode === "hardbl");
+  S.t = saveT;
+
+  const d = g.getImageData(0, 0, CW, CH).data;
+  let solid = 0, band = 0, inter = 0, se = 0, n = 0, ae = 0, nz = 0, mism = 0;
+  for(let i = 0; i < d.length; i += 4){
+    const a = d[i + 3], ra = b[i + 3];
+    if(a > 127) solid++;
+    if(a > 25 && a < 230) band++;
+    if(ra > 127){
+      n++;
+      const sa = a > 127;
+      if(sa) inter++;
+      else mism++;                              // 参考是不透明、重建却漏了 → 轮廓不符
+      const db = d[i] - b[i], dg = d[i+1] - b[i+1], dr = d[i+2] - b[i+2];
+      const e = (dr*dr + dg*dg + db*db) / 3;
+      se += e; ae += Math.sqrt(e);
+      if(e > 576) nz++;                          // 平均每通道差 24 以上才算“明显”
+    } else if(a > 127) mism++;                   // 参考透明、重建却多出一块 → 轮廓不符
+  }
+  const rmse = Math.sqrt(se / Math.max(1, n));
+  M = {
+    shapes: items.length,
+    band, refBand: REF_M.band,
+    coverage: inter / Math.max(1, n) * 100,
+    mism, mismPct: mism / Math.max(1, n) * 100,
+    rmse, mae: ae / Math.max(1, n),
+    diffPx: nz / Math.max(1, n) * 100
+  };
+  paintMetrics();
+}
+
+function paintMetrics(){
+  if(!M) return;
+  const rows = [
+    ["图元数（=Lua 控件数）", M.shapes.toLocaleString()],
+    ["半透明像素（发虚指标）", `${M.band.toLocaleString()} <span class="pill ${M.band < 900 ? 'ok' : 'bad'}">${S.texMode === 'soft' ? '软边' : '硬边'}</span>`],
+    ["参考图半透明像素", M.refBand.toLocaleString() + "（二值硬边）"],
+    ["轮廓覆盖", M.coverage.toFixed(2) + "%"],
+    ["轮廓不符像素", `${M.mism.toLocaleString()}（${M.mismPct.toFixed(2)}%）`],
+    ["颜色 RMSE", M.rmse.toFixed(2)],
+    ["平均颜色误差", M.mae.toFixed(2)],
+    ["明显差异像素", M.diffPx.toFixed(2) + "%"]
+  ];
+  document.getElementById("metrics").innerHTML = rows.map(([k, v], i) =>
+    `<tr class="${i === 3 ? 'sep' : ''}"><td>${k}</td><td>${v}</td></tr>`).join("");
+  const soft = M.band > 1500;
+  const v = document.getElementById("verdict");
+  v.className = "note " + (soft ? "warn" : "ok");
+  v.innerHTML = soft
+    ? "边缘仍偏软：切到<b>硬边</b>贴图，或提高<b>提纯阈值</b>。"
+    : `边缘已接近源图的硬边水平（半透明像素 ${M.band}，源图为 0）。`
+      + `轮廓不符 ${M.mismPct.toFixed(2)}% 属于图元逼近的固有误差。`;
+}
+
+/* ══════════════ 7. 运行时模拟（铺图元 → 关 Tick → 每帧更新） ══════════════ */
+const RT = {created:0, frameMs:0, baked:false, done:false};
+const logEl = document.getElementById("log");
+function logLine(s, cls){
+  const t = new Date().toTimeString().slice(0, 8);
+  logEl.insertAdjacentHTML("beforeend", `<div class="${cls || ''}">[${t}] ${s}</div>`);
+  logEl.scrollTop = logEl.scrollHeight;
+  while(logEl.childElementCount > 120) logEl.removeChild(logEl.firstChild);
+}
+
+function runtimeStats(){
+  const rows = [
+    ["容器", "GEIMG_Canvas"],
+    ["策略", "instantiate"],
+    ["已创建控件", `${RT.created.toLocaleString()} / ${TOTAL.toLocaleString()}`],
+    ["每帧预算", S.budget],
+    ["逐帧回调", RT.done ? "已关闭 EnableUpdate(false)" : "运行中"],
+    [S.perShape ? "每帧逐图元重画" : "每帧绘制", RT.frameMs.toFixed(2) + " ms"],
+    ["理论帧率上限", RT.frameMs > 0.05 ? Math.round(1000 / RT.frameMs) + " fps" : "—"],
+    ["重建贴图耗时", (RT.bakeMs || 0).toFixed(0) + " ms"]
+  ];
+  if(S.perShape) rows.push(["注意", "浏览器要真栅格化每个图元；游戏内只是改控件属性，实际更轻"]);
+  document.getElementById("runtime").innerHTML = rows.map(([k, v], i) =>
+    `<tr class="${i === 5 ? 'sep' : ''}"><td>${k}</td><td>${v}</td></tr>`).join("");
+}
+
+/* ══════════════ 8. 主循环 ══════════════ */
+let last = performance.now();
+let burst = 0, burstCool = 0;
+function loop(now){
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  const t0 = performance.now();
+
+  if(S.playing){ S.t += dt * S.speed; }
+  tickBlink(dt);
+  tickActions();
+  tickGaze(dt);
+
+  if(S.perShape){
+    // 逐图元重画代价高（每个图元都要真栅格化一次），改成突发采样：短窗口内逐图元
+    // 重画以测真实开销，其余时间让出主线程，界面仍可交互。
+    if(burst > 0){
+      draw();
+      const ms = performance.now() - t0;
+      RT.frameMs = RT.frameMs ? RT.frameMs * 0.5 + ms * 0.5 : ms;
+      burst--;
+    } else {
+      burstCool -= dt;
+      if(burstCool <= 0){ burst = 5; burstCool = 0.8; }
+    }
+  } else if(S.playing || DIRTY || BLINK.auto || BLINK.hold || S.blManual > 0
+            || ACTIVE.length || anyChannelOn() || gazeActive()){
+    draw();
+    const ms = performance.now() - t0;
+    RT.frameMs = RT.frameMs ? RT.frameMs * 0.85 + ms * 0.15 : ms;
+  }
+  DIRTY = false;
+
+  syncRuntime();
+  requestAnimationFrame(loop);
+}
+let DIRTY = true;
+
+function syncRuntime(){
+  if(!RT.done){
+    // 模拟分帧实例化：按预算把图元逐个“创建”出来
+    const step = Math.min(S.budget, TOTAL - RT.created);
+    RT.created += step;
+    document.getElementById("statPill").textContent =
+      `铺图元 ${(RT.created / TOTAL * 100).toFixed(0)}%`;
+    if(RT.created >= TOTAL){
+      RT.done = true;
+      logLine(`图元铺完：${TOTAL} / ${TOTAL} —— 对应 Lua 侧 Inst 全部创建完成`, "ok");
+      logLine("script:EnableUpdate(false) —— 静态时不再逐帧回调"
+                     + "（旧文档里叫 EnableTick，运行时已改名）", "ok");
+    }
+  } else {
+    document.getElementById("statPill").textContent =
+      `${TOTAL.toLocaleString()} 图元 · 26 部件 · ${M ? M.band : "—"} 半透明px`;
+  }
+  runtimeStats();
+  drawCurves();
+  if((uiTick++ % 6) === 0){ layoutBlinkStat(); layoutGazeStat(); layoutHud(); }
+}
+let uiTick = 0;
+
+/* ══════════════ 9. 曲线 ══════════════ */
+const cc = document.getElementById("curves").getContext("2d");
+function drawCurves(){
+  const w = 240, h = 52;
+  cc.clearRect(0, 0, w, h);
+  cc.fillStyle = "#181b22"; cc.fillRect(0, 0, w, h);
+  const mid = h / 2;
+  cc.strokeStyle = "#2b3040"; cc.beginPath(); cc.moveTo(0, mid); cc.lineTo(w, mid); cc.stroke();
+  const curves = [[0, "#5aa9ff"], [0.16, "#4ecb8a"], [0.26, "#ffb84d"]];
+  for(const [delay, col] of curves){
+    cc.strokeStyle = col; cc.lineWidth = 1.4; cc.beginPath();
+    for(let i = 0; i <= w; i++){
+      const t = S.t + (i - w * S.phase) * S.period / w;
+      const v = Math.sin(2 * Math.PI * (t - delay) / S.period);
+      const y = mid - v * (h / 2 - 5);
+      i ? cc.lineTo(i, y) : cc.moveTo(0, y);
+    }
+    cc.stroke();
+  }
+  cc.strokeStyle = "#ff6b6b"; cc.beginPath();
+  cc.moveTo(w * S.phase, 2); cc.lineTo(w * S.phase, h - 2); cc.stroke();
+}
+
+/* ══════════════ 10. 放大镜 ══════════════ */
+const magA = document.getElementById("magA"), magB = document.getElementById("magB");
+const magBox = document.getElementById("mag");
+const MAG_W = 42, MAG_H = 56, MAG_Z = 4;
+function renderMagAt(x, y){
+  const sx = Math.max(0, Math.min(CW - MAG_W, Math.round(x - MAG_W / 2)));
+  const sy = Math.max(0, Math.min(CH - MAG_H, Math.round(y - MAG_H / 2)));
+  composeScene();                                   // 保证右格是当前视图/处理参数的结果
+  for(const [cvs, image] of [[magA, off], [magB, null]]){
+    const g = cvs.getContext("2d");
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.fillStyle = "#fff"; g.fillRect(0, 0, cvs.width, cvs.height);
+    g.imageSmoothingEnabled = false;
+    if(image) g.drawImage(image, sx, sy, MAG_W, MAG_H, 0, 0, MAG_W * MAG_Z, MAG_H * MAG_Z);
+    else if(REF_IMG.complete) g.drawImage(REF_IMG, sx, sy, MAG_W, MAG_H, 0, 0, MAG_W * MAG_Z, MAG_H * MAG_Z);
+  }
+}
+function updateMag(ev){
+  if(!S.mag) return;
+  const r = cv.getBoundingClientRect();
+  renderMagAt((ev.clientX - r.left) / VIEW.zoom, (ev.clientY - r.top) / VIEW.zoom);
+}
+cv.addEventListener("mousemove", ev => { updateMag(ev); onGazeMove(ev); });
+cv.addEventListener("mouseleave", () => {
+  GZ.inside = false;
+  GZ.tx = GZ.ty = 0;                       // 鼠标离开画布 → 视线回正
+  for(const cvs of [magA, magB]){
+    const g = cvs.getContext("2d");
+    g.fillStyle = "#fff"; g.fillRect(0, 0, cvs.width, cvs.height);
+  }
+});
+
+/* ══════════════ 11. 快捷键 + 屏幕文字（状态 / 功能） ══════════════
+   键位与 Lua 剧场版**完全一致**，方便照着预览里的手感写进游戏：
+     1~6 预设（待机/摆动/风吹/眯眼笑/说话/全停）、7~0 一次性动作（摇头/点头/惊讶/摆臂）
+     U 眨一下、Y 保持闭眼、Z 视点跟随、G 动画总开关、H 功能表
+   只有预览才有的是：空格 播放/暂停、R 视点回正、M 放大镜（游戏里没有对应按键）。
+   游戏侧靠 Enum.KeyEventType 的「奇匠按键」：KeyboardCraftspersonKey1..10Down = 数字 1~0，
+   11/12/13/14/15 = U/Z/Y/G/H —— 所以这张表能一一对上。 */
+const KEYMAP = [
+  ["1", "待机",   () => applyPresetChannels("idle")],
+  ["2", "摆动",   () => applyPresetChannels("swayIdle")],
+  ["3", "风吹",   () => applyPresetChannels("wind")],
+  ["4", "眯眼笑", () => applyPresetChannels("smile")],
+  ["5", "说话",   () => applyPresetChannels("talk")],
+  ["6", "全停",   () => { applyPresetChannels("allOff"); allOffExtra(); }],
+  ["7", "摇头",   () => playAction("shake")],
+  ["8", "点头",   () => playAction("nodOnce")],
+  ["9", "惊讶",   () => playAction("surprise")],
+  ["0", "摆臂",   () => playAction("wave")],
+  ["U", "眨一下", () => { scheduleBlink(BT); BLINK.count--; DIRTY = true; logLine("快捷键 U：眨一下"); }],
+  ["Y", "保持闭眼", () => { BLINK.hold = !BLINK.hold; DIRTY = true;
+      logLine("快捷键 Y：闭眼保持 " + (BLINK.hold ? "开" : "关")); }],
+  ["Z", "视点跟随", () => { S.gazeOn = !S.gazeOn; document.getElementById("gazeOn").checked = S.gazeOn;
+      if(!S.gazeOn){ GZ.tx = GZ.ty = 0; } DIRTY = true;
+      logLine("快捷键 Z：视点跟随 " + (S.gazeOn ? "开" : "关")); }],
+  ["G", "动画开关", () => { S.playing = !S.playing;
+      document.getElementById("playBtn").textContent = S.playing ? "暂停" : "播放"; DIRTY = true;
+      logLine("快捷键 G：动画 " + (S.playing ? "播放" : "暂停")); }],
+  ["H", "功能表", () => toggleHelp()],
+  // 注意：游戏里**空格是跳跃**（KeyboardJumpKeyDown）。预览里还没接跳跃，
+  // 所以空格先留给播放/暂停 —— 这一条在功能表里标了"仅预览"，别照抄到游戏里。
+  ["空格", "播放/暂停（仅预览；游戏里空格=跳跃）", () => document.getElementById("playBtn").click()],
+  ["R", "视点回正（仅预览）", () => document.getElementById("gazeCenter").click()],
+  ["M", "放大镜（仅预览）", () => document.getElementById("magBtn").click()],
+];
+const KEY = {};
+for(const [k, label, fn] of KEYMAP) KEY[k] = {label, fn};
+let lastKey = "—", lastKeyT = 0;
+
+function toggleHelp(force){
+  const v = document.getElementById("helpVeil");
+  const on = force === undefined ? !v.classList.contains("on") : force;
+  v.classList.toggle("on", on);
+  // 功能表展开时把左上角的常驻文字收起来：那一屏已经把同样的内容写全了
+  document.getElementById("hud").style.display = on ? "none" : "block";
+  if(on) DIRTY = true;
+}
+function allOffExtra(){
+  BLINK.auto = false; BLINK.hold = false;
+  document.getElementById("blinkAuto").checked = false;
+  const hb = document.getElementById("blHold");
+  hb.classList.remove("on"); hb.textContent = "保持闭眼";
+  S.blManual = 0;
+  document.getElementById("blManual").value = 0;
+  document.getElementById("blManualV").textContent = "0.00";
+  logLine("全停：呼吸 / 眨眼 / 动作全部归零");
+}
+window.addEventListener("keydown", e => {
+  const tag = (e.target && e.target.tagName || "").toLowerCase();
+  if(tag === "input" || tag === "select" || tag === "textarea") return;   // 别抢滑杆/下拉的键
+  if(e.ctrlKey || e.altKey || e.metaKey) return;
+  const k = e.key === " " ? "空格" : (e.key.length === 1 ? e.key.toUpperCase() : e.key);
+  if(k === "Escape"){ toggleHelp(false); return; }
+  const hit = KEY[k];
+  if(!hit) return;
+  e.preventDefault();
+  lastKey = k + " · " + hit.label;
+  lastKeyT = performance.now();
+  DIRTY = true;
+  hit.fn();
+});
+
+/** 屏幕文字：功能表（短）+ 实时状态。行宽刻意压窄，免得盖住角色 */
+function layoutHud(){
+  const on = [];
+  for(const n of CH_NAMES) if(S.ch[n]) on.push(`${CH_LABEL[n]}${S.ch[n].toFixed(2)}`);
+  const acts = ACTIVE.map(a => ACTIONS[a.name].label);
+  const rows = [
+    `<b>快捷键</b>  1待机 2摆动 3风吹 4眯眼笑 5说话 6全停`,
+    `        7摇头 8点头 9惊讶 0摆臂`,
+    `        U眨眼 Y闭眼 Z视点 G动画 <b>H功能表</b>`,
+    `<b>状态</b>    预设 ${lastPresetLabel}`,
+    `        动作 ${acts.length ? acts.join("+") : "—"}`,
+    `        通道 ${on.length ? on.join(" ") : "全关"}`,
+    `        视点 ${GZ.x >= 0 ? "→" : "←"}${Math.abs(GZ.x).toFixed(2)} ` +
+      `${GZ.y >= 0 ? "↑" : "↓"}${Math.abs(GZ.y).toFixed(2)}`,
+    `        眨眼 ${(BLINK.hold ? "保持" : BLINK.auto ? "自动" : "关")} ${Math.max(BLINK.vL, BLINK.vR).toFixed(2)}` +
+      `｜呼吸 ${S.playing ? "播放" : "暂停"}`,
+    `        ${RT.frameMs.toFixed(2)}ms/帧｜${RT.created.toLocaleString()}/${TOTAL.toLocaleString()} 图元`,
+    `        ${lastKeyT && performance.now() - lastKeyT < 1400
+        ? `<span class="hi">▲ ${lastKey}</span>` : `上一步操作 ${lastKey}`}`,
+  ];
+  document.getElementById("hud").innerHTML = rows.join("\n");
+}
+let lastPresetLabel = "待机";
+
+/** H 键的完整功能表 */
+function layoutHelp(){
+  const b = document.getElementById("helpBox");
+  if(!b.dataset.built){
+    const rows = KEYMAP.map(([k, label]) =>
+      `<tr><td>${k}</td><td>${label}</td></tr>`).join("");
+    b.innerHTML = `<h3>功能与快捷键</h3><table>${rows}</table>`
+      + `<div class="note">键位与游戏内的 Lua 剧场版一致（游戏走「奇匠按键」，数字 1~0 + U/Z/Y/G/H）。
+         标「仅预览」的键在游戏里没有；反过来，<b>游戏版的空格 = 跳跃</b>，这个预览还没接跳跃。<br>
+         鼠标移到画布上 = 视点跟随；左栏是硬边/边缘参数与量化指标；右栏是运行时模拟与各通道强度。</div>`;
+    b.dataset.built = "1";
+  }
+}
+/* ══════════════ 12. UI 构建 ══════════════ */
+function bindRange(id, key, fmt, after){
+  const el = document.getElementById(id), lab = document.getElementById(id + "V");
+  const upd = () => {
+    S[key] = parseFloat(el.value);
+    if(lab) lab.textContent = fmt ? fmt(S[key]) : S[key];
+    if(after) after();
+  };
+  el.addEventListener("input", upd);
+  upd();
+}
+bindRange("dropT", "dropT", v => v.toFixed(3), () => { markDirty(); });
+bindRange("snapT", "snapT", v => v.toFixed(2), () => { markDirty(); });
+bindRange("gamma", "gamma", v => v.toFixed(2), () => { markDirty(); });
+bindRange("compT", "compT", v => v <= 0 ? "关" : v.toFixed(2), () => { markDirty(); });
+bindRange("bodyAmp", "bodyAmp", v => v.toFixed(1), () => { DIRTY = true; });
+bindRange("depthK", "depthK", v => v.toFixed(2), () => {
+  BODY.depthK = S.depthK; DIRTY = true;
+});
+bindRange("budget", "budget", v => v | 0);
+bindRange("period", "period", v => v.toFixed(1));
+bindRange("baseAmp", "baseAmp", v => v.toFixed(1));
+bindRange("ampScale", "ampScale", v => v.toFixed(2));
+bindRange("speed", "speed", v => v.toFixed(2));
+bindRange("phase", "phase", v => v.toFixed(3));
+bindRange("blDur", "blDur", v => v.toFixed(3));
+bindRange("blGapMin", "blGapMin", v => v.toFixed(1));
+bindRange("blGapMax", "blGapMax", v => v.toFixed(1), () => {
+  if(S.blGapMax < S.blGapMin){ S.blGapMax = S.blGapMin; document.getElementById("blGapMax").value = S.blGapMin; document.getElementById("blGapMaxV").textContent = S.blGapMin.toFixed(1); }
+});
+bindRange("blClose", "maxClose", v => v.toFixed(2));
+bindRange("blAt", "closeAt", v => v.toFixed(2));
+bindRange("blBrow", "browFollow", v => v.toFixed(2));
+bindRange("blFade", "blinkFade", v => v.toFixed(2), () => { DIRTY = true; });
+bindRange("chAmp", "chAmp", v => v.toFixed(2), () => { DIRTY = true; });
+bindRange("motionScale", "motionScale", v => v.toFixed(2), () => { DIRTY = true; });
+bindRange("gazeAmp", "gazeAmp", v => v.toFixed(2), () => { DIRTY = true; });
+bindRange("swing", "swing", v => v.toFixed(1), () => { DIRTY = true; });
+bindRange("yawMax", "yawMax", v => v.toFixed(1), () => { DIRTY = true; });
+
+document.getElementById("gazeOn").addEventListener("change", e => {
+  S.gazeOn = e.target.checked;
+  if(!S.gazeOn){ GZ.tx = GZ.ty = 0; }
+  logLine(S.gazeOn ? "视点跟随：开（把鼠标移到画布上）" : "视点跟随：关");
+  DIRTY = true;
+});
+document.getElementById("irisMask").addEventListener("change", e => {
+  S.irisMask = e.target.checked;
+  logLine(S.irisMask ? "虹膜掩膜裁剪：开（按 眼白∪睫毛∪眼线 裁剪）"
+                     : "虹膜掩膜裁剪：关 → 位移退化为实测安全范围（左5/右0/上3/下0），右视与下视会几乎不动",
+          S.irisMask ? "ok" : "wn");
+  DIRTY = true;
+});
+document.getElementById("gazeCenter").onclick = () => {
+  GZ.tx = GZ.ty = 0; GZ.x = GZ.y = GZ.lagX = GZ.lagY = 0;
+  DIRTY = true;
+};
+
+function layoutGazeStat(){
+  const rows = [
+    ["鼠标方向", GZ.inside || GZ.x || GZ.y
+      ? `${GZ.x >= 0 ? "→" : "←"}${Math.abs(GZ.x).toFixed(2)}  ${GZ.y >= 0 ? "↑" : "↓"}${Math.abs(GZ.y).toFixed(2)}` : "—"],
+    ["虹膜位移 L/R", `${(GZ.x * GAZE.irisDx * S.gazeAmp).toFixed(1)} , ${(GZ.y * GAZE.irisDy * S.gazeAmp).toFixed(1)} px`],
+    // 头已经没有"整体平移"了：方向感来自柱面形变，躯干场在脖子以上被 headKeep 收掉
+    ["躯干场 @胸口/头顶",
+      `${torsoField(BODY.cxTorso, BODY.yNeck, GZ.x * S.motionScale)[0].toFixed(1)} / `
+      + `${torsoField(BODY.cxTorso, BODY.yTop, GZ.x * S.motionScale)[0].toFixed(1)} px`],
+    ["躯干场 @脚底", `${torsoField(BODY.cxTorso, BODY.yGround, GZ.x * S.motionScale)[0].toFixed(2)} px（钉住）`],
+    ["躯干锚点", `髋 ${BODY.yHip.toFixed(0)} → 脖子 ${BODY.yNeck.toFixed(0)} → 头顶 ${BODY.yTop.toFixed(0)}`],
+    ["头部形变", HEAD.ready
+      ? `柱面 中心(${HEAD.hx.toFixed(0)},${HEAD.hy.toFixed(0)}) 半径(${HEAD.rx.toFixed(0)},${HEAD.ry.toFixed(0)})`
+      : "不可用"],
+    ["头部形变方式", "分列位移（每列一次 drawImage）"],
+    ["掩膜裁剪", S.irisMask
+      ? (Object.keys(EYEMASK).length === 2 ? "开（眼白∪睫毛∪眼线）" : "不可用")
+      : "关 → 限幅模式"],
+    ["限幅 L/右/上/下", (() => { const l = GAZE.irisSafe.eyeL || {};
+        return [l.left||0, l.right||0, l.up||0, l.down||0].join(" / ") + " px"; })()]
+  ];
+  document.getElementById("gazeStat").innerHTML = rows.map(([k, v]) =>
+    `<tr><td>${k}</td><td>${v}</td></tr>`).join("");
+}
+bindRange("blSkew", "blSkew", v => (v | 0).toString());
+bindRange("blManual", "blManual", v => v.toFixed(2), () => { DIRTY = true; });
+
+function layoutBlinkStat(){
+  const eL = BL.eyes.eyeL, eR = BL.eyes.eyeR;
+  const rows = [
+    ["左眼闭合线 y", closeTargetY("eyeL").toFixed(1)],
+    ["右眼闭合线 y", closeTargetY("eyeR").toFixed(1)],
+    ["眼睑下移 L / R", `${(closeTargetY("eyeL") - eL.lidCy).toFixed(1)} / ${(closeTargetY("eyeR") - eR.lidCy).toFixed(1)} px`],
+    ["当前闭合 L / R", `${BLINK.vL.toFixed(2)} / ${BLINK.vR.toFixed(2)}`],
+    ["已眨次数", BLINK.count],
+    ["距下次眨眼", BLINK.auto ? Math.max(0, BLINK.next - BT).toFixed(1) + " s" : "—"]
+  ];
+  document.getElementById("blinkStat").innerHTML = rows.map(([k, v]) =>
+    `<tr><td>${k}</td><td>${v}</td></tr>`).join("");
+}
+
+document.getElementById("blinkAuto").addEventListener("change", e => {
+  BLINK.auto = e.target.checked;
+  if(BLINK.auto){ BLINK.next = BT + 0.35; logLine("自动眨眼：开"); }
+  else logLine("自动眨眼：关");
+  DIRTY = true;
+});
+document.getElementById("blOnce").onclick = () => {
+  scheduleBlink(BT);
+  BLINK.count--;                       // scheduleBlink 里加过，这里只算"手动触发的一次"
+  logLine("手动触发一次眨眼" + (BLINK.events.length > 1 ? "（含连眨）" : ""));
+  DIRTY = true;
+};
+document.getElementById("blHold").onclick = e => {
+  BLINK.hold = !BLINK.hold;
+  e.target.classList.toggle("on", BLINK.hold);
+  e.target.textContent = BLINK.hold ? "取消保持" : "保持闭眼";
+  DIRTY = true;
+};
+
+function markDirty(){
+  for(const p of PARTS) p._tr = null;        // 处理参数变了 → 缓存作废
+  DIRTY = true;
+  clearTimeout(markDirty._h);
+  markDirty._h = setTimeout(() => { rebake(); M = null; recompute(); DIRTY = true; }, 90);
+}
+
+document.getElementById("texMode").addEventListener("change", e => {
+  S.texMode = e.target.value; markDirty();
+});
+document.getElementById("snapPx").addEventListener("change", e => {
+  S.snapPx = e.target.checked; markDirty();
+});
+document.getElementById("secondary").addEventListener("change", e => {
+  S.secondary = e.target.checked; DIRTY = true;
+});
+document.getElementById("perShape").addEventListener("change", e => {
+  S.perShape = e.target.checked;
+  logLine(S.perShape ? "逐图元变换：每帧重写全部控件的 anchoredPosition（可看真实开销）"
+                     : "部件级变换：每帧只移动部件贴图");
+  recompute(); DIRTY = true;
+});
+document.getElementById("playBtn").addEventListener("click", e => {
+  S.playing = !S.playing;
+  e.target.textContent = S.playing ? "暂停" : "播放";
+  DIRTY = true;
+});
+document.getElementById("magBtn").addEventListener("click", e => {
+  S.mag = !S.mag;
+  magBox.classList.toggle("on", S.mag);
+  e.target.classList.toggle("on", S.mag);
+  if(S.mag){ renderMagAt(CW / 2, CH * 0.34); logLine("放大镜：左=原 PNG（二值硬边），右=图元重建。硬边差异在这一级最清楚"); }
+});
+
+document.getElementById("viewSeg").addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if(!b) return;
+  S.view = b.dataset.view;
+  [...e.currentTarget.children].forEach(x => x.classList.toggle("on", x === b));
+  resize(); DIRTY = true;
+});
+
+// 预设
+function applyPreset(o){
+  Object.assign(S, o);
+  const set = (id, v) => { const el = document.getElementById(id); if(el.type === "checkbox") el.checked = v; else el.value = v; el.dispatchEvent(new Event("input")); };
+  set("texMode", S.texMode);
+  const sel = document.getElementById("texMode"); sel.value = S.texMode;
+  set("snapPx", S.snapPx); set("dropT", S.dropT); set("snapT", S.snapT);
+  set("gamma", S.gamma); set("compT", S.compT);
+  rebake(); M = null; recompute(); DIRTY = true;
+}
+document.getElementById("presetRaw").onclick = () => {
+  logLine("预设：原样（软贴图、亚像素、不处理 alpha）");
+  applyPreset({texMode:"soft", snapPx:false, dropT:0, snapT:1.0, gamma:1, compT:0});
+};
+document.getElementById("presetHard").onclick = () => {
+  logLine("预设：硬边（硬贴图 + 像素对齐）—— 与源图同为二值边缘", "ok");
+  applyPreset({texMode:"hard", snapPx:true, dropT:0.06, snapT:0.85, gamma:1, compT:0});
+};
+document.getElementById("presetLua").onclick = () => {
+  logLine("预设：硬边 + 丢淡（控件数 6370 → 6186，约 -3%）", "ok");
+  applyPreset({texMode:"hard", snapPx:true, dropT:0.10, snapT:0.85, gamma:0.75, compT:0});
+};
+
+/* 预设动作 / 通道 */
+const CH_LABEL = { sway:"摆动", turn:"转头", nod:"轻点头", wind:"风吹",
+                   armR:"摆臂", talk:"说话", eyeOpen:"睁大/眯", browRaise:"抬眉" };
+const CH_RANGE = { eyeOpen:[-1, 1.6], browRaise:[-1, 1.5], talk:[0, 1], armR:[0, 1.5] };
+
+function buildActionUI(){
+  document.getElementById("presetRow").innerHTML = Object.keys(PRESETS)
+    .map(k => `<button data-preset="${k}">${PRESETS[k].label}</button>`).join("");
+  document.getElementById("actRow").innerHTML = Object.keys(ACTIONS)
+    .map(k => `<button class="act2" data-act="${k}">${ACTIONS[k].label}</button>`).join("");
+  document.getElementById("chRow").innerHTML = CH_NAMES.map(n => {
+    const r = CH_RANGE[n] || [0, 1.5];
+    return `<div class="chline"><label for="ch_${n}">${CH_LABEL[n]}</label>`
+      + `<input type="range" id="ch_${n}" min="${r[0]}" max="${r[1]}" step="0.05" value="0">`
+      + `<span class="val" id="chv_${n}">0.00</span></div>`;
+  }).join("");
+  document.getElementById("presetRow").addEventListener("click", e => {
+    const b = e.target.closest("button[data-preset]");
+    if(!b) return;
+    applyPresetChannels(b.dataset.preset);
+    if(b.dataset.preset === "allOff"){
+      BLINK.auto = false; BLINK.hold = false;
+      document.getElementById("blinkAuto").checked = false;
+      const hb = document.getElementById("blHold");
+      hb.classList.remove("on"); hb.textContent = "保持闭眼";
+      S.blManual = 0; document.getElementById("blManual").value = 0;
+      document.getElementById("blManualV").textContent = "0.00";
+      logLine("全停：呼吸 / 眨眼 / 动作全部归零");
+    }
+    [...e.currentTarget.children].forEach(x => x.classList.toggle("on", x === b));
+    DIRTY = true;
+  });
+  document.getElementById("actRow").addEventListener("click", e => {
+    const b = e.target.closest("button[data-act]");
+    if(b) playAction(b.dataset.act);
+  });
+  document.getElementById("chRow").addEventListener("input", e => {
+    const el = e.target;
+    if(!el.id.startsWith("ch_")) return;
+    const n = el.id.slice(3);
+    S.ch[n] = parseFloat(el.value);
+    document.getElementById("chv_" + n).textContent = S.ch[n].toFixed(2);
+    DIRTY = true;
+  });
+}
+/** 通道值 → UI（预设切换后回填） */
+function syncChannelUI(){
+  for(const n of CH_NAMES){
+    const el = document.getElementById("ch_" + n);
+    if(!el) continue;
+    el.value = S.ch[n] || 0;
+    const lab = document.getElementById("chv_" + n);
+    if(lab) lab.textContent = (S.ch[n] || 0).toFixed(2);
+  }
+  const ca = document.getElementById("chAmp");
+  if(ca){ ca.value = S.chAmp; document.getElementById("chAmpV").textContent = S.chAmp.toFixed(2); }
+}
+function anyChannelOn(){
+  for(const n of CH_NAMES) if(S.ch[n]) return true;
+  return false;
+}
+
+/* 部件表 */
+function buildPartsTable(){
+  const tb = document.getElementById("partsBody");
+  tb.innerHTML = PARTS.slice().sort((a, b) => b.num - a.num).map(p => `
+    <tr data-num="${p.num}">
+      <td><input type="checkbox" ${p.visible ? "checked" : ""} data-act="vis"></td>
+      <td><span class="nm" title="${p.name}">${p.num} ${p.name}</span></td>
+      <td>${p.items.length}</td>
+      <td><input type="number" step="0.05" value="${p.w}" data-act="w"></td>
+      <td><input type="number" step="0.02" value="${p.delay}" data-act="delay"></td>
+      <td><input type="number" step="0.1" value="${p.rot}" data-act="rot"></td>
+    </tr>`).join("");
+  tb.addEventListener("input", e => {
+    const tr = e.target.closest("tr");
+    const p = PARTS.find(x => x.num === +tr.dataset.num);
+    const act = e.target.dataset.act;
+    if(act === "vis") p.visible = e.target.checked;
+    else p[act] = parseFloat(e.target.value);
+    tr.classList.toggle("off", !p.visible);
+    M = null; recompute(); DIRTY = true;
+  });
+}
+
+/* ══════════════ 13. 导出 ══════════════ */
+function hex2(n){ return Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0").toUpperCase(); }
+/** 把角度归一到 (-180, 180]，与 GE-IMG Tool 导出的取值范围一致 */
+function normDeg(d){ d = ((d % 360) + 360) % 360; return d > 180 ? d - 360 : d; }
+function luaRows(){
+  const rows = [];
+  for(const part of TOTAL_ORDER){
+    const t2 = treated(part);
+    for(const s of t2){
+      const rotDeg = normDeg(-s.rad * 180 / Math.PI);
+      const a = Math.round(s.a * 255);
+      const t = s.t === "circle" ? "c" : s.t === "ellipse" ? "e" : "l";
+      rows.push(`${t}|${s.x.toFixed(2)}|${s.y.toFixed(2)}|${s.w.toFixed(2)}|${s.h.toFixed(2)}|${rotDeg.toFixed(2)}|${hex2(s.r)}${hex2(s.g)}${hex2(s.b)}${hex2(a)}`);
+    }
+  }
+  return rows;
+}
+
+/** 生成自包含 Lua：CFG + 紧凑 RAW + 渲染逻辑（模板来自 GE-IMG Tool 的 res/lua_template.lua）。
+ *  只带「能在游戏内实现」的处理结果——贴图硬度是素材选择，写进注释而不是数据。 */
+function buildLua(){
+  const L = DATA.lua;
+  const cfgs = `local CFG = {
+  containerName = "${L.containerName}",   -- 客户端控件容器的名称；脚本挂在别的层时会向上找同名祖先
+  imagePrefabId = ${L.imagePrefabId},   -- 图片控件模板索引ID（uiPrefabId）  ← 待填，见 README
+  circleAssetId = ${L.circleAssetId},   -- 图元用的圆形贴图资源ID（固定 100002）
+  strategy = "instantiate",   -- instantiate = 运行时创建；pool = 用容器里预摆的控件
+  budgetPerFrame = ${S.budget},   -- 每帧实例化多少个，防进关卡顿
+  alphaMax = 255,   -- 图元不透明度的上限（0-255），调小整体更淡
+
+  -- 画布映射：源图像素 → Lua UI 画布（1600x900、中心 800,450）
+  scale = ${L.scale.toFixed(6)},
+  offsetX = ${L.offsetX.toFixed(3)},
+  offsetY = ${L.offsetY.toFixed(3)},
+  sourceHeight = ${L.sourceHeight},
+  flipY = true,   -- 源图 Y 向下、UI 画布 Y 向上
+
+  -- 画布尺寸：控件位置用的是「容器中心原点」，而上面 offsetX/offsetY 算出来的是
+  -- 画布空间坐标（左下原点）。两者相差半个画布，decode 里必须减掉，
+  -- 否则整个角色会窜到画面右上角（实测踩过）。
+  canvasW = ${L.canvasW},
+  canvasH = ${L.canvasH},
+}`;
+  const rows = luaRows();
+  const raw = rows.map(r => `  "${r}",`).join("\n");
+  const body = DATA.luaTemplate.replace("__CFG__", cfgs).replace("__RAW__", raw);
+  const head =
+    `-- GEIMG 数据集（由「图元动态预览」导出）\n`
+    + `-- 图元 ${rows.length} 个 / 部件 ${PARTS.length} 个 / 坐标 = 源图像素 411x600\n`
+    + `-- 数组顺序即绘制顺序（下标 1 在最底层，数字小的部件在上层）\n`
+    + `-- 边缘处理：贴图=${S.texMode === "soft" ? "软边（抗锯齿）" : "硬边（二值）"}`
+    + `${S.snapPx ? " + 像素对齐（位置/尺寸取整）" : ""}`
+    + `，丢淡阈值 ${S.dropT}，提纯阈值 ${S.snapT}，alpha 增益 ${S.gamma}\n`
+    + `-- 注意：贴图硬度是素材属性，不在数据里；游戏里要换成硬边白圆才和预览一致。\n\n`;
+  return head + body + "\n" + blinkAppendix();
+}
+
+/** 附在脚本末尾的眨眼数据与换算说明。眼/睑/眉各自对应 RAW 里的连续下标区间。 */
+function blinkAppendix(){
+  const rng = DATA.blink.ranges || {};
+  const mr = rng.mouth;
+  const rl = r => r ? `{${r[0]}, ${r[1]}}` : "nil";
+  const eyes = Object.keys(BL.eyes).map(k => {
+    const e = BL.eyes[k], r = rng[k] || {};
+    return `    ${k} = { top = ${e.top}, bot = ${e.bot}, lidCy = ${e.lidCy}, cx = ${e.cx},\n`
+         + `             eyeRange = ${rl(r.eye)}, lidRange = ${rl(r.lid)}, browRange = ${rl(r.brow)} },`;
+  }).join("\n");
+  return `
+-- ============================================================================
+-- 眨眼（附录）：数据 + 换算说明。渲染模板本身不做动画，这段要接到 OnUpdate 里。
+--
+-- 每帧：先算闭合量 v(0..1)，再按下面的公式改受影响的控件。
+--   闭合剖面（真人也是闭得快、睁得慢）:
+--     u = (now - t0 - skew) / duration
+--     u < 0.4 : v = 0.5 - 0.5*cos(math.pi * u / 0.4)
+--     否则     : v = 0.5 + 0.5*cos(math.pi * (u - 0.4) / 0.6)
+--
+-- 换算（canvasY 是源图像素、Y 向下；RAW 里的 x/y/w/h 就是源图像素）:
+--   targetY = top + closeAt * (bot - top)         -- 闭合线
+--   眼内容: sy = 1 - maxClose * v
+--           newY = targetY + (y - targetY) * sy
+--           newH = h * sy
+--           imageColor 的 alpha *= (1 - eyeFade * v)
+--           —— 这里没有真正的遮挡关系，眼白压扁后会留一条淡色带，靠淡出收干净
+--   眼睑线: newY = y + v * (targetY - lidCy)
+--   眉毛  : newY = y + v * browFollow * (targetY - lidCy)
+--   说话  : 嘴绕自身中线纵向张开（开合量随时间不规则变化）
+--           newY = cy + (y - cy) * k ;  newH = h * k     (k = 1 + talk*0.95)
+--   然后套模板里的 CFG 映射（注意 Y 翻转 + 减半个画布）:
+--           luaX = offsetX + x * scale - CENTER_X
+--           luaY = offsetY + (sourceHeight - newY) * scale - CENTER_Y
+--           sizeDelta = (w * scale, newH * scale)
+--           （CENTER_X/Y 是模板里算好的容器中心：控件位置用「容器中心原点」，
+--            比画布左下原点差半个画布，见 game.GetCursorUIPos 的坐标系说明）
+-- ============================================================================
+
+local BLINK = {
+  duration = ${S.blDur}, maxClose = ${S.maxClose}, closeAt = ${S.closeAt},
+  browFollow = ${S.browFollow}, eyeFade = ${S.blinkFade}, skewMs = ${S.blSkew},
+  mouth = { cx = ${BL.mouth.cx}, cy = ${BL.mouth.cy}, h = ${BL.mouth.h}, range = ${rl(mr)} },
+  eyes = {
+${eyes}
+  },
+}
+
+-- 把闭合量应用到 [from, to] 区间内的控件上（含首含尾，1-based）
+local function applyBlink(pool, raw, from, to, kind, eye, v)
+  if from == nil then return end
+  local targetY = eye.top + BLINK.closeAt * (eye.bot - eye.top)
+  local sy = 1 - BLINK.maxClose * v
+  for i = from, to do
+    local c = pool[i]
+    local row = raw[i]
+    if c ~= nil and c.alive and row ~= nil then
+      local x, y, w, h = string.match(row, "^%a+|([^|]+)|([^|]+)|([^|]+)|([^|]+)|")
+      x, y, w, h = tonumber(x), tonumber(y), tonumber(w), tonumber(h)
+      local ny, nh = y, h
+      if kind == "eye" then
+        ny = targetY + (y - targetY) * sy
+        nh = h * sy
+        -- 淡出：alpha 需按 imageColor 原值乘 (1 - eyeFade*v)，
+        --      Row 的 RRGGBBAA 里末两位就是原 alpha
+      elseif kind == "lid" then
+        ny = y + v * (targetY - eye.lidCy)
+      else
+        ny = y + v * BLINK.browFollow * (targetY - eye.lidCy)
+      end
+      c:SetAnchoredPosition(CFG.offsetX + x * CFG.scale - CENTER_X,
+                            CFG.offsetY + (CFG.sourceHeight - ny) * CFG.scale - CENTER_Y)
+      c:SetSizeDelta(w * CFG.scale, nh * CFG.scale)
+    end
+  end
+end
+`;
+}
+
+document.getElementById("expLua").onclick = () => {
+  const text = buildLua();
+  const n = (text.match(/^  "(c|e|l)\|/gm) || []).length;
+  dl(text, "geimg_render.lua", "text/plain");
+  logLine(`导出 Lua：${n} 个图元，${Math.round(text.length / 1024)} KB`, "ok");
+};
+
+  document.getElementById("expRig").onclick = () => {
+    const o = {
+      format:"geimg-lua-showcase-rig", version:2,
+      canvas:{w:CW, h:CH},
+      draw_order:"文件名编号从大到小（数字越小越靠上层）",
+      motion:{period:S.period, base_amp:S.baseAmp, amp_scale:S.ampScale, secondary:S.secondary,
+              formula:"breath=sin(2πt/T); dy=-base_amp*amp_scale*w*breath(t-delay); rot=rot_deg*v"},
+      channels:{ note:"连续通道：按部件组给权重；pivot 有值表示绕该全局点旋转；lag=true 时叠加该部件自身的 delay",
+                 defs:CHANNELS, active:S.ch, amp:S.chAmp },
+      actions:{ note:"一次性动作：dur 秒包络（u=0..1），贡献叠加在连续通道上",
+                defs:Object.fromEntries(Object.entries(ACTIONS).map(([k, v]) => [k, {label:v.label, dur:v.dur,
+                  ch:Object.keys(v.ch)}])),
+                presets:PRESETS },
+      gaze:{ note:"视点跟随：输入是归一化方向 (gx,gy)∈[-1,1]²，按组权重联动；软物用滞后值",
+             enabled:S.gazeOn, amp:S.gazeAmp,
+             group_weights:GAZE_W, lag_groups:Object.keys(GAZE_LAG_GROUPS),
+             iris_dx:GAZE.irisDx, iris_dy:GAZE.irisDy,
+             head_dx:GAZE.dx, head_dy:GAZE.dy, head_rot:GAZE.rot,
+             lean_rot:GAZE.leanRot, lean_pivot:GAZE.leanPivot,
+             // 遮挡关系：虹膜必须被裁剪到"眼白 ∪ 睫毛 ∪ 眼线"，否则会压到皮肤上
+             occlusion:{ clip_unions:{ eyeL:["eye-white","lid_lash","lid_line"],
+                                      eyeR:["eye-white","lid_lash+line"] },
+                         measured:"不裁剪时虹膜几乎不能动（左眼左移5px/右移0px即出界，因为眼白上沿本被睫毛盖住）；"
+                                + "裁剪到该并集后 ±16px 都仍有半数可见",
+                         lua_hint:"引擎侧：ClientUIImageControl 确有 enableMask(boolean,读写)、"
+                                + "reverseMaskArea(boolean,读写)、enableSoftEdge、softEdgeMode、"
+                                + "softEdgeWidthX/Y、horizontalSoftRange、verticalSoftRange 等字段"
+                                + "（已核对 PDF 原图）；注意**没有 maskArea 这个字段**（只有 reverseMaskArea）。",
+                         evidence:"两条互相拉扯的证据：PDF 正文说「父子层级中的位移/缩放/显隐/Alpha/镜像与裁剪效果由运行时 UI 层级共同决定」，支持「父控件裁子控件」；但术语表里把软边注为「边缘羽化」，且全表没有遮罩/mask 条目，这削弱「用图片当遮罩」的读法。合起来更可能是按矩形区域（可羽化边）裁剪子控件。",
+                         unverified:"但本套资料里没有任何一处说明这些字段的语义（字段表的说明列整列落在 PDF "
+                                  + "位图之外），所以「用眼白当遮罩裁剪虹膜」目前是**待验证的假设**，不是已确认能力。"
+                                  + "类描述只有一句：图片控件用于显示图片并控制颜色、遮罩与填充效果。",
+                         how_to_verify:"建一个 enableMask=true 的父图片控件 + 一个溢出边界的子控件，"
+                                     + "看裁剪是跟随父控件的**图片 alpha 形状**还是只按矩形；若只按矩形则虹膜裁剪不可实现。",
+                         fallback:"走限幅模式（预览页可切换「虹膜掩膜裁剪」开关对照）：位移限制在实测范围内"
+                                + "—— 左眼 左5/右0/上3/下0 px、右眼 左0/右0/上7/下0 —— "
+                                + "代价是**右视与下视虹膜几乎不动**，视点只剩头/身/发丝在动。" } },
+      blink:{
+        enabled:BLINK.auto, duration:S.blDur, gap_min:S.blGapMin, gap_max:S.blGapMax,
+        max_close:S.maxClose, close_at:S.closeAt, brow_follow:S.browFollow, eye_fade:S.blinkFade,
+        eye_skew_ms:S.blSkew,
+        profile:"u<0.4 闭: v=0.5-0.5cos(πu/0.4)；u>=0.4 开: v=0.5+0.5cos(π(u-0.4)/0.6)",
+        eyes:BL.eyes,
+        formula:{
+          eye:"targetY = top + close_at*(bot-top); sy = 1 - max_close*v",
+          eye_control:"srcY' = targetY + (srcY-targetY)*sy ; sizeDeltaY' = sizeDeltaY*sy",
+          lid:"srcY' = srcY + v*(targetY - lidCy)",
+          brow:"srcY' = srcY + v*brow_follow*(targetY - lidCy)"
+        }
+      },
+      edge:{texture:S.texMode, snap_px:S.snapPx, drop:S.dropT, snap:S.snapT, gamma:S.gamma, composite_threshold:S.compT},
+      metrics:M,
+      parts:PARTS.slice().sort((a,b)=>b.num-a.num).map(p => ({
+        num:p.num, name:p.name, group:p.group, w:p.w, delay:p.delay, rot:p.rot, pivot:p.pivot,
+        role:p.role || null, shapes:p.items.length, visible:p.visible
+      }))
+    };
+    dl(JSON.stringify(o, null, 2), "lua_showcase_rig.json", "application/json");
+  };
+
+document.getElementById("expPng").onclick = () => {
+  off.toBlob(b => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(b);
+    a.download = `图元重建_${S.texMode}${S.snapPx ? "_snap" : ""}.png`;
+    a.click();
+    logLine("导出 PNG（当前处理参数下的静态姿态）", "ok");
+  });
+};
+
+function dl(text, name, mime){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], {type:mime}));
+  a.download = name;
+  a.click();
+}
+
+/* ══════════════ 启动 ══════════════ */
+resize();
+rebake();
+buildActionUI();
+layoutHelp();                      // 功能表先建好，H 键只是切换显隐
+buildPartsTable();
+runtimeStats();
+document.getElementById("luaHint").innerHTML =
+  `本页按 Lua 的方式渲染：<b>每个图元 = 一个图片控件</b>（硬边白圆贴图 × SetSizeDelta 缩放 × SetLocalRotation 旋转 × imageColor 染色），`
+  + `层级用数据顺序。坐标是源图像素，运行时按 CFG 换算成 anchoredPosition。`
+  + `导出的 Lua 里 imagePrefabId / circleAssetId 仍需在编辑器侧填。`;
+logLine(`加载 26 个部件 / ${TOTAL} 个图元（坐标=源图像素 411×600）`);
+logLine("容器 GEIMG_Canvas 已找到，开始分帧 InstantiateClientUIControl…");
+if(REF_IMG.complete){ recompute(); draw(); }
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

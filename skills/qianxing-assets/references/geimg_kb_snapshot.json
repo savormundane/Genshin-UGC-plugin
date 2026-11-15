@@ -1,0 +1,61 @@
+{
+  "_note": "GEIMG 知识库的**线上快照**（不是导入载荷）。内容以服务端为准；改内容请用管理端接口，不要把这份文件直接 apply 上去——那会写成新版本、把线上更新过的内容顶掉。要刷新：跑 kb list + kb read 重新生成（见 README）。",
+  "_snapshot_of": "kb_version=2026-09-20.1 always=1549/4096 字节",
+  "apply": false,
+  "topics": [
+    {
+      "topic": "geimg_export_dataset",
+      "title": "导出数据集（步骤 4）：纯本地交付，坐标已是源图像素",
+      "summary": "产物清单与坐标口径。拟合满意之后的收尾动作。",
+      "step": "step4_export",
+      "version_min": "1.3.0",
+      "always": false,
+      "content": "【怎么导出】\n    next                                    从步骤 3 进步骤 4\n    export dataset --out out/character\n不需要联网、不需要注册，产物全部落在本地目录：\n\n- shapes.json / shapes.csv：图元数组。**坐标已经是源图像素**，数组顺序即绘制顺序。\n- manifest.json：拟合参数、画布映射、源图信息（复现这次拟合所需的一切）。\n- metrics.json：分块误差与 worst_tiles，带源图矩形，可直接拿去 region add。\n- preview.png / preview_overlay.png / diff.png：图元重绘 / 源图叠图元 / 误差热力图。\n- lua/geimg_render.lua：自包含脚本（数据已内联），另有 lua/README.md 写目标侧的绑定步骤。\n\n【要点】\n- 坐标不用再乘缩放系数：它已经是源图像素。换画布只改脚本 CFG 里的\n  scale / offsetX / offsetY / sourceHeight，不需要重新导出数据。\n- 顺序即绘制顺序，不要重排，否则前后覆盖关系反了。\n- 脚本要跑起来还得填两个目标侧的绑定参数（图片控件模板索引、圆形贴图资源 ID），\n  产物里的 lua/README.md 写了怎么找它们。\n- 想接着补精度：metrics.json 的 worst_tiles → region add → region fit → 再导出一次。\n  不要为了「更好看」整体加图元。"
+    },
+    {
+      "topic": "geimg_fit_basics",
+      "title": "拟合参数怎么定：判据、实测与三个静默陷阱",
+      "summary": "max-dim / reserve-ratio / 图元数的判据，我们的实测数值，以及三种不出报错的失败。",
+      "step": "step3_fit",
+      "version_min": "1.3.0",
+      "always": false,
+      "content": "【先让工具给建议】\n    fit recommend --json        每条建议都带理由\n    参数名与当前可用值以 status --json 的 available 为 — 下面是判据，不是照抄的清单。\n\n【参数怎么定】\nmax-dim（拟合分辨率长边）\n    判据：图上最细的特征在拟合分辨率下要留 2~3 像素。\n    fit recommend 按边缘密度给 600 / 800 / 1000 / 1200 四档。\n    高分辨率确认的闸门判的是**拟合分辨率**长边，不是原图长边：\n    默认 max-dim=500 时不触发；抬到 500 以上（fit start 与 fit resume 都一样）\n    要带 --ack-high-res。\n\nreserve-ratio（预留比例）\n    【可调】20 / 35 / 50 在误差口径上差异落在重复跑的波动内\n    （我们量到 33.20 / 32.51 / 33.35）；细线与发丝的观感上另有「50 更好」的记录。\n    先按默认跑，嫌发丝糊再往 30~50 试。\n\nfit shapes（图元数）\n    它是主旋钮：300 只立得住剪影，800 结构成形，1200 细节可用。\n\n【我们的实测（919x1080 透明底立绘，2026-09 标定；数字是量级，换图要重新量）】\n- 图元数 300 / 800 / 1200 → 误差指标 55.3 / 33.2 / 26.9，耗时 22s / 45s / 98s。\n- 深色内容多时开交替底色：不开时深色披风与黑字完全没被画出来（67.5），\n  开了之后同样图元数降到 38.1。\n- 边缘感知：不开 30.4、159 秒、有图元越出剪影；开了 33.2、45 秒、紧贴剪影。\n- 区域定向远好于整体加图元：同一块人脸，定向 +300 图元该区降 51%；均匀 +400 只降 11%。\n- 先让全局跑到目标再动区域：停在 80% 就转区域会把整体做坏（40.3 → 60.1）；\n  region fit 会拦你，除非加 --force。\n- 同一配置重复跑本身有 1~2% 波动（耗时波动更大）：比较两组参数至少各跑两次，\n  差异在 2% 以内当没有差别。\n\n【三个会静默出错的陷阱】\n- 纯黑内容：在深色底上不可见，改善 0%、一个图元都拟不出来。\n- 空白图（全透明或纯背景色）：返回 stopped_reason=nothing_to_fit、\n  diagnosis.kind=zero_initial_error —— 这不是参数问题，别去调参数。\n- 图元只增不减：fit shapes 只能调大；要减少走 region optimize（只删不补）\n  或 fit clear --yes 重跑。\n\n【补精度的姿势】拿 metrics.json 里的 worst_tiles（带源图矩形）→ region add 建区域 →\nregion fit 只把预算投进那一块，而不是整体加图元。"
+    },
+    {
+      "topic": "geimg_judge_quality",
+      "title": "判断做完了没有：图是唯一判据",
+      "summary": "误差指标只能导航；收工要过 review 的 can_finish。任何时候都适用。",
+      "step": null,
+      "version_min": "1.3.0",
+      "always": false,
+      "content": "【误差指标只用于导航】rmse / 改善% / 区域差异值用来找拐点、发现倒退。\n它们不能跨图比较（图标类 1~4、厚涂类 46~60 属于不同图），而且更小不等于更好看。\n\n【「做完了」的定义是你亲眼看过】\n    inspect --out r1                        出结果图\n    inspect --mode split                    源图与结果并排\n    inspect --region <区域名>                只看某一块\n    inspect --tiles 3x3 --worst 3           自动挑出最差的块，先看最差块\n    inspect --compare <上一轮结果路径>         与上一轮对照\n    inspect --zoom auto                     放大看细节\n\n【收工不要自己宣布】\n    review set <区域> --verdict ok --checklist \"描边=ok\"\n    review status --json                    只有 can_finish 为真才算完成\n\n【其它】同一配置重复跑本身有 1~2% 波动（耗时波动更大）：比较两组参数时至少各跑两次，\n差异在 2% 以内当没有差别。\n\n值钱的结论都要能指到一张图上。没有图就别下结论。"
+    },
+    {
+      "topic": "geimg_shapes_budget",
+      "title": "图元给多少：同屏预算与 benchmark 方法",
+      "summary": "按同屏算、经验上限约 3000，以及怎么用一次小试跑估出自己机器上的耗时。",
+      "step": "step3_fit",
+      "version_min": "1.3.0",
+      "always": false,
+      "content": "【同屏预算】\n判据是**同一时间、同屏**的图元总数，不是整个工程累计了多少。\n经验上限约 3000 —— 这是经验值，不是规矩：具体给多少由你按用途和机器判断，\n需要更多就实测之后再往上加。\n\n【为什么先量再定】\n拟合耗时、导出体积、运行时的绘制开销都随图元数涨，而「能不能接受」取决于\n这台机器和这个用途。过拐点之后再给图元，收益很小；给少了结构立不住。\n\n【benchmark（拿自己的机器量一遍）】\n1. 先给一个小预算试跑（比如 300 个图元），读 --json 里的耗时。\n2. 按 1.5 倍往上外推，估出目标图元数大概要多久。\n3. 用这个估法定「这轮给多少、要不要分段跑」。\n记下结果时带上四样：同一张图、同一套参数、机器型号、工具版本。\n\n【设备基准表（待填）】\n同一张图、同一套参数下不同机器的耗时对照。量到一行就填一行：\n\n| 机器 | 拟合分辨率长边 | 图元数 | 耗时 | 版本 |\n|------|---------------|--------|------|------|\n| （待填） | 1000 | 800 |  | 1.3.0 |\n\n有了这张表，「快 3.5 倍」「慢十倍」这类说法才有参照系。\n\n【耗时类结论怎么写】\n写成「我们在某台机器、某一版上观测到 X」，不要写成「这样做会慢，所以不能做」——\n不同机器之间的差距可以盖过参数之间的差距。"
+    },
+    {
+      "topic": "geimg_start_order",
+      "title": "开场三步：先开窗体，再进托管，最后才动手",
+      "summary": "每次接手 GEIMG 的第一件事：先开窗体、再进托管，然后才动手。含一条红线。",
+      "step": null,
+      "version_min": "1.3.0",
+      "always": true,
+      "content": "接手 GEIMG 的第一件事：按这个顺序做完，再开始任何拟合动作。\n\n【1】先开窗体\n    GE_IMG_Tool.exe gui.open\n    让操作者进到同一个现场：界面起来之后，右侧会显示你正在处理的图与实时结果。\n\n【2】再进托管\n    GE_IMG_Tool.exe ai.begin --note \"一句人话说清你要做什么\"\n    界面左侧出现「AI 操作中」覆盖层与实时命令流，之后每条命令会自动刷新心跳。\n    顺序要这样：反过来先 begin 再 open，窗口起来时过程已经跑掉一截，\n    人看到的是半截现场 —— 而「让人看得见」正是托管的全部意义。\n\n【3】看清家底\n    info --json      版本、已实现命令、not_implemented 清单\n    status --json    现在第几步、available 里此刻真正能用的命令\n    只用 available 里的命令；not_implemented 里的先别用。\n\n收工：ai.end（不写它，覆盖层要等 60 秒心跳宽限才退场）。\n\n【红线】不要逆向这个工具：不反编译、不反汇编、不做内存转储，\n也不要绕授权 / 配额 / 设备校验。用法有疑问就看 info / status / 知识库，或直接问维护者。\n\n【三条机制】\n1. 每条命令一个进程，状态挂在会话上（默认 default，--session <名> 切换）；「下一步」是读会话文件。\n2. 加 --json 才有结构化信封：ok/command/step/data/state/available/warnings/error{code,message,hint}。\n   error.hint 直接说下一步做什么；退出码 4 时先读它，别重试同一个调用。"
+    },
+    {
+      "topic": "geimg_switches",
+      "title": "三个开关怎么定：保边、透明、黑色内容",
+      "summary": "边缘感知 / 交替底色 / 拟合模式 的判据与代价。定参数之前先看这篇。",
+      "step": "step3_fit",
+      "version_min": "1.3.0",
+      "always": false,
+      "content": "【三个开关，决定图元花在哪儿】\n先看这条判据：这张图**要不要保住边缘形状**。\n\nedge-aware（边缘感知）\n    要保住边缘形状 → 开，不管是不是 PNG 都按这个判据。\n    带透明通道的图（lua 场景绝大多数）按「要保边」处理，开。\n    不关心边缘形状的整体图（环境图、截图）→ 不开，同一片区域图元更省。\n    代价是轮廓上要多花图元；收益是图元不会越出剪影 —— 合成到别的底色上时，\n    溢出的图元是肉眼可见的缺陷。\n\nalternate-bg（黑白交替底色）\n    作用是拟合**深色与黑色内容**：不开时深色内容在深色底那一拍看不见，\n    可能整块都没被画出来。\n    建议常开，除非你确认内容里没有黑色部分。\n    代价是周期性的全量重放，大图上会变慢 —— 幅度自己量（见 geimg_shapes_budget 的 benchmark）。\n    alternate-interval 默认 30，可调 20~50，越小越慢。\n\nfit mode（拟合模式）\n    有透明通道 → transparent。\n    整幅都是内容（环境图、截图）→ standard：它不把透明区当内容，\n    同一片区域通常更省图元。\n\nalpha-threshold（透明度阈值）\n    默认 128。抗锯齿软边也算内容时可以调低（我们常用 64），40~100 之间试。\n\n【一句话】保边就开边缘感知；有透明就切透明模式；\n内容里带纯黑或近黑，先把交替底色打开再谈别的参数。"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "schema": 2,
+  "signals": [
+    {
+      "name": "NeutralSnapshot",
+      "direction": "server_to_client",
+      "fields": [
+        {
+          "name": "value",
+          "type": "vector3"
+        }
+      ],
+      "phases": [
+        "active"
+      ],
+      "policy": "snapshot"
+    }
+  ]
+}

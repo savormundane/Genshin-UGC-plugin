@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "name": "luaparse",
+  "version": "0.3.1",
+  "source": "https://github.com/fstirlitz/luaparse/tree/v0.3.1",
+  "license": "MIT",
+  "files": {
+    "luaparse.js": {
+      "sha256": "1c70940a6e46be63c84c285036925715f110bf06cbf058922372fb5c9d060b27",
+      "git_blob_sha1": "b7616db31f42aabe969601ebb63a239f97e31a55"
+    },
+    "LICENSE": {
+      "sha256": "bedf97319fd3fb51c22dc5a44daf603ca4b2515ae75cae8ac677fb6bd40ec34e",
+      "git_blob_sha1": "14f9f84f4b7951b32a766d1ccf37fc3f0d14081a"
+    }
+  }
+}

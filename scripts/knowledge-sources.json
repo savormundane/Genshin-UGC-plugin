@@ -1,0 +1,74 @@
+{
+  "schema": 1,
+  "sources": {
+    "client_api": {
+      "path": "skills/client-controls-lua/references/client-controls-api.md",
+      "kind": "provided_api_document",
+      "sha256": "0a74b932020d11696c8bf68d963cee8a20c7969e2ad7d481808d33b26a6dd887",
+      "version": null,
+      "updated_at": null,
+      "original_url": null,
+      "scope": "client UI",
+      "official_origin_verified": false
+    },
+    "conflicts": {
+      "path": "references/sources-and-conflicts.md",
+      "kind": "maintainer_analysis",
+      "sha256": "8e65fae568aa00b64aaf0ea5df19e3c12b113002459c200ce4a13440c7750f09",
+      "version": null,
+      "updated_at": null,
+      "original_url": null,
+      "scope": "conflicts",
+      "official_origin_verified": false
+    },
+    "pixels": {
+      "path": "references/pixel-import-guide.md",
+      "kind": "provided_workflow",
+      "sha256": "2b2be3ed9c52f96b4e567a7b32139938f23bbf10f1b088f11181581ef6c52d82",
+      "version": null,
+      "updated_at": null,
+      "original_url": null,
+      "scope": "pixels",
+      "official_origin_verified": false
+    },
+    "platform_catalogue": {
+      "path": "scripts/platform-sources.json",
+      "kind": "official_mirror_catalogue",
+      "sha256": "8d97d88b1d7f109a1faefc80dd6028def4c992df7a2720ec0c3650d61c6fa5f0",
+      "version": null,
+      "updated_at": null,
+      "original_url": null,
+      "scope": "platform_catalogue",
+      "official_origin_verified": false
+    }
+  },
+  "conflicts": [
+    {
+      "symbols": [
+        "active",
+        "visible",
+        "alive",
+        "SetActive",
+        "SetVisible"
+      ],
+      "resolution": "Use property permissions in the pinned API; older quick references may disagree.",
+      "source": "conflicts"
+    },
+    {
+      "symbols": [
+        "GetUICanvasSize"
+      ],
+      "resolution": "Use exact spelling from the pinned API, not legacy aliases.",
+      "source": "conflicts"
+    },
+    {
+      "symbols": [
+        "controls",
+        "pixels",
+        "budget"
+      ],
+      "resolution": "Official object limits and empirical performance budgets have different scopes.",
+      "source": "conflicts"
+    }
+  ]
+}

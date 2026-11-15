@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "genshin-ugc-public-local": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${PLUGIN_ROOT}/scripts/mcp_launcher.cjs"
+      ]
+    }
+  }
+}

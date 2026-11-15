@@ -1,0 +1,19 @@
+{
+  "schema": 2,
+  "signals": [
+    {
+      "name": "NeutralOrdered",
+      "direction": "client_to_server",
+      "fields": [
+        {
+          "name": "value",
+          "type": "integer"
+        }
+      ],
+      "phases": [
+        "active"
+      ],
+      "policy": "ordered"
+    }
+  ]
+}

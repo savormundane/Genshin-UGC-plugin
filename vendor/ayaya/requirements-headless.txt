@@ -1,0 +1,3 @@
+# Python 3.10-3.12; core file codecs use the standard library.
+# Optional HTML layout conversion:
+playwright>=1.40,<2

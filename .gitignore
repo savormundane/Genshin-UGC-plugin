@@ -1,0 +1,9 @@
+# Local state only; bundled runtime dependencies are distribution inputs.
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.env.local
+.DS_Store
+!vendor/beyond/node_modules/
+!vendor/beyond/node_modules/**

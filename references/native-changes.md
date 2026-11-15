@@ -1,0 +1,74 @@
+# 原生差异与修改计划
+
+能力名：native-changes。入口为qianxing.py native diff/plan及apply --plan，核心位于scripts/native_changes.py，依赖Python标准库及包内原生定义。diff支持同格式GIL或GIA比较；修改计划复用[原生维护](native-maintenance.md)已校准的GIL补丁操作，不扩展未知格式写入。
+
+```text
+python scripts/qianxing.py native diff BEFORE.gil AFTER.gil --allow-fields 10 --out DIFF.json
+python scripts/qianxing.py native plan BEFORE.gil --spec PATCH.json --out PLAN.json
+python scripts/qianxing.py native apply BEFORE.gil --plan PLAN.json --out NEW.gil
+```
+
+输出文件须不存在，父目录由调用方准备；已有文件与原始输入不覆盖。plan在内存执行补丁和最终检查，仅保存可审阅JSON，不生成或覆盖正式GIL。原有apply --spec保持兼容，--spec与--plan互斥。
+
+## 差异内容与保护范围
+
+diff报告包含对象增加/删除/修改、引用变化、节点类型/版本/端口及已识别整数/标识/字符串常量变化、脚本正文摘要，以及每个已读取对象和顶层字段的原始字节摘要。未知值载体保留value_bytes，不猜测其语义。字段顺序和容器非长度参数变化单独列出，bytes_equal比较完整文件。
+
+node_connection按使用者→提供者比较，忽略仅改变连线存储端的serialized_at；输入端、输出端或双端的等价记录不制造语义变化，但serialized_objects和top_level_fields仍显示实际字节变化。
+
+--allow-fields显式列出允许变化的顶层字段。其余字段按原顺序连接的完整原始字节，以及容器非长度参数与尾部必须相同；变化则protected.unchanged=false，status=failed，退出码2。空--allow-fields表示不允许修改任何顶层字段；不提供该选项时只做比较，不声称保护范围已检查。长度字段由合法容器长度核验，不要求修改后的长度与原文件相等。
+
+完整原始字节变化不会被“对象语义相同”隐藏。complete_semantic_diff仍为false，unindexed列出任意组件、自定义变量、动态Lua标识等当前未完整解析范围；不把这些变化判为无影响。结构无法读取时直接失败。最终原生/工程引用检查不通过也不能获得成功差异状态；editor与host保持not_checked。
+
+## 内容绑定的计划
+
+PATCH使用现有schema 2、base_sha256、allowed_top_level_fields及operations合同。replace_graph仍保留目标图ID/名称及既有引用；section_from只在显式指定整段替换时使用，不扩大为任意安全字段迁移。计划要求strict_audit=true或省略该字段。
+
+PLAN的schema为2、kind为native-change-plan，包含：
+
+- patch：补丁内容，来源文件改为稳定的@input:N令牌。
+- inputs：令牌对应的source路径与内容sha256。路径相对PLAN文件。
+- result_sha256：执行已审阅补丁后必须得到的完整GIL摘要。
+- difference：同一基底、来源和补丁实际产生的差异与保护核验。
+- plan_sha256：补丁、来源内容摘要、预期结果及差异报告的共同摘要。
+
+apply --plan先核对计划和所有来源内容，再执行现有补丁，核对完整结果摘要与差异报告，并检查读取期间来源未变。基底变化、来源变化、缺失/多余令牌、修改计划正文、错误预期结果或最终引用失败均不写正式输出。计划摘要用于一致性检查，不是数字签名或外部审批证明。
+
+输入路径不进入plan_sha256，便于完整工程迁移；来源内容摘要始终绑定。只有将令牌指向字节相同的文件才保持同一计划。修改来源正文必须重新生成并检查计划，不自动重新签署旧计划。
+
+两种中性使用方式：第一种替换选定节点图，允许字段10并保护其它图及字段；第二种精确准备脚本映射区段，通过显式section_from替换字段50。后者会替换整段，须先在来源文件保留所有仍需使用的映射，不能当作自动合并。实际ID、脚本和字段范围由当前工程确定。
+
+## 制作链与迁移重建
+
+produce schema 2的native阶段可以选择base+plan：
+
+```json
+{
+  "schema": 2,
+  "native": {"base":"before.gil","plan":"review/plan.json"},
+  "portable": {}
+}
+```
+
+base与plan相对制作配置解析，inputs.source相对计划文件解析。native.spec和native.plan只能选其一；native仍与level新建互斥。计划约束native阶段的输出；若另有图编译、Lua嵌入或存储阶段，这些后续修改继续按各自合同和最终审计核验，不能将native阶段摘要冒充完整制作链最终摘要。
+
+native-report.json记录实际应用和输入摘要；native-diff.json及native-plan.json保留审阅证据。交付目录内的计划副本属于记录，来源路径仍以输入计划为基准，重新应用请使用原计划或portable收纳后的输入计划。portable收纳基底、计划及所有令牌来源，只重写路径，保持plan_sha256和结果摘要；verify --portable在原工程目录不可用时重建。
+
+任何必需检查失败不提交正式目录。现有输出拒绝覆盖，原输入保持只读。独立检查为开发侧test_native_changes.py，包含两种中性配置、节点常量/保护字段/来源漂移/计划变化、真实CLI、GIA只读差异、连线等价及两套produce迁移重建和回滚。编辑器再导出文件可以作为diff的AFTER输入，但该比较本身不能证明文件由编辑器实际产生或已完成实机验收。
+
+## 人工再导出核对
+
+保留交付目录中的原始level.gil、清单、源码映射和报告。人工导入该文件，在编辑器中核对挂载并完成本次需要的运行步骤；另存再导出文件为reexport.gil，不覆盖交付原件。记录实际编辑器版本、操作和结果，尚未操作的项目保留待验。
+
+```text
+python scripts/qianxing.py native diff delivery/level.gil reexport.gil --out reexport-diff.json
+python scripts/qianxing.py client check reexport.gil --out reexport-client.json
+```
+
+第一次对比不设置allow-fields，先查看全部变化。bytes_equal只回答字节是否完全相同。status=passed表示当前已实现的结构检查通过，不表示没有变化，也不证明编辑器兼容。检查objects、references、serialized_objects、top_level_fields、field_order_changed和envelope；未知字节仍必须审阅，不能因已解析对象没有变化而略过。需要保护特定范围时再使用明确的allow-fields；保护范围失败不能通过扩大白名单消除。
+
+新建工程重点核对脚本映射、图挂载和资源引用是否在再导出后仍存在。成熟工程迭代还需核对选定修改之外的对象和引用是否保持。名称相同不代表对象ID相同，字段重排也不自动代表语义等价；complete_semantic_diff始终为false。
+
+client check默认只编译再导出文件的所有内嵌Lua，不执行正文。需要API/引用检查时提供与再导出正文匹配的显式合同，不能复用已不匹配的摘要。运行日志对应哪个产物，就在[结构化日志诊断](log-diagnostics.md)中绑定哪个产物和构建ID；原交付与再导出的事件不可因脚本名相同而混用。编辑器重新写入Lua后，旧行号映射可能失效，不能强行套用。
+
+有存储时另记实际退出/重进和回读结果；差异报告、日志可解析或离线模型通过均不替代这一证据。此流程复用已实现的CLI，不自动操作编辑器，也不新增“已实机通过”的标记。
