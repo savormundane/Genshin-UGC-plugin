@@ -1,0 +1,19 @@
+name: Repository checks (manual)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  repository-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Repository metadata and documentation
+        run: python3 scripts/check_repository.py
+      - name: Python syntax
+        run: python3 -m compileall -q scripts
+      - name: GIL toolkit regression
+        run: node scripts/test_gil.mjs
