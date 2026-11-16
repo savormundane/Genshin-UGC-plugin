@@ -1,0 +1,52 @@
+name: 问题反馈
+description: 报告可复现的问题或兼容性差异
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: "请勿上传令牌、私人工程或未公开的安全漏洞详情。安全问题请先阅读 SECURITY.md。"
+  - type: input
+    id: version
+    attributes:
+      label: 插件版本
+      placeholder: "例如：3.6.1"
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境
+      description: "操作系统、Python / Node、Codex 或 Claude Code 版本、目标平台版本（如适用）"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: "尽可能提供最小可复现操作"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为与实际结果
+    validations:
+      required: true
+  - type: dropdown
+    id: validation
+    attributes:
+      label: 问题出现在哪个阶段
+      options:
+        - 静态检查
+        - 本地 CLI / MCP
+        - 离线模拟
+        - 编辑器导入
+        - 实际游戏运行
+        - 不确定
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 脱敏日志与补充信息
+      description: "如有错误日志，请删去敏感信息后粘贴"

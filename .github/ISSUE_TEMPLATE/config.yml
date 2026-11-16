@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 项目说明与安装文档
+    url: https://github.com/savormundane/Genshin-UGC-plugin/blob/main/README.md
+    about: 创建问题前可先查看安装、常见问题与支持边界
