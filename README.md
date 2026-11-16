@@ -84,7 +84,7 @@ Claude Code 将末尾参数改成 `-Agent claude-code`。首次会询问现有�
 
 ## 文档与参与
 
-- [人类开发者文档入口](docs/README.md)：项目结构、适配状态与典型任务
+- [开发者文档入口](docs/README.md)：项目结构、适配状态与典型任务
 - [资料与工作流索引](references/README.md)：平台知识、各领域技术指南及验证方法
 - [参与贡献](CONTRIBUTING.md)：报告问题、提交资料修正、提出能力建议与 PR 流程
 - [版本变更](CHANGELOG.md)：已公开版本的主要变化
