@@ -5,5 +5,10 @@ __pycache__/
 .env
 .env.local
 .DS_Store
+# Local dependency installs; the audited simulator bundle remains tracked.
+node_modules/
+.pytest_cache/
+.ruff_cache/
+.coverage
 !vendor/beyond/node_modules/
 !vendor/beyond/node_modules/**

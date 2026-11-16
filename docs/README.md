@@ -6,6 +6,7 @@
 - [兼容状态与验证级别](compatibility.md)
 - [典型使用场景](examples.md)
 - [本地检查与提交前验证](development.md)
+- [维护、打包与发布](maintenance.md)
 - [贡献指南](../CONTRIBUTING.md)
 - [版本记录](../CHANGELOG.md)
 

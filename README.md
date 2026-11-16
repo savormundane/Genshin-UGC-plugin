@@ -6,6 +6,8 @@
 
 **3.6.1 · 《原神》千星奇域开发工具包**
 
+[下载完整 Windows ZIP](https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v3.6.1/Genshin-UGC-3.6.1-windows-x64.zip) · [校验文件](https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v3.6.1/SHA256SUMS.txt) · [所有版本](https://github.com/savormundane/Genshin-UGC-plugin/releases)
+
 五个核心 Skill、可追溯平台资料、统一 CLI、18 项本地 MCP 操作，以及随包的离线工具与可选模拟器。
 
 | 领域 | 可以做什么 |
@@ -54,6 +56,8 @@ Claude Code 将末尾参数改成 `-Agent claude-code`。首次会询问现有�
 
 ## 首次使用
 
+安装请选 Release 中的完整 ZIP。GitHub 自动生成的 **Source code (zip/tar.gz)** 是标签源码快照，不是安装器要求的 `Genshin-UGC/` 布局，也不适用于 `-Archive` 参数。
+
 1. 确认客户端能发现五个 Skill 和本插件 MCP 工具。
 2. 请 Agent 查询一个已知 API 或对指定项目做诊断，再执行文件制作。
 3. 输出写入安装时选择的独立目录；原始 GIL 不作为默认覆盖目标。
@@ -85,6 +89,7 @@ Claude Code 将末尾参数改成 `-Agent claude-code`。首次会询问现有�
 ## 文档与参与
 
 - [开发者文档入口](docs/README.md)：项目结构、适配状态与典型任务
+- [维护与发布](docs/maintenance.md)：本地打包、版本核对与手动发布
 - [资料与工作流索引](references/README.md)：平台知识、各领域技术指南及验证方法
 - [参与贡献](CONTRIBUTING.md)：报告问题、提交资料修正、提出能力建议与 PR 流程
 - [版本变更](CHANGELOG.md)：已公开版本的主要变化

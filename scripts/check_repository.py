@@ -25,26 +25,37 @@ REQUIRED_FILES = (
 LINK_RE = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
 
 
-def check() -> list[str]:
+def check(root: Path = ROOT) -> list[str]:
+    root = root.resolve()
     errors: list[str] = []
     manifests: dict[str, dict] = {}
     for relative in MANIFESTS:
-        path = ROOT / relative
+        path = root / relative
         try:
-            manifests[relative] = json.loads(path.read_text(encoding="utf-8-sig"))
+            data = json.loads(path.read_text(encoding="utf-8-sig"))
+            if not isinstance(data, dict):
+                raise ValueError("manifest must be an object")
+            manifests[relative] = data
         except (OSError, ValueError) as exc:
             errors.append(f"{relative}: cannot parse manifest: {exc}")
 
     versions = {path: data.get("version") for path, data in manifests.items()}
-    if len(set(versions.values())) != 1 or any(not value for value in versions.values()):
+    if any(not isinstance(value, str) or not re.fullmatch(r"\d+\.\d+\.\d+", value) for value in versions.values()):
+        errors.append(f"Invalid plugin versions: {versions}")
+    elif len(set(versions.values())) != 1:
         errors.append(f"Plugin manifest versions differ: {versions}")
 
+    installer = root / "install.ps1"
+    defaults = re.findall(r"\[string\]\$Version\s*=\s*'([^']+)'", installer.read_text(encoding="utf-8-sig")) if installer.is_file() else []
+    if defaults != [versions.get("plugin.json")]:
+        errors.append("install.ps1 default version must match plugin.json")
+
     for relative in REQUIRED_FILES:
-        if not (ROOT / relative).is_file():
+        if not (root / relative).is_file():
             errors.append(f"Missing required file: {relative}")
 
-    docs = [ROOT / name for name in REQUIRED_FILES if name.endswith(".md")]
-    docs.extend((ROOT / "docs").glob("*.md"))
+    docs = [root / name for name in REQUIRED_FILES if name.endswith(".md")]
+    docs.extend((root / "docs").glob("*.md"))
     for path in docs:
         if not path.is_file():
             continue
@@ -53,8 +64,8 @@ def check() -> list[str]:
             if not target or re.match(r"^[a-z][a-z0-9+.-]*:", target, re.I) or target.startswith("//"):
                 continue
             resolved = (path.parent / unquote(target)).resolve()
-            if not resolved.is_relative_to(ROOT) or not resolved.exists():
-                errors.append(f"{path.relative_to(ROOT)}: invalid link {raw}")
+            if not resolved.is_relative_to(root) or not resolved.exists():
+                errors.append(f"{path.relative_to(root)}: invalid link {raw}")
 
     return errors
 
