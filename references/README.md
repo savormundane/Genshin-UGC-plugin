@@ -9,6 +9,7 @@
 
 - [知识可信度与API查询](knowledge-reliability.md)
 - [工程只读诊断](project-diagnosis.md)
+- [通用拟合与分层续算](asset-fit.md)
 - [素材检查与差异](asset-inspection.md)
 - [独立运行环境](runtime-environment.md)
 

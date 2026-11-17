@@ -83,7 +83,7 @@ def main():
         elif op=='verify':
             from delivery_verify import verify
             if Path(args['input']).name!='manifest.json':raise ValueError('Verification input must be manifest.json')
-            result=verify(Path(args['input']).parent,args['rebuild'],args['portable'])
+            result=verify(Path(args['input']).parent,args['rebuild'],args['portable'],args.get('trusted_inputs_sha256'))
         elif op=='produce':
             from production_core import produce
             result=produce(args['spec'],args['output'])

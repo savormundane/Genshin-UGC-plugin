@@ -1,6 +1,6 @@
 # 独立运行环境
 
-Python 3.10–3.12、Node 22+。随包Beyond保留Windows x64本地依赖；Python依赖安装到插件专用虚拟环境，不借用游戏环境，不安装到系统Python。
+Python 3.11–3.12、Node 22+。随包Beyond保留Windows x64本地依赖；Python依赖安装到插件专用虚拟环境，不借用游戏环境，不安装到系统Python。
 
 ```text
 EXISTING_PYTHON scripts/configure_runtime.py --python EXISTING_PYTHON --runtime NEW_RUNTIME_DIRECTORY --project PROJECT_ROOT --outputs SEPARATE_OUTPUT_ROOT --config RUNTIME_CONFIG
@@ -15,3 +15,5 @@ CLI使用配置中的Python绝对路径运行 `scripts/qianxing.py`。`doctor` �
 安装后核对版本目录、所有文件摘要和一次真实stdio调用；可选Beyond另调用最小场景。打包、安装文件一致、stdio协议可调用、Codex宿主发现、编辑器导入及游戏运行是不同验证层。锁定依赖的升级需要显式安装与相关专项，不随查询自动更新。
 
 跨版本复用运行环境时核对依赖锁和doctor；环境目录版本名不是插件版本。旧环境保持可恢复，不因升级插件自动重建或删除。回退步骤见[长期维护](architecture-maintenance.md)。
+
+锁定运行依赖不再支持 Python 3.10，安装前即拒绝。wheel 使用 SHA-256 与 `--require-hashes --only-binary=:all:`，不自动升级 pip。首次失败可使用相同参数及 `--resume` 恢复未完成的专用环境；已有有效配置拒绝覆盖。

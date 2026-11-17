@@ -17,7 +17,8 @@
       "test_native_asset_layers.py",
       "test_asset_pipeline.py",
       "test_assets_text.py",
-      "test_runtime_assets.py"
+      "test_runtime_assets.py",
+      "test_audit_remediation.py"
     ],
     "workflow": [
       "test_mcp_service.py",
@@ -326,6 +327,10 @@
     ],
     "asset_inspection": [
       "test_knowledge_diagnosis.py::ReliabilityTests.test_two_asset_and_diagnostic_configs"
+    ],
+    "asset_fit": [
+      "test_audit_remediation.py::AuditTests.test_fitting_transparency_layers_resume_and_roundtrip",
+      "test_audit_remediation.py::AuditTests.test_region_refinement_and_empty_input"
     ]
   }
 }

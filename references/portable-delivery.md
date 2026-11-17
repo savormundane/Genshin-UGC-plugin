@@ -26,11 +26,19 @@ python scripts/qianxing.py verify MOVED_DIRECTORY --portable --out NEW_REPORT.js
 
 project与toolchain是保留根名称。目录依赖收集其非缓存文件；配置引用的脚本、图、GIL/GIA、素材、模拟、实验及图资源目录自动收集。目录外文件必须有明确的roots归属；缺失、链接或未声明输入拒绝。自用插件完整随附，保留官方资料、校准、第三方与许可证；这会增加交付目录体积，不生成ZIP。
 
-portable/original保留工程输入原始字节；portable/workspace保存构建副本和独立toolchain。仅配置中已定义的路径字段改为副本间相对引用；不重写Lua/Python正文、业务文本或协议。portable/portable.json记录原始摘要、路径调整、后端指纹与文件清单。首次制作和重建都执行副本中的同一制作链。
+portable/original保留工程输入原始字节；portable/workspace保存构建副本和独立toolchain。仅配置中已定义的路径字段改为副本间相对引用；不重写Lua/Python正文、业务文本或协议。portable/portable.json记录原始摘要、路径调整、后端指纹与文件清单。首次制作和显式重建只执行当前受信任插件的制作链，包内 toolchain 是历史材料，不参与执行和依赖搜索。
 
 ## 验证与边界
 
---portable在新的临时目录复制输入闭包，调用随附工具链重建，不读取原工程文件。正常verify仍检查原输入位置；两者检查目标不同，不重签旧报告。原输入、声明目录和构建副本变更，以及任一必需制作阶段失败，均不提交正式输出。
+`--portable` 只核对包内输入、清单完整性、路径和摘要，不启动 Python、Node、安装器或包内工具链。普通 verify 检查原输入位置。未知工具链版本仍可静态核对，但不代表可重建。
+
+显式重建先审阅工程源码，再将静态报告返回的完整输入摘要传入：
+
+```text
+python scripts/qianxing.py verify MOVED_DIRECTORY --portable --rebuild --trusted-inputs-sha256 APPROVED_DIGEST
+```
+
+该参数声明调用方已同意执行对应工程代码，不能从“哈希一致”自动推导授权。缺少确认、清单遗漏、越界或链接、工具链与当前插件不一致、后端指纹不同都拒绝重建。历史 `--rebuild` 需增加 portable 闭包与摘要确认；不再执行没有闭包的原路径重建。报告按字节比较可确定产物，不重签旧证据。
 
 Python制作进程和Ayaya编译子进程检查实际文件读取范围，禁止把原路径当作隐含依赖；输入副本不可写，生成与编译临时目录可写。该检查服务于可信本地工程的依赖完整性，不是运行不可信源码的操作系统沙箱。Python、Node和外部包由环境提供并核对指纹；不承诺任意机器或后端版本均兼容。
 

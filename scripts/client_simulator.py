@@ -4,7 +4,7 @@ import argparse,hashlib,json,math,os,re,subprocess,sys
 PLUGIN=Path(__file__).resolve().parents[1]
 def _run_in_process(source,scenario,bindings=None,mapping='main.lua'):
  try:from lupa.lua53 import LuaRuntime
- except ImportError:raise ValueError('离线模拟需要Lua5.3解释器：安装lupa==2.8到当前Python环境；不影响关卡生成和其他CLI')
+ except ImportError:raise ValueError('离线模拟需要Lua5.3解释器：安装lupa==2.6到当前Python环境；不影响关卡生成和其他CLI')
  if not isinstance(scenario,dict) or set(scenario)-{'schema','canvas','steps','assertions','params'} or type(scenario.get('schema'))!=int or scenario.get('schema')!=1:raise ValueError('模拟场景需要schema=1')
  steps=scenario.get('steps',[]);assertions=scenario.get('assertions',[])
  if not isinstance(steps,list) or len(steps)>10000 or not isinstance(assertions,list):raise ValueError('场景步骤/断言无效或超过10000')

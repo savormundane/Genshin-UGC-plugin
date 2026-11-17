@@ -20,7 +20,7 @@
 
 | 内容 | 已知来源 | 当前状态 |
 | --- | --- | --- |
-| GE_IMG_Tool.exe、GE手册和知识快照 | [没空放肆下载页](https://docs.lumkfs.cn/GEIMG-WIKI/Download/) | 已确认发布者线索；未核实再分发许可，不属于本项目GPL授权 |
+| GE手册、知识快照与历史模板（不含GE程序） | [没空放肆下载页](https://docs.lumkfs.cn/GEIMG-WIKI/Download/) | 已确认发布者线索；未核实再分发许可，不属于本项目GPL授权 |
 | 拟L2D正文、附件与模板 | [没空放肆知识库](https://docs.lumkfs.cn/GEIMG-WIKI/EG-L2D/) | 章节和附件对应；精确下载包身份与再分发许可待核，不属于本项目GPL授权 |
 | 点阵像素图处理与导入指南 | 原始下载出处待核 | 作者与许可待核，不冒称原创或GPL |
 | 客户端API整理文档 | [相关官方页面](https://act.mihoyo.com/ys/ugc/tutorial/detail/mhtakr07vej4) | 本地整理稿来源与再分发许可待核 |

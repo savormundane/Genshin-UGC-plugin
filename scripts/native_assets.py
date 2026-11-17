@@ -5,6 +5,22 @@ from authoring_io import *
 from native_core import get
 from level_inventory import container,fields,vals
 
+def export_rectangles(data,anchor=(0,0),name='FittedAsset'):
+    """Serialize the same calibrated XY rectangle dialect accepted by extract."""
+    from level_authoring import msg,integer,text,pack
+    def number(n,value):return bytes([n*8+5])+struct.pack('<f',value)
+    dependencies=[];links=[]
+    for index,(x,y,w,h,c) in enumerate(data['rects'],10):
+        r,g,b,a=data['palette'][c-1]
+        tr=msg(1,number(1,x+w/2-anchor[0])+number(2,anchor[1]-y-h/2))+msg(2,number(1,-90))+msg(3,number(1,w)+number(3,h))
+        body=integer(2,10009001)+msg(5,integer(1,1)+msg(11,tr))+msg(5,integer(1,22)+msg(32,integer(3,(a<<24)|(r<<16)|(g<<8)|b)))
+        dependencies.append(msg(2,msg(1,integer(4,index))+msg(21,msg(1,body))))
+        links.append(msg(2,integer(4,index)))
+    if not links:raise ValueError('An empty fitted raster has no GIA prefab; omit gia for empty assets')
+    result=pack(msg(1,text(3,name)+b''.join(links))+b''.join(dependencies),(1,806,3))
+    extract(result,{'schema':2,'projection':'xy_x90','unit':1,'max_controls':len(links),'anchor':list(anchor)})
+    return result
+
 def floating(b,n,default=0):
     values=[v for a,w,v,r in fields(b)if a==n]
     if not values:return default

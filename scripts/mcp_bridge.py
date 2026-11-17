@@ -1,6 +1,6 @@
 """Fixed operations shared by local MCP and CLI; no arbitrary command tool."""
 from pathlib import Path
-import argparse,asyncio,json,os,re,sys,tempfile
+import argparse,asyncio,json,os,re,sys,tempfile,math
 from authoring_io import PLUGIN,sha,schema,read_json,write_json
 
 OPERATIONS={'doctor':(), 'capabilities':(), 'docs_search':('version','query'),'api_lookup':('symbol',),'diagnose':('spec','sha256'),
@@ -16,6 +16,10 @@ OPERATIONS={'doctor':(), 'capabilities':(), 'docs_search':('version','query'),'a
 
 class Bridge:
     def __init__(self,project,output_root):
+        self.timeouts = {kind: float(os.environ.get(variable, default)) for kind, variable, default in
+                         [('ordinary','UGC_MCP_TIMEOUT_SECONDS','120'),('build','UGC_MCP_BUILD_TIMEOUT_SECONDS','900')]}
+        if any(not math.isfinite(value) or not 0 < value <= 3600 for value in self.timeouts.values()):
+            raise ValueError('MCP timeouts must be finite seconds in (0, 3600]')
         self.project=Path(project).resolve(strict=True);self.output_root=Path(output_root).resolve(strict=True)
         if not self.project.is_dir()or not self.output_root.is_dir():raise ValueError('Project/output roots must be directories')
         if self.project.is_relative_to(self.output_root)or self.output_root.is_relative_to(self.project):raise ValueError('Project and output roots must be disjoint')
@@ -38,8 +42,15 @@ class Bridge:
         return resolved
 
     async def call(self,operation,arguments,progress=None):
+        build=operation in ('produce','native_apply') or operation=='verify' and arguments.get('rebuild')
+        try:
+            return await asyncio.wait_for(self._call(operation,arguments,progress),self.timeouts['build' if build else 'ordinary'])
+        except asyncio.TimeoutError:
+            return {'schema':2,'operation':operation,'status':'failed','error':'MCP operation exceeded its total timeout','output':None}
+
+    async def _call(self,operation,arguments,progress=None):
         if operation not in OPERATIONS:raise ValueError('Unknown bridge operation')
-        allowed=OPERATIONS[operation]+(('contract','contract_sha256')if operation=='client_check'else())
+        allowed=OPERATIONS[operation]+(('contract','contract_sha256')if operation=='client_check'else ('trusted_inputs_sha256',) if operation=='verify' else ())
         schema(arguments,allowed,OPERATIONS[operation]);args=dict(arguments);bound={}
         if ('contract'in args)!=('contract_sha256'in args):raise ValueError('Contract requires digest')
         for field,digest_field in(('input','sha256'),('spec','spec_sha256'if operation=='native_plan'else'sha256'),('other','other_sha256'),('plan','plan_sha256'),('contract','contract_sha256')):
@@ -59,9 +70,10 @@ class Bridge:
             process=None
             with (scratch/'stdout.log').open('wb')as stdout,(scratch/'stderr.log').open('wb')as stderr:
                 try:
+                    from portable_trust import child_environment
                     process=await asyncio.create_subprocess_exec(sys.executable,'-X','utf8','-B',str(PLUGIN/'scripts/mcp_worker.py'),
                         str(request),str(result_path),cwd=self.project,stdout=stdout,stderr=stderr,
-                        env={**os.environ,'PYTHONDONTWRITEBYTECODE':'1'},start_new_session=os.name!='nt')
+                        env={**child_environment(),'PYTHONDONTWRITEBYTECODE':'1'},start_new_session=os.name!='nt')
                     if progress:await progress(1,3,'Core operation running')
                     code=await process.wait()
                 finally:
@@ -74,11 +86,11 @@ class Bridge:
                             else:
                                 import signal
                                 os.killpg(process.pid,signal.SIGKILL)
-                            await process.wait()
+                            await asyncio.wait_for(process.wait(),timeout=10)
                         cleanup=asyncio.create_task(terminate())
                         # AnyIO cancellation can interrupt every checkpoint.
                         import anyio
-                        with anyio.CancelScope(shield=True):await asyncio.shield(cleanup)
+                        with anyio.CancelScope(shield=True):await asyncio.wait_for(asyncio.shield(cleanup),timeout=15)
             if code!=0:
                 detail=(scratch/'stderr.log').read_text(encoding='utf-8',errors='replace')[-8000:]
                 return {'schema':2,'operation':operation,'status':'failed','error':detail,'output':None}

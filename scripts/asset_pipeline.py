@@ -100,6 +100,9 @@ def generate(source, output, *, target='auto', width=None, height=None, step=1, 
 def main(argv=None):
     # Keep established info/text/layouts commands available through the same public entry.
     args=list(sys.argv[1:] if argv is None else argv)
+    if args and args[0]=='fit':
+        from asset_fit import main as fit_main
+        return fit_main(args[1:])
     if args and args[0] in ('check','diff'):
         from asset_inspection import main as inspect_main
         return inspect_main(args)

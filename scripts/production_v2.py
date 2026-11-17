@@ -152,7 +152,12 @@ def produce(path,out,evidence=None):
             for item in job['assets']:
                 if not isinstance(item.get('name'),str)or not re.fullmatch(r'[A-Za-z0-9_-]+',item['name'])or item['name']in asset_names:raise ValueError('Unique safe asset names required')
                 asset_names.add(item['name'])
-                if item.get('kind')=='gia':
+                if item.get('kind')=='fit':
+                    schema(item,('name','kind','source','spec'),('name','kind','source','spec'))
+                    from asset_fit import build
+                    result=build(track(resolve(base,item['source'])),track(resolve(base,item['spec'])),stage/'fitted-assets'/item['name'])
+                    inputs.update(result['inputs']);state('asset_fit')
+                elif item.get('kind')=='gia':
                     from native_assets import build
                     source=track(resolve(base,item['source']));sp=track(resolve(base,item['spec']));build(source,sp,stage/'native-assets'/item['name']);state('native_assets')
                 else:legacy['assets'].append({**item,'source':str(track(resolve(base,item['source'])))})
@@ -399,6 +404,7 @@ def produce(path,out,evidence=None):
             evidence.setdefault(name,{'status':'not_applicable'})
         if graph_spec:evidence['compilation_readback']={'status':'passed','report':'build/graphs/replacement-report.json'if graph_spec.get('schema')==2 else'build/graphs/build-report.json'}
         if any(item.get('kind')=='gia'for item in job.get('assets',[])):evidence['software_preview']={'status':'passed','path':'native-assets'}
+        if any(item.get('kind')=='fit'for item in job.get('assets',[])):evidence['fitted_software_preview']={'status':'passed','layer':'software_preview','path':'fitted-assets'}
         evidence['editor']={'status':'not_checked'};evidence['host']={'status':'not_checked'};evidence['real_storage_reentry']={'status':'not_checked'}
         evidence['v3_pipeline']={'status':'passed'}
         # Copy only stable reviewable artifacts; internal jobs contain temporary paths.

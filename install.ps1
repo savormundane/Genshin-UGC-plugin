@@ -1,11 +1,13 @@
 param(
     [ValidateSet('codex', 'claude-code')][string]$Agent = 'codex',
     [ValidateSet('install', 'rollback', 'uninstall')][string]$Action = 'install',
-    [string]$Version = '3.6.1',
+    [string]$Version = '3.7.0',
+    [switch]$Resume,
     [string]$Project, [string]$Outputs, [string]$Python,
     [string]$Root, [string]$Archive, [string]$Sha256
 )
 $ErrorActionPreference = 'Stop'
+if ($Resume -and $Action -ne 'install') { throw '-Resume is only valid for install.' }
 if ($env:OS -ne 'Windows_NT') { throw 'The complete bundle currently supports Windows x64 only.' }
 if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw 'Version must be x.y.z.' }
 if (!$Root) { $Root = Join-Path $env:LOCALAPPDATA 'Genshin-UGC-Public' }
@@ -32,7 +34,7 @@ if (!$Python) {
         if ($LASTEXITCODE -ne 0) { $Python = $null }
     }
 }
-if (!$Python) { throw 'Install Python 3.10-3.12 or pass -Python with its executable path. No global software was installed.' }
+if (!$Python) { throw 'Install Python 3.11-3.12 or pass -Python with its executable path. No global software was installed.' }
 if ($Action -eq 'install') {
     if (!$Project) { $Project = Read-Host 'Existing project directory' }
     if (!$Outputs) { $Outputs = Read-Host 'Separate output directory (outside the project)' }
@@ -64,6 +66,7 @@ try {
     } finally { $zip.Dispose() }
     $arguments = @('-X', 'utf8', '-B', $runner, $Action, '--agent', $Agent, '--root', $Root, '--version', $Version)
     if ($Action -eq 'install') { $arguments += @('--archive', $Archive, '--sha256', $Sha256, '--project', $Project, '--outputs', $Outputs) }
+    if ($Resume) { $arguments += '--resume' }
     & $Python @arguments
     if ($LASTEXITCODE -ne 0) { throw ('Installation operation failed: ' + $LASTEXITCODE) }
 } finally {

@@ -471,6 +471,40 @@
           "test_knowledge_diagnosis.py::ReliabilityTests.test_two_asset_and_diagnostic_configs"
         ]
       }
+    },
+    "asset_fit": {
+      "rules": {
+        "implementation": "implemented",
+        "scope": "fit parameters, budget, resume and region guards",
+        "cases": [
+          "test_audit_remediation.py::AuditTests.test_fitting_transparency_layers_resume_and_roundtrip",
+          "test_audit_remediation.py::AuditTests.test_region_refinement_and_empty_input"
+        ]
+      },
+      "generation": {
+        "implementation": "implemented",
+        "scope": "deterministic premultiplied RGBA search",
+        "cases": [
+          "test_audit_remediation.py::AuditTests.test_fitting_transparency_layers_resume_and_roundtrip",
+          "test_audit_remediation.py::AuditTests.test_region_refinement_and_empty_input"
+        ]
+      },
+      "readback": {
+        "implementation": "implemented",
+        "scope": "calibrated rectangle GIA and exact rectangle lowering",
+        "cases": [
+          "test_audit_remediation.py::AuditTests.test_fitting_transparency_layers_resume_and_roundtrip",
+          "test_audit_remediation.py::AuditTests.test_region_refinement_and_empty_input"
+        ]
+      },
+      "software_preview": {
+        "implementation": "implemented",
+        "scope": "Pillow reconstruction; no visual acceptance",
+        "cases": [
+          "test_audit_remediation.py::AuditTests.test_fitting_transparency_layers_resume_and_roundtrip",
+          "test_audit_remediation.py::AuditTests.test_region_refinement_and_empty_input"
+        ]
+      }
     }
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "genshin-ugc-public",
-  "version": "3.6.1",
+  "version": "3.7.0",
   "description": "以平台资料与客户端API为依据，提供Editor、Graph Code、Client Lua、GIL、Assets五个千星奇域技术领域，以及共享协议、存储、动画、诊断与制作工具。",
   "author": {
     "name": "Genshin-UGC contributors"

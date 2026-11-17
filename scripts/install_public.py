@@ -32,8 +32,8 @@ def run(command, **kwargs):
 def preflight(agent, project=None, outputs=None):
     if sys.platform != 'win32' or platform.machine().lower() not in ('amd64', 'x86_64'):
         raise ValueError('Complete bundle requires Windows x64')
-    if not (3, 10) <= sys.version_info[:2] <= (3, 12):
-        raise ValueError('Python 3.10-3.12 required')
+    if not (3, 11) <= sys.version_info[:2] <= (3, 12):
+        raise ValueError('Locked dependencies require Python 3.11-3.12')
     client = shutil.which('codex' if agent == 'codex' else 'claude')
     node = shutil.which('node')
     if not client or not node:
@@ -118,6 +118,8 @@ def activate(client, agent, record, previous):
 
 
 def operate(args):
+    if getattr(args,'resume',False) and args.action!='install':
+        raise ValueError('--resume only applies to an unfinished install')
     if not re.fullmatch(r'\d+\.\d+\.\d+', args.version):
         raise ValueError('Version must be x.y.z')
     root = Path(args.root).resolve()
@@ -158,22 +160,64 @@ def operate(args):
     if not args.archive or not args.sha256:
         raise ValueError('Archive and expected SHA-256 required')
     home = root / 'versions' / args.agent / args.version
+    for part in (home,*home.parents):
+        if part==root.parent:break
+        if part.is_symlink() or (part.exists() and getattr(part.lstat(),'st_file_attributes',0)&1024):
+            raise ValueError('Linked installation directory refused')
+    journal = home / 'installation-pending.json'
+    binding = {'schema': 1, 'version': args.version, 'archive_sha256': args.sha256.lower(),
+               'agent': args.agent, 'home': str(home), 'project': str(project), 'outputs': str(outputs)}
+    if hashlib.sha256(Path(args.archive).read_bytes()).hexdigest() != binding['archive_sha256']:
+        raise ValueError('Archive SHA-256 mismatch')
     if home.exists():
-        raise ValueError('Version directory exists; use rollback or a new version, never overwrite')
-    home.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix='extract-', dir=home.parent) as td:
-        stage = Path(td)
-        extract(args.archive, args.sha256, stage, args.version)
-        os.replace(stage, home)
+        if any(r and r['home']==str(home) for r in [previous,*state['history']]):
+            raise ValueError('Activated versions cannot be resumed or overwritten')
+        if not getattr(args,'resume',False) or not journal.is_file():
+            raise ValueError('Version directory exists; --resume requires a registered unfinished installation')
+        pending=read_json(journal)
+        if pending.get('binding')!=binding or pending.get('phase') not in ('dependencies','checks'):
+            raise ValueError('Resume parameters differ or activation has already been attempted')
+        # Revalidate against the same archive, without executing retained package code first.
+        with tempfile.TemporaryDirectory(prefix='resume-check-',dir=home.parent) as td:
+            expected=extract(args.archive,args.sha256,Path(td),args.version)
+            actual=home/'Genshin-UGC'
+            for item in actual.rglob('*'):
+                if item.is_symlink() or getattr(item.lstat(),'st_file_attributes',0)&1024:
+                    raise ValueError('Linked unfinished bundle refused')
+            for item in expected.rglob('*'):
+                if item.is_file():
+                    target=actual/item.relative_to(expected)
+                    if target.is_symlink() or not target.is_file() or target.read_bytes()!=item.read_bytes():
+                        raise ValueError('Unfinished bundle differs from the verified archive')
+            if {p.relative_to(actual) for p in actual.rglob('*') if p.is_file()}!={p.relative_to(expected) for p in expected.rglob('*') if p.is_file()}:
+                raise ValueError('Unregistered file in unfinished bundle')
+    else:
+        if getattr(args,'resume',False):raise ValueError('No registered unfinished version to resume')
+        home.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix='extract-', dir=home.parent) as td:
+            stage = Path(td)
+            extract(args.archive, args.sha256, stage, args.version)
+            save(stage/'installation-pending.json',{'binding':binding,'phase':'dependencies'})
+            os.replace(stage, home)
     # Not activated yet. Failed dependencies leave a diagnostic copy, never an active half-install.
     config = home / 'runtime.json'
     runtime = home / 'runtime'
     bundle = home / 'Genshin-UGC'
-    run([sys.executable, '-X', 'utf8', '-B', bundle / 'scripts/configure_runtime.py',
-         '--python', sys.executable, '--runtime', runtime, '--project', project,
-         '--outputs', outputs, '--config', config])
+    if not config.exists():
+        command=[sys.executable, '-X', 'utf8', '-B', bundle / 'scripts/configure_runtime.py',
+                 '--python', sys.executable, '--runtime', runtime, '--project', project,
+                 '--outputs', outputs, '--config', config]
+        if runtime.exists():command.append('--resume')
+        run(command)
+    else:
+        restored=read_json(config)
+        if restored.get('project_root')!=str(project) or restored.get('output_root')!=str(outputs) or restored.get('python')!=str(runtime/'Scripts/python.exe'):
+            raise ValueError('Unfinished runtime configuration differs from registered parameters')
+    save(journal,{'binding':binding,'phase':'checks'})
     python = runtime / 'Scripts/python.exe'
     run([python, '-X', 'utf8', '-B', bundle / 'scripts/install_smoke.py', '--config', config, '--node', node])
+    # Stop permitting automatic resume before mutating registration; interruption here needs rollback review.
+    save(journal,{'binding':binding,'phase':'activation'})
     market = configure_marketplace(home, args.agent, args.version, node, config)
     record = {'version': args.version, 'home': str(home), 'config': str(config),
               'python': str(python), 'marketplace': market, 'archive_sha256': args.sha256.lower()}
@@ -182,6 +226,7 @@ def operate(args):
     if previous:
         state['history'].append(previous)
     save(state_path, state)
+    journal.unlink()
     return {'installed': args.version, 'agent': args.agent, 'runtime_smoke': 'passed',
             'agent_host_load': 'not_checked', 'next': 'Restart the Agent and verify five Skills and MCP tools'}
 
@@ -190,6 +235,7 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('action', choices=('install', 'rollback', 'uninstall'))
     p.add_argument('--agent', choices=('codex', 'claude-code'), required=True)
+    p.add_argument('--resume',action='store_true')
     for key in ('root', 'version'):
         p.add_argument('--' + key, required=True)
     for key in ('archive', 'sha256', 'project', 'outputs'):

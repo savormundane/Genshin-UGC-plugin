@@ -35,7 +35,7 @@ render:true 生成透明背景 preview.png 和 render.json；render_checks 按�
 
 制作链 schema 2 可添加 beyond:{"spec":"SPEC.json"}，backend 为可选路径。结果写入 beyond/external-simulation.json。绑定本轮生成 GIL 时，将 gil.source 和各 scripts[].source 设为 `@level`，对应 sha256 设为 `@level`（或给定必须匹配的精确摘要）。produce 在全部写回、原生审计及最终 Lua 检查之后绑定最终 level.gil，不读取旧基底。GUID 与 mapping 仍必须明确给出；最终报告的 final_gil_bindings 记录真实摘要。缺少最终 GIL、错误摘要或挂载不匹配会失败，不提交输出。独立 beyond 命令不能单独解析 @level。
 
-任务增加 `"portable":{}` 即可携带模拟器配置、所引用的 GIL/Lua/Authoring JSON，以及完整插件工具链和随包后端。原始配置保留，工作副本路径重定位，@level 标记留到实际构建时绑定；额外输入须位于 portable.roots 声明范围。portable 当前只允许默认随包后端，显式 backend 检出不属于此合同，会拒绝。`qianxing.py verify DELIVERY --portable` 可在独立目录重建，比较 GIL、转换模型、PNG 和渲染清单的确定性正文。模拟执行日志属于证据，不要求跨轮路径或计时字节相同。Python/Lua 和 Node 的外部运行条件仍需满足，不声称完全独立的宿主模拟。
+任务增加 `"portable":{}` 即可携带模拟器配置、所引用的 GIL/Lua/Authoring JSON，以及完整插件工具链和随包后端。原始配置保留，工作副本路径重定位，@level 标记留到实际构建时绑定；额外输入须位于 portable.roots 声明范围。portable 当前只允许默认随包后端，显式 backend 检出不属于此合同，会拒绝。`qianxing.py verify DELIVERY --portable` 仅静态核对；审阅后以 `--rebuild --trusted-inputs-sha256` 显式重建，比较 GIL、转换模型、PNG 和渲染清单的确定性正文。模拟执行日志属于证据，不要求跨轮路径或计时字节相同。Python/Lua 和 Node 的外部运行条件仍需满足，不声称完全独立的宿主模拟。
 
 路径相对配置目录。已有输出、摘要不符、断言失败、依赖损坏和 45 秒超时不提交正式结果。报告区分 external_lua_model、software_preview、native_graph_model、editor、host；编辑器和实机始终待验。不运行浏览器、游戏 GUI 自动化或截图识别。
 

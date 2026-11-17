@@ -4,9 +4,9 @@
 
 **导航：** [安装](#快速安装) · [使用场景](#从需求到结果) · [支持范围](#支持环境与验证边界) · [文档与参与](#文档与参与)
 
-**3.6.1 · 《原神》千星奇域开发工具包**
+**3.7.0 · 《原神》千星奇域开发工具包**
 
-[下载完整 Windows ZIP](https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v3.6.1/Genshin-UGC-3.6.1-windows-x64.zip) · [校验文件](https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v3.6.1/SHA256SUMS.txt) · [所有版本](https://github.com/savormundane/Genshin-UGC-plugin/releases)
+[下载完整 Windows ZIP](https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v3.7.0/Genshin-UGC-3.7.0-windows-x64.zip) · [校验文件](https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v3.7.0/SHA256SUMS.txt) · [所有版本](https://github.com/savormundane/Genshin-UGC-plugin/releases)
 
 五个核心 Skill、可追溯平台资料、统一 CLI、18 项本地 MCP 操作，以及随包的离线工具与可选模拟器。
 
@@ -36,23 +36,25 @@
 
 ## 快速安装
 
-完整工具链当前支持 **Windows x64**。先安装 Python 3.10–3.12、Node.js 22+，以及 Codex 或 Claude Code；安装器不会替你安装全局软件。
+完整工具链当前支持 **Windows x64**。先安装 Python 3.11–3.12、Node.js 22+，以及 Codex 或 Claude Code；安装器不会替你安装全局软件。
 
 在 PowerShell 中运行一条命令：
 
 ```powershell
-& ([scriptblock]::Create((Invoke-RestMethod 'https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v3.6.1/install.ps1'))) -Agent codex
+& ([scriptblock]::Create((Invoke-RestMethod 'https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v3.7.0/install.ps1'))) -Agent codex
 ```
 
 Claude Code 将末尾参数改成 `-Agent claude-code`。首次会询问现有项目目录和独立输出目录，也可传入 `-Project`、`-Outputs` 和 `-Python`。Python 依赖首次安装需要联网；使用锁定版本并安装到插件专用环境。
 
 安装器下载固定版本 ZIP、校验 SHA-256、保留完整目录、配置运行环境，并调用客户端原生插件安装入口。不会仅复制 Skill，也不会修改其他插件的配置。安装后重启客户端；客户端仍可能要求启用或信任本地 MCP。
 
-喜欢先检查脚本，可以从 [Release](https://github.com/savormundane/Genshin-UGC-plugin/releases/tag/v3.6.1) 下载 `install.ps1`、完整 ZIP 和 `SHA256SUMS.txt`，查看脚本后执行：
+喜欢先检查脚本，可以从 [Release](https://github.com/savormundane/Genshin-UGC-plugin/releases/tag/v3.7.0) 下载 `install.ps1`、完整 ZIP 和 `SHA256SUMS.txt`，查看脚本后执行：
 
 ```powershell
-.\install.ps1 -Agent codex -Archive .\Genshin-UGC-3.6.1-windows-x64.zip -Sha256 '<SHA256SUMS.txt 中的 ZIP 摘要>'
+.\install.ps1 -Agent codex -Archive .\Genshin-UGC-3.7.0-windows-x64.zip -Sha256 '<SHA256SUMS.txt 中的 ZIP 摘要>'
 ```
+
+安装失败后可使用相同版本、ZIP摘要、客户端和目录参数加 `-Resume` 续装，仅接受安装器登记的未激活版本。已激活版本使用回退或新版本目录。SHA-256用于内容一致性检查，不代替独立签名。
 
 ## 首次使用
 
@@ -104,7 +106,7 @@ Claude Code 将末尾参数改成 `-Agent claude-code`。首次会询问现有�
 - [AyayaXiaowang / Ayaya_Miliastra_Editor](https://github.com/AyayaXiaowang/Ayaya_Miliastra_Editor)：Graph Code及GIA/GIL离线工具链。
 - [1475505 / miliastra-beyond-simulator](https://github.com/1475505/miliastra-beyond-simulator)：客户端Lua及UI软件模拟后端。
 - [1475505 / Miliastra-knowledge](https://github.com/1475505/Miliastra-knowledge)：千星奇域文档整理与版本资料来源。
-- [没空放肆 / GEIMG](https://docs.lumkfs.cn/GEIMG-WIKI/Download/)：[拟L2D知识库](https://docs.lumkfs.cn/GEIMG-WIKI/EG-L2D/)、附件及GE图像工具；对应文件的许可状态见下方声明。
+- [没空放肆 / GEIMG](https://docs.lumkfs.cn/GEIMG-WIKI/Download/)：[拟L2D知识库](https://docs.lumkfs.cn/GEIMG-WIKI/EG-L2D/)、附件与历史格式参考；当前拟合不依赖GE程序，原资料声明保留。
 - [8itlab / genshin-miliastra-mcp](https://github.com/8itlab/genshin-miliastra-mcp)：千星工具与MCP方案研究参考。
 - [genshin-ts](https://github.com/josStorer/genshin-ts)、[NodeEditorPack](https://github.com/Wu-Yijun/Genshin-Impact-Miliastra-Wonderland-Code-Node-Editor-Pack)、Genshin-Impact-UGC-File-Converter及[perfectPixel](https://github.com/theamusing/perfectPixel)：Ayaya所记录的定义、转换与图像处理相关成果。
 - [script-1024 / genshin-miliastra-file-format](https://github.com/script-1024/genshin-miliastra-file-format)、[luern0313 / UGC-File-Generate-Utils](https://github.com/luern0313/UGC-File-Generate-Utils)：GIL/GIA格式及生成工具研究参考。

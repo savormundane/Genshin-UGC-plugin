@@ -27,7 +27,7 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 | simulate | spec、sha256、output：schema 2联合场景；在独立工作进程执行，零断言或必需覆盖不足不提交 |
 | experiment_run | spec、sha256、output：观察实验，开发／保留种子合同不变；失败不提交 |
 | logs_diagnose | spec、sha256：只读解析JSONL及关联产物 |
-| verify | input、sha256、rebuild、portable：input必须是交付manifest.json；两个开关为显式布尔，重建使用请求临时目录 |
+| verify | input、sha256、rebuild、portable，可选trusted_inputs_sha256：input必须是交付manifest.json；两个开关为显式布尔，重建使用请求临时目录 |
 | native_apply | input、sha256、plan、plan_sha256、output：执行已有摘要绑定原生计划 |
 
 input/spec/plan/contract相对工程根目录，或为工程/输出根内绝对路径。output相对输出根目录，必须是尚不存在的新目录，其父目录须存在。sha256均为对应输入文件原始字节摘要；plan_sha256参数是计划文件摘要，计划内部的语义摘要由原生核心继续核对。
@@ -69,3 +69,5 @@ SDK依据：[官方Python SDK](https://py.sdk.modelcontextprotocol.io/)、[进�
 ## V3.5新增入口与启动
 
 `api_lookup(symbol)` 查询来源、原文行、推导类型和冲突；`diagnose(spec, sha256)` 只读执行显式配置的环境、Lua、GIL和素材检查。复用CLI核心，沿用摘要绑定和依赖根边界。安装后的默认入口使用[专用运行环境](runtime-environment.md)，不依赖系统python命令。SDK stdio调用与Codex宿主实际加载分别记录。
+
+普通操作总时限120秒，制作／原生修改／重建900秒；通过服务进程环境 `UGC_MCP_TIMEOUT_SECONDS`、`UGC_MCP_BUILD_TIMEOUT_SECONDS` 设置（大于0，不超过3600秒）。取消或超时终止工作进程树，清理等待最多15秒，不提升临时输出。`portable=true` 仅静态核对；重建还需 `rebuild=true` 及静态报告的 `trusted_inputs_sha256`，表示调用方已审阅并同意执行该摘要绑定的工程代码。摘要本身不是授权来源。详见[重建边界](portable-delivery.md)。

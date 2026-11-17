@@ -80,7 +80,7 @@ def server(bridge):
         """Run the corresponding CLI core with digest-bound inputs and exclusive outputs."""
         return await bridge.call('logs_diagnose',{'spec':spec,'sha256':sha256},ctx.report_progress)
     @app.tool(structured_output=True)
-    async def verify(input:str,sha256:str,rebuild:bool,portable:bool,ctx:Context)->dict[str,Any]:
-        """Run the corresponding CLI core with digest-bound inputs and exclusive outputs."""
-        return await bridge.call('verify',{'input':input,'sha256':sha256,'rebuild':rebuild,'portable':portable},ctx.report_progress)
+    async def verify(input:str,sha256:str,rebuild:bool,portable:bool,ctx:Context,trusted_inputs_sha256:str|None=None)->dict[str,Any]:
+        """Static portable verification never executes package code. Rebuild requires explicit trusted project-input approval."""
+        return await bridge.call('verify',{'input':input,'sha256':sha256,'rebuild':rebuild,'portable':portable,'trusted_inputs_sha256':trusted_inputs_sha256},ctx.report_progress)
     return app

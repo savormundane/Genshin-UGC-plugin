@@ -4,10 +4,12 @@ import importlib.util,json,os,re,shutil,subprocess,sys,tempfile
 from authoring_io import PLUGIN,read_json,sha,inventory,write_json,output_directory,finish,schema
 from validation_evidence import backend_inventory
 
-def collect(path,options):
+def collect(path,options,*,snapshot_root=None):
     path=Path(path).resolve();base=path.parent
     schema(options,('roots','dependencies'))
     roots={'project':base,'toolchain':PLUGIN}
+    if snapshot_root is not None:
+        roots={p.name:p for p in Path(snapshot_root).iterdir() if p.is_dir() and p.name!='toolchain'}
     for name,value in options.get('roots',{}).items():
         if not re.fullmatch(r'[A-Za-z][A-Za-z0-9_-]*',name)or name in roots:raise ValueError('Unique portable root name required')
         roots[name]=(base/value).resolve()
@@ -38,6 +40,7 @@ def collect(path,options):
             return
         value=read_json(source);configs[source]=(kind,value)
         if kind=='job':
+            if value.get('schema')!=2:raise ValueError('Portable job requires schema 2')
             value.pop('portable',None)
             if 'client'in value:
                 c=value['client'];reference(source,c,'assembly'if 'assembly'in c else'source','assembly'if 'assembly'in c else None)
@@ -51,7 +54,7 @@ def collect(path,options):
             if 'native'in value:
                 native=value['native'];reference(source,native,'plan'if 'plan'in native else'spec','native_plan'if 'plan'in native else'native')
             for item in value.get('assets',[]):
-                reference(source,item,'source')
+                reference(source,item,'source','fit_layers' if item.get('kind')=='fit' and Path(item['source']).suffix.lower()=='.json' else None)
                 if 'spec'in item:reference(source,item,'spec')
             for item in value.get('animation',{}).get('frames',[]):reference(source,item,'asset')
         elif kind in('assembly','level','graphs'):
@@ -61,6 +64,8 @@ def collect(path,options):
             if kind=='graphs':
                 for key in('base_gil','project_resources'):
                     if value.get(key):reference(source,value,key)
+        elif kind=='fit_layers':
+            for layer in value['layers']:reference(source,layer,'source')
         elif kind=='native':
             for item in value['operations']:
                 if 'source'in item:reference(source,item,'source')
@@ -85,12 +90,14 @@ def collect(path,options):
         add(raw)
     # Include the complete independent plugin, including calibrations, official
     # rules, backend definitions and licenses; omit only inventory's cache files.
-    add(PLUGIN)
+    if snapshot_root is None:add(PLUGIN)
     return path,roots,files,configs,bindings,directories
 
-def execute(bundle,out):
+def execute(bundle,out,trusted_inputs_sha256=None):
     bundle=Path(bundle).resolve();out=Path(out).resolve();record=read_json(bundle/'portable.json')
     if record.get('schema')!=1:raise ValueError('Unknown portable delivery schema')
+    from portable_trust import trusted_execution, child_environment
+    trusted_execution(bundle,trusted_inputs_sha256)
     if backend_inventory()!=record['backends']:raise ValueError('Portable execution backend differs from recorded dependencies')
     work=bundle/'workspace'
     with tempfile.TemporaryDirectory(prefix='qianxing-portable-run-')as temporary:
@@ -102,11 +109,12 @@ def execute(bundle,out):
             if spec and spec.submodule_search_locations:
                 read_roots.extend(spec.submodule_search_locations)
                 package_paths.extend(str(Path(p).parent)for p in spec.submodule_search_locations)
-        boundary={'read_roots':read_roots,'write_roots':[str(out.parent),str(scratch)],'trace':str(trace)}
-        runner=work/'toolchain/scripts/dependency_runner.py'
-        command=[sys.executable,'-X','utf8','-B',str(runner),str(work/'toolchain/scripts/qianxing.py'),'produce',str(work/record['job']),'--out',str(out)]
-        env={**os.environ,'UGC_BUILD_BOUNDARY':json.dumps(boundary),'TMP':str(scratch),'TEMP':str(scratch),'TMPDIR':str(scratch),'PYTHONDONTWRITEBYTECODE':'1','PYTHONPATH':os.pathsep.join(dict.fromkeys(package_paths))}
-        process=subprocess.run(command,cwd=work,env=env,capture_output=True,text=True,encoding='utf-8',timeout=900)
+        boundary={'read_roots':read_roots,'blocked_roots':[str(work/'toolchain')],'write_roots':[str(out.parent),str(scratch)],'trace':str(trace)}
+        read_roots.append(str(PLUGIN))
+        runner=PLUGIN/'scripts/dependency_runner.py'
+        command=[sys.executable,'-X','utf8','-B',str(runner),str(PLUGIN/'scripts/qianxing.py'),'produce',str(work/record['job']),'--out',str(out)]
+        env={**child_environment(),'UGC_BUILD_BOUNDARY':json.dumps(boundary),'TMP':str(scratch),'TEMP':str(scratch),'TMPDIR':str(scratch),'PYTHONDONTWRITEBYTECODE':'1','PYTHONPATH':os.pathsep.join(dict.fromkeys(package_paths))}
+        process=subprocess.run(command,cwd=scratch,env=env,capture_output=True,text=True,encoding='utf-8',timeout=900)
         if process.returncode:raise ValueError('Portable build failed: '+(process.stdout+process.stderr)[-18000:])
         traces=list(trace.glob('*.json'));reads=sorted({name for path in traces for name in read_json(path)})
         return {'status':'passed','python_processes':len(traces),'python_read_files':len(reads),'scope':'trusted Python producers and compiler children; external runtime dependencies fingerprinted','editor':'not_checked','host':'not_checked'}
@@ -130,10 +138,11 @@ def produce(path,out,evidence):
             relocations.append({'configuration':files[config],'field':key,'original':container[key],'relocated':value})
             container[key]=value
         for source,(_,value)in configs.items():write_json(work/files[source],value)
-        write_json(bundle/'portable.json',{'schema':1,'job':files[path],'backends':backends,'original_inputs':original,'relocations':relocations,'files':inventory(bundle)})
+        write_json(bundle/'portable.json',{'schema':1,'job':files[path],'backends':backends,'original_inputs':original,'relocations':relocations,'files':inventory(bundle),'directories':sorted(p.relative_to(bundle).as_posix() for p in bundle.rglob('*') if p.is_dir())})
         snapshot=inventory(bundle)
         with tempfile.TemporaryDirectory(prefix='qianxing-portable-output-',dir=stage.parent)as directory:
-            result=Path(directory)/'result';execution=execute(bundle,result)
+            from portable_trust import closure
+            result=Path(directory)/'result';execution=execute(bundle,result,closure(bundle)[1])
             inner=read_json(result/'manifest.json')
             for item in result.iterdir():shutil.move(str(item),str(stage/item.name))
         if snapshot!=inventory(bundle):raise ValueError('Portable input snapshot changed during production')

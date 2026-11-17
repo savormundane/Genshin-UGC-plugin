@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "3.6.1",
+  "version": "3.7.0",
   "code_license": "GPL-3.0-only",
   "third_party_license_scope": "Original notices govern; unverified documents and external executables are not relicensed.",
   "groups": {
@@ -1688,12 +1688,6 @@
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "runtime/GE_IMG_Tool.exe",
-      "sha256": "14c43176ed103d05364805390dc7ce590449c04e0463b8b6269b1537b20a7731",
-      "group": "geimg",
-      "status": "redistribution_permission_unverified"
-    },
-    {
       "path": "skills/client-controls-lua/references/client-controls-api.md",
       "sha256": "0a74b932020d11696c8bf68d963cee8a20c7969e2ad7d481808d33b26a6dd887",
       "group": "client_api_document",
@@ -2130,9 +2124,9 @@
     },
     {
       "path": "vendor/beyond/bundle.json",
-      "source_sha256": "d3badd82fe54b9281adebebefbb69f80b1b42c7948c19861192de27a823a4114",
-      "sha256": "7d0e463a314a8c243d8e72838325c9b0b086129bcfa3dae23a42f2ca4310b1b3",
-      "reason": "Prevent Git newline conversion from invalidating bundled dependency hashes; executable implementation unchanged."
+      "source_sha256": "f3d2872d2d0db873d44af8793e41ee0c0fea9b5ef287a676988a659801ae1d74",
+      "sha256": "8d5d370a30096a7f621ad5109c85c94b3fe738607d88f0289d76fde90c718520",
+      "reason": "Optional dependency source maps omitted; runtime/native files retained; public Git byte policy preserved."
     }
   ]
 }

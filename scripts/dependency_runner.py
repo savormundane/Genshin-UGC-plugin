@@ -6,12 +6,14 @@ def main():
     boundary=json.loads(os.environ['UGC_BUILD_BOUNDARY'])
     allowed=[Path(p).resolve()for p in boundary['read_roots']]
     writable=[Path(p).resolve()for p in boundary.get('write_roots',[])]
+    blocked=[Path(p).resolve()for p in boundary.get('blocked_roots',[])]
     seen=set()
     def audit(event,args):
         if event not in ('open','os.listdir','os.scandir'):return
         value=args[0]
         if value is None or isinstance(value,int):return
         path=Path(os.fsdecode(value)).resolve()
+        if any(path.is_relative_to(root) for root in blocked):raise ValueError('Historical packaged toolchain cannot be used: '+str(path))
         if str(path).casefold()==os.devnull.casefold():return
         if event=='open'and args[2]&(os.O_WRONLY|os.O_RDWR|os.O_CREAT|os.O_TRUNC|os.O_APPEND):
             if not any(path.is_relative_to(root)for root in writable):raise ValueError('Write outside portable output/scratch: '+str(path))
