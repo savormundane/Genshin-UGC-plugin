@@ -27,3 +27,21 @@ regions为`[[left,top,right,bottom],...]`，限制新增／调整范围。`--ini
 gia=true使用相同矩形数据与已校准XY平面封装；空图拒绝GIA输出。保留来源、颜色、坐标和锚点，并用导入器回读。编辑器与设备仍待验：空工程导入后核对颜色、边缘、大小和锚点，再在目标设备检查控件预算。软件PNG不代表实际视觉验收或FPS。
 
 制作链schema 2可用assets项`{"name":"icon","kind":"fit","source":"icon.png","spec":"fit.json"}`，输出到fitted-assets/icon。portable收集分层清单及图片，重建遵守[执行确认](portable-delivery.md)。旧GE资料与未替代能力见[兼容边界](ge-asset-compatibility.md)。
+
+## Schema 2：交付预算与残差搜索
+
+显式使用schema 2启用新算法；schema 1保持旧搜索与检查点行为，不自动迁移。
+
+```json
+{"schema":2,"shapes":["rect","ellipse","circle","line"],"budget":80,"max_controls":1000,"max_total_controls":1500,"work":4000,"seed":7,"target_error":0.001,"gia":true}
+```
+
+max_controls是每层矩形上限；max_total_controls是批次总上限，省略时等于层数乘以每层上限。总预算平均分配，余数按输入层顺序分配，各层不超过max_controls；总预算小于层数拒绝。固定配额不跨层借用，未用额度不自动转移。预算是调用方的交付要求，不是官方硬限制。
+
+搜索75%按预乘RGBA残差加权采样，25%均匀采样；每三次候选安排一次局部优化，图元预算用尽后持续局部优化。轮换早期及后期图元，保持透明层序。只接受预算内误差降低，或误差相同但矩形更少的候选；不以模糊容差降低画质。透明轮廓与regions仍保护不可修改区域。初始结果超预算直接拒绝，导出前再次核对；未知旋转仍拒绝。
+
+primitives.json记录误差/成本历史、图元数、矩形数、palette_size、lua_utf8_bytes、control_budget、stats和stop_reason。catalog.json记录各层配额、total_controls、total_lua_utf8_bytes。target_reached=false意味着误差目标未达到，不冒充质量验收；仍可交付预算内近似结果。work_done是候选尝试数，stats分别记录实际候选渲染、成本计算、预算拒绝和局部尝试；不含初始化与检查点恢复重建。墙钟耗时仅用于开发对照，不混入确定性产物。
+
+schema 2检查点绑定算法、Pillow版本、配置、输入与初始数据，保存随机状态、轮换位置和历史；不匹配拒绝。旧检查点通过schema 1继续恢复，或显式--initial作为新算法起点。--initial开始的任务可直接用新检查点--resume，不必再次提供initial。旧历史检查点若未保存初始来源，不能凭空恢复该来源。
+
+Lua与GIA仍使用已校准矩形表达，preview是软件重建。原生曲线、任意旋转、编辑器和设备表现继续待验。

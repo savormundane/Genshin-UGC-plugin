@@ -18,7 +18,8 @@
       "test_asset_pipeline.py",
       "test_assets_text.py",
       "test_runtime_assets.py",
-      "test_audit_remediation.py"
+      "test_audit_remediation.py",
+      "test_asset_fit_v2.py"
     ],
     "workflow": [
       "test_mcp_service.py",
@@ -329,8 +330,11 @@
       "test_knowledge_diagnosis.py::ReliabilityTests.test_two_asset_and_diagnostic_configs"
     ],
     "asset_fit": [
-      "test_audit_remediation.py::AuditTests.test_fitting_transparency_layers_resume_and_roundtrip",
-      "test_audit_remediation.py::AuditTests.test_region_refinement_and_empty_input"
+      "test_asset_fit_v2.py::FitTests.test_search_resume_and_budget",
+      "test_asset_fit_v2.py::FitTests.test_initial_rotation_region_and_cost_tie",
+      "test_asset_fit_v2.py::FitTests.test_batch_initial_resume_atomic",
+      "test_asset_fit_v2.py::FitTests.test_initial_over_budget",
+      "test_asset_fit_v2.py::FitTests.test_production_and_portable"
     ]
   }
 }

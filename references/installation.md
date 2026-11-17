@@ -17,8 +17,8 @@
 使用已下载的 install.ps1，或解压后直接运行 `scripts/install_public.py`。回退只接受安装器历史中保留的版本，先复查运行环境，再切换注册。
 
 ```powershell
-python -X utf8 -B .\scripts\install_public.py rollback --agent codex --root "$env:LOCALAPPDATA\Genshin-UGC-Public" --version 3.7.0
-python -X utf8 -B .\scripts\install_public.py uninstall --agent codex --root "$env:LOCALAPPDATA\Genshin-UGC-Public" --version 3.7.0
+python -X utf8 -B .\scripts\install_public.py rollback --agent codex --root "$env:LOCALAPPDATA\Genshin-UGC-Public" --version 3.7.1
+python -X utf8 -B .\scripts\install_public.py uninstall --agent codex --root "$env:LOCALAPPDATA\Genshin-UGC-Public" --version 3.7.1
 ```
 
 卸载仅撤销该安装器记录的插件和 marketplace 注册，保留版本目录及专用环境用于回退。确认不再需要后，可手动删除安装根；项目和输出目录不是插件缓存，不随卸载删除。不要手动删除客户端的其他插件缓存。

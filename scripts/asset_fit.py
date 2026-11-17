@@ -8,7 +8,9 @@ from asset_pipeline import lua
 
 def parameters(spec):
     allowed = {'schema', 'shapes', 'budget', 'work', 'seed', 'alpha_min', 'target_error', 'regions', 'anchor','gia','max_controls'}
-    if not isinstance(spec, dict) or set(spec) - allowed or spec.get('schema') != 1:
+    version = spec.get('schema') if isinstance(spec,dict) else None
+    if version == 2: allowed.add('max_total_controls')
+    if not isinstance(spec, dict) or set(spec) - allowed or type(version)!=int or version not in (1,2):
         raise ValueError('Fit schema 1 required; uncalibrated transforms and unknown fields are refused')
     cfg = dict(shapes=['rect', 'ellipse', 'circle', 'line'], budget=100, work=2000,
                seed=0, alpha_min=1, target_error=0, regions=[], anchor=[0, 0],gia=False,max_controls=10000)
@@ -25,6 +27,10 @@ def parameters(spec):
         raise ValueError('regions must contain integer [left,top,right,bottom] boxes, exclusive end')
     if not isinstance(cfg['anchor'],list) or len(cfg['anchor'])!=2 or any(type(x) not in (int,float) or not math.isfinite(x) for x in cfg['anchor']):
         raise ValueError('anchor must contain two finite pixel coordinates')
+    if version == 2:
+        cfg['schema'] = 2
+        total = cfg.get('max_total_controls')
+        if 'max_total_controls' in cfg and (type(total)!=int or total<1): raise ValueError('Positive max_total_controls required')
     return cfg
 
 
@@ -57,6 +63,9 @@ def error(image, target):
 
 def fit(image, cfg, binding, state=None, steps=None, initial=None):
     """Each work unit is one evaluated proposal. Resume preserves the exact RNG stream."""
+    if cfg.get('schema') == 2:
+        from asset_fit_v2 import fit as fit_v2
+        return fit_v2(image,cfg,binding,state,steps,initial)
     size=image.size
     if size[0]*size[1]>262144:raise ValueError('Fit input exceeds 262144 pixels; preprocess explicitly')
     regions=cfg['regions'] or [[0,0,*size]]
@@ -156,15 +165,21 @@ def build(source,spec_path,out,resume=None,steps=None,initial=None):
     previous=read_json(resume) if resume else {};seed_data=read_json(initial) if initial else {}
     for extra in (resume,initial):
         if extra:inputs[str(Path(extra).resolve())]=sha(Path(extra).read_bytes())
-    binding=sha(canonical({'source':inputs[str(source)],'layers':[(n,d) for n,_,d in items],'config':cfg,'initial':seed_data}).encode())
-    if resume and (previous.get('schema')!=1 or previous.get('binding')!=binding or set(previous.get('layers',{}))!=names):raise ValueError('Resume input/configuration digest mismatch or missing layer state')
-    if initial and (seed_data.get('schema')!=1 or set(seed_data.get('layers',{}))!=names):raise ValueError('Initial state needs matching layer names')
+    initial_data=previous.get('initial_data',{}) if resume else seed_data
+    version=cfg.get('schema',1)
+    count=len(items);total=cfg.get('max_total_controls',count*cfg['max_controls'])
+    if version==2 and total<count: raise ValueError('Total controls smaller than layer count')
+    quotas=[min(cfg['max_controls'],total//count+(i<total%count)) for i in range(count)] if version==2 else [cfg['max_controls']]*count
+    binding=sha(canonical({'source':inputs[str(source)],'layers':[(n,d) for n,_,d in items],'config':cfg,'initial':initial_data}).encode())
+    if resume and (previous.get('schema')!=version or previous.get('binding')!=binding or set(previous.get('layers',{}))!=names):raise ValueError('Resume input/configuration digest mismatch or missing layer state')
+    if initial and (seed_data.get('schema') not in (1,2) or set(seed_data.get('layers',{}))!=names):raise ValueError('Initial state needs matching layer names')
     with output_directory(out) as stage:
         states={};catalog=[]
-        for name,image,digest in items:
-            state,preview=fit(image,cfg,binding,previous.get('layers',{}).get(name),steps,seed_data.get('layers',{}).get(name,{}).get('shapes'))
+        for i,(name,image,digest) in enumerate(items):
+            layer_cfg={**cfg,'max_controls':quotas[i]} if version==2 else cfg
+            state,preview=fit(image,layer_cfg,binding,previous.get('layers',{}).get(name),steps,seed_data.get('layers',{}).get(name,{}).get('shapes'))
             states[name]=state;dest=stage/name;dest.mkdir();data=rectangle_data(preview)
-            if len(data['rects'])>cfg['max_controls']:raise ValueError('Lowered rectangle controls exceed max_controls; no output committed')
+            if len(data['rects'])>quotas[i]:raise ValueError('Lowered rectangle controls exceed max_controls; no output committed')
             record={'schema':1,'size':list(image.size),'coordinate_space':'top_left_pixels','anchor':cfg['anchor'],'source_sha256':digest,'config':cfg,'binding':binding,'primitives':state['shapes'],
                     'primitive_count':len(state['shapes']),'rectangle_controls':len(data['rects']),'error':state['errors'][-1],'error_history':state['errors'],'work_done':state['work_done'],
                     'preview':'software reconstruction','editor':'not_checked','host':'not_checked'}
@@ -175,8 +190,17 @@ def build(source,spec_path,out,resume=None,steps=None,initial=None):
                 (dest/'asset.gia').write_bytes(export_rectangles(data,cfg['anchor'],name))
             (dest/'data.lua').write_text('return '+lua({'w':image.width,'h':image.height,'maxRects':len(data['rects']),**data})+'\n',encoding='utf-8')
             catalog.append({'name':name,'path':name+'/asset.json','primitives':record['primitive_count'],'controls':record['rectangle_controls'],'error':record['error']})
-        write_json(stage/'state.json',{'schema':1,'binding':binding,'layers':states})
-        write_json(stage/'catalog.json',{'schema':1,'layers':catalog,'binding':binding})
+            if version==2:
+                metrics=dict(control_budget=quotas[i],palette_size=len(data['palette']),lua_utf8_bytes=(dest/'data.lua').stat().st_size,stats=state['stats'],stop_reason=state['stop_reason'],target_reached=state['target_reached'])
+                record.update(schema=2,cost_history=state['history'],**metrics)
+                write_json(dest/'primitives.json',record);catalog[-1].update(metrics)
+        if version==2 and sum(r['controls'] for r in catalog)>total: raise ValueError('Total control budget exceeded')
+        checkpoint={'schema':version,'binding':binding,'layers':states}
+        if initial_data: checkpoint['initial_data']=initial_data
+        write_json(stage/'state.json',checkpoint)
+        summary={'schema':version,'layers':catalog,'binding':binding}
+        if version==2: summary.update(max_total_controls=total,total_controls=sum(r['controls'] for r in catalog),total_lua_utf8_bytes=sum(r['lua_utf8_bytes'] for r in catalog),budget_kind='tool delivery budget; not platform limit')
+        write_json(stage/'catalog.json',summary)
         return finish(stage,inputs,kind='asset-fit',binding=binding,layers=catalog,editor='not_checked',host='not_checked')
 
 
