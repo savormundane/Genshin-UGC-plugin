@@ -36,12 +36,14 @@ class ReleaseTests(unittest.TestCase):
         self.git("config", "user.email", "release@example.invalid")
         for name in REQUIRED_FILES:
             self.write(name, "Fixture\n")
+        self.write("CHANGELOG.md", f"# Fixture\n\n## {version}\n")
         for name in MANIFESTS:
             self.write(name, json.dumps({"name": "fixture", "version": version, "skills": "./skills/"}))
         self.write("install.ps1", f"param([string]$Version = '{version}')\n")
         self.write("skills/fixture/SKILL.md", "---\nname: fixture\ndescription: Neutral fixture\n---\n")
         self.write("vendor/beyond/node_modules/fixture/index.js", "export const value = 1;\n")
         self.write("runtime/fixture.bin", "neutral binary input\n")
+        self.write("references/中文 文件.txt", "Unicode fixture\n")
         self.write(".gitignore", ".venv/\n")
         self.git("add", ".")
         self.git("commit", "--quiet", "-m", "fixture")
@@ -65,6 +67,7 @@ class ReleaseTests(unittest.TestCase):
                     names = archive.namelist()
                     self.assertIn("Genshin-UGC/vendor/beyond/node_modules/fixture/index.js", names)
                     self.assertIn("Genshin-UGC/runtime/fixture.bin", names)
+                    self.assertIn("Genshin-UGC/references/中文 文件.txt", names)
                     self.assertFalse(any("/.git/" in n or "/.venv/" in n for n in names))
                     self.assertEqual(archive.read("Genshin-UGC/install.ps1"), (first / "install.ps1").read_bytes())
                 with self.assertRaisesRegex(ValueError, "new directory"):

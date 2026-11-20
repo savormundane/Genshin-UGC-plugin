@@ -71,3 +71,9 @@ SDK依据：[官方Python SDK](https://py.sdk.modelcontextprotocol.io/)、[进�
 `api_lookup(symbol)` 查询来源、原文行、推导类型和冲突；`diagnose(spec, sha256)` 只读执行显式配置的环境、Lua、GIL和素材检查。复用CLI核心，沿用摘要绑定和依赖根边界。安装后的默认入口使用[专用运行环境](runtime-environment.md)，不依赖系统python命令。SDK stdio调用与Codex宿主实际加载分别记录。
 
 普通操作总时限120秒，制作／原生修改／重建900秒；通过服务进程环境 `UGC_MCP_TIMEOUT_SECONDS`、`UGC_MCP_BUILD_TIMEOUT_SECONDS` 设置（大于0，不超过3600秒）。取消或超时终止工作进程树，清理等待最多15秒，不提升临时输出。`portable=true` 仅静态核对；重建还需 `rebuild=true` 及静态报告的 `trusted_inputs_sha256`，表示调用方已审阅并同意执行该摘要绑定的工程代码。摘要本身不是授权来源。详见[重建边界](portable-delivery.md)。
+
+Portable 调用顺序：
+
+1. 对交付 `manifest.json` 调用 `verify`，传入其 `sha256`、`portable=true` 和 `rebuild=false`。
+2. 展示静态报告和待执行的工程输入，让调用方审阅并明确批准该次重建。
+3. 获得批准后仍使用同一清单和摘要，传入 `portable=true`、`rebuild=true` 以及报告中的 `trusted_inputs_sha256`。输入变化时重新静态核对及审阅。自动化流程只拿到摘要时停在静态核对。

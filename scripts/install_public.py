@@ -17,11 +17,15 @@ def read_json(p):
     return json.loads(Path(p).read_text(encoding='utf-8-sig'))
 
 
+def json_text(data):
+    return json.dumps(data, ensure_ascii=False, indent=2) + '\n'
+
+
 def save(p, data):
     p = Path(p)
     p.parent.mkdir(parents=True, exist_ok=True)
     pending = p.with_suffix('.pending')
-    pending.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    pending.write_text(json_text(data), encoding='utf-8')
     os.replace(pending, p)
 
 
@@ -79,24 +83,136 @@ def extract(archive, expected, destination, version):
     return bundle
 
 
-def configure_marketplace(home, agent, version, node, config):
-    """All client-specific configuration lives in this owned version directory."""
-    bundle = home / 'Genshin-UGC'
+def marketplace_files(agent, version, node, config):
     market = 'genshin-ugc-download-' + agent + '-' + version.replace('.', '-')
     server = {'type': 'stdio', 'command': node,
               'args': ['${PLUGIN_ROOT}/scripts/mcp_launcher.cjs'],
               'env': {'UGC_RUNTIME_CONFIG': str(config)}}
-    save(bundle / 'mcp.json', {'mcpServers': {'genshin-ugc-public-local': server}})
     claude_server = dict(server, args=['${CLAUDE_PLUGIN_ROOT}/scripts/mcp_launcher.cjs'])
-    save(bundle / '.mcp.json', {'mcpServers': {'genshin-ugc-public-local': claude_server}})
-    save(home / '.agents/plugins/marketplace.json', {
-        'name': market, 'interface': {'displayName': 'Genshin-UGC'},
-        'plugins': [{'name': 'genshin-ugc-public', 'source': {'source': 'local', 'path': './Genshin-UGC'},
-                     'policy': {'installation': 'AVAILABLE', 'authentication': 'ON_INSTALL'}, 'category': 'Productivity'}]})
-    save(home / '.claude-plugin/marketplace.json', {
-        'name': market, 'owner': {'name': 'Genshin-UGC contributors'},
-        'plugins': [{'name': 'genshin-ugc-public', 'source': './Genshin-UGC'}]})
+    files = {
+        Path('Genshin-UGC/mcp.json'): {'mcpServers': {'genshin-ugc-public-local': server}},
+        Path('Genshin-UGC/.mcp.json'): {'mcpServers': {'genshin-ugc-public-local': claude_server}},
+        Path('.agents/plugins/marketplace.json'): {
+            'name': market, 'interface': {'displayName': 'Genshin-UGC'},
+            'plugins': [{'name': 'genshin-ugc-public', 'source': {'source': 'local', 'path': './Genshin-UGC'},
+                         'policy': {'installation': 'AVAILABLE', 'authentication': 'ON_INSTALL'}, 'category': 'Productivity'}]},
+        Path('.claude-plugin/marketplace.json'): {
+            'name': market, 'owner': {'name': 'Genshin-UGC contributors'},
+            'plugins': [{'name': 'genshin-ugc-public', 'source': './Genshin-UGC'}]},
+    }
+    return market, files
+
+
+def linked(path):
+    return path.is_symlink() or (path.exists() and bool(getattr(path.lstat(), 'st_file_attributes', 0) & 1024))
+
+
+def configure_marketplace(home, agent, version, node, config):
+    """All client-specific configuration lives in this owned version directory."""
+    market, files = marketplace_files(agent, version, node, config)
+    for relative, data in files.items():
+        target = home / relative
+        if any(linked(home / part) for part in (relative, *relative.parents)) or linked(target.with_suffix('.pending')):
+            raise ValueError(f'Linked marketplace configuration refused: {relative}')
+        save(target, data)
     return market
+
+
+def verify_unfinished_bundle(home, archive, binding, generated):
+    """Compare all retained files with the archive or exact installer-generated configuration."""
+    with tempfile.TemporaryDirectory(prefix='resume-check-', dir=home.parent) as temporary:
+        extracted = extract(archive, binding['archive_sha256'], Path(temporary), binding['version'])
+        bundle = home / 'Genshin-UGC'
+        if linked(bundle) or not bundle.is_dir():
+            raise ValueError('Linked or missing unfinished bundle')
+        expected = {path.relative_to(extracted.parent): path for path in extracted.rglob('*') if path.is_file()}
+        actual = {}
+        for path in bundle.rglob('*'):
+            if linked(path):
+                raise ValueError(f'Linked unfinished bundle entry refused: {path.relative_to(home)}')
+            if path.is_file():
+                actual[path.relative_to(home)] = path
+        if expected.keys() - actual.keys() or actual.keys() - expected.keys() - generated.keys():
+            raise ValueError('Missing or unregistered file in unfinished bundle')
+        for relative, data in generated.items():
+            if any(linked(home / part) for part in (relative, *relative.parents)):
+                raise ValueError(f'Linked marketplace configuration refused: {relative}')
+            candidate = home / relative
+            if candidate.exists():
+                actual[relative] = candidate
+        for relative, path in actual.items():
+            data = path.read_bytes()
+            if relative in expected and data == expected[relative].read_bytes():
+                continue
+            if relative in generated and data == json_text(generated[relative]).replace('\n', os.linesep).encode('utf-8'):
+                continue
+            raise ValueError(f'Unfinished bundle differs from archive or installer configuration: {relative}')
+
+
+def run_codex_plugin(client, *arguments):
+    try:
+        return run([client, 'plugin', *arguments], capture_output=True, encoding='utf-8', timeout=90).stdout
+    except subprocess.CalledProcessError as error:
+        detail = (error.stderr or error.stdout or '').strip()
+        raise RuntimeError(f"Codex plugin {' '.join(str(value) for value in arguments)} failed ({error.returncode}): {detail}") from error
+
+
+def codex_registration(client, record):
+    """Use the scoped CLI query so unrelated marketplaces do not affect recovery."""
+    marketplace = record['marketplace']
+    result = json.loads(run_codex_plugin(client, 'list', '--marketplace', marketplace, '--available', '--json'))
+    rows = result['installed'] + result['available']
+    if not rows:
+        return None
+    selector = 'genshin-ugc-public@' + marketplace
+    if len(rows) != 1 or rows[0].get('pluginId') != selector:
+        raise ValueError(f'Unexpected Codex registration for {marketplace}')
+    row = rows[0]
+    source = row.get('source', {})
+    market_source = row.get('marketplaceSource', {})
+    source_path = Path(source.get('path', ''))
+    market_path = Path(market_source.get('source', ''))
+    root = Path(record['home']).resolve()
+    if (row.get('version') != record['version'] or source.get('source') != 'local'
+            or market_source.get('sourceType') != 'local'
+            or not source_path.is_absolute() or not source_path.samefile(root / 'Genshin-UGC')
+            or not market_path.is_absolute() or not market_path.samefile(root)):
+        raise ValueError(f'Codex registration source or version differs for {selector}')
+    if row.get('installed') is not bool(result['installed']) or type(row.get('enabled')) is not bool:
+        raise ValueError(f'Codex returned an unknown installation state for {selector}')
+    return row
+
+
+def activate_codex_install(client, record, previous, state, state_path):
+    selector = 'genshin-ugc-public@' + record['marketplace']
+    registration = codex_registration(client, record)
+    if registration is None:
+        # Codex refuses an existing name attached to another source.
+        run_codex_plugin(client, 'marketplace', 'add', record['home'])
+        registration = codex_registration(client, record)
+        if registration is None:
+            raise ValueError(f'Codex did not expose the added marketplace for {selector}')
+    if not registration.get('installed'):
+        run_codex_plugin(client, 'add', selector, '--json')
+        registration = codex_registration(client, record)
+    if not registration or not registration.get('installed') or not registration.get('enabled'):
+        raise ValueError(f'Codex has not installed and enabled {selector}')
+    if state['current'] != record:
+        state['current'] = record
+        if previous:
+            state['history'].append(previous)
+        save(state_path, state)
+    if previous:
+        old = codex_registration(client, previous)
+        if old and old.get('installed'):
+            run_codex_plugin(client, 'remove', old['pluginId'])
+            old = codex_registration(client, previous)
+            if old and old.get('installed'):
+                raise ValueError(f"Codex still reports the previous plugin as installed: {old['pluginId']}")
+        if old:
+            run_codex_plugin(client, 'marketplace', 'remove', previous['marketplace'])
+            if codex_registration(client, previous) is not None:
+                raise ValueError(f"Codex still reports the previous marketplace: {previous['marketplace']}")
 
 
 def activate(client, agent, record, previous):
@@ -162,35 +278,46 @@ def operate(args):
     home = root / 'versions' / args.agent / args.version
     for part in (home,*home.parents):
         if part==root.parent:break
-        if part.is_symlink() or (part.exists() and getattr(part.lstat(),'st_file_attributes',0)&1024):
+        if linked(part):
             raise ValueError('Linked installation directory refused')
     journal = home / 'installation-pending.json'
+    config = home / 'runtime.json'
+    runtime = home / 'runtime'
+    bundle = home / 'Genshin-UGC'
+    python = runtime / 'Scripts/python.exe'
+    market, generated = marketplace_files(args.agent, args.version, node, config)
     binding = {'schema': 1, 'version': args.version, 'archive_sha256': args.sha256.lower(),
                'agent': args.agent, 'home': str(home), 'project': str(project), 'outputs': str(outputs)}
+    record = {'version': args.version, 'home': str(home), 'config': str(config),
+              'python': str(python), 'marketplace': market, 'archive_sha256': binding['archive_sha256']}
     if hashlib.sha256(Path(args.archive).read_bytes()).hexdigest() != binding['archive_sha256']:
         raise ValueError('Archive SHA-256 mismatch')
+    recovering_activation = False
     if home.exists():
-        if any(r and r['home']==str(home) for r in [previous,*state['history']]):
+        if linked(journal):
+            raise ValueError('Linked installation journal refused')
+        pending = read_json(journal) if getattr(args, 'resume', False) and journal.is_file() else None
+        recovering_activation = args.agent == 'codex' and pending is not None and pending.get('phase') == 'activation'
+        if any(r and r['home'] == str(home) for r in [previous, *state['history']]) and not (
+                recovering_activation and previous == record):
             raise ValueError('Activated versions cannot be resumed or overwritten')
-        if not getattr(args,'resume',False) or not journal.is_file():
+        if pending is None:
             raise ValueError('Version directory exists; --resume requires a registered unfinished installation')
-        pending=read_json(journal)
-        if pending.get('binding')!=binding or pending.get('phase') not in ('dependencies','checks'):
-            raise ValueError('Resume parameters differ or activation has already been attempted')
-        # Revalidate against the same archive, without executing retained package code first.
-        with tempfile.TemporaryDirectory(prefix='resume-check-',dir=home.parent) as td:
-            expected=extract(args.archive,args.sha256,Path(td),args.version)
-            actual=home/'Genshin-UGC'
-            for item in actual.rglob('*'):
-                if item.is_symlink() or getattr(item.lstat(),'st_file_attributes',0)&1024:
-                    raise ValueError('Linked unfinished bundle refused')
-            for item in expected.rglob('*'):
-                if item.is_file():
-                    target=actual/item.relative_to(expected)
-                    if target.is_symlink() or not target.is_file() or target.read_bytes()!=item.read_bytes():
-                        raise ValueError('Unfinished bundle differs from the verified archive')
-            if {p.relative_to(actual) for p in actual.rglob('*') if p.is_file()}!={p.relative_to(expected) for p in expected.rglob('*') if p.is_file()}:
-                raise ValueError('Unregistered file in unfinished bundle')
+        if pending.get('binding') != binding:
+            raise ValueError('Resume parameters differ from the unfinished installation')
+        if recovering_activation:
+            if pending.get('record') != record or pending.get('node') != node or 'previous' not in pending:
+                raise ValueError('Codex activation record is incomplete or its parameters have changed')
+            original = pending['previous']
+            if previous == record:
+                if original is not None and original not in state['history']:
+                    raise ValueError('Previous Codex installation is missing from history')
+            elif previous != original:
+                raise ValueError('Current Codex installation changed since activation began')
+            previous = original
+        elif pending.get('phase') not in ('dependencies', 'checks'):
+            raise ValueError('Activation has already been attempted and cannot be resumed for this Agent')
+        verify_unfinished_bundle(home, args.archive, binding, generated if recovering_activation else {})
     else:
         if getattr(args,'resume',False):raise ValueError('No registered unfinished version to resume')
         home.parent.mkdir(parents=True, exist_ok=True)
@@ -200,10 +327,9 @@ def operate(args):
             save(stage/'installation-pending.json',{'binding':binding,'phase':'dependencies'})
             os.replace(stage, home)
     # Not activated yet. Failed dependencies leave a diagnostic copy, never an active half-install.
-    config = home / 'runtime.json'
-    runtime = home / 'runtime'
-    bundle = home / 'Genshin-UGC'
     if not config.exists():
+        if recovering_activation:
+            raise ValueError('Runtime configuration is missing from the interrupted Codex activation')
         command=[sys.executable, '-X', 'utf8', '-B', bundle / 'scripts/configure_runtime.py',
                  '--python', sys.executable, '--runtime', runtime, '--project', project,
                  '--outputs', outputs, '--config', config]
@@ -213,19 +339,27 @@ def operate(args):
         restored=read_json(config)
         if restored.get('project_root')!=str(project) or restored.get('output_root')!=str(outputs) or restored.get('python')!=str(runtime/'Scripts/python.exe'):
             raise ValueError('Unfinished runtime configuration differs from registered parameters')
-    save(journal,{'binding':binding,'phase':'checks'})
-    python = runtime / 'Scripts/python.exe'
+    if not recovering_activation:
+        save(journal, {'binding': binding, 'phase': 'checks'})
     run([python, '-X', 'utf8', '-B', bundle / 'scripts/install_smoke.py', '--config', config, '--node', node])
-    # Stop permitting automatic resume before mutating registration; interruption here needs rollback review.
-    save(journal,{'binding':binding,'phase':'activation'})
-    market = configure_marketplace(home, args.agent, args.version, node, config)
-    record = {'version': args.version, 'home': str(home), 'config': str(config),
-              'python': str(python), 'marketplace': market, 'archive_sha256': args.sha256.lower()}
-    activate(client, args.agent, record, previous)
-    state['current'] = record
-    if previous:
-        state['history'].append(previous)
-    save(state_path, state)
+    activation = {'binding': binding, 'phase': 'activation'}
+    if args.agent == 'codex':
+        activation.update(record=record, previous=previous, node=node)
+        save(journal, activation)
+        try:
+            configure_marketplace(home, args.agent, args.version, node, config)
+            activate_codex_install(client, record, previous, state, state_path)
+        except (ValueError, RuntimeError, OSError, KeyError, TypeError, subprocess.SubprocessError) as error:
+            save(journal, {**activation, 'last_error': str(error)})
+            raise ValueError(f'Codex activation remains pending: {error}. Diagnose this state and use --resume with the same inputs.') from error
+    else:
+        save(journal, activation)
+        configure_marketplace(home, args.agent, args.version, node, config)
+        activate(client, args.agent, record, previous)
+        state['current'] = record
+        if previous:
+            state['history'].append(previous)
+        save(state_path, state)
     journal.unlink()
     return {'installed': args.version, 'agent': args.agent, 'runtime_smoke': 'passed',
             'agent_host_load': 'not_checked', 'next': 'Restart the Agent and verify five Skills and MCP tools'}

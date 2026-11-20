@@ -1,10 +1,34 @@
 """Package one explicitly selected plugin or single Skill directory."""
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import argparse
 import hashlib
 import json
 import re
+import tempfile
 import zipfile
+
+
+def validate_windows_names(names):
+    """Reject names Windows would change or map to the same path."""
+    entries = set()
+    prefixes = {}
+    for name in names:
+        if name in entries:
+            raise ValueError(f'Duplicate archive path: {name!r}')
+        entries.add(name)
+        name.encode('utf-8')
+        parts = name.removesuffix('/').split('/')
+        prefix = []
+        for index, part in enumerate(parts):
+            if (not part or part != part.strip() or part.endswith('.')
+                    or re.search(r'[<>:"\\|?*\x00-\x1f]', part)
+                    or PureWindowsPath(part).is_reserved()):
+                raise ValueError(f'Invalid Windows archive path: {name!r}')
+            prefix.append(part)
+            current = ('/'.join(prefix), index < len(parts) - 1 or name.endswith('/'))
+            prior = prefixes.setdefault(current[0].casefold(), current)
+            if prior != current:
+                raise ValueError(f'Windows archive path collision: {prior[0]!r} and {name!r}')
 
 
 def build_release(source, output, layout='auto', archive_root=None):
@@ -69,27 +93,39 @@ def build_release(source, output, layout='auto', archive_root=None):
             raise ValueError('Plugin identity and skills required')
     else:
         raise ValueError('Unknown layout')
+    members = {archive_root + '/' + f.relative_to(source).as_posix(): f for f in files}
+    validate_windows_names(members)
     output.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output, 'x', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
-        for f in files:
-            member = archive_root + '/' + f.relative_to(source).as_posix()
+        for member, f in members.items():
             info = zipfile.ZipInfo(member, date_time=(1980, 1, 1, 0, 0, 0))
             info.compress_type = zipfile.ZIP_DEFLATED
             info.create_system = 3
             info.external_attr = 0o100644 << 16
             archive.writestr(info, f.read_bytes())
-    with zipfile.ZipFile(output) as archive:
+    with tempfile.TemporaryDirectory(prefix='ugc-zip-check-') as temporary, zipfile.ZipFile(output) as archive:
         if archive.testzip() is not None:
             raise ValueError('ZIP CRC failed')
-        for f in files:
-            member = archive_root + '/' + f.relative_to(source).as_posix()
-            if archive.read(member) != f.read_bytes():
-                raise ValueError('Archive differs from source: ' + member)
+        zip_entries = archive.infolist()
+        if [entry.filename for entry in zip_entries] != list(members):
+            raise ValueError('ZIP entry names differ from source')
+        unicode_names = [entry for entry in zip_entries if not entry.filename.isascii()]
+        if any(not entry.flag_bits & 0x800 for entry in unicode_names):
+            raise ValueError('Non-ASCII ZIP names must carry the UTF-8 flag')
+        archive.extractall(temporary)
+        unpacked = Path(temporary)
+        restored = {f.relative_to(unpacked).as_posix() for f in unpacked.rglob('*') if f.is_file()}
+        if restored != set(members):
+            raise ValueError('Extracted file names differ from ZIP entries')
+        for member, original in members.items():
+            if (unpacked / member).read_bytes() != original.read_bytes():
+                raise ValueError('Extracted bytes differ from source: ' + member)
     return {'layout': layout, 'excluded_prefixes': excluded, 'files': len(files), 'skills': len(entries),
             'zip_bytes': output.stat().st_size,
             'largest_file_bytes': max(f.stat().st_size for f in files),
             'sha256': hashlib.sha256(output.read_bytes()).hexdigest(),
-            'archive_content_verified': True, 'agent_installation_tested': False}
+            'archive_content_verified': True, 'extracted_names_verified': True,
+            'utf8_entries': len(unicode_names), 'agent_installation_tested': False}
 
 
 if __name__ == '__main__':

@@ -17,8 +17,8 @@
 使用已下载的 install.ps1，或解压后直接运行 `scripts/install_public.py`。回退只接受安装器历史中保留的版本，先复查运行环境，再切换注册。
 
 ```powershell
-python -X utf8 -B .\scripts\install_public.py rollback --agent codex --root "$env:LOCALAPPDATA\Genshin-UGC-Public" --version 3.7.1
-python -X utf8 -B .\scripts\install_public.py uninstall --agent codex --root "$env:LOCALAPPDATA\Genshin-UGC-Public" --version 3.7.1
+python -X utf8 -B .\scripts\install_public.py rollback --agent codex --root "$env:LOCALAPPDATA\Genshin-UGC-Public" --version 3.7.3
+python -X utf8 -B .\scripts\install_public.py uninstall --agent codex --root "$env:LOCALAPPDATA\Genshin-UGC-Public" --version 3.7.3
 ```
 
 卸载仅撤销该安装器记录的插件和 marketplace 注册，保留版本目录及专用环境用于回退。确认不再需要后，可手动删除安装根；项目和输出目录不是插件缓存，不随卸载删除。不要手动删除客户端的其他插件缓存。
@@ -42,4 +42,6 @@ python -X utf8 -B .\scripts\install_public.py uninstall --agent codex --root "$e
 
 ## 失败后续装
 
-保留失败目录，用相同参数增加 `-Resume`（Python入口为 `--resume`）。安装器核对版本、ZIP摘要、客户端、安装及输入输出目录，只恢复已登记且未进入激活阶段的版本；已激活或归属不明的目录拒绝覆盖。原安装与回退版本保持。依赖安装采用 `--require-hashes --only-binary=:all:`，不自动升级pip。摘要检查仅证明下载内容一致，不是独立签名。
+保留失败目录，以相同版本、ZIP 摘要、客户端和安装及输入输出目录参数加 `-Resume`（Python 入口为 `--resume`）。两个客户端都可恢复依赖安装和启动检查阶段。Codex 还可恢复安装器已登记的激活阶段。续装会核对候选文件、安装器生成的配置及实际 marketplace 来源，复用能确认归属的注册。新版启用且安装记录写入成功后，才清理旧版注册并保留其目录用于回退。
+
+如输出提示来源不同、查询失败或清理失败，请按提示核对该版本的 Codex 注册后重试同一命令。已完成安装的版本应使用回退或新版本目录。Claude Code 的激活中断保留人工恢复方式。依赖安装采用 `--require-hashes --only-binary=:all:`。SHA-256 可验证下载内容一致性。

@@ -50,6 +50,12 @@ def check(root: Path = ROOT) -> list[str]:
     if defaults != [versions.get("plugin.json")]:
         errors.append("install.ps1 default version must match plugin.json")
 
+    changelog = root / "CHANGELOG.md"
+    if changelog.is_file():
+        released = re.search(r"^##[ \t]+v?(\d+\.\d+\.\d+)(?=\s|$)", changelog.read_text(encoding="utf-8-sig"), re.M)
+        if released is None or released[1] != versions.get("plugin.json"):
+            errors.append("CHANGELOG.md first released version must match plugin.json")
+
     for relative in REQUIRED_FILES:
         if not (root / relative).is_file():
             errors.append(f"Missing required file: {relative}")
@@ -76,4 +82,4 @@ if __name__ == "__main__":
         print(f"FAIL: {failure}", file=sys.stderr)
     if failures:
         sys.exit(1)
-    print("PASS: manifests, required documents and local links")
+    print("PASS: manifests, installer, changelog and local links")

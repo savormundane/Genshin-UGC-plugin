@@ -5,13 +5,15 @@ from PIL import Image, ImageDraw, ImageChops, ImageStat
 from authoring_io import read_json, write_json, sha, canonical, output_directory, finish
 from asset_pipeline import lua
 
+MAX_FIT_PIXELS = 262_144
+
 
 def parameters(spec):
     allowed = {'schema', 'shapes', 'budget', 'work', 'seed', 'alpha_min', 'target_error', 'regions', 'anchor','gia','max_controls'}
     version = spec.get('schema') if isinstance(spec,dict) else None
     if version == 2: allowed.add('max_total_controls')
     if not isinstance(spec, dict) or set(spec) - allowed or type(version)!=int or version not in (1,2):
-        raise ValueError('Fit schema 1 required; uncalibrated transforms and unknown fields are refused')
+        raise ValueError('Fit schema 1 or 2 required; uncalibrated transforms and unknown fields are refused')
     cfg = dict(shapes=['rect', 'ellipse', 'circle', 'line'], budget=100, work=2000,
                seed=0, alpha_min=1, target_error=0, regions=[], anchor=[0, 0],gia=False,max_controls=10000)
     cfg.update({k:v for k,v in spec.items() if k != 'schema'})
@@ -67,7 +69,8 @@ def fit(image, cfg, binding, state=None, steps=None, initial=None):
         from asset_fit_v2 import fit as fit_v2
         return fit_v2(image,cfg,binding,state,steps,initial)
     size=image.size
-    if size[0]*size[1]>262144:raise ValueError('Fit input exceeds 262144 pixels; preprocess explicitly')
+    if size[0]*size[1]>MAX_FIT_PIXELS:
+        raise ValueError(f'Fit input exceeds {MAX_FIT_PIXELS} pixels; preprocess explicitly')
     regions=cfg['regions'] or [[0,0,*size]]
     if any(not(0<=l<r<=size[0] and 0<=t<b<=size[1]) for l,t,r,b in regions):raise ValueError('Region outside image')
     region_mask=Image.new('L',size);draw=ImageDraw.Draw(region_mask)
@@ -159,6 +162,9 @@ def build(source,spec_path,out,resume=None,steps=None,initial=None):
         if not path.is_relative_to(source.parent):raise ValueError('Layer dependency outside source directory')
         inputs[str(path)]=sha(path.read_bytes())
         with Image.open(path) as im:
+            width, height = im.size
+            if width * height > MAX_FIT_PIXELS:
+                raise ValueError(f'{path.name}: {width}x{height} exceeds {MAX_FIT_PIXELS} pixels; preprocess explicitly')
             if getattr(im,'n_frames',1)!=1:raise ValueError('Use explicit layers for animated input')
             image=im.convert('RGBA')
         items.append((layer['name'],image,inputs[str(path)]))

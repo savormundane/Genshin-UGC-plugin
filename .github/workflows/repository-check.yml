@@ -34,6 +34,7 @@ jobs:
         run: |
           python -B scripts/check_repository.py
           python -B scripts/test_distribution.py -v
+          python -B scripts/test_release_behaviors.py -v
       - name: Local MCP and minimum software render
         shell: pwsh
         run: |

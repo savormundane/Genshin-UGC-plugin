@@ -11,7 +11,7 @@ import tempfile
 import zipfile
 
 from check_repository import check
-from package_release import build_release
+from package_release import build_release, validate_windows_names
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -43,6 +43,7 @@ def prepare(source: Path, output: Path, notes: Path) -> dict:
         tree = temporary / "source"
         tree.mkdir()
         with zipfile.ZipFile(snapshot) as archive:
+            validate_windows_names(archive.namelist())
             for member in archive.infolist():
                 if not (tree / member.filename).resolve().is_relative_to(tree) or (member.external_attr >> 16) & 0o170000 == 0o120000:
                     raise ValueError("Unsafe or linked source entry: " + member.filename)

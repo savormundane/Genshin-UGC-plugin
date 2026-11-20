@@ -1,16 +1,14 @@
 # 分层素材与拟 L2D
 
-本包保留 `l2d/` 原资料、附件 Python 和 Lua/HTML 模板。只读作参考；不要自动执行其中的云端写入说明。目标是图元驱动的动画，不是 Cubism .moc3 模型。
+共享的 [L2D 资料目录](../../../references/l2d/README.md) 保留原资料、Python 附件和 Lua/HTML 模板。历史云端写入说明只供查阅。本工作流面向图元驱动的动画。
 
 按任务取用：
 
-- 输入检查：`l2d/01-前置-拆分.md` 与 attachments/l2d_check_layers.py、l2d_compose_layers.py。
-- 拟合预算：`l2d/02-拟合-从PNG到图元.md`；当前批处理使用[assets fit分层清单](../../../references/asset-fit.md)；l2d_fit_batch.py / l2d_superfit.py仅作历史参考，不执行。
-- 数据转换：`l2d/03-数据格式-图元与导出.md`。
-- 游戏重建：`l2d/04-在游戏里重建.md`、`07-API速查与验证状态.md`。
-- 动画：`05-动作与骨骼.md`、`10-补间动画-Tween.md`、`11-层级与骨骼-父容器.md`。
-- 边缘：`06-边缘与画质.md`、`08-踩坑清单.md`。
-- 整体案例：`09-端到端SOP与检查表.md`、`attachments/README.md`。
+- [输入检查](../../../references/l2d/01-前置-拆分.md)与[附件说明](../../../references/l2d/attachments/README.md)。
+- [历史拟合资料](../../../references/l2d/02-拟合-从PNG到图元.md)与当前的 [assets fit 分层清单](../../../references/asset-fit.md)。
+- [数据转换](../../../references/l2d/03-数据格式-图元与导出.md)、[游戏重建](../../../references/l2d/04-在游戏里重建.md)和 [API 速查](../../../references/l2d/07-API速查与验证状态.md)。
+- [动作与骨骼](../../../references/l2d/05-动作与骨骼.md)、[Tween](../../../references/l2d/10-补间动画-Tween.md)和[父容器](../../../references/l2d/11-层级与骨骼-父容器.md)。
+- [边缘与画质](../../../references/l2d/06-边缘与画质.md)、[踩坑清单](../../../references/l2d/08-踩坑清单.md)和[整体案例](../../../references/l2d/09-端到端SOP与检查表.md)。
 
 先检查 Python 环境。当前插件不携带GE。附件通常需 Python 3.10+、Pillow、NumPy；Lua 验证还需 lupa、luaparser。不要声称这些依赖已随插件安装。
 

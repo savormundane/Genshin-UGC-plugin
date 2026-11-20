@@ -1,11 +1,11 @@
 """Budget-constrained deterministic search; schema 1 stays in asset_fit."""
 import bisect
 import random
-from PIL import Image, ImageDraw, ImageChops, __version__ as PILLOW_VERSION
+from PIL import Image, ImageDraw, ImageChops, ImageStat, __version__ as PILLOW_VERSION
 from authoring_io import sha, canonical
 from asset_fit import paint, render, error, rectangle_data
 
-ALGORITHM = 'residual-budget-1'
+ALGORITHM = 'residual-budget-2'
 
 
 def fit(image, cfg, binding, state=None, steps=None, initial=None):
@@ -24,7 +24,9 @@ def fit(image, cfg, binding, state=None, steps=None, initial=None):
     allowed = ImageChops.multiply(region, image.getchannel('A').point(lambda a: 255 if a >= cfg['alpha_min'] else 0))
     points = [(i % size[0], i // size[0]) for i,a in enumerate(allowed.getdata()) if a]
     rng = random.Random(cfg['seed'])
-    identity = {'algorithm': ALGORITHM, 'pillow': PILLOW_VERSION, 'config_sha256': sha(canonical(cfg).encode())}
+    algorithm = state.get('identity',{}).get('algorithm') if state else ALGORITHM
+    if algorithm not in ('residual-budget-1', ALGORITHM): raise ValueError('Resume algorithm identity mismatch')
+    identity = {'algorithm': algorithm, 'pillow': PILLOW_VERSION, 'config_sha256': sha(canonical(cfg).encode())}
     shapes = list(initial or [])
     done = cursor = 0
     stats = dict(renders=0, cost_evaluations=0, budget_rejections=0, local_attempts=0)
@@ -70,6 +72,21 @@ def fit(image, cfg, binding, state=None, steps=None, initial=None):
             else: h = 1
         l = max(0,min(size[0]-w,x-w//2)); t = max(0,min(size[1]-h,y-h//2))
         box = [l,t,l+w,t+h]; color = list(image.getpixel((x,y)))
+        # Spend one existing proposal, not extra work: a coherent source region avoids
+        # building flat translucent areas from many overlapping alpha composites.
+        if algorithm == ALGORITHM and not local and done % 4 == 0 and 'rect' in cfg['shapes']:
+            kind = 'rect'
+            pixels = image.load(); mask = allowed.load(); reference = pixels[x,y]
+            def coherent(xx,yy):
+                c = pixels[xx,yy]
+                return mask[xx,yy] and c[3] == reference[3] and max(abs(c[k]-reference[k]) for k in range(3)) <= 32
+            left=right=x; top=bottom=y
+            while left>0 and coherent(left-1,y): left-=1
+            while right+1<size[0] and coherent(right+1,y): right+=1
+            while top>0 and all(coherent(xx,top-1) for xx in range(left,right+1)): top-=1
+            while bottom+1<size[1] and all(coherent(xx,bottom+1) for xx in range(left,right+1)): bottom+=1
+            box=[left,top,right+1,bottom+1]
+            color=[round(v) for v in ImageStat.Stat(image.crop(tuple(box))).mean]
         index = len(shapes)
         if local:
             stats['local_attempts'] += 1
