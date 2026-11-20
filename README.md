@@ -4,9 +4,9 @@
 
 **导航：** [安装](#快速安装) · [使用场景](#从需求到结果) · [支持范围](#支持环境与验证边界) · [文档与参与](#文档与参与)
 
-**3.7.3 · 《原神》千星奇域开发工具包**
+**3.7.4 · 《原神》千星奇域开发工具包**
 
-[下载完整 Windows ZIP](https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v3.7.3/Genshin-UGC-3.7.3-windows-x64.zip) · [校验文件](https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v3.7.3/SHA256SUMS.txt) · [所有版本](https://github.com/savormundane/Genshin-UGC-plugin/releases)
+[下载完整 Windows ZIP](https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v3.7.4/Genshin-UGC-3.7.4-windows-x64.zip) · [校验文件](https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v3.7.4/SHA256SUMS.txt) · [所有版本](https://github.com/savormundane/Genshin-UGC-plugin/releases)
 
 五个核心 Skill、可追溯平台资料、统一 CLI、18 项本地 MCP 操作，以及随包的离线工具与可选模拟器。
 
@@ -41,17 +41,17 @@
 在 PowerShell 中运行一条命令：
 
 ```powershell
-& ([scriptblock]::Create((Invoke-RestMethod 'https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v3.7.3/install.ps1'))) -Agent codex
+& ([scriptblock]::Create((Invoke-RestMethod 'https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v3.7.4/install.ps1'))) -Agent codex
 ```
 
 Claude Code 将末尾参数改成 `-Agent claude-code`。首次会询问现有项目目录和独立输出目录，也可传入 `-Project`、`-Outputs` 和 `-Python`。Python 依赖首次安装需要联网；使用锁定版本并安装到插件专用环境。
 
 安装器下载固定版本 ZIP、校验 SHA-256、保留完整目录、配置运行环境，并调用客户端原生插件安装入口。不会仅复制 Skill，也不会修改其他插件的配置。安装后重启客户端；客户端仍可能要求启用或信任本地 MCP。
 
-喜欢先检查脚本，可以从 [Release](https://github.com/savormundane/Genshin-UGC-plugin/releases/tag/v3.7.3) 下载 `install.ps1`、完整 ZIP 和 `SHA256SUMS.txt`，查看脚本后执行：
+喜欢先检查脚本，可以从 [Release](https://github.com/savormundane/Genshin-UGC-plugin/releases/tag/v3.7.4) 下载 `install.ps1`、完整 ZIP 和 `SHA256SUMS.txt`，查看脚本后执行：
 
 ```powershell
-.\install.ps1 -Agent codex -Archive .\Genshin-UGC-3.7.3-windows-x64.zip -Sha256 '<SHA256SUMS.txt 中的 ZIP 摘要>'
+.\install.ps1 -Agent codex -Archive .\Genshin-UGC-3.7.4-windows-x64.zip -Sha256 '<SHA256SUMS.txt 中的 ZIP 摘要>'
 ```
 
 安装中断后，保留版本目录并以相同版本、ZIP 摘要、客户端及目录参数加 `-Resume`。Codex 可以核对实际注册并继续已登记的激活，已完成的安装使用回退或新版本目录。SHA-256 用于内容一致性检查。详见[安装恢复](references/installation.md#失败后续装)。

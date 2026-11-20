@@ -1,6 +1,7 @@
 """Small neutral fitting and portable checks shared by candidate preparation and CI."""
 
 import json
+from importlib.util import find_spec
 from pathlib import Path
 import tempfile
 import unittest
@@ -9,6 +10,7 @@ from unittest.mock import patch
 from PIL import Image, PngImagePlugin
 
 from asset_fit import build, fit, parameters
+from asset_fit_v2 import residual_index
 from authoring_io import inventory, write_json
 from delivery_verify import verify
 
@@ -45,17 +47,30 @@ class ReleaseBehaviorTests(unittest.TestCase):
                         with self.assertRaisesRegex(ValueError, r'over-limit\.png: 513x512 exceeds 262144'):
                             build(source, spec, output)
                         self.assertFalse(output.exists())
-                from production_core import produce
-
-                job = root / 'job.json'
-                write_json(job, {'schema': 2, 'assets': [
-                    {'kind': 'fit', 'name': 'neutral', 'source': layers.name, 'spec': spec.name},
-                ]})
-                with self.assertRaisesRegex(ValueError, r'over-limit\.png: 513x512 exceeds 262144'):
-                    produce(job, root / 'production')
-                self.assertFalse((root / 'production').exists())
             with self.assertRaisesRegex(ValueError, 'Fit schema 1 or 2'):
                 parameters({'schema': 3})
+
+    @unittest.skipUnless(find_spec('lupa') and find_spec('lupa.lua53'), 'full production requires lupa.lua53')
+    def test_production_rejects_oversized_layer_without_output(self):
+        from production_core import produce
+
+        with tempfile.TemporaryDirectory(prefix='ugc production fit ') as temporary:
+            root = Path(temporary)
+            Image.new('RGBA', (513, 512)).save(root / 'over-limit.png')
+            write_json(root / 'layers.json', {'schema': 1, 'layers': [{'name': 'oversized', 'source': 'over-limit.png'}]})
+            write_json(root / 'fit.json', {'schema': 2, 'work': 1})
+            job = root / 'job.json'
+            write_json(job, {'schema': 2, 'assets': [
+                {'kind': 'fit', 'name': 'neutral', 'source': 'layers.json', 'spec': 'fit.json'},
+            ]})
+            with self.assertRaisesRegex(ValueError, r'over-limit\.png: 513x512 exceeds 262144'):
+                produce(job, root / 'production')
+            self.assertFalse((root / 'production').exists())
+
+    def test_residual_sampler_rounding_boundary(self):
+        self.assertEqual(residual_index([0, 4, 4, 12, 12, 12], 1.0), 3)
+        self.assertEqual(residual_index([0, 4, 4, 8], 0.5), 3)
+        self.assertEqual(residual_index([0, 4, 4, 8], 0.0), 1)
 
     def test_fit_budget_and_resume(self):
         image = Image.new('RGBA', (12, 8), (55, 90, 130, 180))

@@ -14,6 +14,8 @@
 
 使用 `plan --kind nodes|lua|gil|assets|editor` 选择直接领域；game、animation及--multiplayer旧参数保留，storage、protocol、diagnosis选择共享流程。support仅列可选协作方，不要求全部加载、运行或读取所有官方资料。节点任务主入口为Graph Code；动画运行主入口为Client Lua；未知故障先diagnose，按发现对象进入领域。完整制作继续复用produce。
 
+诊断对象已知时使用 `plan --kind diagnosis --target-domain editor|graph|client|gil|assets`。`--task-mode ui|assets|delivery` 也可提供已有工作流线索。新调用方读取 `diagnosis.entrypoint` 与 `diagnosis.target_domain`。对象未定时运行共享 `diagnose`，根据发现的输入再选领域。为保留 schema 2，顶层 `primary` 在对象未定时仍保留历史值。
+
 旧工作流schema 1的十个owner均可读取，结果附resolved_owners，原记录不重写；五个退役Skill名解析到共享工作流。显式调用旧Skill的用户改用对应核心入口；不假定宿主自动重定向。
 
 新增节点、控件、组件规则通常只扩展现有资料、工具和验证。只有独立且稳定的平台工作对象无法归入五领域时才考虑新Skill。工程玩法、协议编号和文案留在项目。

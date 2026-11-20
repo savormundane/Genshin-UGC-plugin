@@ -22,7 +22,33 @@ REQUIRED_FILES = (
     "CHANGELOG.md",
     "references/README.md",
 )
-LINK_RE = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
+DESTINATION = r'(<[^\n<>]+>|(?:[^()\s]|\([^()\n]*\))+)'
+LINK_RE = re.compile(r'(?<!\\)\]\(\s*' + DESTINATION + r'''(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*\)''')
+REFERENCE_RE = re.compile(r'^ {0,3}\[[^]\n]+\]:\s*' + DESTINATION, re.M)
+FENCE_RE = re.compile(r'^ {0,3}(`{3,}|~{3,})(.*)$')
+CODE_RE = re.compile(r'(?<!`)(`+)(?!`).*?(?<!`)\1(?!`)')
+
+
+def markdown_destinations(text):
+    body = []
+    fence = None
+    for line in re.sub(r'<!--[\s\S]*?(?:-->|$)', '', text).splitlines():
+        delimiter = FENCE_RE.match(line)
+        if fence is not None:
+            if delimiter and delimiter[1][0] == fence[0] and len(delimiter[1]) >= len(fence) and not delimiter[2].strip():
+                fence = None
+            continue
+        if delimiter:
+            fence = delimiter[1]
+            continue
+        if line.startswith(('    ', '\t')):
+            continue
+        body.append(CODE_RE.sub('', line))
+    text = '\n'.join(body)
+    for pattern in (LINK_RE, REFERENCE_RE):
+        for match in pattern.finditer(text):
+            yield match[1]
+
 
 
 def check(root: Path = ROOT) -> list[str]:
@@ -62,11 +88,20 @@ def check(root: Path = ROOT) -> list[str]:
 
     docs = [root / name for name in REQUIRED_FILES if name.endswith(".md")]
     docs.extend((root / "docs").glob("*.md"))
-    for path in docs:
-        if not path.is_file():
+    docs.extend((root / "skills").rglob("*.md"))
+    docs.extend((root / "references").rglob("*.md"))
+    provenance = root / "PUBLIC_SOURCES.json"
+    raw_paths = set()
+    if provenance.is_file():
+        registry = json.loads(provenance.read_text(encoding="utf-8-sig"))
+        raw_paths = {row["path"] for row in registry.get("permission_unverified_files", [])}
+    for path in sorted(set(docs)):
+        relative = path.relative_to(root).as_posix()
+        if (relative in raw_paths or relative.startswith(("references/official/", "references/platform/"))
+                or "vendor" in path.relative_to(root).parts or not path.is_file()):
             continue
-        for raw in LINK_RE.findall(path.read_text(encoding="utf-8-sig")):
-            target = raw.strip().split(" ", 1)[0].strip("<>").split("#", 1)[0].split("?", 1)[0]
+        for raw in markdown_destinations(path.read_text(encoding="utf-8-sig")):
+            target = raw.strip().strip("<>").split("#", 1)[0].split("?", 1)[0]
             if not target or re.match(r"^[a-z][a-z0-9+.-]*:", target, re.I) or target.startswith("//"):
                 continue
             resolved = (path.parent / unquote(target)).resolve()

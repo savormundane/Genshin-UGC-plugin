@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -11,14 +11,14 @@ import tempfile
 import zipfile
 
 from check_repository import check
-from package_release import build_release, validate_windows_names
+from package_release import build_release, sha256_file, validate_windows_names
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def prepare(source: Path, output: Path, notes: Path) -> dict:
-    source, output, notes = source.resolve(), output.resolve(), notes.resolve()
-    if output.exists() or output.is_relative_to(source):
+    source, output, notes = source.resolve(), output.absolute(), notes.resolve()
+    if os.path.lexists(output) or output.resolve().is_relative_to(source):
         raise ValueError("Output must be a new directory outside the repository")
     release_notes = notes.read_text(encoding="utf-8-sig")
     if not release_notes.strip():
@@ -57,17 +57,19 @@ def prepare(source: Path, output: Path, notes: Path) -> dict:
         filename = f"Genshin-UGC-{version}-windows-x64.zip"
         package = build_release(tree, staged / filename, "plugin", "Genshin-UGC")
         shutil.copyfile(tree / "install.ps1", staged / "install.ps1")
-        assets = {name: hashlib.sha256((staged / name).read_bytes()).hexdigest()
+        assets = {name: sha256_file(staged / name)
                   for name in (filename, "install.ps1")}
-        (staged / "SHA256SUMS.txt").write_text("".join(f"{sha}  {name}\n" for name, sha in assets.items()), encoding="utf-8")
+        (staged / "SHA256SUMS.txt").write_text("".join(f"{sha}  {name}\n" for name, sha in assets.items()), encoding="utf-8", newline="\n")
         (staged / "release-notes.md").write_text(release_notes, encoding="utf-8")
         report = {"schema": 1, "version": version, "tag": "v" + version,
                   "source_commit": commit, "package": package, "assets": assets,
-                  "notes_sha256": hashlib.sha256((staged / "release-notes.md").read_bytes()).hexdigest(),
+                  "notes_sha256": sha256_file(staged / "release-notes.md"),
                   "published": False, "client_loading": "not_checked", "game_host": "not_checked"}
         (staged / "release-review.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         if git("rev-parse", "HEAD") != commit or git("status", "--porcelain", "--untracked-files=normal"):
             raise ValueError("Repository changed while preparing assets")
+        if os.path.lexists(output):
+            raise FileExistsError(f"Output already exists: {output}")
         staged.rename(output)
     return report
 

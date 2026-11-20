@@ -10,6 +10,7 @@ import zipfile
 
 from check_repository import check, MANIFESTS, REQUIRED_FILES
 from prepare_release import prepare
+from package_release import build_release
 
 
 class ReleaseTests(unittest.TestCase):
@@ -63,6 +64,9 @@ class ReleaseTests(unittest.TestCase):
                 for name, sha in report["assets"].items():
                     self.assertEqual(hashlib.sha256((first / name).read_bytes()).hexdigest(), sha)
                     self.assertEqual((first / name).read_bytes(), (second / name).read_bytes())
+                checksum_bytes = (first / "SHA256SUMS.txt").read_bytes()
+                self.assertNotIn(b'\r', checksum_bytes)
+                self.assertTrue(checksum_bytes.endswith(b'\n'))
                 with zipfile.ZipFile(first / f"Genshin-UGC-{version}-windows-x64.zip") as archive:
                     names = archive.namelist()
                     self.assertIn("Genshin-UGC/vendor/beyond/node_modules/fixture/index.js", names)
@@ -72,6 +76,36 @@ class ReleaseTests(unittest.TestCase):
                     self.assertEqual(archive.read("Genshin-UGC/install.ps1"), (first / "install.ps1").read_bytes())
                 with self.assertRaisesRegex(ValueError, "new directory"):
                     prepare(self.root, first, self.notes)
+
+
+    def test_zip_verification_failure_keeps_target_absent(self):
+        self.fixture()
+        output = self.base / 'failed.zip'
+        with patch.object(zipfile.ZipFile, 'testzip', return_value='bad entry'):
+            with self.assertRaisesRegex(ValueError, 'CRC'):
+                build_release(self.root, output, archive_root='Fixture')
+        self.assertFalse(output.exists())
+        self.assertEqual(list(self.base.glob('.ugc-package-*')), [])
+        output.write_bytes(b'original')
+        with self.assertRaises(FileExistsError):
+            build_release(self.root, output, archive_root='Fixture')
+        self.assertEqual(output.read_bytes(), b'original')
+
+    def test_link_checks_cover_first_party_and_skip_code_and_snapshots(self):
+        self.fixture()
+        self.write('references/中文 文件(例).md', '# Fixture')
+        self.write('skills/fixture/reference.md',
+                   '[valid](<../../references/中文 文件(例).md> "title")\n'
+                   '~~~md\n[example](absent.md)\n~~~\n'
+                   '```md\n[example](absent.md)\n```\n'
+                   '    [indented example](absent.md)\n'
+                   '[bad]: missing.md\n')
+        self.write('references/official/raw.md', '[raw](absent.md)')
+        self.write('references/registered.md', '[raw](absent.md)')
+        self.write('PUBLIC_SOURCES.json', json.dumps({'permission_unverified_files': [{'path': 'references/registered.md'}]}))
+        errors = check(self.root)
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn('missing.md', errors[0])
 
     def test_dirty_input_rejected_without_output(self):
         self.fixture()

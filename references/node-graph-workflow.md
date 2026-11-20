@@ -12,7 +12,7 @@
 
 ## 统一命令
 
-下列命令从插件根目录执行；其他工作目录使用脚本绝对路径。需要 Python 3.10–3.12，节点图/GIL/GIA核心链路仅用标准库。输出到当前项目的新目录，不写入插件源码或安装缓存。
+下列命令从插件根目录执行；其他工作目录使用脚本绝对路径。完整环境要求 Python 3.11–3.12。节点图/GIL/GIA核心链路仅用标准库。输出到当前项目的新目录，不写入插件源码或安装缓存。
 
     python scripts/qianxing.py plan --kind game --interface lua --multiplayer --format both
     python scripts/qianxing.py inspect 当前基底.gil --out 新清点报告.json

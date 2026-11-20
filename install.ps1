@@ -1,7 +1,7 @@
 param(
     [ValidateSet('codex', 'claude-code')][string]$Agent = 'codex',
     [ValidateSet('install', 'rollback', 'uninstall')][string]$Action = 'install',
-    [string]$Version = '3.7.3',
+    [string]$Version = '3.7.4',
     [switch]$Resume,
     [string]$Project, [string]$Outputs, [string]$Python,
     [string]$Root, [string]$Archive, [string]$Sha256
@@ -27,14 +27,38 @@ if ($Action -ne 'install') {
     if ($LASTEXITCODE -ne 0) { throw ('Installation operation failed: ' + $LASTEXITCODE) }
     return
 }
-if (!$Python) {
-    $Python = (Get-Command python.exe -ErrorAction SilentlyContinue).Source
-    if (!$Python -and (Get-Command py.exe -ErrorAction SilentlyContinue)) {
-        $Python = & py.exe -3.12 -c 'import sys; print(sys.executable)'
-        if ($LASTEXITCODE -ne 0) { $Python = $null }
+function Find-SupportedPython([string]$Executable, [string[]]$Selector = @()) {
+    if (!$Executable -or $Executable -match '[\\/]Microsoft[\\/]WindowsApps[\\/]') { return }
+    # An unavailable launcher version can write to stderr and return nonzero.
+    $ErrorActionPreference = 'Continue'
+    $PSNativeCommandUseErrorActionPreference = $false
+    $probe = 'import json,sys; sys.exit(1) if sys.version_info[:2] not in ((3, 11), (3, 12)) else print(json.dumps(sys.executable))'
+    $answer = @(& $Executable @Selector -I -B -c $probe 2>$null)
+    if ($LASTEXITCODE -eq 0 -and $answer.Count -eq 1) {
+        $resolved = ConvertFrom-Json -InputObject $answer[0] -ErrorAction SilentlyContinue
+        if ($resolved -is [string] -and (Test-Path -LiteralPath $resolved -PathType Leaf)) { return $resolved }
     }
 }
-if (!$Python) { throw 'Install Python 3.11-3.12 or pass -Python with its executable path. No global software was installed.' }
+
+if ($Python) {
+    $requested = Get-Command -Name $Python -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    $Python = Find-SupportedPython $requested.Source
+} else {
+    foreach ($candidate in @(Get-Command python.exe -All -CommandType Application -ErrorAction SilentlyContinue)) {
+        $Python = Find-SupportedPython $candidate.Source
+        if ($Python) { break }
+    }
+    if (!$Python) {
+        foreach ($launcher in @(Get-Command py.exe -All -CommandType Application -ErrorAction SilentlyContinue)) {
+            foreach ($selector in @('-3.12', '-3.11')) {
+                $Python = Find-SupportedPython $launcher.Source @($selector)
+                if ($Python) { break }
+            }
+            if ($Python) { break }
+        }
+    }
+}
+if (!$Python) { throw 'A usable Python 3.11-3.12 is required. Install it or pass its executable with -Python.' }
 if ($Action -eq 'install') {
     if (!$Project) { $Project = Read-Host 'Existing project directory' }
     if (!$Outputs) { $Outputs = Read-Host 'Separate output directory (outside the project)' }
@@ -47,11 +71,13 @@ try {
         $base = 'https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v' + $Version
         $filename = 'Genshin-UGC-' + $Version + '-windows-x64.zip'
         $Archive = Join-Path $taskTemp $filename
-        Invoke-WebRequest ($base + '/' + $filename) -OutFile $Archive
-        $checksums = (Invoke-WebRequest ($base + '/SHA256SUMS.txt')).Content
+        Invoke-WebRequest ($base + '/' + $filename) -UseBasicParsing -OutFile $Archive
+        $checksums = (Invoke-WebRequest ($base + '/SHA256SUMS.txt') -UseBasicParsing).Content
+        if ($checksums -is [byte[]]) { $checksums = [Text.Encoding]::UTF8.GetString($checksums) }
+        $checksums = $checksums.TrimStart([char]0xFEFF)
         $line = @($checksums -split "`n" | Where-Object { $_.Trim() -match ('^[0-9a-fA-F]{64}\s+' + [regex]::Escape($filename) + '$') })
         if ($line.Count -ne 1) { throw 'Missing or ambiguous release checksum.' }
-        $Sha256 = ($line[0] -split '\s+')[0]
+        $Sha256 = ($line[0].Trim() -split '\s+')[0]
     }
     if ($Sha256 -notmatch '^[0-9a-fA-F]{64}$') { throw 'A local ZIP requires -Sha256.' }
     if ((Get-FileHash -LiteralPath $Archive -Algorithm SHA256).Hash -ne $Sha256) { throw 'Archive SHA-256 mismatch.' }

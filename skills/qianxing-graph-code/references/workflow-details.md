@@ -17,7 +17,7 @@ PLUGIN_PYTHON -X utf8 -B scripts/ayaya_bridge.py --execute --input <file_path> v
 PLUGIN_PYTHON -X utf8 -B scripts/ayaya_bridge.py --input <file_path> validate-file
 ```
 
-需要 Python 3.10–3.12。验证只做静态检查，不执行节点业务逻辑。若 bridge 报依赖缺失，先运行 doctor 核对入口。
+完整运行环境需要 Python 3.11–3.12。验证只做静态检查，不执行节点业务逻辑。若 bridge 报依赖缺失，先运行 doctor 核对入口。
 
 ## 核心语法
 

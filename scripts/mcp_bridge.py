@@ -13,6 +13,50 @@ OPERATIONS={'doctor':(), 'capabilities':(), 'docs_search':('version','query'),'a
             'logs_diagnose':('spec','sha256'),'verify':('input','sha256','rebuild','portable'),
             'produce':('spec','sha256','output'),'native_apply':('input','sha256','plan','plan_sha256','output')}
 
+ 
+async def finish_worker(process):
+    """Finish cleanup before releasing the request directory."""
+    async def terminate():
+        if os.name == 'nt':
+            if process.returncode is None:
+                killer = await asyncio.create_subprocess_exec(
+                    'taskkill', '/PID', str(process.pid), '/T', '/F',
+                    stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
+                try:
+                    result = await killer.wait()
+                    if result != 0 and process.returncode is None:
+                        process.kill()
+                finally:
+                    if killer.returncode is None:
+                        killer.kill()
+        else:
+            import signal
+            try:
+                # Startup used a new session. The worker may have exited, leaving its group alive.
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        await process.wait()
+
+    from contextlib import nullcontext
+    try:
+        from anyio import CancelScope
+    except ImportError:
+        scope = nullcontext()
+    else:
+        scope = CancelScope(shield=True)
+    with scope:
+        cleanup = asyncio.create_task(asyncio.wait_for(terminate(), timeout=15))
+        # asyncio callers may cancel again while the independent cleanup task is running.
+        while not cleanup.done():
+            try:
+                await asyncio.shield(cleanup)
+            except asyncio.CancelledError:
+                continue
+            except Exception:
+                break
+        cleanup.result()
+
 
 class Bridge:
     def __init__(self,project,output_root):
@@ -68,6 +112,7 @@ class Bridge:
             write_json(request,{'operation':operation,'arguments':args,'inputs':bound,'project':str(self.project),
                                'output_root':str(self.output_root),'scratch':str(scratch)})
             process=None
+            code=None
             with (scratch/'stdout.log').open('wb')as stdout,(scratch/'stderr.log').open('wb')as stderr:
                 try:
                     from portable_trust import child_environment
@@ -77,22 +122,15 @@ class Bridge:
                     if progress:await progress(1,3,'Core operation running')
                     code=await process.wait()
                 finally:
-                    if process is not None and process.returncode is None:
-                        # Shield cleanup from SDK cancellation; kill descendants too.
-                        async def terminate():
-                            if os.name=='nt':
-                                killer=await asyncio.create_subprocess_exec('taskkill','/PID',str(process.pid),'/T','/F',stdout=asyncio.subprocess.DEVNULL,stderr=asyncio.subprocess.DEVNULL)
-                                await killer.wait()
-                            else:
-                                import signal
-                                os.killpg(process.pid,signal.SIGKILL)
-                            await asyncio.wait_for(process.wait(),timeout=10)
-                        cleanup=asyncio.create_task(terminate())
-                        # AnyIO cancellation can interrupt every checkpoint.
-                        import anyio
-                        with anyio.CancelScope(shield=True):await asyncio.wait_for(asyncio.shield(cleanup),timeout=15)
+                    if process is not None and (code is None or (os.name != 'nt' and code != 0)):
+                        try:
+                            await finish_worker(process)
+                        except Exception as cleanup_error:
+                            # The request's failure or cancellation remains the result.
+                            import logging
+                            logging.getLogger(__name__).warning('MCP worker cleanup: %s', cleanup_error)
             if code!=0:
-                detail=(scratch/'stderr.log').read_text(encoding='utf-8',errors='replace')[-8000:]
+                detail=(scratch/'stderr.log').read_text(encoding='utf-8',errors='replace')[-8000:] or f'MCP worker exited with status {code}'
                 return {'schema':2,'operation':operation,'status':'failed','error':detail,'output':None}
             result=read_json(result_path)
             for path,digest in bound.items():

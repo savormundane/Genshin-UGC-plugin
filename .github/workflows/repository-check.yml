@@ -33,6 +33,7 @@ jobs:
       - name: Repository and release checks
         run: |
           python -B scripts/check_repository.py
+          python -B scripts/test_release.py -v
           python -B scripts/test_distribution.py -v
           python -B scripts/test_release_behaviors.py -v
       - name: Local MCP and minimum software render
@@ -42,5 +43,5 @@ jobs:
           $outputs = Join-Path $env:RUNNER_TEMP 'ugc-outputs'
           New-Item -ItemType Directory -Force $project,$outputs | Out-Null
           $config = Join-Path $env:RUNNER_TEMP 'ugc-runtime.json'
-          @{schema=1;python=(Get-Command python).Source;project_root=$project;output_root=$outputs} | ConvertTo-Json | Set-Content -Encoding utf8 $config
+          @{schema=1;python=(Get-Command python).Source;project_root=$project;output_root=$outputs} | ConvertTo-Json | Set-Content -Encoding utf8BOM $config
           python -B scripts/install_smoke.py --config $config --node (Get-Command node).Source

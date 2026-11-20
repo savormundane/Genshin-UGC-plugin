@@ -5,7 +5,7 @@
 ## 前置条件
 
 - 该低层写回子命令需要一份 Ayaya_Miliastra_Editor 检出；插件内置 CLI 未暴露 `add_signal_definition_to_gil`
-- Python 3.10，命令在编辑器根目录执行
+- Python 3.11–3.12，命令在编辑器根目录执行
 - 输出会被强制写入编辑器的 `private_extensions/ugc_file_tools/out/`，`--output-gil` 只给文件名
 
 ## spec.json

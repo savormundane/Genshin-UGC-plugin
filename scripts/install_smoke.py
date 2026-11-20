@@ -17,6 +17,9 @@ async def check(config, node):
         listed = await client.list_tools()
         if len(listed.tools) != 18:
             raise ValueError('Expected 18 MCP tools')
+        doctor = await client.call_tool('doctor', {})
+        if doctor.is_error or doctor.structured_content['status'] != 'passed':
+            raise ValueError(f'MCP worker cannot diagnose the configured runtime: {doctor.structured_content!r}')
         for symbol in ('game.GetUICanvasSize', 'OnUpdate'):
             result = await client.call_tool('api_lookup', {'symbol': symbol})
             if result.is_error or result.structured_content['status'] != 'passed':

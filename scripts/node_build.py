@@ -16,12 +16,17 @@ def copy_tree(source,dest):
     if source.is_symlink() or any(p.is_symlink() for p in source.rglob('*')):raise ValueError('Linked resources are not supported')
     shutil.copytree(source,dest,dirs_exist_ok=True,ignore=shutil.ignore_patterns('__pycache__','*.pyc','.git','out','__workbench_out__'))
 
-def route(kind='game',interface='lua',multiplayer=False,output='gil',task_mode=None):
+def route(kind='game',interface='lua',multiplayer=False,output='gil',task_mode=None,target_domain=None):
     if kind not in ['game','nodes','lua','gil','assets','animation','editor','diagnosis','storage','protocol']:raise ValueError('Unknown task kind')
     if interface not in ['lua','html','native','none']:raise ValueError('Unknown UI implementation')
     if output not in ['gia','gil','both','source']:raise ValueError('Unknown output format')
     from capability_index import DOMAINS,WORKFLOWS
     primary=DOMAINS[{'game':'editor','nodes':'graph','lua':'client','gil':'gil','assets':'assets','animation':'client','editor':'editor','diagnosis':'editor','storage':'editor','protocol':'graph'}[kind]]
+    if target_domain is not None and (kind != 'diagnosis' or target_domain not in DOMAINS):
+        raise ValueError('Target domain requires a known diagnosis domain')
+    diagnosis_domain = target_domain or {'ui':'client','delivery':'gil','assets':'assets'}.get(task_mode)
+    if kind == 'diagnosis' and diagnosis_domain:
+        primary = DOMAINS[diagnosis_domain]
     helpers=[]
     selected_workflows=[{'animation':'animation','diagnosis':'diagnosis','storage':'storage','protocol':'multiplayer'}[kind]] if kind in ('animation','diagnosis','storage','protocol') else []
     if multiplayer and 'multiplayer' not in selected_workflows:selected_workflows.append('multiplayer')
@@ -32,7 +37,7 @@ def route(kind='game',interface='lua',multiplayer=False,output='gil',task_mode=N
     if kind in ['game','nodes','gil'] and output in ['gia','gil','both']:helpers.append('qianxing-gil')
     from qianxing_workflow import guide
     workflow=guide(task_mode or {'gil':'delivery','assets':'assets','lua':'ui','diagnosis':'fix'}.get(kind,'feature'))
-    return {'domain':workflow['domain'],'workflow':workflow,'primary':primary,'support':[x for x in dict.fromkeys(helpers) if x!=primary],
+    routing = {'domain':workflow['domain'],'workflow':workflow,'primary':primary,'support':[x for x in dict.fromkeys(helpers) if x!=primary],
             'decisions':{'kind':kind,'interface':interface,'multiplayer':multiplayer,'output':output},
             'routing_schema':2,'shared_workflows':selected_workflows,
             'loading':'Primary domain first; support lists available domains, not mandatory reads or execution.',
@@ -40,6 +45,12 @@ def route(kind='game',interface='lua',multiplayer=False,output='gil',task_mode=N
             'missing_contract_policy':'Design and implement new contracts; read and preserve existing contracts. Inspect or create verified bindings; ask only for essential unavailable inputs.',
             'implementation_policy':{'new_contracts':'design_and_implement','existing_contracts':'inspect_and_preserve_or_explicitly_migrate','custom_ids':'allocate_in_verified_namespace_and_check_collisions','platform_ids':'read_from_verified_resources','missing_tool':'inspect_schema_and_implement_adapter','mounts':'implement_supported_binding_then_verify','host_validation':'report_separately_and_continue_offline_work'},
             'contract_resolution_steps':['inspect_current_files_and_definitions','design_new_events_states_signals_and_types','allocate_custom_identifiers_and_check_conflicts','author_graphs_clients_and_required_adapters','write_and_readback_supported_bindings','ask_only_for_unavailable_essential_inputs']}
+    if kind == 'diagnosis':
+        # Retain the schema-2 string field for legacy readers when the fault object is unknown.
+        routing['diagnosis'] = {'entrypoint':'diagnose', 'target_domain':diagnosis_domain,
+                                'primary':DOMAINS[diagnosis_domain] if diagnosis_domain else None}
+        routing['loading'] = 'Start with shared diagnose. Select a domain from the fault object; the legacy primary field alone is not a loading decision.'
+    return routing
 
 def catalog(query='',scope='all',limit=20):
     if scope not in ['all','client','server']:raise ValueError('Unknown node scope')

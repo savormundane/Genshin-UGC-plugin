@@ -54,8 +54,13 @@ def preflight(agent, project=None, outputs=None):
     return client, node
 
 
+def archive_sha256(path):
+    with Path(path).open('rb') as stream:
+        return hashlib.file_digest(stream, 'sha256').hexdigest()
+
+
 def extract(archive, expected, destination, version):
-    if hashlib.sha256(Path(archive).read_bytes()).hexdigest() != expected.lower():
+    if archive_sha256(archive) != expected.lower():
         raise ValueError('Archive SHA-256 mismatch')
     with zipfile.ZipFile(archive) as z:
         seen = set()
@@ -183,7 +188,7 @@ def codex_registration(client, record):
     return row
 
 
-def activate_codex_install(client, record, previous, state, state_path):
+def ensure_codex_active(client, record):
     selector = 'genshin-ugc-public@' + record['marketplace']
     registration = codex_registration(client, record)
     if registration is None:
@@ -197,22 +202,28 @@ def activate_codex_install(client, record, previous, state, state_path):
         registration = codex_registration(client, record)
     if not registration or not registration.get('installed') or not registration.get('enabled'):
         raise ValueError(f'Codex has not installed and enabled {selector}')
+def retire_codex_registration(client, record):
+    owned = codex_registration(client, record)
+    if owned and owned['installed']:
+        run_codex_plugin(client, 'remove', owned['pluginId'])
+        owned = codex_registration(client, record)
+        if owned and owned['installed']:
+            raise ValueError(f"Codex still reports the plugin as installed: {owned['pluginId']}")
+    if owned:
+        run_codex_plugin(client, 'marketplace', 'remove', record['marketplace'])
+        if codex_registration(client, record) is not None:
+            raise ValueError(f"Codex still reports the marketplace: {record['marketplace']}")
+
+
+def activate_codex_install(client, record, previous, state, state_path):
+    ensure_codex_active(client, record)
     if state['current'] != record:
         state['current'] = record
         if previous:
             state['history'].append(previous)
         save(state_path, state)
     if previous:
-        old = codex_registration(client, previous)
-        if old and old.get('installed'):
-            run_codex_plugin(client, 'remove', old['pluginId'])
-            old = codex_registration(client, previous)
-            if old and old.get('installed'):
-                raise ValueError(f"Codex still reports the previous plugin as installed: {old['pluginId']}")
-        if old:
-            run_codex_plugin(client, 'marketplace', 'remove', previous['marketplace'])
-            if codex_registration(client, previous) is not None:
-                raise ValueError(f"Codex still reports the previous marketplace: {previous['marketplace']}")
+        retire_codex_registration(client, previous)
 
 
 def activate(client, agent, record, previous):
@@ -249,18 +260,29 @@ def operate(args):
         raise ValueError('Project and outputs are required')
     client, node = preflight(args.agent, project, outputs)
     previous = state['current']
+    codex = args.agent == 'codex'
+    pending_retirement = state.get('pending_rollback_retirement') if codex else None
+    if pending_retirement and (args.action != 'rollback' or not previous or args.version != previous['version']):
+        raise ValueError('Complete the pending Codex rollback with the current version before another operation')
     if args.action == 'uninstall':
+        result = {'registration_removed': True, 'retained_for_rollback': str(root)}
         if not previous:
+            if codex and state['history']:
+                return result
             raise ValueError('No installation owned by this installer')
-        remove = 'remove' if args.agent == 'codex' else 'uninstall'
-        run([client, 'plugin', remove, 'genshin-ugc-public@' + previous['marketplace']])
-        run([client, 'plugin', 'marketplace', 'remove', previous['marketplace']])
+        if codex:
+            retire_codex_registration(client, previous)
+        else:
+            run([client, 'plugin', 'uninstall', 'genshin-ugc-public@' + previous['marketplace']])
+            run([client, 'plugin', 'marketplace', 'remove', previous['marketplace']])
         state['history'].append(previous)
         state['current'] = None
         save(state_path, state)
-        return {'registration_removed': True, 'retained_for_rollback': str(root)}
+        return result
     if args.action == 'rollback':
         selected = [r for r in state['history'] if r['version'] == args.version]
+        if codex and previous and previous['version'] == args.version:
+            selected.append(previous)
         if not selected:
             raise ValueError('No retained installation for this version')
         record = selected[-1]
@@ -268,10 +290,20 @@ def operate(args):
             raise ValueError('Retained installation is unavailable')
         run([record['python'], '-X', 'utf8', '-B', Path(record['home']) / 'Genshin-UGC/scripts/install_smoke.py',
              '--config', record['config'], '--node', node])
-        activate(client, args.agent, record, previous)
-        state['current'] = record
-        state['history'] = [r for r in state['history'] if r != record] + ([previous] if previous else [])
-        save(state_path, state)
+        if codex:
+            ensure_codex_active(client, record)
+        else:
+            activate(client, args.agent, record, previous)
+        if previous != record:
+            state['current'] = record
+            state['history'] = [r for r in state['history'] if r != record] + ([previous] if previous else [])
+            if codex and previous:
+                state['pending_rollback_retirement'] = previous
+            save(state_path, state)
+        if codex and state.get('pending_rollback_retirement'):
+            retire_codex_registration(client, state['pending_rollback_retirement'])
+            state.pop('pending_rollback_retirement')
+            save(state_path, state)
         return {'rolled_back': args.version, 'agent_host_load': 'not_checked'}
     if not args.archive or not args.sha256:
         raise ValueError('Archive and expected SHA-256 required')
@@ -290,7 +322,7 @@ def operate(args):
                'agent': args.agent, 'home': str(home), 'project': str(project), 'outputs': str(outputs)}
     record = {'version': args.version, 'home': str(home), 'config': str(config),
               'python': str(python), 'marketplace': market, 'archive_sha256': binding['archive_sha256']}
-    if hashlib.sha256(Path(args.archive).read_bytes()).hexdigest() != binding['archive_sha256']:
+    if archive_sha256(args.archive) != binding['archive_sha256']:
         raise ValueError('Archive SHA-256 mismatch')
     recovering_activation = False
     if home.exists():

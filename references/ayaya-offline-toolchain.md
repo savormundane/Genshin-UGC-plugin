@@ -8,7 +8,7 @@
 
 上游：[Ayaya_Miliastra_Editor](https://github.com/AyayaXiaowang/Ayaya_Miliastra_Editor)。按当地仓库的源码与许可使用；上游声明 GPLv3，各第三方组件保留独立许可。包内包含经筛选的上游 GPLv3 源码、节点定义、静态 Workbench 页面和文件写回所需的校准 seed；不包含上游游戏项目资源库。源码改动、原文件/分发文件摘要见 `vendor/ayaya/VENDORED.json`，许可证及署名见同目录 LICENSE、LICENSES 和 NOTICE.md。
 
-命令中的 `PYTHON` 为实际 Python 可执行文件，`PLUGIN` 为本包根；输入与输出采用实际绝对路径。使用 Python 3.10–3.12，文件解析、图校验、GIL/GIA 生成链路仅用标准库；HTML 浏览器排版为可选依赖。接入脚本仅用标准库，不安装依赖，不启动 GUI、不执行 OCR、截图识别或游戏鼠标键盘自动化。不要为文件转换直接安装整个 GUI requirements；先用具体入口帮助定位所需依赖，缺少模块时单独处理该链路。
+命令中的 `PYTHON` 为实际 Python 可执行文件，`PLUGIN` 为本包根；输入与输出采用实际绝对路径。完整环境使用 Python 3.11–3.12，文件解析、图校验、GIL/GIA 生成链路仅用标准库；HTML 浏览器排版为可选依赖。接入脚本仅用标准库，不安装依赖，不启动 GUI、不执行 OCR、截图识别或游戏鼠标键盘自动化。不要为文件转换直接安装整个 GUI requirements；先用具体入口帮助定位所需依赖，缺少模块时单独处理该链路。
 
     PYTHON PLUGIN/scripts/ayaya_bridge.py doctor
     PYTHON PLUGIN/scripts/ayaya_bridge.py --tool export_project_graphs_to_gia tool -- --help

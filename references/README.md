@@ -80,7 +80,7 @@
 
 - [三个核心依据与冲突处理](sources-and-conflicts.md)
 - [奇匠学院官方资料](official-index.md)
-- [可复用制作经验](production-experience.md)
+- [可选制作案例与历史核验](production-experience.md)
 - [排障与定位](debugging-workflow.md)
 - [证据等级与验收](validation.md)
 - [验证证据闭环](validation-evidence.md)

@@ -1,17 +1,28 @@
 """Budget-constrained deterministic search; schema 1 stays in asset_fit."""
 import bisect
+from itertools import accumulate, compress
+import math
 import random
 from PIL import Image, ImageDraw, ImageChops, ImageStat, __version__ as PILLOW_VERSION
 from authoring_io import sha, canonical
-from asset_fit import paint, render, error, rectangle_data
+from asset_fit import MAX_FIT_PIXELS, paint, render, rectangle_data
 
 ALGORITHM = 'residual-budget-2'
 
 
+def residual_index(cumulative, fraction):
+    total = cumulative[-1]
+    # Preserve the last positive weight even when rounding reaches the upper endpoint.
+    sample = fraction * total
+    if sample >= total:
+        sample = math.nextafter(total, -math.inf)
+    return bisect.bisect_right(cumulative, sample)
+
+
 def fit(image, cfg, binding, state=None, steps=None, initial=None):
     size = image.size
-    if size[0]*size[1] > 262144:
-        raise ValueError('Fit input exceeds 262144 pixels')
+    if size[0]*size[1] > MAX_FIT_PIXELS:
+        raise ValueError(f'Fit input exceeds {MAX_FIT_PIXELS} pixels')
     if steps is not None and (type(steps) != int or steps <= 0):
         raise ValueError('steps must be positive')
     regions = cfg['regions'] or [[0, 0, *size]]
@@ -22,7 +33,15 @@ def fit(image, cfg, binding, state=None, steps=None, initial=None):
     for l,t,r,b in regions:
         draw.rectangle((l,t,r-1,b-1), fill=255)
     allowed = ImageChops.multiply(region, image.getchannel('A').point(lambda a: 255 if a >= cfg['alpha_min'] else 0))
-    points = [(i % size[0], i // size[0]) for i,a in enumerate(allowed.getdata()) if a]
+    mask_bytes = allowed.tobytes()
+    points = [(i % size[0], i // size[0]) for i,a in enumerate(mask_bytes) if a]
+    pixels = image.load()
+    mask = allowed.load()
+    target = image.convert('RGBa')
+    denominator = size[0] * size[1] * 4 * 255**2
+
+    def score_image(canvas):
+        return sum(ImageStat.Stat(ImageChops.difference(canvas.convert('RGBa'), target)).sum2) / denominator
     rng = random.Random(cfg['seed'])
     algorithm = state.get('identity',{}).get('algorithm') if state else ALGORITHM
     if algorithm not in ('residual-budget-1', ALGORITHM): raise ValueError('Resume algorithm identity mismatch')
@@ -42,7 +61,7 @@ def fit(image, cfg, binding, state=None, steps=None, initial=None):
     if len(shapes) > cfg['budget']:
         raise ValueError('Initial primitives exceed budget')
     canvas = render(size, shapes)
-    current = error(canvas, image)
+    current = score_image(canvas)
     controls = len(rectangle_data(canvas)['rects'])
     if controls > cfg['max_controls']:
         raise ValueError('Initial rectangles exceed control budget')
@@ -50,16 +69,14 @@ def fit(image, cfg, binding, state=None, steps=None, initial=None):
     if not history or history[-1] != [current, controls] or any(not (b[0] < a[0] or b[0] == a[0] and b[1] < a[1]) for a,b in zip(history,history[1:])):
         raise ValueError('Invalid resume error/cost history')
     cumulative = None
-    target = image.convert('RGBa')
     limit = cfg['work'] if steps is None else min(cfg['work'], done+steps)
     while done < limit and current > cfg['target_error'] and points:
         if cumulative is None:
             residual = ImageChops.difference(canvas.convert('RGBa'), target)
-            cumulative = []; total = 0
-            for xy in points:
-                total += sum(c*c for c in residual.getpixel(xy)); cumulative.append(total)
+            weights = (r*r + g*g + b*b + a*a for r,g,b,a in compress(residual.getdata(), mask_bytes))
+            cumulative = list(accumulate(weights))
         if rng.random() < .75 and cumulative[-1]:
-            x,y = points[bisect.bisect_right(cumulative, rng.random()*cumulative[-1])]
+            x,y = points[residual_index(cumulative, rng.random())]
         else:
             x,y = rng.choice(points)
         local = bool(shapes) and (done % 3 == 2 or len(shapes) >= cfg['budget'])
@@ -71,15 +88,17 @@ def fit(image, cfg, binding, state=None, steps=None, initial=None):
             if rng.randrange(2): w = 1
             else: h = 1
         l = max(0,min(size[0]-w,x-w//2)); t = max(0,min(size[1]-h,y-h//2))
-        box = [l,t,l+w,t+h]; color = list(image.getpixel((x,y)))
+        box = [l,t,l+w,t+h]; color = list(pixels[x,y])
         # Spend one existing proposal, not extra work: a coherent source region avoids
         # building flat translucent areas from many overlapping alpha composites.
         if algorithm == ALGORITHM and not local and done % 4 == 0 and 'rect' in cfg['shapes']:
             kind = 'rect'
-            pixels = image.load(); mask = allowed.load(); reference = pixels[x,y]
+            red, green, blue, alpha = pixels[x,y]
             def coherent(xx,yy):
-                c = pixels[xx,yy]
-                return mask[xx,yy] and c[3] == reference[3] and max(abs(c[k]-reference[k]) for k in range(3)) <= 32
+                if not mask[xx,yy]:
+                    return False
+                r,g,b,a = pixels[xx,yy]
+                return a == alpha and abs(r-red) <= 32 and abs(g-green) <= 32 and abs(b-blue) <= 32
             left=right=x; top=bottom=y
             while left>0 and coherent(left-1,y): left-=1
             while right+1<size[0] and coherent(right+1,y): right+=1
@@ -100,7 +119,7 @@ def fit(image, cfg, binding, state=None, steps=None, initial=None):
                 elif kind == 'line': box[2 if box[2]-box[0]>1 else 3] += move
                 else: box[axis+2*rng.randrange(2)] += move
             else:
-                color = list(image.getpixel(((box[0]+box[2]-1)//2,(box[1]+box[3]-1)//2)))
+                color = list(pixels[(box[0]+box[2]-1)//2,(box[1]+box[3]-1)//2])
         done += 1
         if not (0 <= box[0] < box[2] <= size[0] and 0 <= box[1] < box[3] <= size[1]): continue
         if local and ImageChops.subtract(paint(size,shapes[index]).getchannel('A'),region).getbbox(): continue
@@ -110,7 +129,7 @@ def fit(image, cfg, binding, state=None, steps=None, initial=None):
         trial = shapes[:]; trial[index:index+1] = [proposal]
         candidate = render(size,trial) if local else Image.alpha_composite(canvas,layer)
         stats['renders'] += 1
-        score = error(candidate,image)
+        score = score_image(candidate)
         if score > current: continue
         cost = len(rectangle_data(candidate)['rects']); stats['cost_evaluations'] += 1
         if cost > cfg['max_controls']:

@@ -3,9 +3,18 @@ from pathlib import Path, PureWindowsPath
 import argparse
 import hashlib
 import json
+import os
 import re
 import tempfile
 import zipfile
+
+
+def sha256_file(path):
+    digest = hashlib.sha256()
+    with Path(path).open('rb') as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def validate_windows_names(names):
@@ -32,7 +41,10 @@ def validate_windows_names(names):
 
 
 def build_release(source, output, layout='auto', archive_root=None):
-    source, output = Path(source).resolve(), Path(output).resolve()
+    source, output = Path(source).resolve(), Path(output).absolute()
+    if os.path.lexists(output):
+        raise FileExistsError(f'Output already exists: {output}')
+    output = output.parent.resolve() / output.name
     if not source.is_dir():
         raise ValueError('Source must be a directory')
     if output.is_relative_to(source):
@@ -96,34 +108,43 @@ def build_release(source, output, layout='auto', archive_root=None):
     members = {archive_root + '/' + f.relative_to(source).as_posix(): f for f in files}
     validate_windows_names(members)
     output.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(output, 'x', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
-        for member, f in members.items():
-            info = zipfile.ZipInfo(member, date_time=(1980, 1, 1, 0, 0, 0))
-            info.compress_type = zipfile.ZIP_DEFLATED
-            info.create_system = 3
-            info.external_attr = 0o100644 << 16
-            archive.writestr(info, f.read_bytes())
-    with tempfile.TemporaryDirectory(prefix='ugc-zip-check-') as temporary, zipfile.ZipFile(output) as archive:
-        if archive.testzip() is not None:
-            raise ValueError('ZIP CRC failed')
-        zip_entries = archive.infolist()
-        if [entry.filename for entry in zip_entries] != list(members):
-            raise ValueError('ZIP entry names differ from source')
-        unicode_names = [entry for entry in zip_entries if not entry.filename.isascii()]
-        if any(not entry.flag_bits & 0x800 for entry in unicode_names):
-            raise ValueError('Non-ASCII ZIP names must carry the UTF-8 flag')
-        archive.extractall(temporary)
-        unpacked = Path(temporary)
-        restored = {f.relative_to(unpacked).as_posix() for f in unpacked.rglob('*') if f.is_file()}
-        if restored != set(members):
-            raise ValueError('Extracted file names differ from ZIP entries')
-        for member, original in members.items():
-            if (unpacked / member).read_bytes() != original.read_bytes():
-                raise ValueError('Extracted bytes differ from source: ' + member)
+    with tempfile.TemporaryDirectory(prefix='.ugc-package-', dir=output.parent) as staging:
+        staged = Path(staging) / output.name
+        with zipfile.ZipFile(staged, 'x', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
+            for member, f in members.items():
+                info = zipfile.ZipInfo(member, date_time=(1980, 1, 1, 0, 0, 0))
+                info.compress_type = zipfile.ZIP_DEFLATED
+                info.create_system = 3
+                info.external_attr = 0o100644 << 16
+                archive.writestr(info, f.read_bytes())
+        with tempfile.TemporaryDirectory(prefix='ugc-zip-check-') as temporary, zipfile.ZipFile(staged) as archive:
+            if archive.testzip() is not None:
+                raise ValueError('ZIP CRC failed')
+            zip_entries = archive.infolist()
+            if [entry.filename for entry in zip_entries] != list(members):
+                raise ValueError('ZIP entry names differ from source')
+            unicode_names = [entry for entry in zip_entries if not entry.filename.isascii()]
+            if any(not entry.flag_bits & 0x800 for entry in unicode_names):
+                raise ValueError('Non-ASCII ZIP names must carry the UTF-8 flag')
+            archive.extractall(temporary)
+            unpacked = Path(temporary)
+            restored = {f.relative_to(unpacked).as_posix() for f in unpacked.rglob('*') if f.is_file()}
+            if restored != set(members):
+                raise ValueError('Extracted file names differ from ZIP entries')
+            for member, original in members.items():
+                if (unpacked / member).read_bytes() != original.read_bytes():
+                    raise ValueError('Extracted bytes differ from source: ' + member)
+        file_size = staged.stat().st_size
+        digest = sha256_file(staged)
+        if os.name == 'nt':
+            staged.rename(output)
+        else:
+            # POSIX rename overwrites a file created during the build.
+            os.link(staged, output)
     return {'layout': layout, 'excluded_prefixes': excluded, 'files': len(files), 'skills': len(entries),
-            'zip_bytes': output.stat().st_size,
+            'zip_bytes': file_size,
             'largest_file_bytes': max(f.stat().st_size for f in files),
-            'sha256': hashlib.sha256(output.read_bytes()).hexdigest(),
+            'sha256': digest,
             'archive_content_verified': True, 'extracted_names_verified': True,
             'utf8_entries': len(unicode_names), 'agent_installation_tested': False}
 
