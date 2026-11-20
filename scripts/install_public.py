@@ -12,6 +12,11 @@ import sys
 import tempfile
 import zipfile
 
+MANUAL_AGENTS = ('agent-plugins', 'deepseek-harness')
+AGENTS = ('codex', 'claude-code', *MANUAL_AGENTS)
+MCP_SCHEMA = 'https://agent-plugins.org/schemas/1.0.0/mcp.schema.json'
+MCP_NAME = 'genshin-ugc-public-local'
+
 
 def read_json(p):
     return json.loads(Path(p).read_text(encoding='utf-8-sig'))
@@ -38,14 +43,17 @@ def preflight(agent, project=None, outputs=None):
         raise ValueError('Complete bundle requires Windows x64')
     if not (3, 11) <= sys.version_info[:2] <= (3, 12):
         raise ValueError('Locked dependencies require Python 3.11-3.12')
-    client = shutil.which('codex' if agent == 'codex' else 'claude')
+    client = None if agent in MANUAL_AGENTS else shutil.which('codex' if agent == 'codex' else 'claude')
     node = shutil.which('node')
-    if not client or not node:
-        raise ValueError('Install the selected Agent and Node.js 22+ first; no global installer is run')
+    if not node or (agent not in MANUAL_AGENTS and not client):
+        raise ValueError('Install Node.js and the selected client first. No global installer is run.')
     version = subprocess.check_output([node, '--version'], text=True).strip()
-    if int(version.lstrip('v').split('.')[0]) < 22:
-        raise ValueError('Node.js 22+ required')
-    run([client, 'plugin', '--help'], capture_output=True)
+    match = re.fullmatch(r'v(\d+)\.(\d+)\.(\d+)', version)
+    minimum = (24, 9, 0) if agent == 'deepseek-harness' else (22, 0, 0)
+    if not match or tuple(map(int, match.groups())) < minimum:
+        raise ValueError('Node.js ' + '.'.join(map(str, minimum)) + '+ required')
+    if client:
+        run([client, 'plugin', '--help'], capture_output=True)
     if project is not None:
         if not project.is_dir() or project == Path(project.anchor):
             raise ValueError('Select an existing project, not an entire drive')
@@ -90,20 +98,45 @@ def extract(archive, expected, destination, version):
 
 def marketplace_files(agent, version, node, config):
     market = 'genshin-ugc-download-' + agent + '-' + version.replace('.', '-')
-    server = {'type': 'stdio', 'command': node,
+    server = {'type': 'stdio', 'command': 'node',
               'args': ['${PLUGIN_ROOT}/scripts/mcp_launcher.cjs'],
               'env': {'UGC_RUNTIME_CONFIG': str(config)}}
-    claude_server = dict(server, args=['${CLAUDE_PLUGIN_ROOT}/scripts/mcp_launcher.cjs'])
-    files = {
-        Path('Genshin-UGC/mcp.json'): {'mcpServers': {'genshin-ugc-public-local': server}},
-        Path('Genshin-UGC/.mcp.json'): {'mcpServers': {'genshin-ugc-public-local': claude_server}},
-        Path('.agents/plugins/marketplace.json'): {
-            'name': market, 'interface': {'displayName': 'Genshin-UGC'},
-            'plugins': [{'name': 'genshin-ugc-public', 'source': {'source': 'local', 'path': './Genshin-UGC'},
-                         'policy': {'installation': 'AVAILABLE', 'authentication': 'ON_INSTALL'}, 'category': 'Productivity'}]},
-        Path('.claude-plugin/marketplace.json'): {
-            'name': market, 'owner': {'name': 'Genshin-UGC contributors'},
-            'plugins': [{'name': 'genshin-ugc-public', 'source': './Genshin-UGC'}]},
+    if agent == 'deepseek-harness':
+        bundle = config.parent / 'Genshin-UGC'
+        # The Cordis YAML loader accepts JSON. Using the existing serializer keeps Windows paths
+        # and Unicode lossless without evaluating expressions or interpolating YAML strings.
+        patch = [{'insert': [
+            {'id': 'genshin-ugc-skills', 'name': '@deepseek-ai/dsh-skill-filesystem',
+             'config': {'providerName': 'genshin-ugc-public', 'includeDefaultRoots': False,
+                        'customSkillDirs': [str(bundle / 'skills')]}},
+            {'id': 'genshin-ugc-mcp', 'name': '@deepseek-ai/dsh-mcp-client',
+             'config': {'serverName': 'genshin_ugc', 'transport': 'stdio', 'command': node,
+                        'args': [str(bundle / 'scripts/mcp_launcher.cjs')], 'env': server['env'],
+                        'cwd': str(bundle), 'toolCallTimeoutMs': 930000, 'failOnStartupError': True}},
+        ]}]
+        return None, {
+            Path('cordis-bundle/package.json'): {
+                'name': '@local/genshin-ugc-public', 'version': version, 'private': True,
+                'description': 'Genshin-UGC Skills and local MCP for DeepSeek Harness',
+                'engines': {'dsh': '0.2.2-rc.5'}, 'files': ['cordis.patch.yml'],
+                'dsh': {'bundle': {'patch': './cordis.patch.yml'}}},
+            Path('cordis-bundle/cordis.patch.yml'): patch,
+        }
+    if agent == 'claude-code':
+        server.update(command=node, args=['${CLAUDE_PLUGIN_ROOT}/scripts/mcp_launcher.cjs'])
+        return market, {
+            Path('Genshin-UGC/.mcp.json'): {'mcpServers': {MCP_NAME: server}},
+            Path('.claude-plugin/marketplace.json'): {
+                'name': market, 'owner': {'name': 'Genshin-UGC contributors'},
+                'plugins': [{'name': 'genshin-ugc-public', 'source': './Genshin-UGC'}]},
+        }
+    files = {Path('Genshin-UGC/mcp.json'): {'$schema': MCP_SCHEMA, 'mcpServers': {MCP_NAME: server}}}
+    if agent == 'agent-plugins':
+        return None, files
+    files[Path('.agents/plugins/marketplace.json')] = {
+        'name': market, 'interface': {'displayName': 'Genshin-UGC'},
+        'plugins': [{'name': 'genshin-ugc-public', 'source': {'source': 'local', 'path': './Genshin-UGC'},
+                     'policy': {'installation': 'AVAILABLE', 'authentication': 'ON_INSTALL'}, 'category': 'Productivity'}],
     }
     return market, files
 
@@ -245,6 +278,9 @@ def activate(client, agent, record, previous):
 
 
 def operate(args):
+    manual = args.agent in MANUAL_AGENTS
+    if manual and args.action != 'install':
+        raise ValueError('Manage registration and rollback in the host. The prepared files are retained.')
     if getattr(args,'resume',False) and args.action!='install':
         raise ValueError('--resume only applies to an unfinished install')
     if not re.fullmatch(r'\d+\.\d+\.\d+', args.version):
@@ -326,6 +362,8 @@ def operate(args):
         raise ValueError('Archive SHA-256 mismatch')
     recovering_activation = False
     if home.exists():
+        if manual and os.path.lexists(home / 'preparation.json'):
+            raise ValueError('This version is already prepared. Use its existing directory in the host.')
         if linked(journal):
             raise ValueError('Linked installation journal refused')
         pending = read_json(journal) if getattr(args, 'resume', False) and journal.is_file() else None
@@ -347,9 +385,10 @@ def operate(args):
             elif previous != original:
                 raise ValueError('Current Codex installation changed since activation began')
             previous = original
-        elif pending.get('phase') not in ('dependencies', 'checks'):
+        elif pending.get('phase') not in ('dependencies', 'checks', *(['preparation'] if manual else [])):
             raise ValueError('Activation has already been attempted and cannot be resumed for this Agent')
-        verify_unfinished_bundle(home, args.archive, binding, generated if recovering_activation else {})
+        verify_unfinished_bundle(home, args.archive, binding,
+                                 generated if recovering_activation or (manual and pending.get('phase') == 'preparation') else {})
     else:
         if getattr(args,'resume',False):raise ValueError('No registered unfinished version to resume')
         home.parent.mkdir(parents=True, exist_ok=True)
@@ -371,9 +410,25 @@ def operate(args):
         restored=read_json(config)
         if restored.get('project_root')!=str(project) or restored.get('output_root')!=str(outputs) or restored.get('python')!=str(runtime/'Scripts/python.exe'):
             raise ValueError('Unfinished runtime configuration differs from registered parameters')
+    smoke = [python, '-X', 'utf8', '-B', bundle / 'scripts/install_smoke.py', '--config', config, '--node', node]
+    if manual:
+        save(journal, {'binding': binding, 'phase': 'preparation'})
+        configure_marketplace(home, args.agent, args.version, node, config)
+        run([*smoke, '--adapter', args.agent])
+        result = {'prepared': args.version, 'agent': args.agent, 'runtime_smoke': 'passed',
+                  'registration': 'pending_host_registration', 'agent_host_load': 'not_checked',
+                  'plugin_directory': str(bundle), 'config': str(config)}
+        if args.agent == 'deepseek-harness':
+            result.update(bundle_directory=str(home / 'cordis-bundle'),
+                          next='Add the bundle directory in DeepSeek Harness Plugins for the selected profile.')
+        else:
+            result['next'] = 'Use your host\'s local Agent Plugin import with plugin_directory.'
+        save(home / 'preparation.json', result)
+        journal.unlink()
+        return result
     if not recovering_activation:
         save(journal, {'binding': binding, 'phase': 'checks'})
-    run([python, '-X', 'utf8', '-B', bundle / 'scripts/install_smoke.py', '--config', config, '--node', node])
+    run(smoke)
     activation = {'binding': binding, 'phase': 'activation'}
     if args.agent == 'codex':
         activation.update(record=record, previous=previous, node=node)
@@ -400,7 +455,7 @@ def operate(args):
 if __name__ == '__main__':
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('action', choices=('install', 'rollback', 'uninstall'))
-    p.add_argument('--agent', choices=('codex', 'claude-code'), required=True)
+    p.add_argument('--agent', choices=AGENTS, required=True)
     p.add_argument('--resume',action='store_true')
     for key in ('root', 'version'):
         p.add_argument('--' + key, required=True)

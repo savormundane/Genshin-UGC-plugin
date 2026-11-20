@@ -1,11 +1,15 @@
 {
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
   "mcpServers": {
     "genshin-ugc-public-local": {
       "type": "stdio",
       "command": "node",
       "args": [
         "${PLUGIN_ROOT}/scripts/mcp_launcher.cjs"
-      ]
+      ],
+      "env": {
+        "UGC_RUNTIME_CONFIG": "${PLUGIN_DATA}/runtime.json"
+      }
     }
   }
 }

@@ -1,7 +1,7 @@
 param(
-    [ValidateSet('codex', 'claude-code')][string]$Agent = 'codex',
+    [ValidateSet('codex', 'claude-code', 'agent-plugins', 'deepseek-harness')][string]$Agent = 'codex',
     [ValidateSet('install', 'rollback', 'uninstall')][string]$Action = 'install',
-    [string]$Version = '3.7.4',
+    [string]$Version = '4.0.0',
     [switch]$Resume,
     [string]$Project, [string]$Outputs, [string]$Python,
     [string]$Root, [string]$Archive, [string]$Sha256
@@ -13,6 +13,9 @@ if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw 'Version must be x.y.z.' }
 if (!$Root) { $Root = Join-Path $env:LOCALAPPDATA 'Genshin-UGC-Public' }
 # Recovery must also work offline, without downloading an old release bootstrap.
 if ($Action -ne 'install') {
+    if ($Agent -in @('agent-plugins', 'deepseek-harness')) {
+        throw 'Manage registration and rollback in the host. The prepared files are retained.'
+    }
     $state = Get-Content -Raw -LiteralPath (Join-Path $Root ($Agent + '.json')) | ConvertFrom-Json
     if ($state.schema -ne 1) { throw 'Unknown installation state version.' }
     $owned = $state.current
@@ -70,14 +73,17 @@ try {
     if (!$Archive) {
         $base = 'https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v' + $Version
         $filename = 'Genshin-UGC-' + $Version + '-windows-x64.zip'
+        $uri = 'https://api.github.com/repos/savormundane/Genshin-UGC-plugin/releases/tags/v' + $Version
+        $release = Invoke-RestMethod $uri -UseBasicParsing -TimeoutSec 30 -Headers @{ Accept = 'application/vnd.github+json' }
+        $asset = @($release.assets | Where-Object { $_.name -ceq $filename })
+        if ($release.tag_name -cne ('v' + $Version) -or $release.draft -ne $false -or
+            $asset.Count -ne 1 -or $asset[0].state -ne 'uploaded' -or
+            $asset[0].digest -notmatch '^sha256:([0-9a-fA-F]{64})$') {
+            throw 'The release must publish one Windows ZIP with a GitHub SHA-256 digest.'
+        }
+        $Sha256 = $asset[0].digest.Substring(7)
         $Archive = Join-Path $taskTemp $filename
         Invoke-WebRequest ($base + '/' + $filename) -UseBasicParsing -OutFile $Archive
-        $checksums = (Invoke-WebRequest ($base + '/SHA256SUMS.txt') -UseBasicParsing).Content
-        if ($checksums -is [byte[]]) { $checksums = [Text.Encoding]::UTF8.GetString($checksums) }
-        $checksums = $checksums.TrimStart([char]0xFEFF)
-        $line = @($checksums -split "`n" | Where-Object { $_.Trim() -match ('^[0-9a-fA-F]{64}\s+' + [regex]::Escape($filename) + '$') })
-        if ($line.Count -ne 1) { throw 'Missing or ambiguous release checksum.' }
-        $Sha256 = ($line[0].Trim() -split '\s+')[0]
     }
     if ($Sha256 -notmatch '^[0-9a-fA-F]{64}$') { throw 'A local ZIP requires -Sha256.' }
     if ((Get-FileHash -LiteralPath $Archive -Algorithm SHA256).Hash -ne $Sha256) { throw 'Archive SHA-256 mismatch.' }

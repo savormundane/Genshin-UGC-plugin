@@ -22,4 +22,4 @@ GitHub Actions 的 [Repository checks](../.github/workflows/repository-check.yml
 
 涉及完整安装、MCP 工具、模拟器、实际游戏文件的变动，需结合 [安装说明](../references/installation.md) 与 [验证边界](compatibility.md)另行检查。不得用上述静态检查代替实机验收。
 
-修改打包或版本检查时运行 `python -B scripts/test_release.py`；它使用临时合成仓库，不下载依赖、不安装插件、不访问 GitHub。打包流程见[维护与发布](maintenance.md)。
+修改打包或版本检查时运行 `python -B scripts/test_release.py`。若改动客户端适配，运行 `python -B scripts/test_agent_protocols.py`，再按[安装说明](../references/installation.md)检查对应入口。打包流程见[维护与发布](maintenance.md)。

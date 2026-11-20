@@ -9,14 +9,14 @@ body:
     id: version
     attributes:
       label: 插件版本
-      placeholder: "例如：3.7.4"
+      placeholder: "例如：4.0.0"
     validations:
       required: true
   - type: textarea
     id: environment
     attributes:
       label: 环境
-      description: "操作系统、Python / Node、Codex 或 Claude Code 版本、目标平台版本（如适用）"
+      description: "操作系统、Python / Node、Agent 客户端及版本、目标平台版本（如适用）"
     validations:
       required: true
   - type: textarea
@@ -37,6 +37,7 @@ body:
     attributes:
       label: 问题出现在哪个阶段
       options:
+        - 插件安装或宿主加载
         - 静态检查
         - 本地 CLI / MCP
         - 离线模拟

@@ -64,16 +64,16 @@ class ReleaseTests(unittest.TestCase):
                 for name, sha in report["assets"].items():
                     self.assertEqual(hashlib.sha256((first / name).read_bytes()).hexdigest(), sha)
                     self.assertEqual((first / name).read_bytes(), (second / name).read_bytes())
-                checksum_bytes = (first / "SHA256SUMS.txt").read_bytes()
-                self.assertNotIn(b'\r', checksum_bytes)
-                self.assertTrue(checksum_bytes.endswith(b'\n'))
+                filename = f"Genshin-UGC-{version}-windows-x64.zip"
+                self.assertEqual(set(report["assets"]), {filename})
+                self.assertEqual({p.name for p in first.iterdir()}, {filename, "release-notes.md", "release-review.json"})
                 with zipfile.ZipFile(first / f"Genshin-UGC-{version}-windows-x64.zip") as archive:
                     names = archive.namelist()
                     self.assertIn("Genshin-UGC/vendor/beyond/node_modules/fixture/index.js", names)
                     self.assertIn("Genshin-UGC/runtime/fixture.bin", names)
                     self.assertIn("Genshin-UGC/references/中文 文件.txt", names)
                     self.assertFalse(any("/.git/" in n or "/.venv/" in n for n in names))
-                    self.assertEqual(archive.read("Genshin-UGC/install.ps1"), (first / "install.ps1").read_bytes())
+                    self.assertEqual(archive.read("Genshin-UGC/install.ps1"), (self.root / "install.ps1").read_bytes())
                 with self.assertRaisesRegex(ValueError, "new directory"):
                     prepare(self.root, first, self.notes)
 

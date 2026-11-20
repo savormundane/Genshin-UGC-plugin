@@ -4,9 +4,9 @@
 
 **导航：** [安装](#快速安装) · [使用场景](#从需求到结果) · [支持范围](#支持环境与验证边界) · [文档与参与](#文档与参与)
 
-**3.7.4 · 《原神》千星奇域开发工具包**
+**4.0.0 · 《原神》千星奇域开发工具包**
 
-[下载完整 Windows ZIP](https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v3.7.4/Genshin-UGC-3.7.4-windows-x64.zip) · [校验文件](https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v3.7.4/SHA256SUMS.txt) · [所有版本](https://github.com/savormundane/Genshin-UGC-plugin/releases)
+[下载完整 Windows ZIP](https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v4.0.0/Genshin-UGC-4.0.0-windows-x64.zip) · [所有版本](https://github.com/savormundane/Genshin-UGC-plugin/releases)
 
 五个核心 Skill、可追溯平台资料、统一 CLI、18 项本地 MCP 操作，以及随包的离线工具与可选模拟器。
 
@@ -22,7 +22,7 @@
 
 ## 从需求到结果
 
-安装后，在 Codex 或 Claude Code 中描述目标，并让 Agent 明确引用的资料、生成文件和验证范围：
+安装后，在已配置的客户端中描述目标，并让 Agent 明确引用的资料、生成文件和验证范围：
 
 | 任务 | 示例提问 |
 | --- | --- |
@@ -36,22 +36,31 @@
 
 ## 快速安装
 
-完整工具链当前支持 **Windows x64**。先安装 Python 3.11–3.12、Node.js 22+，以及 Codex 或 Claude Code；安装器不会替你安装全局软件。
+完整工具链支持 **Windows x64**。准备 Python 3.11–3.12、Node.js 22+ 和所选客户端。DeepSeek Harness `0.2.2-rc.5` 需要 Node.js 24.9 或以上。
 
 在 PowerShell 中运行一条命令：
 
 ```powershell
-& ([scriptblock]::Create((Invoke-RestMethod 'https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v3.7.4/install.ps1'))) -Agent codex
+& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.0.0/install.ps1'))) -Agent codex
 ```
 
-Claude Code 将末尾参数改成 `-Agent claude-code`。首次会询问现有项目目录和独立输出目录，也可传入 `-Project`、`-Outputs` 和 `-Python`。Python 依赖首次安装需要联网；使用锁定版本并安装到插件专用环境。
+把 `-Agent` 参数改为所选入口。
 
-安装器下载固定版本 ZIP、校验 SHA-256、保留完整目录、配置运行环境，并调用客户端原生插件安装入口。不会仅复制 Skill，也不会修改其他插件的配置。安装后重启客户端；客户端仍可能要求启用或信任本地 MCP。
+| 客户端或协议 | 参数 | 注册方式 |
+| --- | --- | --- |
+| Codex | `codex` | 安装器调用 Codex 插件命令 |
+| Claude Code Plugin | `claude-code` | 安装器调用 Claude Code 插件命令 |
+| Agent Plugins 1.0.0 | `agent-plugins` | 在兼容客户端中导入准备好的插件目录 |
+| DeepSeek Harness Cordis | `deepseek-harness` | 在目标 profile 中添加准备好的 Bundle |
 
-喜欢先检查脚本，可以从 [Release](https://github.com/savormundane/Genshin-UGC-plugin/releases/tag/v3.7.4) 下载 `install.ps1`、完整 ZIP 和 `SHA256SUMS.txt`，查看脚本后执行：
+详见[宿主原生注册](references/installation.md#宿主原生注册)。首次会询问现有项目目录和独立输出目录，也可传入 `-Project`、`-Outputs` 和 `-Python`。Python 依赖首次安装需要联网；使用锁定版本并安装到插件专用环境。
+
+安装器下载固定版本 ZIP，从 GitHub Release 读取 ZIP 的 SHA-256 并校验，再准备完整插件和专用运行环境。Codex 与 Claude Code 使用宿主原生命令注册；另外两种入口会输出待导入目录。客户端仍可能要求启用或信任本地 MCP。
+
+也可以先下载[完整 ZIP](https://github.com/savormundane/Genshin-UGC-plugin/releases/tag/v4.0.0)，解压查看其中的 `install.ps1`。从 GitHub Release 附件详情取得 ZIP 的 SHA-256，保留原 ZIP 并在解包的插件目录运行：
 
 ```powershell
-.\install.ps1 -Agent codex -Archive .\Genshin-UGC-3.7.4-windows-x64.zip -Sha256 '<SHA256SUMS.txt 中的 ZIP 摘要>'
+.\install.ps1 -Agent codex -Archive ..\Genshin-UGC-4.0.0-windows-x64.zip -Sha256 '<GitHub Release 显示的 ZIP SHA-256>'
 ```
 
 安装中断后，保留版本目录并以相同版本、ZIP 摘要、客户端及目录参数加 `-Resume`。Codex 可以核对实际注册并继续已登记的激活，已完成的安装使用回退或新版本目录。SHA-256 用于内容一致性检查。详见[安装恢复](references/installation.md#失败后续装)。
@@ -71,9 +80,11 @@ Claude Code 将末尾参数改成 `-Agent claude-code`。首次会询问现有�
 | 项目 | 边界 |
 | --- | --- |
 | Windows x64 | 完整包的目标平台；包含平台相关模拟器依赖 |
-| Codex | 原生插件注册；实际加载以当前客户端检查为准 |
-| Claude Code | 提供原生插件适配；未实测的客户端版本不宣称已验证 |
-| 其他客户端或系统 | 可阅读资料、按需使用工具；不承诺完整运行兼容 |
+| Codex | 使用现有 marketplace 和原生插件命令 |
+| Claude Code Plugin | 原生清单与 stdio 配置；通过安装器注册或由宿主加载已配置目录 |
+| Agent Plugins 1.0.0 | 兼容具备 Skills 和本地 stdio MCP 的宿主；从完整目录导入 |
+| DeepSeek Harness Cordis | `0.2.2-rc.5` 适配目标；使用原生 Bundle 安装，Node.js 24.9 或以上 |
+| 其他平台 | 可阅读资料、按各工具的环境要求运行 CLI |
 
 静态检查、离线 Lua／节点模型、软件预览、编辑器导入、游戏宿主表现和用户验收分别判断。安装器的 MCP 查询与 PNG 检查不代表游戏实测，也不证明所有 API 都被模拟器实现。
 

@@ -1,15 +1,16 @@
-# 兼容与验证状态
+# 兼容与运行要求
 
-这里记录公开版本的**声明范围**，不是对所有客户端版本的实测保证。
+以下入口共用五个 Skills 和本地 stdio MCP。
 
 | 目标 | 当前公开说明 |
 | --- | --- |
 | Windows x64 | 完整发行包目标平台 |
 | Python | 3.11–3.12，安装时创建独立环境 |
-| Node.js | 22+ |
-| Codex | 提供插件注册入口；须以当前客户端实际加载为准 |
-| Claude Code | 提供插件适配；未核实的具体客户端版本不宣称支持 |
-| 其他系统 / Agent | 可阅读资料、按需运行部分工具；不承诺完整包兼容 |
+| Node.js | 22+；DeepSeek Harness 需要 24.9 或以上 |
+| Agent Plugins 1.0.0 | 宿主须支持 Skills 与 stdio MCP，使用 `-Agent agent-plugins` 准备目录 |
+| DeepSeek Harness Cordis | `0.2.2-rc.5`，使用 `-Agent deepseek-harness` 准备 Bundle |
+| Claude Code Plugin | 使用 `-Agent claude-code` 调用原生安装入口 |
+| Codex | 使用 `-Agent codex` 调用原生安装入口 |
 
 ## 验证级别
 

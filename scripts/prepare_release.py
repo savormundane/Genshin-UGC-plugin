@@ -5,7 +5,6 @@ import argparse
 import json
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import tempfile
 import zipfile
@@ -56,10 +55,7 @@ def prepare(source: Path, output: Path, notes: Path) -> dict:
         staged.mkdir()
         filename = f"Genshin-UGC-{version}-windows-x64.zip"
         package = build_release(tree, staged / filename, "plugin", "Genshin-UGC")
-        shutil.copyfile(tree / "install.ps1", staged / "install.ps1")
-        assets = {name: sha256_file(staged / name)
-                  for name in (filename, "install.ps1")}
-        (staged / "SHA256SUMS.txt").write_text("".join(f"{sha}  {name}\n" for name, sha in assets.items()), encoding="utf-8", newline="\n")
+        assets = {filename: package["sha256"]}
         (staged / "release-notes.md").write_text(release_notes, encoding="utf-8")
         report = {"schema": 1, "version": version, "tag": "v" + version,
                   "source_commit": commit, "package": package, "assets": assets,

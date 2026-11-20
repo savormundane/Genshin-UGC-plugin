@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+## 4.0.0
+
+- 同一完整 ZIP 提供 Agent Plugins 1.0.0、DeepSeek Harness Cordis 和 Claude Code Plugin 入口，复用五个 Skills 和本地 stdio MCP 工具。
+- 新增 Agent Plugins 和 DeepSeek Harness 的独立安装准备模式，使用相应宿主的原生入口加载。继续支持 Codex 和 Claude Code 现有注册流程。
+- Release 只上传完整 Windows ZIP。一键安装从标签源码读取脚本，并按 GitHub Release 的 SHA-256 校验包内容。
+
 ## 3.7.4
 
 - 修复 Windows 安装器的 Python 3.11–3.12 探测和 SHA-256 解析。Codex 卸载与回退统一检查实际注册状态。

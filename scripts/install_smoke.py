@@ -9,10 +9,27 @@ import tempfile
 from mcp import Client, StdioServerParameters
 
 
-async def check(config, node):
+async def check(config, node, adapter=None):
     bundle = Path(__file__).resolve().parents[1]
-    params = StdioServerParameters(command=node, args=[str(bundle / 'scripts/mcp_launcher.cjs')],
-                                   env={**os.environ, 'UGC_RUNTIME_CONFIG': str(config)})
+    command = node
+    args = [str(bundle / 'scripts/mcp_launcher.cjs')]
+    env = {**os.environ, 'UGC_RUNTIME_CONFIG': str(config)}
+    cwd = None
+    if adapter == 'deepseek-harness':
+        patch = json.loads((bundle.parent / 'cordis-bundle/cordis.patch.yml').read_text(encoding='utf-8'))
+        server = next(row['config'] for row in patch[0]['insert'] if row['name'] == '@deepseek-ai/dsh-mcp-client')
+        command, args, cwd = server['command'], server['args'], server['cwd']
+        env.update(server['env'])
+    elif adapter:
+        location = '.mcp.json' if adapter == 'claude-code' else 'mcp.json'
+        placeholder = '${CLAUDE_PLUGIN_ROOT}' if adapter == 'claude-code' else '${PLUGIN_ROOT}'
+        config_file = json.loads((bundle / location).read_text(encoding='utf-8'))
+        server, = config_file['mcpServers'].values()
+        command = server['command']
+        args = [arg.replace(placeholder, str(bundle)) for arg in server['args']]
+        env.update(server['env'])
+        cwd = str(bundle)
+    params = StdioServerParameters(command=command, args=args, env=env, cwd=cwd)
     async with Client(params) as client:
         listed = await client.list_tools()
         if len(listed.tools) != 18:
@@ -42,5 +59,6 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser()
     p.add_argument('--config', type=Path, required=True)
     p.add_argument('--node', required=True)
+    p.add_argument('--adapter', choices=('agent-plugins', 'deepseek-harness', 'claude-code', 'codex'))
     args = p.parse_args()
-    asyncio.run(asyncio.wait_for(check(args.config, args.node), timeout=90))
+    asyncio.run(asyncio.wait_for(check(args.config, args.node, args.adapter), timeout=90))

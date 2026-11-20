@@ -1,6 +1,6 @@
 {
   "name": "genshin-ugc-public",
-  "version": "3.7.4",
+  "version": "4.0.0",
   "description": "千星奇域 Editor、Graph Code、Client Lua、GIL 与 Assets 开发工具",
   "author": {
     "name": "Genshin-UGC contributors"
