@@ -6,8 +6,8 @@
 
 ## 4.0.0
 
-- 同一完整 ZIP 提供 Agent Plugins 1.0.0、DeepSeek Harness Cordis 和 Claude Code Plugin 入口，复用五个 Skills 和本地 stdio MCP 工具。
-- 新增 Agent Plugins 和 DeepSeek Harness 的独立安装准备模式，使用相应宿主的原生入口加载。继续支持 Codex 和 Claude Code 现有注册流程。
+- 安装包增加了用于 VS Code 本地导入和 DeepSeek Harness 插件安装的准备命令。
+- Codex 与 Claude Code 继续使用各自的安装命令。各客户端的操作见[安装指南](references/installation.md)。
 - Release 只上传完整 Windows ZIP。一键安装从标签源码读取脚本，并按 GitHub Release 的 SHA-256 校验包内容。
 
 ## 3.7.4

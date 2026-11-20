@@ -1,13 +1,14 @@
-# 开发者文档
+# 使用与开发文档
 
-面向 **使用与维护仓库的人**；供 Agent 检索平台资料与工作流的完整入口仍是 [references 索引](../references/README.md)。
+- [安装、更新与卸载](../references/installation.md)
+- [使用示例](examples.md)
+- [运行要求与验证](compatibility.md)
+- [平台资料与操作指南](../references/README.md)
 
-- [项目结构与职责边界](architecture.md)
-- [兼容状态与验证级别](compatibility.md)
-- [典型使用场景](examples.md)
-- [本地检查与提交前验证](development.md)
-- [维护、打包与发布](maintenance.md)
+## 开发与维护
+
+- [项目结构](architecture.md)
+- [本地检查与客户端适配](development.md)
+- [打包与发布](maintenance.md)
 - [贡献指南](../CONTRIBUTING.md)
 - [版本记录](../CHANGELOG.md)
-
-安装、回退与卸载操作请先阅读 [README](../README.md) 和 [安装说明](../references/installation.md)。
