@@ -4,7 +4,7 @@
 
 ## 依赖与启动
 
-按[独立运行环境](runtime-environment.md)显式创建插件专用Python环境并安装锁定依赖。工具查询和doctor不自动安装依赖。下面是配置完成后仍兼容的直接CLI入口，python应替换为专用解释器路径。
+按[独立运行环境](../docs/runtime-environment.md)显式创建插件专用Python环境并安装锁定依赖。工具查询和doctor不自动安装依赖。下面是配置完成后仍兼容的直接CLI入口，python应替换为专用解释器路径。
 
 ```text
 python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PATH_TO_OUTPUTS
@@ -72,7 +72,7 @@ SDK依据：[官方Python SDK](https://py.sdk.modelcontextprotocol.io/)、[进�
 
 ## V3.5新增入口与启动
 
-`api_lookup(symbol)` 查询来源、原文行、推导类型和冲突；`diagnose(spec, sha256)` 只读执行显式配置的环境、Lua、GIL和素材检查。复用CLI核心，沿用摘要绑定和依赖根边界。安装后的默认入口使用[专用运行环境](runtime-environment.md)，不依赖系统python命令。SDK stdio调用与Codex宿主实际加载分别记录。
+`api_lookup(symbol)` 查询来源、原文行、推导类型和冲突；`diagnose(spec, sha256)` 只读执行显式配置的环境、Lua、GIL和素材检查。复用CLI核心，沿用摘要绑定和依赖根边界。安装后的默认入口使用[专用运行环境](../docs/runtime-environment.md)，不依赖系统python命令。SDK stdio调用与Codex宿主实际加载分别记录。
 
 普通操作总时限120秒，制作／原生修改／重建900秒；通过服务进程环境 `UGC_MCP_TIMEOUT_SECONDS`、`UGC_MCP_BUILD_TIMEOUT_SECONDS` 设置（大于0，不超过3600秒）。取消或超时终止工作进程树，清理等待最多15秒，不提升临时输出。`portable=true` 仅静态核对；重建还需 `rebuild=true` 及静态报告的 `trusted_inputs_sha256`，表示调用方已审阅并同意执行该摘要绑定的工程代码。摘要本身不是授权来源。详见[重建边界](portable-delivery.md)。
 

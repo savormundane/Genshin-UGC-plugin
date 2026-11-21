@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 import zipfile
 
-from check_repository import check, MANIFESTS, REQUIRED_FILES
+from check_repository import check, MANIFESTS, REQUIRED_FILES, REPO
 from prepare_release import prepare
 from package_release import build_release
 
@@ -37,6 +37,14 @@ class ReleaseTests(unittest.TestCase):
         self.git("config", "user.email", "release@example.invalid")
         for name in REQUIRED_FILES:
             self.write(name, "Fixture\n")
+        asset = f"Genshin-UGC-{version}-windows-x64.zip"
+        install = f"https://raw.githubusercontent.com/{REPO}/v{version}/install.ps1"
+        releases = f"https://github.com/{REPO}/releases"
+        self.write("README.md", f"**当前版本 `{version}`**\n[ZIP]({releases}/download/v{version}/{asset})\n"
+                               f"```powershell\nInstall from {install}\n```\n")
+        self.write("docs/installation.md", f"[Release]({releases}/tag/v{version})\n"
+                                           f"```powershell\nInstall from {install}\n"
+                                           f"Install from {asset}\nRollback -Version 0.1.0\n```\n")
         self.write("CHANGELOG.md", f"# Fixture\n\n## {version}\n")
         for name in MANIFESTS:
             self.write(name, json.dumps({"name": "fixture", "version": version, "skills": "./skills/"}))
@@ -106,6 +114,25 @@ class ReleaseTests(unittest.TestCase):
         errors = check(self.root)
         self.assertEqual(len(errors), 1, errors)
         self.assertIn('missing.md', errors[0])
+
+    def test_active_install_documentation_versions(self):
+        self.fixture()
+        self.assertEqual(check(self.root), [])
+        readme = (self.root / "README.md").read_text(encoding="utf-8")
+        install = (self.root / "docs/installation.md").read_text(encoding="utf-8")
+        for file, text, old, new, label in (
+            ("README.md", readme, "当前版本 `1.2.3`", "当前版本 `1.2.2`", "current version"),
+            ("README.md", readme, "download/v1.2.3", "download/v1.2.2", "download tag"),
+            ("docs/installation.md", install, "/tag/v1.2.3", "/tag/v1.2.2", "release tag"),
+            ("docs/installation.md", install, "/v1.2.3/install.ps1", "/v1.2.2/install.ps1", "install command tag"),
+            ("docs/installation.md", install, "Genshin-UGC-1.2.3-", "Genshin-UGC-1.2.2-", "ZIP filename"),
+        ):
+            with self.subTest(file=file, label=label):
+                self.write(file, text.replace(old, new))
+                self.assertTrue(any(label in error for error in check(self.root)))
+                self.write(file, text)
+        self.write("docs/contributing/guide.md", "[bad](missing.md)")
+        self.assertTrue(any("missing.md" in error for error in check(self.root)))
 
     def test_dirty_input_rejected_without_output(self):
         self.fixture()

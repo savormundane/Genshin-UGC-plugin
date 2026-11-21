@@ -3,7 +3,7 @@ name: qianxing-editor
 description: 设计和检查千星奇域工程对象、实体、模板、组件配置及资源关联，查询平台版本规则；节点程序、客户端Lua和GIL文件处理分别交给对应领域。
 ---
 
-# Editor
+# 工程检查
 
 负责平台工程与配置语义。先读取实际工程和目标平台版本／模式，通过 `qianxing.py project inspect`、`docs search/show`、`platform profile/check` 核对对象和规则。声明配置检查不等于最终GIL已落地，已校准原生绑定需最终回读。
 

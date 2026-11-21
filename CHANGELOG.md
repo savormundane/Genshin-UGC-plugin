@@ -14,9 +14,17 @@
 
 ## 4.0.0
 
+4.0.0 将 Codex、Claude Code、DeepSeek Harness 和通用 Agent Plugins 的接入方式纳入同一套安装和分发流程。
+
 - 安装包增加了用于 VS Code 本地导入和 DeepSeek Harness 插件安装的准备命令。
-- Codex 与 Claude Code 继续使用各自的安装命令。各客户端的操作见[安装指南](references/installation.md)。
+- Codex 与 Claude Code 继续使用各自的安装命令。各客户端的操作见[安装指南](docs/installation.md)。
 - Release 只上传完整 Windows ZIP。一键安装从标签源码读取脚本，并按 GitHub Release 的 SHA-256 校验包内容。
+
+### 从 3.x 升级
+
+- 按[安装指南](docs/installation.md)选择客户端并运行新版命令。保留旧版本目录供回退。
+- 4.0.0 起 Release 只附完整 Windows ZIP，原先单独上传的安装脚本和 `SHA256SUMS.txt` 分别由标签源码中的脚本与 GitHub 的附件摘要取代。旧版安装命令继续使用对应旧 Release。
+- 手动导入的客户端需选择新版准备命令生成的目录，再新开会话核对插件和本地工具。
 
 ## 3.7.4
 

@@ -4,7 +4,7 @@
 
 | 领域 | 入口 | 工作对象 |
 | --- | --- | --- |
-| Editor | [工程配置](../skills/qianxing-editor/SKILL.md) | 实体、模板、组件、资源关联、平台约束 |
+| 工程检查 | [工程配置](../skills/qianxing-editor/SKILL.md) | 实体、模板、组件、资源关联、平台约束 |
 | Graph Code | [节点程序](../skills/qianxing-graph-code/SKILL.md) | 客户端／服务端图、复合节点、类型和连线 |
 | Client Lua | [客户端](../skills/client-controls-lua/SKILL.md) | Lua、生命周期、控件、输入、动画运行与装配 |
 | GIL | [原生文件](../skills/qianxing-gil/SKILL.md) | 容器、身份、挂载、保护字节和回读 |

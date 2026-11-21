@@ -18,4 +18,4 @@ UI开销提示从Lua语法树寻找更新回调中的创建/属性更新调用�
 
 layer仅允许editor、host、user_acceptance；status支持passed、failed、not_checked、not_applicable。摘要过期自动显示未验证，原始记录不改写；人工报告只作明确归属的记录，不冒充工具亲自观察。离线、软件预览与人工层分别报告。
 
-依赖及安装见[独立运行环境](runtime-environment.md)。未知schema、未知检查类型和MCP越界依赖拒绝。通常只列此次修改涉及的检查；完整交付使用现有全套验证入口。该诊断无需工程新增固定目录或改造生成链。
+依赖及安装见[独立运行环境](../docs/runtime-environment.md)。未知schema、未知检查类型和MCP越界依赖拒绝。通常只列此次修改涉及的检查；完整交付使用现有全套验证入口。该诊断无需工程新增固定目录或改造生成链。

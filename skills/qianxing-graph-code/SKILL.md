@@ -13,4 +13,4 @@ description: 编写和修复千星奇域客户端／服务端节点图及复合�
 - 存储及成就：[存储生成](../../references/storage-authoring.md)；确认流程不冒充真实重进或平台授奖。
 - 图编译使用 `qianxing.py build`；文件挂载由GIL领域处理。相关模型与回读按[验证边界](../../references/validation.md)报告，普通图修复不自动触发完整制作。
 
-执行命令使用[专用Python](../../references/runtime-environment.md)，不依赖系统默认解释器。
+执行命令使用[专用Python](../../docs/runtime-environment.md)，不依赖系统默认解释器。

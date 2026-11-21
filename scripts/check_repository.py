@@ -20,8 +20,26 @@ REQUIRED_FILES = (
     "CONTRIBUTING.md",
     "SECURITY.md",
     "CHANGELOG.md",
+    "docs/installation.md",
     "references/README.md",
 )
+SEMVER = r"\d+\.\d+\.\d+"
+REPO = "savormundane/Genshin-UGC-plugin"
+INSTALL_TAG = rf"https://raw\.githubusercontent\.com/{REPO}/v({SEMVER})/install\.ps1\b"
+ZIP_VERSION = rf"\bGenshin-UGC-({SEMVER})-windows-x64\.zip\b"
+DOC_VERSIONS = {
+    "README.md": {
+        "current version": rf"\*\*当前版本 `({SEMVER})`\*\*",
+        "download tag": rf"https://github\.com/{REPO}/releases/download/v({SEMVER})/",
+        "install command tag": INSTALL_TAG,
+        "ZIP filename": ZIP_VERSION,
+    },
+    "docs/installation.md": {
+        "release tag": rf"https://github\.com/{REPO}/releases/tag/v({SEMVER})\b",
+        "install command tag": INSTALL_TAG,
+        "ZIP filename": ZIP_VERSION,
+    },
+}
 DESTINATION = r'(<[^\n<>]+>|(?:[^()\s]|\([^()\n]*\))+)'
 LINK_RE = re.compile(r'(?<!\\)\]\(\s*' + DESTINATION + r'''(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*\)''')
 REFERENCE_RE = re.compile(r'^ {0,3}\[[^]\n]+\]:\s*' + DESTINATION, re.M)
@@ -66,20 +84,33 @@ def check(root: Path = ROOT) -> list[str]:
             errors.append(f"{relative}: cannot parse manifest: {exc}")
 
     versions = {path: data.get("version") for path, data in manifests.items()}
-    if any(not isinstance(value, str) or not re.fullmatch(r"\d+\.\d+\.\d+", value) for value in versions.values()):
+    if any(not isinstance(value, str) or not re.fullmatch(SEMVER, value) for value in versions.values()):
         errors.append(f"Invalid plugin versions: {versions}")
     elif len(set(versions.values())) != 1:
         errors.append(f"Plugin manifest versions differ: {versions}")
+    version = versions.get("plugin.json")
+
+    if isinstance(version, str) and re.fullmatch(SEMVER, version):
+        for relative, patterns in DOC_VERSIONS.items():
+            path = root / relative
+            if not path.is_file():
+                continue
+            text = path.read_text(encoding="utf-8-sig")
+            for label, pattern in patterns.items():
+                found = set(re.findall(pattern, text))
+                if found != {version}:
+                    details = ", ".join(sorted(found)) if found else "missing"
+                    errors.append(f"{relative}: {label} must match plugin.json ({version}); found {details}")
 
     installer = root / "install.ps1"
     defaults = re.findall(r"\[string\]\$Version\s*=\s*'([^']+)'", installer.read_text(encoding="utf-8-sig")) if installer.is_file() else []
-    if defaults != [versions.get("plugin.json")]:
+    if defaults != [version]:
         errors.append("install.ps1 default version must match plugin.json")
 
     changelog = root / "CHANGELOG.md"
     if changelog.is_file():
         released = re.search(r"^##[ \t]+v?(\d+\.\d+\.\d+)(?=\s|$)", changelog.read_text(encoding="utf-8-sig"), re.M)
-        if released is None or released[1] != versions.get("plugin.json"):
+        if released is None or released[1] != version:
             errors.append("CHANGELOG.md first released version must match plugin.json")
 
     for relative in REQUIRED_FILES:
@@ -87,7 +118,7 @@ def check(root: Path = ROOT) -> list[str]:
             errors.append(f"Missing required file: {relative}")
 
     docs = [root / name for name in REQUIRED_FILES if name.endswith(".md")]
-    docs.extend((root / "docs").glob("*.md"))
+    docs.extend((root / "docs").rglob("*.md"))
     docs.extend((root / "skills").rglob("*.md"))
     docs.extend((root / "references").rglob("*.md"))
     provenance = root / "PUBLIC_SOURCES.json"
@@ -117,4 +148,4 @@ if __name__ == "__main__":
         print(f"FAIL: {failure}", file=sys.stderr)
     if failures:
         sys.exit(1)
-    print("PASS: manifests, installer, changelog and local links")
+    print("PASS: manifests, installer, changelog, documentation versions and local links")
