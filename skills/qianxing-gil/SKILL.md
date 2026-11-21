@@ -9,6 +9,7 @@ description: 检查、比较和安全修改千星奇域GIL/GIA容器，处理脚
 
 | 任务 | 按需资料与工具 |
 | --- | --- |
+| 已摆放物件的世界变换 | [三维实体读取和变换](../../references/native-entity-transform.md) · `set_entity_transform` |
 | 比较和局部修改 | [原生修改](../../references/native-changes.md)；`native diff/plan/apply` |
 | 图、信号、结构体、实体和模板挂载 | [原生维护](../../references/native-maintenance.md)、[详细操作](references/native-operations.md) |
 | Lua嵌入与最终脚本检查 | [最终Lua检查](../../references/client-check.md) |

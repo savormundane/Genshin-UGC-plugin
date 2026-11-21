@@ -426,6 +426,12 @@ def apply(data,spec,base):
     allowed=spec['allowed_top_level_fields'];before=container(data)[1];logs=[]
     for op in spec['operations']:
         m=model(data);kind=op['op']
+        if kind=='set_entity_transform':
+            from native_scene import set_entity_transform
+            if 5 not in allowed:raise ValueError('Entity transform edits require allowed top-level field 5')
+            data,detail=set_entity_transform(data,op)
+            logs.append({'op':kind,**detail})
+            continue
         if kind=='set_custom_variable_default':
             from native_variables import set_default
             data,detail=set_default(data,m,op)

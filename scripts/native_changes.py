@@ -10,7 +10,7 @@ from project_index import build,key
 
 
 def snapshot(data):
-    index=build(data);m=model(data);_,root=container(data)
+    index=build(data,include_spatial=False);m=model(data);_,root=container(data)
     objects={o['key']:{k:v for k,v in o.items()if k!='sha256'or o['kind']!='document'}for o in index['objects']}
     raw={}
     for g in m['graphs']+m['composite_graphs']:
@@ -55,7 +55,7 @@ def snapshot(data):
     return index,objects,raw,references
 
 
-def difference(before,after,allowed=None):
+def difference(before,after,allowed=None,*,include_spatial=True):
     if allowed is not None and (not isinstance(allowed,list)or any(type(v)!=int or not 1<=v<=536870911 for v in allowed)or len(allowed)!=len(set(allowed))):
         raise ValueError('Unique valid allowed top-level field numbers required')
     bh,bfields=container(before);ah,afields=container(after)
@@ -78,7 +78,7 @@ def difference(before,after,allowed=None):
         r=b''.join(raw for n,w,v,raw in afields if n not in allowed)
         protected={'allowed_top_level_fields':allowed,'before_sha256':sha(l),'after_sha256':sha(r),
                    'unchanged':l==r and bh[1:4]==ah[1:4]and before[-4:]==after[-4:]}
-    return {'schema':2,'kind':'native-diff','before_sha256':sha(before),'after_sha256':sha(after),
+    result={'schema':2,'kind':'native-diff','before_sha256':sha(before),'after_sha256':sha(after),
             'bytes_equal':before==after,'status':'passed'if right['status']=='passed'and(protected is None or protected['unchanged'])else'failed',
             'validation':{'before':{'status':left['status'],'issues':left['issues'],'unresolved':left['unresolved']},
                           'after':{'status':right['status'],'issues':right['issues'],'unresolved':right['unresolved']}},
@@ -88,6 +88,15 @@ def difference(before,after,allowed=None):
             'envelope':{'before':list(bh[1:4]),'after':list(ah[1:4]),'changed':bh[1:4]!=ah[1:4]},
             'protected':protected,'complete_semantic_diff':False,'unindexed':sorted(set(left['unindexed'])|set(right['unindexed'])),
             'editor':'not_checked','host':'not_checked'}
+    if include_spatial and before != after:
+        from native_scene import spatial_objects
+        spatial=[]
+        for header,root in ((bh,bfields),(ah,afields)):
+            spatial.append({(key('level',kind,1,ident) if kind=='gia_resource' else key('level',kind,ident)):props
+                            for (kind,ident),props in spatial_objects(header,root).items()})
+        rows=changed(*spatial)
+        if rows:result['spatial_objects']=rows
+    return result
 
 
 def fingerprint(plan):
@@ -146,7 +155,9 @@ def apply_plan(data,record,base):
     if used!=set(record['inputs']):raise ValueError('Unused native plan input')
     output,report=apply(data,spec,base)
     if sha(output)!=record['result_sha256']:raise ValueError('Native plan result digest mismatch')
-    actual=difference(data,output,spec['allowed_top_level_fields'])
+    # Plans created before spatial readback retain their original review contract.
+    actual=difference(data,output,spec['allowed_top_level_fields'],
+                      include_spatial='spatial_objects' in record['difference'])
     if actual['status']!='passed'or actual!=record['difference']:raise ValueError('Native plan difference changed')
     for source,digest in inputs.items():
         if sha(Path(source).read_bytes())!=digest:raise ValueError('Native plan input changed during apply')

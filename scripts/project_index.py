@@ -12,8 +12,12 @@ from native_core import model,audit,get,ref,slot,definition_id,node_catalog
 def key(*parts):return '/'.join(quote(str(p),safe='')for p in parts)
 
 
-def build(data,namespace='level'):
-    m=model(data);validation=audit(data);_,root=container(data)
+def build(data,namespace='level',*,include_spatial=True):
+    m=model(data);validation=audit(data);header,root=container(data)
+    spatial={}
+    if include_spatial:
+        from native_scene import spatial_objects
+        spatial=spatial_objects(header,root)
     objects=[];references=[];variable_accesses=[];issues=list(validation['issues']);unknown=list(validation['unresolved'])
     def obj(kind,ident,name='',scope=(),**details):
         ident_key=key(namespace,kind,*scope,ident)
@@ -91,7 +95,10 @@ def build(data,namespace='level'):
             for mapping in vals(fields(g['raw']),4):
                 link(owner,key(namespace,'node',*scope,get(mapping,2,0)),'composite_interface',port=list(slot(mapping)))
     for entity in m['entities']:
-        obj('template'if entity['section']==4 else'entity',entity['entity_id'])
+        kind='template'if entity['section']==4 else'entity'
+        ident=entity['entity_id']
+        detail=spatial.get((kind,ident))
+        obj(kind,ident,**({'name':detail['name'],'spatial':detail} if detail else {}))
     from native_variables import summary,audit as audit_variables
     variables=defaultdict(dict)
     for record in m['custom_variables']['records']:
@@ -156,7 +163,9 @@ def build(data,namespace='level'):
             for role,peer in s['peers'].items():
                 if peer:link(source,key(namespace,'definition',ref(peer)),'signal_peer',role=role)
         for resource in m['resources']:
-            source=obj('gia_resource',resource['id'],'',(resource['class'],))
+            detail=spatial.get(('gia_resource',resource['id'])) if resource['class']==1 else None
+            source=obj('gia_resource',resource['id'],detail['name'] if detail else '',(resource['class'],),
+                       **({'spatial':detail} if detail else {}))
             for category,ident in resource['references']:link(source,key(namespace,'gia_resource',category,ident),'gia_dependency')
         for unit in vals(root,1)+vals(root,2):
             locator=get(unit,1,default=b'');source=key(namespace,'gia_resource',get(locator,2,0,0),get(locator,4,0,0))

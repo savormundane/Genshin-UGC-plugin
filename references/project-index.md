@@ -21,6 +21,10 @@ inspect和check输出同一结构化报告，包含objects、references、issues
 
 平台内置模板仅记录外部身份并标记resource_verified=false；文件内声明以实际文件为准。[原生自定义变量](native-variables.md)区分模板默认值、实例覆盖及结构体引用，支持继承/覆盖消费者查询。任意组件内容、变量访问及标识值目标、无类型数字常量、动态Lua标识及平台资源目录尚未全部索引，complete_reference_index固定为false，unindexed明确列出范围。因此消费者查询不能作为任意ID迁移的完整安全证明。
 
+## 三维物件
+
+已校准物件返回 `spatial`。用 `kind: "entity"` 选取场景实例，用 `kind: "template"` 查看元件记录。独立物件 GIA 由 `gia_resource` 标识。[三维身份和坐标](native-entity-transform.md)
+
 ## 多文件清单与必需关系
 
 配置schema为2，未知版本/字段拒绝。每个artifact名称非空且唯一，source相对该清单解析；可用sha256绑定输入版本。同一文件可在不同命名空间中检查，不自动推断跨文件ID等价。

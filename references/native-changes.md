@@ -47,6 +47,8 @@ apply --plan先核对计划和所有来源内容，再执行现有补丁，核�
 | `set_custom_variable_default` | 模板 `[4]`，实例 `[5]` | `{"op":"set_custom_variable_default","section":4,"entity_id":42,"name":"Count","value":8}`。精确选定已有变量，保留名称与类型描述符。接受对应的 JSON 整数、布尔、有限浮点或字符串。实例需已有该变量的覆盖条目。应用报告列出修改前后的值。 |
 | `set_timer_sequence` | `[10]` | `{"op":"set_timer_sequence","source":"platform.json","timer_id":"timer-a"}`。配置与 `platform check` 共用，须有对应 `native_bindings`，并匹配既有普通图、节点、实体及计时器名。序列写入使用 float32，编码后也须满足间隔并以正时间点结束。连线入参、歧义目标和无法保留的序列项拒绝写入。应用后可执行 `platform check platform.json --gil NEW.gil` 核对。 |
 
+源码版支持 `set_entity_transform`。以 `section: 5` 和 `entity_id` 选中放置物件，指定 `position_m`、`rotation_deg` 或 `scale`。允许字段为 `[5]`，计划和差异通过 `spatial_objects` 记录前后值。[三维变换](native-entity-transform.md)
+
 模板默认值用于继承该值的实例，已有覆盖继续生效。计时器编辑保留循环项、连线及挂载。新建计时器逻辑沿用 Graph Code 编译。两项写入均保留目标以外的内容，编辑器和游戏运行结果按实际验证记录。
 
 ## 制作链与迁移重建

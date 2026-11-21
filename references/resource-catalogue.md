@@ -55,6 +55,10 @@ produce在生成前检查合同，failed或not_checked均不提交输出。成�
 
 默认检查范围是显式uses清单，artifact_references_verified=false；它不证明最终Lua/GIL已经引用这些资源，也不证明没有未声明引用。可按下一节开启客户端SetImage子集检查。完整客户端/原生资源引用提取仍待补齐。complete_platform_catalogue=false，内置目录当前仅含经典角色编号；图片、音效等平台完整清单未凭空生成。角色尺寸与依赖未在表中给出，因此保留null，不猜测。
 
+## 三维模型引用
+
+`project inspect` 返回已识别物件的 `spatial.model`，身份沿用目录的 `type: "template"` 和 `id`。`spatial.template.scope: "project"` 表示工程内的元件身份。原生文件提供实际定位器，目录的版本、模式和来源按资源合同检查。[三维实体身份](native-entity-transform.md)
+
 ## 最终客户端图片引用
 
 在uses.json中设置`"check_client":true`，制作任务同时声明`client_check:{"spec":"client-check.json"}`，使用[客户端API检查](client-api-check.md)的源码摘要及类型绑定合同。缺少合同即拒绝，不能通过扫描文本猜测某个对象是图片控件。

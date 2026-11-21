@@ -12,6 +12,7 @@ description: 生成、转换和检查千星奇域静态素材及图元数据，�
 | 位图、矩形、透明边缘与富文本 | [点阵指南](../../references/pixel-import-guide.md)、[富文本](../../references/rich-text-assets.md) |
 | 校准的GIA图元导入 | [原生素材](../../references/native-assets.md)；不支持的投影、变换与依赖拒绝 |
 | 合法性、转换保真与成本 | [素材检查](../../references/asset-inspection.md) |
+| 工程中的平台模型身份 | [三维实体读取和变换](../../references/native-entity-transform.md#定位对象与模型) |
 | 资源目录及运行缓存 | [资源目录](../../references/resource-catalogue.md)、[容量缓存](../../references/runtime-assets.md) |
 | 生成目录补字段 | [目录合并](../../references/workflows/generated-lua-catalog-merge/README.md) |
 | 图片自动拟合与续算 | [通用拟合](../../references/asset-fit.md)：`assets fit`，透明轮廓、区域和分层输入 |

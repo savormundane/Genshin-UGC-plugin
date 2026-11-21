@@ -52,7 +52,7 @@ def server(bridge):
     @app.tool(structured_output=True)
     async def project_inspect(input:str,ctx:Context,sha256:str|None=None,
                               selector:dict[str,str|StrictInt]|None=None,transitive:bool|None=None)->dict[str,Any]:
-        """Index a GIL/GIA, or select one object by exact key, kind, name or id. A selector returns direct dependencies and consumers; transitive expands consumers."""
+        """Index a GIL/GIA, or select an object by exact key, kind, name or id. Returns calibrated 3D attributes and direct dependencies when available. Use transitive to expand consumers."""
         return await call('project_inspect',ctx,input=input,sha256=sha256,selector=selector,transitive=transitive)
     @app.tool(structured_output=True)
     async def client_check(input:str,ctx:Context,sha256:str|None=None,contract:str|None=None,
@@ -77,7 +77,7 @@ def server(bridge):
     @app.tool(structured_output=True)
     async def native_plan(input:str,sha256:str,output:str,ctx:Context,patch:dict[str,Any]|None=None,
                           spec:str|None=None,spec_sha256:str|None=None)->dict[str,Any]:
-        """Preview a GIL edit and save plan.json. Provide a schema-2 patch object, or a spec file with its SHA-256. Review result.difference and use outputs_sha256 for native_apply."""
+        """Preview a GIL edit and save plan.json. Use set_entity_transform to update calibrated placed objects. Provide a schema-2 patch or a spec file with its SHA-256. Review result.difference and use outputs_sha256 for native_apply."""
         return await call('native_plan',ctx,input=input,sha256=sha256,output=output,patch=patch,spec=spec,spec_sha256=spec_sha256)
     @app.tool(structured_output=True)
     async def simulate(spec:str,sha256:str,output:str,ctx:Context)->dict[str,Any]:

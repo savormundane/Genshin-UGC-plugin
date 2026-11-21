@@ -22,7 +22,7 @@ DeepSeek Harness、其他本地插件客户端，以及手动安装、更新和�
 
 - **接手已有工程**。读取 GIL 的实体、模板、图和脚本关系，生成局部修改计划并另存文件。[检查和修改 GIL](docs/examples.md#局部修改-gil)
 - **制作逻辑、界面和素材**。查节点签名并编译 Graph Code，编写或装配 Client Lua，把 PNG 转成可复用的图元。[按任务查找](docs/examples.md)
-- **辅助原生 3D 制作**。查询实体、镜头、碰撞和运动器资料，检查声明配置并编写节点逻辑。[支持范围](docs/compatibility.md) · [开发路线](ROADMAP.md)
+- **辅助原生 3D 制作**。查询实体、镜头、碰撞和运动器资料并编写节点逻辑。源码版支持读取普通物件变换并另存局部修改。[三维实体](references/native-entity-transform.md)[支持范围](docs/compatibility.md) · [开发路线](ROADMAP.md)
 
 `main` 用于浏览与贡献源码。[版本记录](CHANGELOG.md)的 `Unreleased` 标记尚未进入正式下载包的改动。生成文件的编辑器导入和实际游戏表现以相应验证为准。
 
