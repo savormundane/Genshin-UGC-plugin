@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "files_sha256": {
+    "asset.json": "1801a2aad1f4f1f9a13163fc7bee8aab2910206599a4bf7071bd3508c4f99f4e",
+    "preview.png": "49cb1d890d70503689a26589db3f51c53bbeb691aedaf7112362fbdef6956c42",
+    "report.json": "a7e667a42f4a8d91c46ba2876d31b51e780e565ef71a6f25eb077afb4bbc4e1a",
+    "data.lua": "76c261869dedd44aa735823587e252b05dc4ba86a8d0483b6a93137c16d135e7"
+  },
+  "source_sha256": "49cb1d890d70503689a26589db3f51c53bbeb691aedaf7112362fbdef6956c42",
+  "target": "rectangles"
+}

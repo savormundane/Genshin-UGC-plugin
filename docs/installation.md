@@ -1,22 +1,32 @@
 # 安装、更新与卸载
 
-安装前请核对[运行要求与验证](compatibility.md)中的操作系统、Python 和 Node.js 要求。首次安装需要联网拉取锁定的 Python 依赖。
+使用插件不需要先学 Git，也不需要克隆仓库。选择下方对应客户端的安装命令，或下载 Release 中的完整 Windows ZIP 即可。GitHub 自动生成的 `Source code (zip)` / `Source code (tar.gz)` 用于查看和开发源码，不是面向使用者的完整安装包。
+
+安装前请核对[运行要求与支持范围](compatibility.md)中的操作系统、Python 和 Node.js 要求。首次安装需要联网拉取锁定的 Python 依赖。
+
+[返回首页](../README.md) · [第一次使用](getting-started.md) · [独立使用命令行](runtime-environment.md)
+
+## 准备输入与输出目录
 
 安装器会提示选择两个目录，也可通过 `-Project` 和 `-Outputs` 预先指定。
 
-* **现有千星奇域项目目录**（读取输入用）
-* **独立输出目录**（保存报告与生成文件，必须与项目目录互不包含）
+- **项目目录**：读取你提供的工程、Lua 或图片。还没有工程时，可以先创建一个空目录来查询资料。
+- **独立输出目录**：保存报告与生成文件，必须与项目目录互不包含。
+
+例如，使用 `C:\Qianxing\project` 和 `C:\Qianxing\outputs` 两个同级目录。先创建 `project`，安装器会创建所选的输出目录。不要把 `outputs` 放在 `project` 内，也不要选择整个磁盘。
 
 如果 Python 未加入 PATH 或命中了商店占位符，用 `-Python` 指定真实解释器路径。默认安装根目录为 `$env:LOCALAPPDATA\Genshin-UGC-Public`（可用 `-Root` 修改）。
 
 ## 客户端与 `-Agent` 参数速查
 
-| 客户端 | `-Agent` 参数 | 安装后操作 |
+| 接入方式 | `-Agent` 参数 | 安装后操作 |
 | --- | --- | --- |
 | **Codex** | `codex` | 自动注册，新开会话确认已启用 |
 | **Claude Code** | `claude-code` | 自动注册，新开会话在 `/plugin` 确认 |
 | **DeepSeek Harness**（`0.2.2-rc.5`） | `deepseek-harness` | 记下 `bundle_directory`，在客户端添加插件目录 |
-| **VS Code / Cursor / Copilot CLI / Kiro / Antigravity / 通用客户端** | `agent-plugins` | 记下 `plugin_directory`，按下方对应客户端导入 |
+| **通用本地插件**（支持相应导入方式的客户端） | `agent-plugins` | 记下 `plugin_directory`，再由客户端导入；这不代表所有客户端已实测支持 |
+
+前两种方式由安装器注册插件；后两种方式准备文件和运行环境，最后一步在客户端完成。其他客户端的具体导入入口见[其他客户端](#其他客户端)。
 
 ## Codex
 
@@ -26,7 +36,7 @@
 & ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.1.0/install.ps1'))) -Agent codex
 ```
 
-安装成功时，输出中的 `installed` 是版本号，`runtime_smoke: passed` 表示本地工具自检通过。打开新会话，在插件列表确认 Genshin-UGC 已启用，再试 [首次使用示例](../README.md#第一次使用)。
+安装成功时，输出中的 `installed` 是版本号，`runtime_smoke: passed` 表示安装器已完成本地工具自检。打开新会话，在插件列表确认 Genshin-UGC 已启用，按[第一次使用](getting-started.md)查询一个节点即可开始制作。
 
 ## Claude Code
 
@@ -40,7 +50,7 @@
 
 ## DeepSeek Harness
 
-本指南适用于 DeepSeek Harness `0.2.2-rc.5`。接入前请按[运行要求与验证](compatibility.md)核对 Node.js 版本。
+本指南适用于 DeepSeek Harness `0.2.2-rc.5`。接入前请按[运行要求与支持范围](compatibility.md)核对 Node.js 版本。
 
 1. 在 PowerShell 运行准备命令，记下输出中的 `bundle_directory` 路径。
 
@@ -59,7 +69,7 @@
 & ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.1.0/install.ps1'))) -Agent agent-plugins
 ```
 
-记下输出的 `plugin_directory`，并**保留该目录旁边的运行环境目录**。接下来按所用客户端导入。
+记下输出的 `plugin_directory`，接下来按所用客户端导入。**保留整个版本目录及其原位置**：插件旁边的 `runtime` 和 `runtime.json` 都会被使用；DeepSeek Harness 还需要同级的 `cordis-bundle`。只复制插件子目录，或搬动配套环境，会使原配置中的路径失效。
 
 ### VS Code
 
@@ -77,7 +87,9 @@
   2. 打开副本里的 `mcp.json`，将启动参数中的 `${PLUGIN_ROOT}` 改为 `${CURSOR_PLUGIN_ROOT}`，保留安装器写入的运行配置路径。
   3. 重载 Cursor。
 
-导入后均需开启新会话并试一次 API 查询，以实际能发现技能和调用本地工具为准；升级或卸载通过对应客户端管理。
+  Cursor 副本仍引用安装器生成的运行配置，原版本目录需要保留。更新时重新准备新版并调整其副本。
+
+以上是对应客户端提供的导入途径；是否能完整加载本插件取决于客户端版本、插件格式和本地工具支持。导入后在新会话试一次查询即可判断本次接入结果；升级或卸载通过对应客户端管理。
 
 ### 通用客户端
 
@@ -121,7 +133,10 @@
 
 ## 失败后续装
 
-* **找不到 Python**：按[运行要求与验证](compatibility.md)安装 Python，或用 `-Python` 指定已安装的解释器 `python.exe` 路径。
-* **安装中断**：保留失败目录，用完全相同的参数加上 `-Resume` 重跑即可。Codex 与 Claude Code 均支持依赖与冒烟检查阶段续装；Codex 还支持已登记的激活阶段续装。若提示版本已安装完成，请改用上方回退流程。Claude Code 若在启用阶段中断，按错误提示核对插件列表中的条目后再试。
-* **客户端看不到工具**：新开会话检查插件是否已启用；如客户端弹出本地工具信任确认，核对后批准。手动导入时确保选的是准备命令输出的目录（或 Cursor 修改后的副本）。
-* **产物已生成但需核对游戏内效果**：按 [运行要求与验证](compatibility.md) 导入千星奇域编辑器并进游戏试运行。
+- **找不到 Python**：按[运行要求与支持范围](compatibility.md)安装 Python，或在原安装命令末尾加 `-Python 'C:\实际路径\python.exe'`。Windows 商店占位命令不等于可用的 Python。
+- **目录冲突**：项目目录和输出目录应为两个独立目录，不能相同或互相包含；只有项目目录需要提前存在。
+- **安装中断**：保留失败目录，用完全相同的参数加上 `-Resume` 重跑即可。Codex 与 Claude Code 均支持依赖与冒烟检查阶段续装；Codex 还支持已登记的激活阶段续装。若提示版本已安装完成，请改用上方回退流程。Claude Code 若在启用阶段中断，按错误提示核对插件列表中的条目后再试。
+- **客户端看不到工具**：新开会话检查插件是否已启用；如客户端弹出本地工具信任确认，核对后批准。手动导入时确保选的是准备命令输出的目录（或 Cursor 修改后的副本），整个版本目录仍在原位置。
+- **命令行能查询、客户端不能查询**：先检查该客户端的插件与 MCP 配置，通常无需重新安装 Python 依赖。运行配置的定位方法见[独立运行环境](runtime-environment.md)。
+
+仍无法解决时，通过 [Bug 反馈](https://github.com/savormundane/Genshin-UGC-plugin/issues/new?template=bug_report.yml) 提供版本、所用客户端、执行命令和第一条错误信息。路径、日志和截图中不需要公开的内容可先删去。
