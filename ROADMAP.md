@@ -1,30 +1,7 @@
 # 开发路线
 
-Genshin-UGC 的目标是让创作者借助 AI 完成真正可继续编辑的千星奇域作品：基于平台资料理解工程、实现逻辑、生成或修改文件，并清楚说明尚需在编辑器或游戏内完成的步骤。
+- **已有工程的局部修改**。扩展可以唯一定位对象、回读引用、限定写入范围的节点、场景和界面操作。
+- **原生 3D 场景与交互**。从可分享的工程做一次现有实体的直线运动修改，核对编辑器重存结果，再逐项扩展静态布景、碰撞和镜头。[实体运动任务 #3](https://github.com/savormundane/Genshin-UGC-plugin/issues/3)
+- **可复现的创作案例**。提供能用于实际创作的输入、命令和结果。提交案例时注明做过哪些离线检查、编辑器导入或游戏内测试。
 
-这里记录能力方向，不是版本承诺。已发布功能以 [README](README.md)、[使用文档](docs/README.md)和[Releases](https://github.com/savormundane/Genshin-UGC-plugin/releases)为准。
-
-## 当前基础
-
-- **五个核心领域**：工程检查（Editor）、Graph Code、Client Lua、GIL、Assets；协议、存储、多人和诊断属于共享能力。[能力索引](references/skill-map.md)
-- **平台知识与版本**：官方资料索引、节点定义、客户端 API 及版本化规则。[平台资料](references/platform-profiles.md)
-- **本地制作工具**：工程诊断、节点编译、Lua 装配、原生文件局部修改、素材处理及组合交付。[命令入口](scripts/README.md)
-- **分发**：Windows x64 完整包与 Codex、Claude Code 等客户端接入。[安装说明](docs/installation.md)
-
-## 优先方向
-
-### 更完整地修改已有工程
-
-沿着定位对象、审阅修改、另存和核对差异扩展能力。优先选择能唯一定位目标、回读引用、限定范围的节点、场景与界面操作。用编辑器重存前后的样本校准新增写入。
-
-### 原生 3D 场景与交互
-
-以同版本、同模式的可共享工程为起点，完成一次现有实体的直线运动修改与编辑器回读。用同一校准方式推进静态场景 GIA、碰撞触发器和镜头。模型目录记录平台身份和样本来源，按需接入外部数据。[相关任务 #3](https://github.com/savormundane/Genshin-UGC-plugin/issues/3)
-
-### 真实创作成果与可复用性
-
-仅展示具有实际创作价值的案例，提供清楚的输入、完整产物、复现方式和验证范围；简单工具冒烟结果不作为作品展示。贡献者可从[现有工程修改的公开复现](docs/contributing/development.md#复现已有工程的修改流程)开始，用实际创作样本补齐编辑器和游戏内观察。
-
-## 参与
-
-功能缺口、实际使用问题和创作需求可通过 [Issues](https://github.com/savormundane/Genshin-UGC-plugin/issues) 讨论；代码与文档贡献请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。
+当前发行内容见[版本记录](CHANGELOG.md)。具体工作和需求通过 [Issues](https://github.com/savormundane/Genshin-UGC-plugin/issues) 跟进。

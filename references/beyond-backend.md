@@ -1,6 +1,6 @@
 # 可选外部模拟器后端
 
-能力名：beyond-backend。自用插件内含固定提交 02a5ea2cd38bb5bcf7a7ce6dd745be3bb1ae655c 的 miliastra-beyond-simulator 源码、GPL-3.0-only 许可证和 Windows x64 运行依赖。需要 Node 22+，无需另外下载模拟器或安装 npm 包。其他系统的原生渲染依赖尚未随包提供。默认模拟后端不变。
+能力名：beyond-backend。插件随包提供固定提交 02a5ea2cd38bb5bcf7a7ce6dd745be3bb1ae655c 的 miliastra-beyond-simulator 源码、GPL-3.0-only 许可证和 Windows x64 运行依赖。需要 Node 22+，无需另外下载模拟器或安装 npm 包。其他系统的原生渲染依赖尚未随包提供。默认模拟后端不变。
 
 ```text
 python scripts/qianxing.py beyond SPEC.json --out NEW_DIRECTORY
@@ -39,4 +39,4 @@ render:true 生成透明背景 preview.png 和 render.json；render_checks 按�
 
 路径相对配置目录。已有输出、摘要不符、断言失败、依赖损坏和 45 秒超时不提交正式结果。报告区分 external_lua_model、software_preview、native_graph_model、editor、host；编辑器和实机始终待验。不运行浏览器、游戏 GUI 自动化或截图识别。
 
-专项：development/test_beyond_backend.py（旧接口与 produce），development/test_beyond_gil.py（两套中性 GIL、PNG 像素、挂载与渲染故障、独立目录依赖）。随包重建用 development/bundle_beyond.py，输入固定提交且已安装锁定依赖的源码目录，输出必须为新目录。完整上游源码和依赖许可证均保留；不生成发布 ZIP。
+软件预览用于检查控件布局和渲染。涉及最终 GIL 时，按交付报告核对输入摘要，并在千星奇域中确认实际挂载和效果。[第三方声明](../THIRD_PARTY_NOTICES.md)

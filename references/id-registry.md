@@ -55,4 +55,4 @@ produce可直接使用该native-plan.json：
 
 字段依据为包内Ayaya的record_codec.py连接写入规则及工作区保留的第三方gia.proto中GraphNode、NodeConnection、CompositePin定义；第三方定义不是官方宿主验收证据。实现没有运行时外部仓库依赖，也没有修改第三方文件。
 
-独立检查为development/test_id_registry.py，覆盖两种图和范围、确定性、同域跨namespace冲突、预留冲突、重复名称、容量耗尽、旧基底、篡改计划、连接和复合接口重映射、未知载体拒绝及两套produce最终产物摘要一致。登记与重映射本身不执行Lua；produce仍遵循自身依赖检查。编辑器和实机仍not_checked。
+登记和重映射属于离线文件操作。使用新编号前，回读实际连接和复合接口，并在编辑器里核对挂载。

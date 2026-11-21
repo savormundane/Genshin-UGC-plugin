@@ -18,17 +18,15 @@ platform通过spec执行[平台版本与配置检查](platform-profiles.md)，�
 python scripts/qianxing.py doctor
 python scripts/qianxing.py capabilities
 python scripts/qianxing.py produce JOB.json --out NEW_DIRECTORY
-python scripts/qianxing.py verify NEW_DIRECTORY --rebuild
+python scripts/qianxing.py verify NEW_DIRECTORY
 ```
 
-报告绑定源配置、Lua、工具、必要编译后端及产物摘要。verify拒绝旧源、缺失或改动产物，不重签旧清单；--rebuild在独立目录重建，按artifacts交付角色比较全部必需正文，包含JSON与生成源码。历史无角色清单的报告保留有限范围。--portable使用随附输入闭包和工具重建，原工程目录不再是输入依赖；路径／耗时报告不作跨轮字节相等要求。模型、编译回读、软件预览与编辑器／宿主分别记录。
+交付清单绑定源配置、Lua、工具、编译后端及产物摘要。`verify` 校验当前文件与清单。对带可迁移输入的产物，先用 `--portable` 校验随附输入，再按需要审阅并显式重建。重建按 `artifacts` 交付角色比较正文，包含 JSON 和生成源码。[可迁移交付与重建](portable-delivery.md)
 
 environment.json记录生成前的依赖检查；dependency-graph.json记录实际有序阶段、输入／工具、阶段产物及依赖边。资源先生成再创建／修改基底，随后严格构图与嵌入；最终client.lua须与指定GIL映射正文相同。模拟场景使用@level读取此最终产物。required阶段失败时输出目录不提交，已有输出路径拒绝覆盖；输入变化也拒绝提交。
 
 两种中性整合配置可以分别采用单整数槽与双槽布尔／列表布局，变化模板别名、记录版本、素材数量及开发／保留集。失败用例包括未知schema、缺环境、源变更、输出已存在、原生审计错误及最终场景断言失败。独立重建比对交付正文，运行报告中的路径和耗时分别保留。
 
 capabilities默认只报告可用源码和支持范围；通过--evidence指定checks.json时，只有源码、规则、测试支撑文件、后端及实际必需用例全部匹配才显示对应离线证据。证据schema 3及失败规则见[验证证据闭环](validation-evidence.md)。doctor只检查当前Python、Node、Pillow、Lua与后端入口，不以模块存在推断宿主通过。
-
-开发侧run_validation.py默认检查自用并执行完整相关套件，--changed接受改动路径，按Python导入关系与公共边界选择受影响检查。最终版本验收仍运行全套。新增输出、日志和失败记录进入development，不写冻结releases或已安装缓存。
 
 人工验收：在千星奇域导入本轮最终GIL，核对图及UI挂载；启用客户端日志，执行首次操作、重开与关闭；有存储时按同玩家、同发布关卡完成首次读、实际进度、写入回读、结算及重进读取。保留文件摘要、设备和实际结果，未执行项保持not_checked。

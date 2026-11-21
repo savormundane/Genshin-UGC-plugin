@@ -50,6 +50,6 @@ New-Item -ItemType Directory -Force 'C:\Qianxing\project' | Out-Null
 
 手动连接 MCP 时，让客户端通过 Node 启动插件的 `scripts/mcp_launcher.cjs`，并将 `UGC_RUNTIME_CONFIG` 指向实际 `runtime.json`。完整配置见[客户端适配](contributing/development.md#客户端适配)。
 
-切换工程时，先准备两个独立的新项目、输出目录，再修改当前绑定的 `runtime.json` 中 `project_root` 和 `output_root` 的绝对路径，保留 `python` 与其他字段。重启该 MCP 连接或打开新会话使配置生效。不要同时让旧任务继续写入，也无需为此重装依赖。
+`runtime.json` 记录本机路径，应保存在本地。切换工程时，先准备新的独立项目与输出目录，再修改当前绑定的 `runtime.json` 中 `project_root` 和 `output_root` 的绝对路径，保留 `python` 与其他字段。重启该 MCP 连接或打开新会话使配置生效。不要同时让旧任务继续写入，也无需为此重装依赖。
 
 旧版本目录可保留用于回退；不要只移动其中的插件或运行环境子目录。[更新与回退](installation.md#回退与卸载)

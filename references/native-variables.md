@@ -41,4 +41,4 @@ native inspect的custom_variables返回section、entity_id、name、type_id、�
 
 produce使用最终GIL执行相同审计和工程索引，不需增加另一个变量配置。已有工程通过native.spec/plan继续迭代；任何必需检查失败都不提交正式输出。portable收纳原有基底和补丁，独立重建时重新执行变量检查。原始输入、默认值和无关字节不被本读取器修改。
 
-独立检查test_native_variables.py覆盖两份保留的原始校准、两种中性配置、继承/覆盖、结构体消费者、重复/类型/深层身份故障、差异、真实CLI及原输入目录不可用后的produce/portable重建。原始摘录缺少依赖时保留失败，不修补原件。静态和回读证据与Lua/原生图执行模型分开；编辑器导入、真实生命周期、保存重进及实机保持待验。
+修改模板默认值时，回读模板、实例覆盖与继承引用。对真实关卡参数的影响用编辑器导入及游戏内运行确认。[修改流程复现](../docs/contributing/development.md#复现已有工程的修改流程)

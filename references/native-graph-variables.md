@@ -55,4 +55,4 @@ native inspect返回graph_variables，包含graph、graph_kind、name、type_id�
 
 produce在最终产物上执行同一检查，不需要额外变量检查开关。既有GIL可通过native.spec/plan迭代；必需审计失败不提交输出。portable携带原始基底及工具链，在原输入目录不可用时重新读取、检查和重建。
 
-开发侧test_native_graph_variables.py验证原始样本、两种中性配置、声明/嵌套/访问类型及身份故障、同名作用域、消费者、差异、CLI、真实编译、produce/portable和失败回滚。此证据属于静态与编译回读范围；不代表节点图变量执行模型、编辑器导入或真实保存重进通过。
+用最终文件回读变量名称、图作用域、默认值和引用。编辑器导入、节点执行和实际保存重进各有对应的验证步骤。

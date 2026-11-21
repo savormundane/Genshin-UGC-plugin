@@ -65,7 +65,7 @@ base与plan相对制作配置解析，inputs.source相对计划文件解析。na
 
 native-report.json记录实际应用和输入摘要；native-diff.json及native-plan.json保留审阅证据。交付目录内的计划副本属于记录，来源路径仍以输入计划为基准，重新应用请使用原计划或portable收纳后的输入计划。portable收纳基底、计划及所有令牌来源，只重写路径，保持plan_sha256和结果摘要；verify --portable在原工程目录不可用时仅静态核对；显式重建需按portable-delivery指南提供摘要确认。
 
-任何必需检查失败不提交正式目录。现有输出拒绝覆盖，原输入保持只读。独立检查为开发侧test_native_changes.py，包含两种中性配置、节点常量/保护字段/来源漂移/计划变化、真实CLI、GIA只读差异、连线等价及两套produce迁移重建和回滚。编辑器再导出文件可以作为diff的AFTER输入，但该比较本身不能证明文件由编辑器实际产生或已完成实机验收。
+任何必需检查失败不提交正式目录。现有输出拒绝覆盖，原输入保持只读。公开仓库提供[计划、应用与回读复现](../docs/contributing/development.md#复现已有工程的修改流程)。编辑器再导出文件可以作为diff的AFTER输入，但该比较本身不能证明文件由编辑器实际产生或已完成实机验收。
 
 ## 人工再导出核对
 

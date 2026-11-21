@@ -117,10 +117,9 @@ def check(root: Path = ROOT) -> list[str]:
         if not (root / relative).is_file():
             errors.append(f"Missing required file: {relative}")
 
-    docs = [root / name for name in REQUIRED_FILES if name.endswith(".md")]
-    docs.extend((root / "docs").rglob("*.md"))
-    docs.extend((root / "skills").rglob("*.md"))
-    docs.extend((root / "references").rglob("*.md"))
+    docs = list(root.glob("*.md"))
+    for directory in ("docs", "skills", "references", "scripts", ".github"):
+        docs.extend((root / directory).rglob("*.md"))
     provenance = root / "PUBLIC_SOURCES.json"
     raw_paths = set()
     if provenance.is_file():
@@ -132,10 +131,13 @@ def check(root: Path = ROOT) -> list[str]:
                 or "vendor" in path.relative_to(root).parts or not path.is_file()):
             continue
         for raw in markdown_destinations(path.read_text(encoding="utf-8-sig")):
-            target = raw.strip().strip("<>").split("#", 1)[0].split("?", 1)[0]
+            target = unquote(raw.strip().strip("<>").split("#", 1)[0].split("?", 1)[0])
+            if re.match(r"^(?:file:|[a-z]:[\\/])", target, re.I):
+                errors.append(f"{path.relative_to(root)}: machine-local link {raw}")
+                continue
             if not target or re.match(r"^[a-z][a-z0-9+.-]*:", target, re.I) or target.startswith("//"):
                 continue
-            resolved = (path.parent / unquote(target)).resolve()
+            resolved = (path.parent / target).resolve()
             if not resolved.is_relative_to(root) or not resolved.exists():
                 errors.append(f"{path.relative_to(root)}: invalid link {raw}")
 

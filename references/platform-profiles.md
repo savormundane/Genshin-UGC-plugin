@@ -109,7 +109,7 @@ python scripts/qianxing.py capabilities --platform 7.2 --mode classic --evidence
 
 通过证据必须满足[验证证据闭环](validation-evidence.md)并实际执行该层required_cases。scope限定其覆盖范围，例如原生图模型仅覆盖已实现节点，不包含复合调用执行。选择平台仅附加配置上下文，platform_version_verified仍为false；编辑器和宿主不会由离线用例升级为通过。
 
-独立检查使用开发侧test_platform_profiles.py，覆盖两个版本／模式、规则边界、资料摘要、CLI、分层用例缺失、两套迁移重建及失败不提交。宿主验证需人工导入、核对实际配置和运行表现，分别登记editor与host证据。
+宿主验证需导入实际文件，核对配置和运行表现。
 
 ## 7.2补充声明规则
 
@@ -125,4 +125,4 @@ python scripts/qianxing.py capabilities --platform 7.2 --mode classic --evidence
 | translations | languages非空语言列表、entries每项唯一id、origin（text/graph_variable/instance_override）、translations语言到文本映射；检查所需语言的空白或遗漏，不验证译文质量。 |
 | arrival | radius非负有限数、accept_precise_sliding布尔；零半径触发精准移动／滑步，未明确接受则not_checked，不当作非法字段。 |
 
-两种中性配置和反例维护在development/test_platform_profiles.py的rules72与专项中：经典配置声明镜头恢复、30秒牵引、两种语言；超限配置改为不存在的装置序号关闭全部、胶囊碰撞、排除标签及非零抵达半径。修改required语言、实例覆盖文本或期望语义后，docs check及produce使用同一检查器；违反规则failed，缺少适用依据not_checked，必需制作阶段均不提交输出。
+用 `platform check` 单独检查配置，在 `produce` 声明同一配置可复用检查。违反规则返回 `failed`，缺少适用依据返回 `not_checked`。必需阶段未通过时不提交正式输出。

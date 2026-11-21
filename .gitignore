@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 .venv/
+/runtime.json
 .env
 .env.local
 .DS_Store

@@ -108,7 +108,7 @@
 - [工程只读诊断](project-diagnosis.md)
 - [结构化日志诊断](log-diagnostics.md)
 - [证据等级与验收](validation.md)
-- [维护者证据采集与读取](validation-evidence.md)
+- [能力与验证结果](validation-evidence.md)
 - [可选制作案例与历史观察](production-experience.md)
 
-官方快照与版本补充的路径、摘要由来源清单登记；不要将旧案例、开发侧测试清单或软件模拟结果当作当前平台的完整支持声明。普通说明和目录导航的修改按实际影响检查即可。
+平台资料的路径和摘要见[来源清单](../PUBLIC_SOURCES.json)。

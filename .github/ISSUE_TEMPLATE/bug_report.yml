@@ -1,52 +1,23 @@
 name: 问题反馈
-description: 反馈安装、使用、文档或兼容性问题，不需要先定位原因
+description: 报告安装、使用、文档或兼容性问题
 title: "[Bug] "
 body:
-  - type: markdown
+  - type: textarea
+    id: problem
     attributes:
-      value: "先告诉我们你想完成什么、在哪一步卡住。不确定的版本或环境可以填“不确定”。请勿上传令牌、私人工程或未公开的安全漏洞详情；安全问题请先阅读仓库的 SECURITY.md。"
+      label: 你想做什么，遇到了什么？
+      description: 写下预期结果、实际情况和能复现的步骤。报错文字或截图有帮助，请先去掉私人信息。
+    validations:
+      required: true
   - type: input
     id: version
     attributes:
-      label: 插件版本
-      description: "可从下载包文件名或插件信息查看；不知道可以填“不确定”"
-      placeholder: "Release 版本号，或所用源码提交"
+      label: 所用版本
+      placeholder: 发行版本号或源码提交。不清楚时可填“不确定”。
     validations:
       required: true
   - type: textarea
-    id: environment
+    id: context
     attributes:
-      label: 使用的客户端与系统
-      description: "例如 Codex / Claude Code / DeepSeek Harness 和 Windows。知道客户端版本时可附上；Python / Node 版本仅在相关报错时补充。"
-    validations:
-      required: true
-  - type: textarea
-    id: expected
-    attributes:
-      label: 想完成什么，实际遇到了什么
-      description: "说明预期结果和实际情况；可以直接附上报错或截图"
-    validations:
-      required: true
-  - type: textarea
-    id: steps
-    attributes:
-      label: 操作步骤（可选）
-      description: "如果能再次遇到问题，请描述操作过程；相关命令、输入文件或精简示例有的话再提供"
-  - type: dropdown
-    id: validation
-    attributes:
-      label: 卡在哪一步（可选）
-      options:
-        - 不确定
-        - 插件安装或宿主加载
-        - 静态检查
-        - 本地 CLI / MCP
-        - 离线模拟
-        - 编辑器导入
-        - 实际游戏运行
-        - 文档与使用说明
-  - type: textarea
-    id: logs
-    attributes:
-      label: 日志与补充信息（可选）
-      description: "如有错误日志，请删去敏感信息后粘贴；涉及平台版本差异时可补充千星奇域版本"
+      label: 环境与可共享的输入
+      description: 可补充客户端、操作系统、千星奇域版本和可以公开的最小复现。

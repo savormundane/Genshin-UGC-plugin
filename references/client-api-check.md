@@ -39,7 +39,7 @@ client-check.json逐脚本输出api报告，包括已解析调用、API文档摘
 
 解析区分局部同名变量、宿主别名、实例冒号/显式接收者与命名空间点号，处理多返回值及括号截断。紧凑控件表的省略类型结合本篇API中的字段、事件枚举和回调说明解析，保留类型依据行；不存在依据时不猜类型。integer字面值保留原文，避免JavaScript大整数精度损失。
 
-此词法检查不证明跨函数运行路径、容器动态修改、监听清理或Tween时序。参数顺序、模板和资源需对应的工程交叉检查，不能把词法API检查通过当作完整客户端验收。工程引用、运行模型、编辑器和实机分别报告。开发侧test_client_api.py覆盖两套配置、反例、CLI、制作链和独立重建。
+此词法检查不证明跨函数运行路径、容器动态修改、监听清理或Tween时序。参数顺序、模板和资源需对应的工程交叉检查，不能把词法API检查通过当作完整客户端验收。工程引用、运行模型、编辑器和实机分别报告。
 
 GIL合同检查还会将已解析的ServerSignal、RegisterServerSignalHandler和UnregisterServerSignalHandler调用名称与最终GIL信号登记表对照。signal_references记录逐调用映射、行号、名称和解析结果；名称缺失或歧义为failed，动态名称为not_checked，两者均阻止必需阶段提交。参数顺序采用下述直线流程检查，信号方向需要显式协议合同，实际送达另验；运行时控件ID也不能当作存档GUID查找。没有相关调用时为not_applicable，完整references状态仍保持not_checked。
 

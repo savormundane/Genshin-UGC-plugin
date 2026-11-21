@@ -1,8 +1,8 @@
 blank_issues_enabled: true
 contact_links:
-  - name: 使用文档与安装帮助
+  - name: 安装和使用帮助
     url: https://github.com/savormundane/Genshin-UGC-plugin/blob/main/docs/README.md
-    about: 查找安装、使用示例、常见术语与运行要求
-  - name: 项目路线图
-    url: https://github.com/savormundane/Genshin-UGC-plugin/blob/main/ROADMAP.md
-    about: 了解近期重点与后续方向，欢迎提出实际使用需求
+    about: 查找安装步骤、任务示例和运行要求
+  - name: 报告安全问题
+    url: https://github.com/savormundane/Genshin-UGC-plugin/blob/main/SECURITY.md
+    about: 获取私密报告渠道

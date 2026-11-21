@@ -111,9 +111,13 @@ class ReleaseTests(unittest.TestCase):
         self.write('references/official/raw.md', '[raw](absent.md)')
         self.write('references/registered.md', '[raw](absent.md)')
         self.write('PUBLIC_SOURCES.json', json.dumps({'permission_unverified_files': [{'path': 'references/registered.md'}]}))
+        self.write("ROADMAP.md", "[bad](file:///C:/work/notes.md)")
+        self.write("scripts/README.md", "[bad](C:/work/notes.md)")
+        self.write(".github/PULL_REQUEST_TEMPLATE.md", "[bad](../missing.md)")
         errors = check(self.root)
-        self.assertEqual(len(errors), 1, errors)
-        self.assertIn('missing.md', errors[0])
+        self.assertEqual(len(errors), 4, errors)
+        for path in ("skills/fixture/reference.md", "ROADMAP.md", "scripts/README.md", ".github/PULL_REQUEST_TEMPLATE.md"):
+            self.assertTrue(any(error.startswith(f"{Path(path)}:") for error in errors), errors)
 
     def test_active_install_documentation_versions(self):
         self.fixture()
