@@ -100,11 +100,16 @@ def fingerprint(plan):
 
 def plan(data,spec,base,destination):
     if container(data)[0][3]!=2:raise ValueError('Modification plans require a calibrated GIL baseline')
+    operations=spec.get('operations') if isinstance(spec,dict) else None
+    if not isinstance(operations,list) or any(not isinstance(op,dict) for op in operations):
+        raise ValueError('Native patch must specify operations as a list of objects')
     spec=deepcopy(spec);inputs={};bound=deepcopy(spec)
+    destination=Path(destination).resolve()
     for index,op in enumerate(spec['operations']):
         if 'source'not in op:continue
         source=resolve(base,op['source']);token='@input:'+str(index);digest=sha(source.read_bytes())
-        inputs[token]={'source':os.path.relpath(source,Path(destination).resolve()).replace('\\','/'),'sha256':digest}
+        reference=os.path.relpath(source,destination) if source.anchor.casefold()==destination.anchor.casefold() else str(source)
+        inputs[token]={'source':reference.replace('\\','/'),'sha256':digest}
         bound['operations'][index]['source']=token;op['source']=str(source)
     if spec.get('strict_audit',True)is not True:raise ValueError('Modification plans require strict audit')
     output,applied=apply(data,spec,base)

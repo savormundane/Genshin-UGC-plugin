@@ -41,7 +41,7 @@
 | 创建专用环境、绑定工程与输出目录 | [configure_runtime.py](configure_runtime.py)、[install_public.py](install_public.py)；用户入口在根 `install.ps1`。 |
 | 从已提交源码准备发行候选 | [prepare_release.py](prepare_release.py) 调用 [package_release.py](package_release.py)；见[发布流程](../docs/contributing/maintenance.md)。 |
 | 检查版本、清单和文档链接 | [check_repository.py](check_repository.py)。 |
-| 仓库随附的定向回归 | [test_gil.mjs](test_gil.mjs)、[test_agent_protocols.py](test_agent_protocols.py)、[test_distribution.py](test_distribution.py)、[test_release.py](test_release.py)、[test_release_behaviors.py](test_release_behaviors.py)。按改动选择，见[开发指南](../docs/contributing/development.md)。 |
+| 仓库随附的定向回归 | [test_gil.mjs](test_gil.mjs)、[test_agent_protocols.py](test_agent_protocols.py)、[test_distribution.py](test_distribution.py)、[test_release.py](test_release.py)、[test_release_behaviors.py](test_release_behaviors.py)、[test_mcp_native_workflow.py](test_mcp_native_workflow.py)。按改动选择，见[开发指南](../docs/contributing/development.md)。 |
 
 `validation-contract.json`、`capability-layers.json`、`test-impact.json` 还登记了维护者开发工作区的测试名称；其完整测试源码和 `run_validation.py` 当前没有随本公开仓库提供。不要把清单中的用例名当作本地可执行文件，也不要把历史证据当作本轮结果。[证据读取说明](../references/validation-evidence.md)
 

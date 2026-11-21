@@ -15,7 +15,7 @@ inspect和check输出同一结构化报告，包含objects、references、issues
 
 对象key由文件命名空间、kind、作用域和id组成，每段使用URL百分号编码。例如level/graph/ordinary/1073741900与level/graph/composite/1073741900不同；level/template/1086324737与level/entity/1086324737也不同。脚本、控件、声明、结构体、存档模板/槽位、信号及GIA资源均保留自身命名空间。以inspect返回的完整key作为后续选择器，不按名称或数字猜选对象。
 
-consumers默认返回直接引用者，--transitive沿反向引用继续追踪图、挂载实体等；循环引用不会无限遍历。--name、--id可以搭配--kind，但最终必须唯一；多个文件中的同名脚本、同号普通/复合图均报告歧义。node_connection统一从使用者指向提供者，输入端、输出端或两端记录得到同一依赖关系；location保留input_port、output_port和serialized_at原始记录位置。双端记录合并，同一端的重复记录报错。流程连接表示下游对上游的依赖，不代替运行时执行顺序。
+`consumers` 返回目标的直接依赖和引用者。`references` 为引用者侧关系，`dependency_references` 为目标指向依赖的关系。`--transitive` 沿反向引用继续追踪。状态和问题数量对应整份输入。MCP `project_inspect` 可用 `selector` 执行同一查询。--name、--id可以搭配--kind，但最终必须唯一；多个文件中的同名脚本、同号普通/复合图均报告歧义。node_connection统一从使用者指向提供者，输入端、输出端或两端记录得到同一依赖关系；location保留input_port、output_port和serialized_at原始记录位置。双端记录合并，同一端的重复记录报错。流程连接表示下游对上游的依赖，不代替运行时执行顺序。
 
 已读取的关系包括节点声明/具体类型、通用信号的实际声明、图连接与复合接口、结构体描述/默认值、存档槽位、信号角色、图库和图挂载、GIA依赖及资源正文、已校准实体模板引用、控件父子/模板/根控件、UI登记与脚本挂载。检查重复身份、悬空和歧义引用、父子不一致与父级循环、模板双向关联及根控件绑定。没有序列化子列表的对象不被假定具有空列表。
 

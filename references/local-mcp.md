@@ -18,14 +18,17 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 | --- | --- |
 | doctor | 只读检查执行依赖 |
 | capabilities | 返回当前实现和证据边界 |
+| api_lookup | symbol。查询客户端 Lua API、来源与推导状态 |
+| diagnose | spec、sha256。按配置执行只读的环境、Lua、GIL 和素材检查 |
 | docs_search | version、query：检索固定版本资料 |
 | nodes_lookup | query、scope、limit 均可选。查询 Graph Code 调用、作用域、签名和端口。scope 为 all、client 或 server，limit 默认 20，范围 1 到 100 |
-| native_inspect / native_audit / project_inspect | input，可选 sha256。读取或审计指定原生文件 |
+| native_inspect / native_audit | input，可选 sha256。读取或审计指定原生文件 |
+| project_inspect | input、可选 sha256、selector、transitive。按 key、kind、name 或 id 选择唯一对象，查看依赖和引用者 |
 | client_check | input，可选 sha256、mapping、contract、contract_sha256。编译 Lua 正文，可选择单个 GIL 映射或检查 API 合同 |
 | produce | spec、sha256、output：执行已有制作链 |
-| native_diff | input、other，可选 sha256、other_sha256。直接返回原生差异 |
+| native_diff | input、other，可选 sha256、other_sha256、allowed_top_level_fields。返回差异和保护检查 |
 | experiment_compare | input、sha256、other、other_sha256。直接返回成对观察比较 |
-| native_plan | input、sha256、spec、spec_sha256、output：生成plan.json；source依赖使用显式绝对路径，后续apply继续核对摘要 |
+| native_plan | input、sha256、output 加一个 patch 对象，或加 spec 和 spec_sha256 文件参数。输出可审阅的 plan.json 和文件摘要 |
 | simulate | spec、sha256、output：schema 2联合场景；在独立工作进程执行，零断言或必需覆盖不足不提交 |
 | experiment_run | spec、sha256、output：观察实验，开发／保留种子合同不变；失败不提交 |
 | logs_diagnose | spec、sha256：只读解析JSONL及关联产物 |
@@ -35,6 +38,17 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 input/spec/plan/contract相对工程根目录，或为工程/输出根内绝对路径。output相对输出根目录，必须是尚不存在的新目录，其父目录须存在。sha256均为对应输入文件原始字节摘要；plan_sha256参数是计划文件摘要，计划内部的语义摘要由原生核心继续核对。
 
 直接读取文件的五项工具会检查显式传入的摘要，省略时由工具计算。结果的 `inputs_sha256` 按 input、other 或 contract 返回实际读取的摘要。编辑既有 GIL 时可把 `inputs_sha256.input` 交给 `native_plan`。配置诊断、计划、实际写入和重建使用各自的必填摘要。
+
+## 审阅并另存已有工程
+
+以下参数对应源码版 Unreleased。正式 4.1.0 可用[补丁文件和 CLI](native-changes.md#局部编辑)执行同一原生操作。
+
+1. 调用 `project_inspect`，例如传入 `{"input":"level.gil","selector":{"kind":"template","id":1086324737}}`。复用 `inputs_sha256.input`。追踪一个模板参数时，可选中变量的完整 `key` 并开启 `transitive`。
+2. 给 `native_plan` 传入基底的 `input`、`sha256` 和新 `output`，将包含 `base_sha256`、`allowed_top_level_fields` 和 `operations` 的 schema 2 对象作为 `patch`。内联补丁中的相对 `source` 以项目目录为准。使用 `spec` 文件时以该文件的目录为准，并提供 `spec_sha256`。
+3. 审阅 `result.difference`。确认后调用 `native_apply`，使用同一基底和新输出目录。用计划 `output` 目录下的 `plan.json` 作为 `plan`，用 `outputs_sha256["plan.json"]` 作为 `plan_sha256`。
+4. `native_apply` 返回另存的 `level.gil`、实际操作和审计结果，以及 `outputs_sha256`。用 `native_diff` 的 `allowed_top_level_fields` 核对保护范围，或将 `manifest.json` 和对应摘要交给 `verify` 做静态完整性检查。计划和应用清单均记录外部来源摘要。
+
+摘要错配、路径和参数冲突会返回具体原因。保护检查失败时仍可读取 `result.protected`。编辑器重存后可以[重新比较](native-changes.md#人工再导出核对)。
 
 ## CLI与MCP共同合同
 
@@ -54,27 +68,17 @@ produce复用实际制作链，native_apply复用native_changes.apply_plan；不
 
 每次调用创建输出根下独立临时目录，以固定Python工作进程执行。输入开始/结束核对摘要，成功且通过提交前取消检查后才将产物目录改名为正式输出。已有目录不覆盖。取消时终止本次工作进程，Windows同时终止其进程树；清理仅限该请求的临时目录。成功提交为同步边界，此后到达的取消不能撤回已经提交的产物。
 
-进度依次报告输入绑定、核心运行、结果检查三个阶段。报告不假装掌握底层编译百分比，调用方可以没有进度回调。
+进度依次报告输入绑定、核心运行和结果检查。普通操作默认时限 120 秒，制作、应用和重建为 900 秒。可分别设置 `UGC_MCP_TIMEOUT_SECONDS` 和 `UGC_MCP_BUILD_TIMEOUT_SECONDS`，范围为大于 0 且不超过 3600 秒。
 
 路径检查和工作进程的Python文件访问审计用于发现越界依赖，不是操作系统沙箱。Graph Code等工程源码及后端仍须可信；由其自行启动的任意第三方程序不因本工具而获得完整沙箱保证。Python依赖目录与插件自身是允许读取的运行资源。
 
-## 验证与手工交付
+## 本地复现
 
-开发专项test_mcp_service.py使用真实SDK stdio，覆盖两种中性控件工程的新建GIL和两套已有图的重编号迭代、CLI/MCP读取结果一致、摘要/路径拒绝。只读工具专项补齐doctor、capabilities、docs_search、native_audit、project_inspect和client_check，合计十六个工具均有实际stdio调用。环境诊断返回结果不代表所有依赖可用；能力查询成功不代表全部能力已验收。
+公开仓库的 stdio 检查可复现一次完整的关卡参数编辑。编辑器导入和实际游戏运行需要对应的工程证据。[公开复现](../docs/contributing/development.md#复现已有工程的修改流程) · [MCP Python SDK](https://py.sdk.modelcontextprotocol.io/)
 
-独立Bridge专项覆盖嵌套输入越界、取消不提交及临时目录清理；SDK内存传输与实际stdio专项分别取消调用并核对不提交、不残留临时目录。stdio专项还检查输入不变及同一服务取消后可继续响应。宿主UI中的取消通知仍待验，不把SDK客户端测试写成Codex宿主验收。通过PYTHONPATH指定依赖时使用绝对目录，因为工作进程在工程目录执行。
+## 便携交付重建
 
-将产物GIL在编辑器中人工导入，核对图和脚本挂载，运行最小交互并记录日志；涉及存储时退出后重新进入回读。将再导出的GIL另存后使用native diff对照。编辑器、平台真实保存重进、运行表现以及Codex/其它宿主加载本MCP均保持待验。
-
-SDK依据：[官方Python SDK](https://py.sdk.modelcontextprotocol.io/)、[进度](https://py.sdk.modelcontextprotocol.io/handlers/progress/)、[取消](https://py.sdk.modelcontextprotocol.io/handlers/cancellation/)。固定依赖和开发安装证据位于development，不能把开发机安装视为用户环境已安装。
-
-新增入口专项使用两种中性配置，串联修改计划与应用、独立模拟、实验比较、日志关联和交付重建；覆盖无断言、错误断言、嵌套依赖越界、摘要不符及已有输出拒绝。所有生成操作仅在核心status为passed时提交；实验passed=false也视为失败。
-
-## V3.5新增入口与启动
-
-`api_lookup(symbol)` 查询来源、原文行、推导类型和冲突；`diagnose(spec, sha256)` 只读执行显式配置的环境、Lua、GIL和素材检查。复用CLI核心，沿用摘要绑定和依赖根边界。安装后的默认入口使用[专用运行环境](../docs/runtime-environment.md)，不依赖系统python命令。SDK stdio调用与Codex宿主实际加载分别记录。
-
-普通操作总时限120秒，制作／原生修改／重建900秒；通过服务进程环境 `UGC_MCP_TIMEOUT_SECONDS`、`UGC_MCP_BUILD_TIMEOUT_SECONDS` 设置（大于0，不超过3600秒）。取消或超时终止工作进程树，清理等待最多15秒，不提升临时输出。`portable=true` 仅静态核对；重建还需 `rebuild=true` 及静态报告的 `trusted_inputs_sha256`，表示调用方已审阅并同意执行该摘要绑定的工程代码。摘要本身不是授权来源。详见[重建边界](portable-delivery.md)。
+重建需要审阅待执行的工程输入并确认摘要。静态检查结果包含这个摘要。[重建边界](portable-delivery.md)
 
 Portable 调用顺序：
 

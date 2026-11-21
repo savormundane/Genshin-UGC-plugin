@@ -20,6 +20,16 @@ GitHub Actions 的 [Repository checks](../../.github/workflows/repository-check.
 
 修改打包或版本检查时运行 `python -B scripts/test_release.py`。若改动客户端适配，运行 `python -B scripts/test_agent_protocols.py`，再按[安装说明](../installation.md)检查对应入口。打包流程见[维护与发布](maintenance.md)。
 
+## 复现已有工程的修改流程
+
+在插件专用环境中执行以下命令。脚本生成一个小关卡，其中一个实例继承模板的整数参数 `ActivationDelay=7`。真实 MCP stdio 测试定位对象、预览修改、另存并确认参数变为 `12`，再逐字节核对保护范围。它也覆盖过期摘要和外部来源变化。
+
+```powershell
+python -B scripts/test_mcp_native_workflow.py -v
+```
+
+成功输出 `OK`。编辑器导入和机关行为需要用实际工程检查。[输入与断言](../../scripts/test_mcp_native_workflow.py) · [MCP 操作合同](../../references/local-mcp.md#审阅并另存已有工程) · [贡献任务 #4](https://github.com/savormundane/Genshin-UGC-plugin/issues/4)
+
 ## Windows 长路径
 
 Windows 开发检出建议放在较短路径，例如 `C:\src\Genshin-UGC-plugin`，并使用 `git -c core.longpaths=true clone https://github.com/savormundane/Genshin-UGC-plugin.git`。首次克隆后可在该仓库运行 `git config core.longpaths true`，不必修改全局配置。若出现 `Filename too long`，使用较短的检出路径并确认依赖文件齐全。

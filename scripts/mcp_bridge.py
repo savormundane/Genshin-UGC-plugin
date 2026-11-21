@@ -7,18 +7,18 @@ OPERATIONS={'doctor':(), 'capabilities':(), 'docs_search':('version','query'),'a
             'native_inspect':('input',),'native_audit':('input',),
             'project_inspect':('input',),'client_check':('input',),
             'native_diff':('input','other'),
-            'native_plan':('input','sha256','spec','spec_sha256','output'),
+            'native_plan':('input','sha256','output'),
             'simulate':('spec','sha256','output'),'experiment_run':('spec','sha256','output'),
             'experiment_compare':('input','sha256','other','other_sha256'),
             'logs_diagnose':('spec','sha256'),'verify':('input','sha256','rebuild','portable'),
             'produce':('spec','sha256','output'),'native_apply':('input','sha256','plan','plan_sha256','output')}
 
 READ_FILE_OPERATIONS={
-    'native_inspect':('sha256',),'native_audit':('sha256',),'project_inspect':('sha256',),
-    'native_diff':('sha256','other_sha256'),
+    'native_inspect':('sha256',),'native_audit':('sha256',),'project_inspect':('sha256','selector','transitive'),
+    'native_diff':('sha256','other_sha256','allowed_top_level_fields'),
     'client_check':('sha256','contract','contract_sha256','mapping'),
 }
-OPTIONAL_FIELDS={**READ_FILE_OPERATIONS,'nodes_lookup':('query','scope','limit'),'verify':('trusted_inputs_sha256',)}
+OPTIONAL_FIELDS={**READ_FILE_OPERATIONS,'native_plan':('patch','spec','spec_sha256'),'nodes_lookup':('query','scope','limit'),'verify':('trusted_inputs_sha256',)}
 
 async def finish_worker(process):
     """Finish cleanup before releasing the request directory."""
@@ -104,6 +104,15 @@ class Bridge:
         schema(arguments,required+OPTIONAL_FIELDS.get(operation,()),required)
         args=dict(arguments);bound={};input_hashes={}
         automatic=operation in READ_FILE_OPERATIONS
+        if operation=='native_plan':
+            supplied=set(args)&{'patch','spec','spec_sha256'}
+            if supplied not in ({'patch'}, {'spec','spec_sha256'}):
+                raise ValueError('Provide patch, or provide spec with spec_sha256')
+            if 'patch' in args and not isinstance(args['patch'], dict):
+                raise ValueError('patch must be a schema 2 object')
+        if operation=='project_inspect' and 'transitive' in args:
+            if 'selector' not in args or type(args['transitive']) is not bool:
+                raise ValueError('transitive requires a selector and a boolean value')
         if 'contract_sha256'in args and 'contract'not in args:raise ValueError('Contract path required')
         if 'mapping'in args and (not isinstance(args['mapping'],str) or not args['mapping']):
             raise ValueError('Nonempty Lua mapping required')
@@ -157,12 +166,18 @@ class Bridge:
             await asyncio.sleep(0)
             status=result.get('status', 'failed'if result.get('passed')is False else'passed')
             if destination and status!='passed':return {'schema':2,'operation':operation,'status':status,'result':result,'output':None}
+            output_hashes=None
             if destination:
+                delivery=scratch/'delivery'
+                if operation in ('native_plan','native_apply'):
+                    manifest=delivery/'manifest.json'
+                    output_hashes={**read_json(manifest)['files'],'manifest.json':sha_file(manifest)}
                 self.path(str(destination),True)
-                os.rename(scratch/'delivery',destination)
+                os.rename(delivery,destination)
             response={'schema':2,'operation':operation,'status':status,
                       'result':result,'output':str(destination)if destination else None}
             if automatic:response['inputs_sha256']=input_hashes
+            if output_hashes is not None:response['outputs_sha256']=output_hashes
             return response
 
 

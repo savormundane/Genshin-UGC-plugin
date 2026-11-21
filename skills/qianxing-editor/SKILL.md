@@ -19,4 +19,4 @@ description: 设计和检查千星奇域工程对象、实体、模板、组件�
 
 节点逻辑由Graph Code处理，控件运行由Client Lua处理，容器修改由GIL处理。未知字段、动态对象和缺失校准明确列为未覆盖，不按旧项目名称推断身份。无编辑器GUI控制能力；人工导入和实机证据按[验证边界](../../references/validation.md)记录。
 
-使用 MCP `project_inspect` 读取所选工程并取得基底摘要。控件脚本运行时签名查 [Client Lua](../client-controls-lua/SKILL.md)，节点签名查 [Graph Code](../qianxing-graph-code/SKILL.md)。
+使用 MCP `project_inspect` 取得基底摘要。已知对象 ID 或名称时，用 `selector` 定位唯一对象，查看直接依赖和引用者。控件脚本运行时签名查 [Client Lua](../client-controls-lua/SKILL.md)，节点签名查 [Graph Code](../qianxing-graph-code/SKILL.md)。

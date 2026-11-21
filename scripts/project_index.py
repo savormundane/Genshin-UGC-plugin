@@ -295,8 +295,12 @@ def consumers(report,selector,transitive=False):
             edges.append(edge);source=edge['source']
             if source!=target['key']:keys.add(source)
             if transitive and source not in seen:seen.add(source);pending.append(source)
+    dependencies=[edge for edge in report['references']if edge['source']==target['key']]
+    dependency_keys={edge['target'] for edge in dependencies}
     return {'schema':2,'status':report['status'],'target':target,'transitive':transitive,'consumers':[o for o in report['objects']if o['key']in keys],
-            'references':edges,'complete_reference_index':report['complete_reference_index'],'unindexed':report['unindexed'],
+            'references':edges,'dependencies':[o for o in report['objects']if o['key']in dependency_keys],
+            'dependency_references':dependencies,'issue_count':len(report['issues']),'unresolved_count':len(report['unresolved']),
+            'complete_reference_index':report['complete_reference_index'],'unindexed':report['unindexed'],
             'artifacts':report['artifacts'],'editor':'not_checked','host':'not_checked'}
 
 

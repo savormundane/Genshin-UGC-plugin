@@ -43,8 +43,10 @@ def main():
         elif op in('native_inspect','native_audit','project_inspect'):
             raw=Path(args['input']).read_bytes()
             if op=='project_inspect':
-                from project_index import build
+                from project_index import build,consumers
                 result=build(raw)
+                if 'selector' in args:
+                    result=consumers(result,args['selector'],args.get('transitive',False))
             else:
                 import native_core
                 result=(native_core.inspect if op=='native_inspect'else native_core.audit)(raw)
@@ -53,16 +55,26 @@ def main():
             result=inspect(args['input'],mapping=args.get('mapping'),contract=read_json(args['contract'])if 'contract'in args else None)
         elif op=='native_diff':
             from native_changes import difference
-            result=difference(Path(args['input']).read_bytes(),Path(args['other']).read_bytes())
+            result=difference(Path(args['input']).read_bytes(),Path(args['other']).read_bytes(),args.get('allowed_top_level_fields'))
         elif op=='native_plan':
             from native_changes import plan
             from authoring_io import output_directory,finish
+            if 'patch' in args:
+                patch=args['patch']
+                base=Path(request['project'])
+            else:
+                source=Path(args['spec'])
+                patch=read_json(source)
+                base=source.parent
             with output_directory(args['output'])as stage:
-                result=plan(Path(args['input']).read_bytes(),read_json(args['spec']),Path(args['spec']).parent,stage)
+                result=plan(Path(args['input']).read_bytes(),patch,base,stage)
                 # Absolute project paths survive the private-stage directory commit.
-                for item in result['inputs'].values():item['source']=str((stage/item['source']).resolve())
+                inputs=dict(request['inputs'])
+                for item in result['inputs'].values():
+                    item['source']=str((stage/item['source']).resolve())
+                    inputs[item['source']]=item['sha256']
                 write_json(stage/'plan.json',result)
-                finish(stage,request['inputs'],kind='native-plan')
+                finish(stage,inputs,kind='native-plan')
         elif op=='simulate':
             from joint_simulator import execute
             from authoring_io import output_directory,finish
@@ -96,8 +108,13 @@ def main():
             raw,result=apply_plan(Path(args['input']).read_bytes(),read_json(args['plan']),Path(args['plan']).parent)
             with output_directory(args['output'])as stage:
                 (stage/'level.gil').write_bytes(raw);write_json(stage/'native-report.json',result)
-                finish(stage,request['inputs'],kind='native-apply')
+                finish(stage,{**request['inputs'],**result['inputs']},kind='native-apply')
         else:raise ValueError('Unknown worker operation')
     write_json(result_path,result)
 
-if __name__=='__main__':main()
+if __name__ == '__main__':
+    try:
+        main()
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        sys.exit(2)
