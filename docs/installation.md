@@ -26,7 +26,7 @@
 & ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.1.0/install.ps1'))) -Agent codex
 ```
 
-安装成功时，输出中的 `installed` 是版本号，`runtime_smoke: passed` 表示本地工具自检通过。打开新会话，在插件列表确认 Genshin-UGC 已启用，再试 [首次使用示例](../README.md#首次使用)。
+安装成功时，输出中的 `installed` 是版本号，`runtime_smoke: passed` 表示本地工具自检通过。打开新会话，在插件列表确认 Genshin-UGC 已启用，再试 [首次使用示例](../README.md#第一次使用)。
 
 ## Claude Code
 
