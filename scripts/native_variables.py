@@ -4,9 +4,11 @@ Entity overrides live in section5/entry7; template defaults in section4/entry8.
 Template entry7 is component data, not the same variable-group representation.
 """
 from collections import Counter
-from authoring_io import sha
-from level_inventory import fields,vals
-from native_core import get
+import math,struct
+from authoring_io import sha,schema
+from level_authoring import flt,integer,msg,set_section
+from level_inventory import container,fields,vals
+from native_core import get,replace_message
 
 TYPES={1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,20,21,22,23,24,25,26,27}
 
@@ -40,6 +42,75 @@ def summary(record):
     return {k:v for k,v in record.items()if k not in('raw','descriptor','value')}|{
         'descriptor_sha256':sha(record['descriptor'])if record['descriptor']is not None else None,
         'value_sha256':sha(record['value'])if record['value']is not None else None}
+
+
+def scalar_default(payload,typ):
+    wire={3:0,4:0,5:5,6:2}[typ]
+    if any(n==1 and w!=wire for n,w,_,_ in fields(payload)):
+        raise ValueError('Uncalibrated scalar default encoding')
+    value=get(payload,1,wire)
+    if typ==3:
+        value=value or 0
+        return value-(1<<64) if value>=1<<63 else value
+    if typ==4:
+        if value not in (None,0,1):raise ValueError('Uncalibrated boolean default')
+        return value==1
+    if typ==5:
+        value=struct.unpack('<f',value)[0] if value is not None else 0.0
+        if not math.isfinite(value):raise ValueError('Nonfinite existing float default')
+        return value
+    return (value or b'').decode('utf-8')
+
+
+def set_default(data,model,op):
+    keys=('op','section','entity_id','name','value')
+    schema(op,keys,keys)
+    section,ident,name,value=(op[k] for k in keys[1:])
+    if (container(data)[0][3]!=2 or type(section)is not int or section not in (4,5)
+            or type(ident)is not int or ident<0 or not isinstance(name,str) or not name):
+        raise ValueError('Custom variable target requires GIL, section 4 or 5, entity_id and name')
+    records=[r for r in model['custom_variables']['records']
+             if (r['section'],r['entity_id'],r['name'])==(section,ident,name)]
+    if len(records)!=1:raise ValueError('Expected one existing custom variable in the selected scope')
+    record=records[0];typ=record['type_id'];default=record['value']
+    if typ not in (3,4,5,6) or default is None or record['descriptor'] is None:
+        raise ValueError('Only existing calibrated scalar defaults are writable')
+    carrier=typ+10;payload=get(default,carrier)
+    if (payload is None or get(default,1,0)!=typ or get(get(default,2,default=b''),1,0)!=typ
+            or get(record['descriptor'],1,0)!=typ):
+        raise ValueError('Custom variable default type mismatch')
+    before=scalar_default(payload,typ)
+    if typ==3 and type(value)is int and -(1<<63)<=value<(1<<63):
+        field=integer(1,value%(1<<64)) if value else b''
+    elif typ==4 and type(value)is bool:
+        field=integer(1,1) if value else b''
+    elif typ==5 and type(value) in (float,int) and abs(value)<=3.4028234663852886e38:
+        field=flt(1,value) if value else b''
+    elif typ==6 and isinstance(value,str):
+        field=msg(1,value.encode('utf-8'))
+    else:
+        raise ValueError('Invalid value for existing scalar type '+str(typ))
+    new_payload=b''.join(field if n==1 else raw for n,_,_,raw in fields(payload))
+    if all(n!=1 for n,_,_,_ in fields(payload)):new_payload+=field
+    after=scalar_default(new_payload,typ)
+    detail={'section':section,'entity_id':ident,'name':name,'type_id':typ,'before':before,'after':after}
+    if before==after:return data,detail
+    body=get(data[20:-4],section)
+    owners=[e for e in vals(fields(body),1) if get(e,1,0)==ident]
+    if len(owners)!=1:raise ValueError('Custom variable owner must match exactly once')
+    owner=owners[0];group_field=record['group_field']
+    groups=[g for g in vals(fields(owner),group_field) if (get(g,1,0),get(g,2,0))==(1,1)]
+    if len(groups)!=1:raise ValueError('Custom variable group must match exactly once')
+    group=groups[0];items=get(group,11)
+    old_item=record['raw']
+    new_item=replace_message(old_item,4,default,replace_message(default,carrier,payload,new_payload))
+    new_group=replace_message(group,11,items,replace_message(items,1,old_item,new_item))
+    updated=set_section(data,section,replace_message(body,1,owner,replace_message(owner,group_field,group,new_group)))
+    observed=[r for r in read(container(updated)[1])['records']
+              if (r['section'],r['entity_id'],r['name'])==(section,ident,name)]
+    if len(observed)!=1 or scalar_default(get(observed[0]['value'],carrier),typ)!=after:
+        raise ValueError('Custom variable default readback differs')
+    return updated,detail
 
 
 def audit_default_types(value,context,issues,unknown,expected=None):

@@ -5,6 +5,13 @@ from contextlib import contextmanager
 
 PLUGIN=Path(__file__).resolve().parents[1]
 def sha(data):return hashlib.sha256(data).hexdigest()
+
+
+def sha_file(path):
+    with Path(path).open('rb') as stream:
+        return hashlib.file_digest(stream,'sha256').hexdigest()
+
+
 def read_json(path):return json.loads(Path(path).read_text(encoding='utf-8-sig'))
 def canonical(value):return json.dumps(value,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False)
 def write_json(path,value):Path(path).write_text(canonical(value)+'\n',encoding='utf-8')
@@ -29,6 +36,6 @@ def output_directory(out):
         os.rename(stage,out)
 def finish(stage,inputs,**details):
     for p,digest in inputs.items():
-        if sha(Path(p).read_bytes())!=digest:raise ValueError('Input changed: '+p)
+        if sha_file(p)!=digest:raise ValueError('Input changed: '+p)
     report={'schema':2,'inputs':inputs,'files':inventory(stage),'editor_tested':False,'host_tested':False,**details}
     write_json(stage/'manifest.json',report);return report

@@ -5,7 +5,7 @@ description: 编写、解释和修复千星奇域客户端Lua，处理控件API�
 
 # Client Lua
 
-工作对象是千星奇域客户端Lua 5.3和运行时控件。先确认脚本、绑定与调用环境；API用法通过 `qianxing.py knowledge api SYMBOL` 查询签名、原文行和未知／推导项，再读取相关API章节。不能从标准Lua或其他引擎补造宿主能力。
+先确认 Lua 5.3 脚本、绑定与调用环境。通过 MCP `api_lookup` 或 `qianxing.py knowledge api SYMBOL` 查签名、原文行和推导项。编写后用 `client_check` 或 `client check` 检查源码，或通过 `mapping` 选定现有 GIL 中的单个脚本。提供 API 合同可同时核对调用和已声明引用。
 
 按当前任务读取，不预先加载全部资料：
 

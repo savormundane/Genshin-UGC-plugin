@@ -38,6 +38,17 @@ apply --plan先核对计划和所有来源内容，再执行现有补丁，核�
 
 两种中性使用方式：第一种替换选定节点图，允许字段10并保护其它图及字段；第二种精确准备脚本映射区段，通过显式section_from替换字段50。后者会替换整段，须先在来源文件保留所有仍需使用的映射，不能当作自动合并。实际ID、脚本和字段范围由当前工程确定。
 
+## 局部编辑
+
+先用 `project inspect` 确认模板或实例身份和变量名称，用 `native inspect` 确认计时器节点位置。将基底 SHA-256 和相应字段加入 PATCH，再使用上面的 plan/apply 命令。下列两项可独立使用。
+
+| operation | allowed_top_level_fields | 参数与回读 |
+| --- | --- | --- |
+| `set_custom_variable_default` | 模板 `[4]`，实例 `[5]` | `{"op":"set_custom_variable_default","section":4,"entity_id":42,"name":"Count","value":8}`。精确选定已有变量，保留名称与类型描述符。接受对应的 JSON 整数、布尔、有限浮点或字符串。实例需已有该变量的覆盖条目。应用报告列出修改前后的值。 |
+| `set_timer_sequence` | `[10]` | `{"op":"set_timer_sequence","source":"platform.json","timer_id":"timer-a"}`。配置与 `platform check` 共用，须有对应 `native_bindings`，并匹配既有普通图、节点、实体及计时器名。序列写入使用 float32，编码后也须满足间隔并以正时间点结束。连线入参、歧义目标和无法保留的序列项拒绝写入。应用后可执行 `platform check platform.json --gil NEW.gil` 核对。 |
+
+模板默认值用于继承该值的实例，已有覆盖继续生效。计时器编辑保留循环项、连线及挂载。新建计时器逻辑沿用 Graph Code 编译。两项写入均保留目标以外的内容，编辑器和游戏运行结果按实际验证记录。
+
 ## 制作链与迁移重建
 
 produce schema 2的native阶段可以选择base+plan：

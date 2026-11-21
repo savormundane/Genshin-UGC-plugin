@@ -19,6 +19,12 @@ def put(b,n,v,w=2):
     raw=integer(n,v) if w==0 else msg(n,v)
     return b''.join(raw if x[:2]==(n,w) else x[3] for x in fs)+(raw if not hits else b'')
 def rewrite(b,n,fn):return b''.join(msg(n,fn(v)) if a==n and w==2 else raw for a,w,v,raw in fields(b))
+def replace_message(parent,field,old,new):
+    rows=fields(parent)
+    if sum((n,w,v)==(field,2,old) for n,w,v,_ in rows)!=1:
+        raise ValueError('Native message selector must match exactly once: '+str(field))
+    if old==new:return parent
+    return b''.join(msg(n,new) if (n,w,v)==(field,2,old) else raw for n,w,v,raw in rows)
 def ref(b):return get(b,5,0)
 def definition_id(n,definitions):
     concrete=ref(get(n,3,default=b''));generic=ref(get(n,2,default=b''))
@@ -420,6 +426,17 @@ def apply(data,spec,base):
     allowed=spec['allowed_top_level_fields'];before=container(data)[1];logs=[]
     for op in spec['operations']:
         m=model(data);kind=op['op']
+        if kind=='set_custom_variable_default':
+            from native_variables import set_default
+            data,detail=set_default(data,m,op)
+            logs.append({'op':kind,**detail})
+            continue
+        if kind=='set_timer_sequence':
+            from platform_native import set_sequence
+            schema(op,('op','source','timer_id'),('op','source','timer_id'))
+            data,detail=set_sequence(data,m,read_json(resolve(base,op['source'])),op['timer_id'])
+            logs.append({'op':kind,**detail})
+            continue
         if kind in ('replace_graph','append_graph','rewire','optimize','remap_nodes'):
             graph_kind=op.get('graph_kind','ordinary')
             if graph_kind not in('ordinary','composite'):raise ValueError('Unknown graph kind')

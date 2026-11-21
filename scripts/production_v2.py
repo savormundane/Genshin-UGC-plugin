@@ -40,10 +40,12 @@ def produce(path,out,evidence=None):
     if 'ui'in job:
         schema(job['ui'],('spec',),('spec',));ui_spec=read_json(track(resolve(base,job['ui']['spec'])))
     if 'client_check'in job:
-        from client_api import API_PATH,PARSER,PARSER_FILES
+        from client_api import PARSER,PARSER_FILES
+        from knowledge import REGISTRY,sources
         schema(job['client_check'],('spec',),('spec',))
         client_contract=read_json(track(resolve(base,job['client_check']['spec'])))
-        track(API_PATH);track(PARSER/'SOURCE.json');track(PLUGIN/'scripts/client_ast.cjs')
+        track(REGISTRY);track(PLUGIN/sources()['client_api']['path'])
+        track(PARSER/'SOURCE.json');track(PLUGIN/'scripts/client_ast.cjs')
         for name in PARSER_FILES:track(PARSER/name)
         if not environment['node']:raise ValueError('Node is required for client API checks')
     if resource_check is not None and resource_check['check_client']and client_contract is None:
@@ -188,6 +190,10 @@ def produce(path,out,evidence=None):
                 for op in spec['operations']:
                     if 'source'in op:track(resolve(sp.parent,op['source']))
                 raw,r=apply(p.read_bytes(),spec,sp.parent)
+            for operation in r['operations']:
+                for relative,digest in operation.get('platform_sources',{}).items():
+                    source=track(PLUGIN/relative)
+                    if inputs[str(source)]!=digest:raise ValueError('Native edit platform source changed: '+relative)
             write_json(stage/'native-report.json',r);state('native_apply')
         if ui_spec is not None:
             from native_ui import layout

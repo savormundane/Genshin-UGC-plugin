@@ -12,17 +12,19 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 
 两个目录必须已存在且互不包含，输出目录不得与插件源码重叠。也可通过UGC_PROJECT_ROOT和UGC_OUTPUT_ROOT环境变量指定；缺失时拒绝启动。包内mcp.json通过Node启动器读取独立runtime.json中的解释器和目录绑定；直接CLI入口仍可显式传参。宿主实际加载与SDK协议调用分别验证。
 
-协议只走stdout，执行日志走stderr或请求临时日志，不混入协议输出。当前提供十八个具名工具：
+协议只走 stdout，执行日志走 stderr 或请求临时日志。当前提供十九个工具。
 
 | 工具 | 参数与行为 |
 | --- | --- |
 | doctor | 只读检查执行依赖 |
 | capabilities | 返回当前实现和证据边界 |
 | docs_search | version、query：检索固定版本资料 |
-| native_inspect / native_audit / project_inspect | input、sha256：读取或审计指定原生文件 |
-| client_check | input、sha256，可选contract与contract_sha256：编译最终正文及API检查 |
+| nodes_lookup | query、scope、limit 均可选。查询 Graph Code 调用、作用域、签名和端口。scope 为 all、client 或 server，limit 默认 20，范围 1 到 100 |
+| native_inspect / native_audit / project_inspect | input，可选 sha256。读取或审计指定原生文件 |
+| client_check | input，可选 sha256、mapping、contract、contract_sha256。编译 Lua 正文，可选择单个 GIL 映射或检查 API 合同 |
 | produce | spec、sha256、output：执行已有制作链 |
-| native_diff / experiment_compare | input、sha256、other、other_sha256：原生差异或成对观察比较，直接返回报告 |
+| native_diff | input、other，可选 sha256、other_sha256。直接返回原生差异 |
+| experiment_compare | input、sha256、other、other_sha256。直接返回成对观察比较 |
 | native_plan | input、sha256、spec、spec_sha256、output：生成plan.json；source依赖使用显式绝对路径，后续apply继续核对摘要 |
 | simulate | spec、sha256、output：schema 2联合场景；在独立工作进程执行，零断言或必需覆盖不足不提交 |
 | experiment_run | spec、sha256、output：观察实验，开发／保留种子合同不变；失败不提交 |
@@ -31,6 +33,8 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 | native_apply | input、sha256、plan、plan_sha256、output：执行已有摘要绑定原生计划 |
 
 input/spec/plan/contract相对工程根目录，或为工程/输出根内绝对路径。output相对输出根目录，必须是尚不存在的新目录，其父目录须存在。sha256均为对应输入文件原始字节摘要；plan_sha256参数是计划文件摘要，计划内部的语义摘要由原生核心继续核对。
+
+直接读取文件的五项工具会检查显式传入的摘要，省略时由工具计算。结果的 `inputs_sha256` 按 input、other 或 contract 返回实际读取的摘要。编辑既有 GIL 时可把 `inputs_sha256.input` 交给 `native_plan`。配置诊断、计划、实际写入和重建使用各自的必填摘要。
 
 ## CLI与MCP共同合同
 

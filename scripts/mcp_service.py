@@ -8,6 +8,9 @@ from mcp.server.mcpserver import Context
 def server(bridge):
     if version('mcp')!='2.3.0':raise ValueError('MCP service requires pinned mcp==2.3.0')
     app=MCPServer('Genshin-UGC')
+    async def read(operation,ctx,**args):
+        return await bridge.call(operation,{k:v for k,v in args.items() if v is not None},ctx.report_progress)
+
     @app.tool(structured_output=True)
     async def api_lookup(symbol:str,ctx:Context)->dict[str,Any]:
         """Query a source-bound API signature and its declared/derived basis."""
@@ -29,24 +32,27 @@ def server(bridge):
         """Search pinned platform documentation for an explicit version."""
         return await bridge.call('docs_search',{'version':version,'query':query},ctx.report_progress)
     @app.tool(structured_output=True)
-    async def native_inspect(input:str,sha256:str,ctx:Context)->dict[str,Any]:
-        """Read native identities from a digest-bound project file."""
-        return await bridge.call('native_inspect',{'input':input,'sha256':sha256},ctx.report_progress)
+    async def nodes_lookup(ctx:Context,query:str='',scope:str='all',limit:int=20)->dict[str,Any]:
+        """Find Graph Code nodes by name, invocation, or port metadata in all, client, or server scope."""
+        return await bridge.call('nodes_lookup',{'query':query,'scope':scope,'limit':limit},ctx.report_progress)
     @app.tool(structured_output=True)
-    async def native_audit(input:str,sha256:str,ctx:Context)->dict[str,Any]:
+    async def native_inspect(input:str,ctx:Context,sha256:str|None=None)->dict[str,Any]:
+        """Read native identities and return the file digest."""
+        return await read('native_inspect',ctx,input=input,sha256=sha256)
+    @app.tool(structured_output=True)
+    async def native_audit(input:str,ctx:Context,sha256:str|None=None)->dict[str,Any]:
         """Audit final native types and references without modifying input."""
-        return await bridge.call('native_audit',{'input':input,'sha256':sha256},ctx.report_progress)
+        return await read('native_audit',ctx,input=input,sha256=sha256)
     @app.tool(structured_output=True)
-    async def project_inspect(input:str,sha256:str,ctx:Context)->dict[str,Any]:
+    async def project_inspect(input:str,ctx:Context,sha256:str|None=None)->dict[str,Any]:
         """Index native objects and known references; report coverage limits."""
-        return await bridge.call('project_inspect',{'input':input,'sha256':sha256},ctx.report_progress)
+        return await read('project_inspect',ctx,input=input,sha256=sha256)
     @app.tool(structured_output=True)
-    async def client_check(input:str,sha256:str,ctx:Context,contract:str|None=None,contract_sha256:str|None=None)->dict[str,Any]:
-        """Compile final Lua, optionally checking a digest-bound API contract."""
-        args={'input':input,'sha256':sha256}
-        if contract is not None:args.update(contract=contract,contract_sha256=contract_sha256)
-        elif contract_sha256 is not None:raise ValueError('Contract path required')
-        return await bridge.call('client_check',args,ctx.report_progress)
+    async def client_check(input:str,ctx:Context,sha256:str|None=None,contract:str|None=None,
+                           contract_sha256:str|None=None,mapping:str|None=None)->dict[str,Any]:
+        """Compile final Lua, optionally selecting one embedded mapping and checking an API contract."""
+        return await read('client_check',ctx,input=input,sha256=sha256,contract=contract,
+                          contract_sha256=contract_sha256,mapping=mapping)
     @app.tool(structured_output=True)
     async def produce(spec:str,sha256:str,output:str,ctx:Context)->dict[str,Any]:
         """Build a trusted project into a new output directory; cancellation prevents commit."""
@@ -56,9 +62,9 @@ def server(bridge):
         """Apply a reviewed native plan, preserving the original and existing outputs."""
         return await bridge.call('native_apply',{'input':input,'sha256':sha256,'plan':plan,'plan_sha256':plan_sha256,'output':output},ctx.report_progress)
     @app.tool(structured_output=True)
-    async def native_diff(input:str,sha256:str,other:str,other_sha256:str,ctx:Context)->dict[str,Any]:
-        """Run the corresponding CLI core with digest-bound inputs and exclusive outputs."""
-        return await bridge.call('native_diff',{'input':input,'sha256':sha256,'other':other,'other_sha256':other_sha256},ctx.report_progress)
+    async def native_diff(input:str,other:str,ctx:Context,sha256:str|None=None,other_sha256:str|None=None)->dict[str,Any]:
+        """Compare two native files and return their digests without writing an output."""
+        return await read('native_diff',ctx,input=input,sha256=sha256,other=other,other_sha256=other_sha256)
     @app.tool(structured_output=True)
     async def native_plan(input:str,sha256:str,spec:str,spec_sha256:str,output:str,ctx:Context)->dict[str,Any]:
         """Run the corresponding CLI core with digest-bound inputs and exclusive outputs."""

@@ -9,7 +9,15 @@
       "updated_at": null,
       "original_url": null,
       "scope": "client UI",
-      "official_origin_verified": false
+      "official_origin_verified": false,
+      "related_official_document": {
+        "id": "mhtakr07vej4",
+        "source_version": "7.1",
+        "sha256": "501705133bac927f440d141dcdd8d098a280ab919b91e0906a47294470b82772",
+        "official_url": "https://act.mihoyo.com/ys/ugc/tutorial/detail/mhtakr07vej4",
+        "announced_in_guide_on": "2026-09-23",
+        "announcement_url": "https://act.mihoyo.com/ys/ugc/tutorial/detail/mhiufi00ceh4"
+      }
     },
     "conflicts": {
       "path": "references/sources-and-conflicts.md",
@@ -34,7 +42,7 @@
     "platform_catalogue": {
       "path": "scripts/platform-sources.json",
       "kind": "official_mirror_catalogue",
-      "sha256": "8d97d88b1d7f109a1faefc80dd6028def4c992df7a2720ec0c3650d61c6fa5f0",
+      "sha256": "8ddec1e524a1bdd6eec48f54c2c9b9d8021f1f91650f90ee7ac97756e75da674",
       "version": null,
       "updated_at": null,
       "original_url": null,

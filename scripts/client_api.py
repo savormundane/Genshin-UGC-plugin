@@ -1,10 +1,10 @@
 """Lexical Lua binding and source-located host API checks."""
 from pathlib import Path
 import base64,json,re,subprocess,shutil
-from client_api_catalogue import catalogue
-from authoring_io import PLUGIN,sha,schema
+from knowledge import REGISTRY,client_catalogue
+from authoring_io import PLUGIN,sha,schema,read_json
 
-API_PATH=PLUGIN/'skills/client-controls-lua/references/client-controls-api.md'
+API_PATH=PLUGIN/read_json(REGISTRY)['sources']['client_api']['path']
 PARSER=PLUGIN/'vendor/luaparse'
 PARSER_FILES={'luaparse.js':'1c70940a6e46be63c84c285036925715f110bf06cbf058922372fb5c9d060b27',
               'LICENSE':'bedf97319fd3fb51c22dc5a44daf603ca4b2515ae75cae8ac677fb6bd40ec34e'}
@@ -12,10 +12,7 @@ PARSER_FILES={'luaparse.js':'1c70940a6e46be63c84c285036925715f110bf06cbf05892237
 
 def analyze(code,bindings=()):
     """Analyze UTF-8 Lua without running it; unknown facts remain unverified."""
-    raw=code.encode('utf-8');api=catalogue(API_PATH)
-    from knowledge import sources
-    source=sources()['client_api']
-    if source['integrity']!='passed':raise ValueError('Client API source changed; review the knowledge source registry')
+    raw=code.encode('utf-8');api,source=client_catalogue()
     if api['unparsed']:raise ValueError('Unparsed client API signatures: '+str(api['unparsed']))
     provenance=json.loads((PARSER/'SOURCE.json').read_text('utf-8'))
     if provenance['version']!='0.3.1':raise ValueError('Unexpected Lua parser version')

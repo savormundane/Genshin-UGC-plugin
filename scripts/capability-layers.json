@@ -427,6 +427,7 @@
         "cases": [
           "test_platform_profiles.py::PlatformTests.test_versioned_rules_and_rejections",
           "test_platform_profiles.py::PlatformTests.test_sources_cli_diff_and_integrity",
+          "test_platform_profiles.py::PlatformTests.test_multilevel_inheritance_and_rule_review",
           "test_platform_profiles.py::PlatformTests.test_production_and_portable_profile",
           "test_platform_profiles.py::PlatformTests.test_rules72_semantics_and_failures",
           "test_platform_profiles.py::PlatformTests.test_rules72_production_binding"
@@ -434,10 +435,11 @@
       },
       "readback": {
         "implementation": "available",
-        "scope": "Selected Start Timer entity/name/sequence constants bound to final GIL; whole platform artifact unverified",
+        "scope": "Selected Start Timer constants and time-sequence edits bound to final GIL; whole platform artifact unverified",
         "cases": [
           "test_platform_native.py::PlatformNativeTests.test_bound_constants_drift_and_dynamic_inputs",
-          "test_platform_native.py::PlatformNativeTests.test_production_final_binding_and_rollback"
+          "test_platform_native.py::PlatformNativeTests.test_production_final_binding_and_rollback",
+          "test_platform_native.py::PlatformNativeTests.test_timer_patch_cli_produce_and_exact_target"
         ]
       }
     },

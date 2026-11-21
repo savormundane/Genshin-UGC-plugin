@@ -1,6 +1,10 @@
 """Unified native static asset generation; no external fitter process is launched."""
 from pathlib import Path
 import argparse, hashlib, json, math, os, sys, tempfile
+from authoring_io import sha_file
+
+MAX_SOURCE_PIXELS = 16_777_216
+MAX_GRID_PIXELS = 1_048_576
 
 def positive(value,name,maximum=None):
     if type(value)!=int or value<1 or (maximum is not None and value>maximum):
@@ -8,7 +12,7 @@ def positive(value,name,maximum=None):
 
 def procedural(spec):
     from PIL import Image, ImageDraw
-    if not isinstance(spec,dict) or set(spec)!={'schema','size','shapes'} or type(spec['schema'])!=int or type(spec['schema'])!=int or spec['schema']!=1:
+    if not isinstance(spec,dict) or set(spec)!={'schema','size','shapes'} or type(spec['schema'])!=int or spec['schema']!=1:
         raise ValueError('Shape source requires schema=1, size and shapes only')
     size=spec['size']
     if not isinstance(size,list) or len(size)!=2:raise ValueError('size must be [width,height]')
@@ -48,7 +52,7 @@ def lua(value):
 
 def generate(source, output, *, target='auto', width=None, height=None, step=1, colors=96, alpha_min=128, max_controls=None, columns=64, max_bytes=4096, cell=16, fit='auto'):
     from PIL import Image
-    from asset_core import harden, compile_prepared
+    from asset_core import harden, compile_prepared, open_single_image
     source=Path(source).resolve();output=Path(output).resolve()
     if output.exists():raise ValueError('Output exists; select a new directory')
     if target not in ('auto','rectangles','text'):raise ValueError('Unknown target')
@@ -60,21 +64,31 @@ def generate(source, output, *, target='auto', width=None, height=None, step=1, 
     if width is not None:
         if step!=1:raise ValueError('Explicit dimensions cannot be combined with step')
         positive(width,'width');positive(height,'height')
-        if width*height>1048576:raise ValueError('Grid exceeds 1048576 pixels')
-    raw=source.read_bytes();original=hashlib.sha256(raw).hexdigest()
-    if source.suffix.lower()=='.json':image=procedural(json.loads(raw));source_kind='shapes'
+    def grid_size(w,h):
+        size=(width,height) if width is not None else ((w+step-1)//step,(h+step-1)//step)
+        if size[0]*size[1]>MAX_GRID_PIXELS:
+            raise ValueError(f'Grid {size[0]}x{size[1]} exceeds {MAX_GRID_PIXELS} pixels; increase --step or reduce --width and --height')
+        return size
+    if width is not None:grid_size(width,height)
+    if source.suffix.lower()=='.json':
+        raw=source.read_bytes()
+        original=hashlib.sha256(raw).hexdigest()
+        image=procedural(json.loads(raw))
+        source_kind='shapes'
     else:
-        with Image.open(source) as im:
-            if getattr(im,'n_frames',1)!=1:raise ValueError('Extract animation frames explicitly')
+        original=sha_file(source)
+        with open_single_image(source,MAX_SOURCE_PIXELS) as im:
+            size=grid_size(*im.size)
             image=im.convert('RGBA')
         source_kind='image'
     source_size=list(image.size)
-    size=(width,height) if width is not None else (max(1,(image.width+step-1)//step),max(1,(image.height+step-1)//step))
-    if size[0]*size[1]>1048576:raise ValueError('Grid exceeds 1048576 pixels')
+    if source_kind=='shapes':size=grid_size(*source_size)
     image=harden(image,alpha_min).convert('RGBa').resize(size,Image.Resampling.BOX).convert('RGBA')
     image=harden(image,alpha_min)
     preview,data,count=compile_prepared(image,target,colors,columns,max_bytes,cell,fit)
-    if max_controls is not None and count>max_controls:raise ValueError(f'{count} controls exceed budget {max_controls}; change parameters explicitly')
+    if max_controls is not None and count>max_controls:
+        adjust='use a smaller grid or fewer colors' if target=='rectangles' else 'use a smaller grid or review --columns and --max-bytes'
+        raise ValueError(f'{count} controls exceed budget {max_controls} ({target}, {size[0]}x{size[1]} grid); {adjust}')
     if target=='rectangles':payload={'w':size[0],'h':size[1],'maxRects':count,**data};coordinate='top_left_grid_pixels'
     else:
         payload={'tiles':[{'x':t['x'],'y':t['y'],'width':t['width'],'height':t['height'],'fontSize':t['font_size'],'text':t['text']} for t in data['tiles']]};coordinate='top_left_design_units'
@@ -93,7 +107,7 @@ def generate(source, output, *, target='auto', width=None, height=None, step=1, 
             (stage/'source.json').write_bytes(raw)
         files={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in stage.iterdir()}
         (stage/'manifest.json').write_text(json.dumps({'schema':1,'files_sha256':files,'source_sha256':original,'target':target},indent=2)+'\n',encoding='utf-8')
-        if hashlib.sha256(source.read_bytes()).hexdigest()!=original:raise ValueError('Source changed during generation')
+        if sha_file(source)!=original:raise ValueError('Source changed during generation')
         os.rename(stage,output)
     return report
 

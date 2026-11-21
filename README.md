@@ -6,18 +6,18 @@
 
 > 社区个人维护项目，独立于米哈游官方工具。
 
-**当前版本：`4.0.0`** · [下载 Windows x64 ZIP](https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v4.0.0/Genshin-UGC-4.0.0-windows-x64.zip) · [快速安装](#快速安装) · [首次使用](#首次使用) · [完整文档](docs/README.md)
+**当前版本：`4.1.0`** · [下载 Windows x64 ZIP](https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v4.1.0/Genshin-UGC-4.1.0-windows-x64.zip) · [快速安装](#快速安装) · [首次使用](#首次使用) · [完整文档](docs/README.md)
 
 ## 它能帮你解决什么
 
-内置 5 个领域 Skill、统一 CLI（`scripts/qianxing.py`）、18 项本地 MCP 工具，以及随包的离线编译器与软件模拟器：
+内置 5 个领域 Skill、统一 CLI（`scripts/qianxing.py`）、19 项本地 MCP 工具，以及随包的离线编译器与软件模拟器：
 
 | 你手上有 | 可以用它做什么 |
 | --- | --- |
 | **现有千星工程或关卡** | 只读排查实体、模板、组件配置和资源引用，定位断链或版本规则冲突 |
 | **一段玩法逻辑或节点图** | 按真实节点定义写服务端/客户端 Graph Code，核对端口类型、数据流和执行顺序，离线编译导出 `.gia` / `.gil` |
 | **客户端界面或控件 Lua** | 查完真实控件 API 再写交互、输入、生命周期与动画，少踩编造接口的坑，支持多文件装配与语法检查 |
-| **需要对比或修改的 `.gil`** | 对比两份 `.gil` 差异，在已支持的格式中替换指定脚本或修改局部字段，保留未修改的数据并回读确认 |
+| **需要对比或修改的 `.gil`** | 对比两份 `.gil` 差异，在已支持的格式中替换指定脚本、调整已有标量默认值或定时器序列，保留未修改的数据并回读确认 |
 | **PNG 图片或图元素材** | 解码前检查尺寸上限，读取像素后按透明度和控件预算拟合，输出图元、`data.lua` 和预览图 |
 
 共享工具还提供跨客户端协议、多人会话、存档结构和可重建交付的配置与检查。
@@ -39,7 +39,7 @@
 以 **Codex** 为例，在 PowerShell 中运行：
 
 ```powershell
-& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.0.0/install.ps1'))) -Agent codex
+& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.1.0/install.ps1'))) -Agent codex
 ```
 
 使用 **Claude Code** 时，只需把末尾改为 `-Agent claude-code`。
@@ -72,7 +72,7 @@
 
 ## 常见问题与边界
 
-* **应该下载哪个 ZIP？** 在 Release 附件中下载 `Genshin-UGC-4.0.0-windows-x64.zip`。GitHub 自动生成的 Source code 压缩包只供查看源码，目录结构不适用于安装器。
+* **应该下载哪个 ZIP？** 在 Release 附件中下载 `Genshin-UGC-4.1.0-windows-x64.zip`。GitHub 自动生成的 Source code 压缩包只供查看源码，目录结构不适用于安装器。
 * **可以不装客户端插件、只用命令行吗？** 可以。解压完整 ZIP 后按 [独立运行环境](references/runtime-environment.md) 配置专用环境，直接调用 `scripts/qianxing.py`。
 * **本地预览或检查通过后，能直接交付吗？** 本地检查和预览用来提前排掉语法、结构和预算问题；是否能正常导入要进千星奇域编辑器确认，实际手感和渲染表现要进游戏试运行。详见 [运行要求与验证](docs/compatibility.md)。
 * **提示找不到 Python 怎么办？** Windows 上常见原因是命中了微软商店的占位 `python.exe`，直接通过 `-Python '你的 python.exe 真实路径'` 指定即可。

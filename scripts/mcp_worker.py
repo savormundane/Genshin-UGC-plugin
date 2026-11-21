@@ -1,7 +1,7 @@
 """Isolated fixed-operation worker. stdout is never the MCP transport."""
 from pathlib import Path
 import contextlib,json,os,sys
-from authoring_io import PLUGIN,sha,read_json,write_json
+from authoring_io import PLUGIN,sha_file,read_json,write_json
 
 
 def main():
@@ -23,7 +23,7 @@ def main():
     tempfile.tempdir=str(scratch)
     sys.addaudithook(boundary)
     for path,digest in request['inputs'].items():
-        if sha(Path(path).read_bytes())!=digest:raise ValueError('Worker input digest mismatch')
+        if sha_file(path)!=digest:raise ValueError('Worker input digest mismatch')
     with contextlib.redirect_stdout(sys.stderr):
         if op in('doctor','capabilities'):
             import capabilities
@@ -37,6 +37,9 @@ def main():
         elif op=='docs_search':
             from platform_profiles import search
             result={'status':'passed','matches':search(args['version'],args['query'])}
+        elif op=='nodes_lookup':
+            from node_build import catalog
+            result=catalog(**args)
         elif op in('native_inspect','native_audit','project_inspect'):
             raw=Path(args['input']).read_bytes()
             if op=='project_inspect':
@@ -47,7 +50,7 @@ def main():
                 result=(native_core.inspect if op=='native_inspect'else native_core.audit)(raw)
         elif op=='client_check':
             from client_check import inspect
-            result=inspect(args['input'],contract=read_json(args['contract'])if 'contract'in args else None)
+            result=inspect(args['input'],mapping=args.get('mapping'),contract=read_json(args['contract'])if 'contract'in args else None)
         elif op=='native_diff':
             from native_changes import difference
             result=difference(Path(args['input']).read_bytes(),Path(args['other']).read_bytes())

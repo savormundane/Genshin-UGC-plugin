@@ -99,6 +99,7 @@
       "test_native_changes.py::ChangeTests.test_cli_plan_application_and_output_guards",
       "test_native_changes.py::ChangeTests.test_production_plan_portable_and_failure_rollback",
       "test_native_variables.py::VariableTests.test_duplicate_groups_names_and_difference",
+      "test_native_variables.py::VariableTests.test_scalar_patch_cli_and_scope_protection",
       "test_native_graph_variables.py::GraphVariableTests.test_namespaces_types_and_semantic_diff",
       "test_native_graph_variables.py::GraphVariableTests.test_graph_access_contracts_and_consumers"
     ],
@@ -127,10 +128,12 @@
     "platform": [
       "test_platform_profiles.py::PlatformTests.test_versioned_rules_and_rejections",
       "test_platform_profiles.py::PlatformTests.test_sources_cli_diff_and_integrity",
+      "test_platform_profiles.py::PlatformTests.test_multilevel_inheritance_and_rule_review",
       "test_platform_profiles.py::PlatformTests.test_production_and_portable_profile",
       "test_platform_profiles.py::PlatformTests.test_layers_require_matching_cases",
       "test_platform_native.py::PlatformNativeTests.test_bound_constants_drift_and_dynamic_inputs",
       "test_platform_native.py::PlatformNativeTests.test_production_final_binding_and_rollback",
+      "test_platform_native.py::PlatformNativeTests.test_timer_patch_cli_produce_and_exact_target",
       "test_platform_profiles.py::PlatformTests.test_rules72_semantics_and_failures",
       "test_platform_profiles.py::PlatformTests.test_rules72_production_binding"
     ],
@@ -330,6 +333,8 @@
       "test_knowledge_diagnosis.py::ReliabilityTests.test_two_asset_and_diagnostic_configs"
     ],
     "asset_fit": [
+      "test_audit_remediation.py::AuditTests.test_fitting_transparency_layers_resume_and_roundtrip",
+      "test_audit_remediation.py::AuditTests.test_region_refinement_and_empty_input",
       "test_asset_fit_v2.py::FitTests.test_search_resume_and_budget",
       "test_asset_fit_v2.py::FitTests.test_initial_rotation_region_and_cost_tie",
       "test_asset_fit_v2.py::FitTests.test_batch_initial_resume_atomic",

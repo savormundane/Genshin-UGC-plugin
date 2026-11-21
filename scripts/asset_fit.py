@@ -2,7 +2,8 @@
 from pathlib import Path
 import argparse, json, math, random
 from PIL import Image, ImageDraw, ImageChops, ImageStat
-from authoring_io import read_json, write_json, sha, canonical, output_directory, finish
+from authoring_io import read_json, write_json, sha, sha_file, canonical, output_directory, finish
+from asset_core import open_single_image
 from asset_pipeline import lua
 
 MAX_FIT_PIXELS = 262_144
@@ -148,9 +149,10 @@ def rectangle_data(image):
 def build(source,spec_path,out,resume=None,steps=None,initial=None):
     if resume and initial:raise ValueError('Choose resume or initial, not both')
     source=Path(source).resolve();sp=Path(spec_path).resolve();cfg=parameters(read_json(sp))
-    inputs={str(source):sha(source.read_bytes()),str(sp):sha(sp.read_bytes())}
+    inputs={str(sp):sha_file(sp)}
     # A JSON source is an explicit layer manifest. Paths are relative to it, never discovered.
     if source.suffix.lower()=='.json':
+        inputs[str(source)]=sha_file(source)
         batch=read_json(source)
         if set(batch)!={'schema','layers'} or batch['schema']!=1 or not isinstance(batch['layers'],list) or not batch['layers']:raise ValueError('Expected schema 1 layers manifest')
         layers=batch['layers']
@@ -160,17 +162,13 @@ def build(source,spec_path,out,resume=None,steps=None,initial=None):
         if set(layer)!={'name','source'} or not isinstance(layer['name'],str) or not layer['name'].isascii() or not layer['name'].replace('-','').replace('_','').isalnum() or layer['name'] in names:raise ValueError('Unique simple layer names required')
         names.add(layer['name']);path=(source.parent/layer['source']).resolve()
         if not path.is_relative_to(source.parent):raise ValueError('Layer dependency outside source directory')
-        inputs[str(path)]=sha(path.read_bytes())
-        with Image.open(path) as im:
-            width, height = im.size
-            if width * height > MAX_FIT_PIXELS:
-                raise ValueError(f'{path.name}: {width}x{height} exceeds {MAX_FIT_PIXELS} pixels; preprocess explicitly')
-            if getattr(im,'n_frames',1)!=1:raise ValueError('Use explicit layers for animated input')
+        if str(path) not in inputs:inputs[str(path)]=sha_file(path)
+        with open_single_image(path,MAX_FIT_PIXELS) as im:
             image=im.convert('RGBA')
         items.append((layer['name'],image,inputs[str(path)]))
     previous=read_json(resume) if resume else {};seed_data=read_json(initial) if initial else {}
     for extra in (resume,initial):
-        if extra:inputs[str(Path(extra).resolve())]=sha(Path(extra).read_bytes())
+        if extra:inputs[str(Path(extra).resolve())]=sha_file(extra)
     initial_data=previous.get('initial_data',{}) if resume else seed_data
     version=cfg.get('schema',1)
     count=len(items);total=cfg.get('max_total_controls',count*cfg['max_controls'])

@@ -18,3 +18,5 @@ description: 检查、比较和安全修改千星奇域GIL/GIA容器，处理脚
 | 产物失配和重建 | [交付排障](../../references/workflows/qianxing-release-integrity-triage/README.md)、[portable](../../references/portable-delivery.md) |
 
 跨GIL迁移仅限工具明确支持的身份及引用，不直接复制带旧引用的字段，不承诺全工程ID重映射。最终文件审计覆盖新增消费者和挂载；编译回读、模型、编辑器导入和宿主运行按[验证边界](../../references/validation.md)分别报告。
+
+使用 MCP 编辑现有工程时，先以 `project_inspect` 读取对象，把 `inputs_sha256.input` 用作 `native_plan` 的基底摘要。审阅计划后，以同一基底和计划文件的摘要调用 `native_apply`。

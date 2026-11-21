@@ -9,26 +9,41 @@ DOCUMENTS={'creature':'mh74ae9fsg8i','movers':'mhnmcmipncrg','timer':'mhufb90zbn
            'photo_button':'mhtpwgitsigc','combat_text_filter':'mh3lmk9tmrky','prefab_group':'mhzhzb9rw0uy'}
 
 
-def documents(version):
-    index=read_json(CATALOGUE)
+def selection(version):
+    raw=CATALOGUE.read_bytes()
+    index=json.loads(raw.decode('utf-8-sig'))
     if index['schema']!=1:raise ValueError('Unknown platform source catalogue schema')
-    if not isinstance(version,str)or version not in index['profiles']:raise ValueError('Unknown platform version: '+str(version))
-    base=index['profiles'][version]['base'];result={}
+    profiles=index['profiles']
+    if not isinstance(version,str)or version not in profiles:raise ValueError('Unknown platform version: '+str(version))
+    lineage=[];current=version
+    while current is not None:
+        if not isinstance(current,str)or current not in profiles:
+            raise ValueError(f'Missing or invalid platform parent: {current!r} in {version}')
+        if current in lineage:raise ValueError('Platform inheritance cycle: '+' -> '.join([*lineage,current]))
+        lineage.append(current)
+        if 'base' not in profiles[current]:raise ValueError('Platform profile has no parent declaration: '+current)
+        current=profiles[current]['base']
+    result={}
     for ident,row in index['documents'].items():
-        selected=version if version in row['versions']else base
-        if selected not in row['versions']:continue
+        selected=next((v for v in lineage if v in row['versions']),None)
+        if selected is None:continue
         source=row['versions'][selected]
         result[ident]={**{k:row[k]for k in('id','title','official_url')},**source,
                        'requested_version':version,'source_version':selected,
                        'knowledge_status':'documented','editor':'not_checked','host':'not_checked',
                        'applicability':'inherited_source_not_revalidated' if selected!=version else 'selected_document_profile',
                        'inherited':selected!=version,'update_entry':ident in index['update_documents']}
-    return result
+    return index,lineage,result,sha(raw)
+
+
+def documents(version):
+    return selection(version)[2]
 
 
 def _content(record):
     path=(PLUGIN/record['path']).resolve()
     if not path.is_relative_to(PLUGIN.resolve())or path.is_symlink():raise ValueError('Invalid platform document path')
+    if not path.is_file():raise ValueError('Selected platform document file missing: '+record['id'])
     raw=path.read_bytes()
     if sha(raw)!=record['sha256']:raise ValueError('Platform source digest changed: '+record['id'])
     return {**record,'content':raw.decode('utf-8-sig')}
@@ -69,26 +84,47 @@ def difference(before,after,ident=None):
             'counts':{s:sum(r['status']==s for r in rows)for s in('added','removed','changed','unchanged')},'documents':rows}
 
 
-def profile(version,mode):
-    documents(version)
+def _profile(version,mode):
     if mode not in('classic','beyond'):raise ValueError('Unknown platform mode: '+str(mode))
-    return {'schema':2,'version':version,'mode':mode,'source_catalogue_sha256':sha(CATALOGUE.read_bytes()),
-            'limits':{'creature_skills':50 if version=='7.1'else 100,'timers_per_entity':100,'timer_sequence':100,
-                      'combat_filter_templates':None if version=='7.1'else 100,'combat_filters_per_template':None if version=='7.1'else 100,
-                      'classic_photo_buttons':2 if version=='7.2'and mode=='classic'else None},
+    from platform_rules72 import SOURCES
+    index,lineage,docs,digest=selection(version)
+    dependencies={k:(v,) for k,v in DOCUMENTS.items()}|SOURCES
+    for kind in ('timer','combat_text_filter'):
+        dependencies[kind]=(*dependencies[kind],DOCUMENTS['creature'])
+    limits={};mode_limits={};rules={};mover_conflicts={}
+    for revision in reversed(lineage):
+        settings=index['profiles'][revision]
+        limits.update(settings.get('limits',{}))
+        mode_limits.update(settings.get('mode_limits',{}).get(mode,{}))
+        mover_conflicts.update(settings.get('conflicts',{}).get('mover_pairs',{}))
+        decisions=settings.get('rules',{})
+        for kind,ids in dependencies.items():
+            if kind in decisions:
+                decision=decisions[kind]
+                if type(decision)is not bool:raise ValueError('Platform rule decision must be boolean: '+kind)
+                rules[kind]='enabled' if decision else 'disabled'
+            elif rules.get(kind)=='enabled' and any(revision in index['documents'][i]['versions'] for i in ids if i in index['documents']):
+                rules[kind]='review_required'
+    context={'schema':2,'version':version,'mode':mode,'source_catalogue_sha256':digest,
+            'limits':limits|mode_limits,
             'document_inheritance':'unmodified entries retain their recorded source version',
             'native_format_version':'not_calibrated_by_this_profile','editor':'not_checked','host':'not_checked'}
+    return context,rules,mover_conflicts,dependencies,docs
+
+
+def profile(version,mode):
+    return _profile(version,mode)[0]
 
 
 def check(spec):
     schema(spec,('schema','version','mode','objects','native_bindings'),('schema','version','mode','objects'))
-    context=profile(spec['version'],spec['mode']);version=spec['version'];limits=context['limits']
+    context,rules,mover_conflicts,dependencies,docs=_profile(spec['version'],spec['mode']);limits=context['limits']
     objects=spec['objects']
     if not isinstance(objects,list):raise ValueError('Platform objects must be a list')
     fields={'creature':('skill_count',),'movers':('active',),'timer':('entity','sequence'),
             'photo_button':('trigger','cooldown_origin'),'combat_text_filter':('entity_kind','filters_per_template'),
             'prefab_group':('members',)}
-    from platform_rules72 import FIELDS,SOURCES,check as check72
+    from platform_rules72 import FIELDS,check as check72
     fields.update(FIELDS)
     checks=[];seen=set();sources={};timers={};photos=[]
     def result(obj,rule,passed,detail):
@@ -98,20 +134,17 @@ def check(spec):
         kind=obj['kind'];schema(obj,('id','kind',*fields[kind]),('id','kind',*fields[kind]))
         if not isinstance(obj['id'],str)or not obj['id'].strip()or obj['id']in seen:raise ValueError('Unique nonempty platform object IDs required')
         seen.add(obj['id'])
-        if kind in FIELDS:
-            if version!='7.2':
-                checks.append({'object':obj['id'],'rule':kind,'status':'not_checked','detail':'Rule unavailable in selected profile'})
-            else:
-                for ident in SOURCES[kind]:
-                    source=show(version,ident);source.pop('content');sources[ident]=source
-                checks.extend(check72(obj,context['mode']))
+        if rules.get(kind)!='enabled':
+            detail='Rule requires review for the selected source version' if rules.get(kind)=='review_required' else 'Rule unavailable in selected profile'
+            checks.append({'object':obj['id'],'rule':kind,'status':'not_checked','detail':detail})
             continue
-        if kind in('photo_button','combat_text_filter','prefab_group')and version!='7.2':
-            checks.append({'object':obj['id'],'rule':kind,'status':'not_checked','detail':'Rule unavailable in selected profile'});continue
-        ids=[DOCUMENTS[kind]]
-        if kind in('timer','combat_text_filter'):ids.append('mh74ae9fsg8i')
-        for ident in ids:
-            source=show(version,ident);source.pop('content');sources[ident]=source
+        for ident in dependencies[kind]:
+            if ident not in docs:raise ValueError('Platform rule source absent: '+ident)
+            if ident not in sources:
+                _content(docs[ident]);sources[ident]=docs[ident]
+        if kind in FIELDS:
+            checks.extend(check72(obj,context['mode']))
+            continue
         if kind=='creature':
             count=obj['skill_count']
             if type(count)!=int or count<0:raise ValueError('skill_count must be a nonnegative integer')
@@ -123,8 +156,9 @@ def check(spec):
             # Keep that conflict visible instead of choosing the permissive row.
             for i,a in enumerate(active):
                 for b in active[i+1:]:
-                    if version=='7.1'and 'point'in(a,b)and any(x in(a,b)for x in('rotation','target_rotation')):
-                        checks.append({'object':obj['id'],'rule':'movers.compatibility','status':'not_checked','detail':{'types':[a,b],'reason':'7.1 prose/table conflict'}});continue
+                    reason=mover_conflicts.get('/'.join(sorted((a,b))))
+                    if reason:
+                        checks.append({'object':obj['id'],'rule':'movers.compatibility','status':'not_checked','detail':{'types':[a,b],'reason':reason}});continue
                     compatible='linear'in(a,b)or set((a,b))=={'path','point'}
                     result(obj,'movers.compatibility',compatible,{'types':[a,b]})
             if len(active)<2:result(obj,'movers.compatibility',True,{'types':active})
@@ -135,7 +169,8 @@ def check(spec):
                 raise ValueError('Timer sequence needs finite nonnegative numbers')
             timers.setdefault(entity,[]).append(obj)
             result(obj,'timer.sequence_limit',len(sequence)<=limits['timer_sequence'],{'actual':len(sequence),'maximum':limits['timer_sequence']})
-            result(obj,'timer.interval',all(b>a and b-a>=.03-1e-12 for a,b in zip(sequence,sequence[1:])),{'minimum_seconds':.03})
+            minimum=limits['timer_interval_seconds']
+            result(obj,'timer.interval',all(b>a and b-a>=minimum-1e-12 for a,b in zip(sequence,sequence[1:])),{'minimum_seconds':minimum})
         elif kind=='photo_button':
             photos.append(obj)
             result(obj,'photo_button.trigger',obj['trigger']=='photo_close',{'required':'photo_close'})
@@ -144,8 +179,10 @@ def check(spec):
             counts=obj['filters_per_template']
             if not isinstance(counts,list)or any(type(v)!=int or v<0 for v in counts):raise ValueError('Filter counts must be nonnegative integers')
             result(obj,'combat_filter.player_only',obj['entity_kind']=='player',{'required':'player'})
-            result(obj,'combat_filter.template_limit',len(counts)<=100,{'actual':len(counts),'maximum':100})
-            result(obj,'combat_filter.item_limit',all(v<=100 for v in counts),{'actual':counts,'maximum':100})
+            limit=limits['combat_filter_templates']
+            result(obj,'combat_filter.template_limit',len(counts)<=limit,{'actual':len(counts),'maximum':limit})
+            limit=limits['combat_filters_per_template']
+            result(obj,'combat_filter.item_limit',all(v<=limit for v in counts),{'actual':counts,'maximum':limit})
         elif kind=='prefab_group':
             members=obj['members']
             if not isinstance(members,list)or not members:raise ValueError('Prefab group members required')
@@ -155,8 +192,10 @@ def check(spec):
                 if not isinstance(member['id'],str)or not member['id']or member['id']in names or type(member['dynamic'])!=bool:raise ValueError('Unique member IDs and boolean dynamic flag required')
                 names.add(member['id'])
             result(obj,'prefab_group.dynamic_only',all(m['dynamic']for m in members),{'members':[m['id']for m in members]})
-    for entity,items in timers.items():result(items[0],'timer.entity_limit',len(items)<=100,{'entity':entity,'actual':len(items),'maximum':100})
-    if photos and context['mode']=='classic':result(photos[0],'photo_button.classic_limit',len(photos)<=2,{'actual':len(photos),'maximum':2})
+    limit=limits['timers_per_entity']
+    for entity,items in timers.items():result(items[0],'timer.entity_limit',len(items)<=limit,{'entity':entity,'actual':len(items),'maximum':limit})
+    limit=limits['classic_photo_buttons']
+    if photos and limit is not None:result(photos[0],'photo_button.classic_limit',len(photos)<=limit,{'actual':len(photos),'maximum':limit})
     if 'native_bindings'in spec:
         bindings=spec['native_bindings']
         if not isinstance(bindings,dict)or not bindings:raise ValueError('Nonempty native_bindings object required')

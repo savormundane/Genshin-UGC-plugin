@@ -2,10 +2,50 @@
   "schema": 1,
   "profiles": {
     "7.1": {
-      "base": null
+      "base": null,
+      "limits": {
+        "creature_skills": 50,
+        "timers_per_entity": 100,
+        "timer_sequence": 100,
+        "timer_interval_seconds": 0.03,
+        "combat_filter_templates": null,
+        "combat_filters_per_template": null,
+        "classic_photo_buttons": null
+      },
+      "rules": { "creature": true, "movers": true, "timer": true },
+      "conflicts": {
+        "mover_pairs": {
+          "point/rotation": "7.1 prose/table conflict",
+          "point/target_rotation": "7.1 prose/table conflict"
+        }
+      }
     },
     "7.2": {
-      "base": "7.1"
+      "base": "7.1",
+      "limits": {
+        "creature_skills": 100,
+        "combat_filter_templates": 100,
+        "combat_filters_per_template": 100
+      },
+      "mode_limits": { "classic": { "classic_photo_buttons": 2 } },
+      "rules": {
+        "creature": true,
+        "movers": true,
+        "timer": true,
+        "photo_button": true,
+        "combat_text_filter": true,
+        "prefab_group": true,
+        "disturbance": true,
+        "push_collision": true,
+        "filter_semantics": true,
+        "camera_takeover": true,
+        "clear_velocity": true,
+        "translations": true,
+        "arrival": true
+      },
+      "conflicts": {
+        "mover_pairs": { "point/rotation": null, "point/target_rotation": null }
+      }
     }
   },
   "update_documents": [

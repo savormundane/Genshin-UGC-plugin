@@ -12,9 +12,11 @@ python scripts/qianxing.py docs diff --from 7.1 --to 7.2 --id mhnmcmipncrg
 python scripts/qianxing.py platform profile --version 7.2 --mode classic
 ```
 
-版本必须显式选择7.1或7.2，模式为classic（经典）或beyond（超限）。未知版本、模式或文档ID拒绝。search按标题和正文匹配所有查询词，--limit为1至100；show返回正文；diff按文档ID和实际内容摘要比较，指定--id时附全文差异。
+显式选择已登记的平台版本，目前有 7.1 和 7.2。模式为 classic（经典）或 beyond（超限）。search 按标题和正文匹配所有查询词，--limit 为 1 至 100。show 返回正文。diff 按文档 ID 和内容摘要比较，指定 --id 时附全文差异。
 
-scripts/platform-sources.json将文档ID映射到包内原文、来源类型、官方链接和摘要。7.2未更新的条目继承7.1资料，结果同时提供requested_version、source_version和inherited，不能将继承条目当作重新核实过的7.2接口。读取正文时检查摘要；源文件改变而目录未更新会失败。差异包括排版变化，不自动推断节点签名或公式改变。
+scripts/platform-sources.json 将文档 ID 映射到包内原文、来源类型、官方链接和摘要。资料沿 `base` 逐级回溯，取最近版本的声明。结果提供 requested_version、source_version 和 inherited。读取已选正文时检查文件和摘要，父级缺失或循环直接报错。diff 两侧保留来源，正文摘要相同时仍为 unchanged。正文差异包括排版变化。
+
+新版本通过 `limits`、`mode_limits`、`conflicts` 记录规则差异。默认沿用已有规则。覆盖了某项规则的依据时，在 `rules` 中将该规则设为 true 以登记审定后的沿用或修订，或设为 false 停用。缺少审定记录时，该规则在新版本返回 not_checked。
 
 ## 配置合同
 

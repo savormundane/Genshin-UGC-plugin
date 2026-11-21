@@ -17,12 +17,18 @@ def sources():
                      'actual_sha256':actual,'editor':'not_checked','host':'not_checked'}
     return result
 
-def api(symbol):
+def client_catalogue(source=None):
     from client_api_catalogue import catalogue
-    if not isinstance(symbol,str) or not symbol.strip():raise ValueError('Nonempty API symbol required')
-    records=sources();source=records['client_api']
+    if source is None:source=sources()['client_api']
     if source['integrity']!='passed':raise ValueError('Client API source changed; review source registry before use')
-    cat=catalogue(PLUGIN/source['path']);matches=[]
+    parsed=catalogue(PLUGIN/source['path'])
+    if parsed['sha256']!=source['sha256']:raise ValueError('Client API source changed during parsing')
+    return parsed,source
+
+
+def api(symbol):
+    if not isinstance(symbol,str) or not symbol.strip():raise ValueError('Nonempty API symbol required')
+    cat,source=client_catalogue();matches=[]
     for name,row in cat['methods'].items():
         if name==symbol or symbol.casefold() in name.casefold():
             basis=row['parameter_basis']+[row['return_basis']]
@@ -41,11 +47,10 @@ def api(symbol):
             'scope':'bundled API contract; documented is not editor or host verified','editor':'not_checked','host':'not_checked'}
 
 def snapshot():
-    from client_api_catalogue import catalogue
     records=sources()
     if any(r['integrity']!='passed' for r in records.values()):raise ValueError('Knowledge source changed; review registry before snapshot')
     return {'schema':1,'kind':'knowledge_snapshot','sources':records,
-            'client_api':catalogue(PLUGIN/records['client_api']['path']),
+            'client_api':client_catalogue(records['client_api'])[0],
             'scope':'bundled source snapshot; no new official, editor or host verification'}
 
 def difference(before,after):

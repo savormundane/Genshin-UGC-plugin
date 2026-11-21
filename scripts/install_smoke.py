@@ -7,6 +7,7 @@ import os
 import subprocess
 import tempfile
 from mcp import Client, StdioServerParameters
+from mcp_bridge import OPERATIONS
 
 
 async def check(config, node, adapter=None):
@@ -32,8 +33,12 @@ async def check(config, node, adapter=None):
     params = StdioServerParameters(command=command, args=args, env=env, cwd=cwd)
     async with Client(params) as client:
         listed = await client.list_tools()
-        if len(listed.tools) != 18:
-            raise ValueError('Expected 18 MCP tools')
+        tools = {tool.name for tool in listed.tools}
+        if tools != set(OPERATIONS):
+            raise ValueError('MCP tools differ from the bundled operation list')
+        nodes = await client.call_tool('nodes_lookup', {'query': '启动定时器', 'scope': 'server'})
+        if nodes.is_error or not nodes.structured_content['result']['nodes']:
+            raise ValueError('MCP node lookup failed')
         doctor = await client.call_tool('doctor', {})
         if doctor.is_error or doctor.structured_content['status'] != 'passed':
             raise ValueError(f'MCP worker cannot diagnose the configured runtime: {doctor.structured_content!r}')
@@ -51,7 +56,7 @@ async def check(config, node, adapter=None):
                          'let p=s.playGet({paint:true});let r=renderPaintPng(p.paint,p.canvasWidth,p.canvasHeight);'
                          's.playStop();if(r.data.length<100)throw Error("empty PNG");console.log(r.data.length);', encoding='utf-8')
         subprocess.run([node, str(probe)], check=True)
-    print(json.dumps({'stdio': 'passed', 'tools': 18, 'software_png': 'passed',
+    print(json.dumps({'stdio': 'passed', 'tools': len(tools), 'software_png': 'passed',
                       'agent_host': 'not_checked', 'editor': 'not_checked', 'game_host': 'not_checked'}))
 
 

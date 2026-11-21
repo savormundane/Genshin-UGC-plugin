@@ -5,7 +5,7 @@ description: 生成、转换和检查千星奇域静态素材及图元数据，�
 
 # Assets
 
-先确定输入、坐标空间、输出表示和项目预算。默认复用 [内置素材核心](../../references/asset-generation.md) 的 `qianxing.py assets generate`，按需使用 `assets check/diff`。
+先确定输入、坐标空间、输出表示和项目预算。普通位图和参数图形用 [内置素材核心](../../references/asset-generation.md) 的 `assets generate`，需要分层配额、误差目标或续算时用 `assets fit`。按需执行 `assets check/diff`，将生成的 `data.lua` 接入工程已有控件模板。
 
 | 任务 | 资料 |
 | --- | --- |

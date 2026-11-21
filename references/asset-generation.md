@@ -10,11 +10,11 @@ python scripts/qianxing.py assets generate SOURCE.png --out NEW_DIRECTORY --targ
 python scripts/qianxing.py assets generate SOURCE.json --out NEW_DIRECTORY --target rectangles
 ```
 
-需要Python与Pillow。step为下采样步长；width/height成对给定时直接指定输出网格，不能与非默认step同时使用。所有预算来自当前任务，不把示例当平台限制。原图只读，多帧图先显式拆帧。网格上限1048576像素是本工具资源保护值。
+需要 Python 与 Pillow。step 为下采样步长。width 与 height 成对指定输出网格，使用时 step 须为默认值。单帧位图最多 16,777,216 源像素，输出网格最多 1,048,576 像素。工具在解码前检查两项。超限时按提示预处理源图或调整网格，多帧图先显式拆帧。控件预算由当前任务提供。
 
 ## 共同处理与输出
 
-先alpha阈值硬化、预乘BOX缩放、再硬化；对不透明像素做前景调色板量化。矩形和富文本使用完全相同的量化参考网格。矩形采用水平行程与纵向无损合并；富文本按连续不透明区域逐行分块，用color标签合并同色字符，每块按列数和UTF-8字节数双重限制。max-controls限制实际生成矩形/文本框总数，超限拒绝提交整个输出目录。
+先按 alpha 阈值硬化，经预乘 BOX 缩放后再次硬化，再量化不透明前景。矩形与富文本共用量化参考网格。矩形采用行程和纵向合并。富文本按不透明行分块，受列数和 UTF-8 字节双重限制。max-controls 限制实际生成数量。超限会报告当前网格和控件数量，可缩小网格或减少矩形颜色，富文本可按控件容量调整分块限制。需要误差目标、分层配额或恢复检查点时用 [assets fit](asset-fit.md)。
 
 交付统一为asset.json（源摘要、坐标、格式和数据）、data.lua（当前格式运行数据）、preview.png（参考网格）、report.json（参数/预算/证据）和manifest.json（各产物摘要）。参数化源另保留source.json。采用临时生成后提交新目录，拒绝覆盖；不启动外部进程、不联网、不修改安装目录。
 
