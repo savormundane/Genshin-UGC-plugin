@@ -36,6 +36,6 @@
 
 日常修改可以先合入 `main`；有值得用户安装的功能或修复时，再由维护者发布版本。[版本记录](CHANGELOG.md)记录用户可感知的变化。Release 压缩包、版本标签、插件 manifest、安装命令及回退说明应相互一致。项目采用手动发布。
 
-第一次参与 GitHub 项目，可以先看[日常维护与 GitHub](docs/contributing/github-workflow.md)；打包操作见[打包与发布](docs/contributing/maintenance.md)。
+开发入口见[项目结构](docs/contributing/architecture.md)，正式版本打包见[打包与发布](docs/contributing/maintenance.md)。
 
 有关作者与第三方内容的现有记录见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

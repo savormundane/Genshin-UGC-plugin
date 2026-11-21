@@ -9,7 +9,7 @@ Genshin-UGC 将千星奇域资料、Agent 工作方式和本地文件工具组�
 | 第一次了解和安装 | [README](../../README.md)、[使用文档](../README.md) | 项目价值、安装步骤、使用示例和常见问题放 `docs/`。 |
 | Agent 接到创作任务 | [五领域路由](../../references/skill-map.md) | `skills/` 选择工作领域，`references/` 提供按需读取的技术资料。 |
 | 开发者修改工具 | [脚本导航](../../scripts/README.md) | `scripts/` 的 CLI、MCP 和共用实现。 |
-| 维护者整理方向和发布 | [贡献入口](README.md)、[发布流程](maintenance.md) | 日常规则放 `docs/contributing/`，阶段审查与维护记录放 `docs/maintenance/`。 |
+| 开发者维护和发布 | [开发者文档](README.md)、[发布流程](maintenance.md) | 贡献、构建与发布说明放 `docs/contributing/`。 |
 
 ## 顶层目录的职责
 
@@ -22,7 +22,6 @@ Genshin-UGC 将千星奇域资料、Agent 工作方式和本地文件工具组�
 | `vendor/` | 随包第三方工具和固定依赖：Ayaya 用于节点及文件工具，Beyond 用于可选软件模拟，luaparse 用于 Lua 解析。保留各自的来源和摘要清单。 |
 | `runtime/` | 当前仅保存 `res/lua_template.lua` 模板；并非安装后生成的 Python 虚拟环境。 |
 | `assets/` | 插件图标与标识，不保存具体游戏的美术素材。 |
-| `examples/` | 可以公开复用的中性输入、制作说明与真实示例产物；与个人游戏项目分开。 |
 | `plugin.json`、`mcp.json` | 通用插件声明与 MCP 入口。 |
 | `.codex-plugin/`、`.claude-plugin/`、`.mcp.json` | 客户端适配声明；与根清单共用五个 Skills 和本地工具。 |
 | `install.ps1`、`distribution.json` | Windows 安装入口与发行文件筛选规则。 |
@@ -59,6 +58,6 @@ Genshin-UGC 将千星奇域资料、Agent 工作方式和本地文件工具组�
 
 用户操作说明改 `docs/`；Agent 的技术路线改 `references/`；领域发现和任务分工改对应 `SKILL.md`；工具行为改 `scripts/`。更新平台原文或 API 正文时，同时核对来源登记与摘要，不能仅修改展示文字。
 
-`vendor/beyond/node_modules/` 是随包 Windows 模拟器的固定依赖子集。Python 依赖由安装器按锁文件建立独立环境。ZIP、虚拟环境和日常运行报告放在仓库外；经过整理的公共示例产物随 `examples/` 保存。`.gitattributes` 保留文件字节，包括已有换行；不要在整理目录时顺带统一全部文件格式。[运行环境](../runtime-environment.md) · [第三方声明](../../THIRD_PARTY_NOTICES.md)
+`vendor/beyond/node_modules/` 是随包 Windows 模拟器的固定依赖子集。Python 依赖由安装器按锁文件建立独立环境。ZIP、虚拟环境和日常运行报告放在仓库外；`.gitattributes` 保留文件字节，包括已有换行；不要在整理目录时顺带统一全部文件格式。[运行环境](../runtime-environment.md) · [第三方声明](../../THIRD_PARTY_NOTICES.md)
 
 检查按实际影响选择，见[开发指南](development.md)。文档导航调整不需要触发完整安装、模拟器或游戏宿主回归。

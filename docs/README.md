@@ -1,17 +1,15 @@
 # 使用文档
 
-从你要完成的任务开始。安装和日常使用看这里；平台 API 与内部制作合同在[技术参考](../references/README.md)，维护仓库看[维护者文档](contributing/README.md)。
+从你要完成的任务开始。安装和日常使用看这里；平台 API 与内部制作合同在[技术参考](../references/README.md)，参与开发看[开发者文档](contributing/README.md)。
 
 ## 第一次来
 
 | 你处在哪一步 | 阅读入口 |
 | --- | --- |
 | 还没安装 | [安装、更新与卸载](installation.md)：选客户端，准备工程与输出目录 |
-| 已安装，想先试一下 | [首次使用](getting-started.md)：没有现成工程也能查询节点，再做一个素材任务 |
+| 已安装，想先试一下 | [首次使用](getting-started.md)：没有现成工程也能查询节点，之后按实际需求选择制作任务 |
 | 想知道需要哪些软件、支持到什么程度 | [运行要求与支持范围](compatibility.md) |
 | 不认识 GIL、Graph Code 或 MCP | [术语表](glossary.md) |
-
-想先看真实输出，打开[完整素材案例](../examples/hello-assets/README.md)：输入图片、制作命令、9 个矩形、Lua 与预览都在同一个目录。
 
 ## 按任务查找
 
@@ -33,4 +31,4 @@
 
 [开发路线](../ROADMAP.md)说明当前重点；[Issues](https://github.com/savormundane/Genshin-UGC-plugin/issues)记录具体任务；[版本记录](../CHANGELOG.md)说明已经交付的变化。路线图里的计划不代表当前版本已经支持。
 
-[返回首页](../README.md) · [参与贡献](../CONTRIBUTING.md) · [维护者文档](contributing/README.md)
+[返回首页](../README.md) · [参与贡献](../CONTRIBUTING.md) · [开发者文档](contributing/README.md)

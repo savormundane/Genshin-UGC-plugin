@@ -1,68 +1,30 @@
 # 开发路线
 
-Genshin-UGC 的目标是让创作者把时间用在玩法和作品上：助手能找到适用的平台知识，利用真实工程对象制作可继续编辑的成果，并在遇到不支持的能力时给出明确的下一步。
+Genshin-UGC 的目标是让创作者借助 AI 完成真正可继续编辑的千星奇域作品：基于平台资料理解工程、实现逻辑、生成或修改文件，并清楚说明尚需在编辑器或游戏内完成的步骤。
 
-本页记录方向和优先顺序。具体任务及进度以 [Issues](https://github.com/savormundane/Genshin-UGC-plugin/issues) 为准，已交付内容看 [CHANGELOG](CHANGELOG.md)。以下方向不构成发布日期或版本承诺。
+这里记录能力方向，不是版本承诺。已发布功能以 [README](README.md)、[使用文档](docs/README.md)和[Releases](https://github.com/savormundane/Genshin-UGC-plugin/releases)为准。
 
 ## 当前基础
 
-| 已有能力 | 现有范围与入口 |
-| --- | --- |
-| 五个领域协作 | 工程检查、Graph Code、Client Lua、GIL、Assets；多人、存储、动画、协议作为共享能力。[职责说明](references/skill-map.md) |
-| 按平台版本查资料 | 来源索引、版本继承、节点目录、客户端 API 及声明配置规则。[平台资料](references/platform-profiles.md) |
-| 从任务到本地文件 | 工程诊断、节点编译、Lua 装配、GIL 局部修改、图像拟合和制作编排。[使用示例](docs/examples.md) |
-| 可复用的入门案例 | [蓝金徽章](examples/hello-assets/README.md)：真实输入 PNG、制作命令、9 个矩形、Lua 与软件预览。随当前源码提供。 |
-| 分发与维护 | 完整 Windows ZIP、独立 Python 环境、各客户端接入、本地打包命令。[维护与发布](docs/contributing/maintenance.md) |
+- **五个核心领域**：工程检查（Editor）、Graph Code、Client Lua、GIL、Assets；协议、存储、多人和诊断属于共享能力。[能力索引](references/skill-map.md)
+- **平台知识与版本**：官方资料索引、节点定义、客户端 API 及版本化规则。[平台资料](references/platform-profiles.md)
+- **本地制作工具**：工程诊断、节点编译、Lua 装配、原生文件局部修改、素材处理及组合交付。[命令入口](scripts/README.md)
+- **分发**：Windows x64 完整包与 Codex、Claude Code 等客户端接入。[安装说明](docs/installation.md)
 
-这些基础值得继续积累。用户文档按任务组织；Agent 技术资料按平台对象组织；运行工具继续共用现有入口。
+## 优先方向
 
-## 近期优先事项
+### 更完整地修改已有工程
 
-### 1. 完善可以直接接手的创作示例
+继续扩展有依据的 GIL/GIA 修改、节点逻辑和 Lua 挂载能力，减少创作者在多个工具之间手动搬运的工作。每项能力需要明确输入工程、目标对象、修改范围和可继续编辑的输出，而不只是生成一段演示代码。
 
-已提供[首个 PNG → 图元 / Lua 案例](examples/hello-assets/README.md)，任务记录见 [#2](https://github.com/savormundane/Genshin-UGC-plugin/issues/2)。
+### 原生 3D 场景与交互
 
-**接下来要解决的问题：** 一个简单素材案例可以帮助入门；更完整的工程任务仍需要可以接手的公开输入与结果。
+从已有工程中的具体实体运动任务开始，逐步覆盖运动器、镜头及碰撞等常见创作需求。现有平台资料与节点查询能力不等于完整场景生成。[相关任务 #3](https://github.com/savormundane/Genshin-UGC-plugin/issues/3)
 
-下一步整理一个基于可公开 GIL 的局部 Lua 修改案例，展示实际映射定位、源码、修改后文件和前后差异。复杂素材与分层动画随后按使用需求补充。
+### 真实创作成果与可复用性
 
-**完成的样子：** 下载对应版本的用户可以复用这个案例，知道每个文件的用途，也知道如何替换成自己的输入。预览来自实际输出，编辑器或游戏内截图有实际来源。先做好一个，再按需求扩展。
+仅展示具有实际创作价值的案例，提供清楚的输入、完整产物、复现方式和验证范围；简单工具冒烟结果不作为作品展示。外部贡献者的最小复现入口见[任务 #4](https://github.com/savormundane/Genshin-UGC-plugin/issues/4)。
 
-### 2. 扩展原生 3D 场景开发能力
+## 参与
 
-具体任务：[原生 3D 实体运动制作流程 #3](https://github.com/savormundane/Genshin-UGC-plugin/issues/3)。
-
-**要解决的问题：** 千星奇域包含 3D 场景制作。现有资料和节点能力已经涉及实体、变换、运动器、碰撞、镜头，但“能够查询或检查声明”与“能够直接写入工程”覆盖范围不同。
-
-从现有工程中的一个具体任务切入：优先串通实体身份、运动器配置与对应节点逻辑，交付一份中性的原生场景示例；碰撞和镜头随后沿用同一方式扩展。每次扩展明确输入对象、可写字段、保留范围和输出文件。
-
-**完成的样子：** 创作者能在真实目标工程上完成一个明确的 3D 制作任务，并获得与该任务相称的检查结果。无法自动写入的配置能指出具体编辑器操作，不把 Lua 界面原型当作 3D 场景交付。
-
-技术起点：[现有原生生成范围](references/native-authoring.md)、[平台规则](references/platform-profiles.md)、[节点设计](references/graph-authoring.md)。这项工作扩展现有五个领域，无需另起一套 Skill 架构。
-
-### 3. 让外部贡献者容易接手一个小改动
-
-具体任务：[中性输入与复现方法 #4](https://github.com/savormundane/Genshin-UGC-plugin/issues/4)。
-
-**要解决的问题：** 有些内部开发用例和夹具没有随公开仓库分发，公开文档需要清楚区分它们与当前可运行的检查；贡献者也需要容易定位修改入口。
-
-依托[模块导航](scripts/README.md)，先公开与上述案例相关的一小组中性输入和复现方法。根据实际修改选择已有检查，逐步沉淀有用夹具，不迁移整个历史测试体系。
-
-**完成的样子：** 贡献者能从一次问题反馈找到对应资料或工具，复现该问题、完成修改并提交范围清楚的 PR；没有维护者的私人工作区也能开始贡献。
-
-## 持续改善
-
-- 根据首次使用反馈缩短安装、选客户端和定位报错的步骤。
-- 吸收平台更新时保留资料来源、适用版本与旧工程兼容方式。
-- 把已完成的真实作品和常用流程整理为示例，减少重复解释。
-- 有稳定的使用者需求后，再决定跨平台完整包、更多客户端适配和国际化的投入。
-
-## 当前保持简单的部分
-
-保留五领域结构、运行模块路径和固定第三方依赖。当前已有本地打包工具，仓库瘦身或拆依赖应由真实维护收益推动。GitHub Actions 保持手动触发。
-
-计划管理采用“路线图说明方向，Issue 描述任务，PR 记录实现，Release 交付版本”。需要总览时，用一个仅含 Todo / In progress / Done 的 Projects 看板关联现有 Issue。仓库维护方法见[GitHub 日常维护](docs/contributing/github-workflow.md)。
-
-## 参与方向
-
-可以从第一次安装卡住的步骤、看不懂的文档、一个可公开的小案例，或一个具体的 3D 制作需求开始。[提交反馈](https://github.com/savormundane/Genshin-UGC-plugin/issues/new/choose)时，先说想完成什么、当前停在哪里即可。
+功能缺口、实际使用问题和创作需求可通过 [Issues](https://github.com/savormundane/Genshin-UGC-plugin/issues) 讨论；代码与文档贡献请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。
