@@ -1,76 +1,98 @@
 # Genshin-UGC
 
-让 AI 助手帮你做《原神》千星奇域关卡：节点图、客户端 Lua、GIL 文件和图片素材。节点目录、客户端 API 和离线检查工具都装在你的电脑上，助手先查真实资料再动手，改完先在本机检查一遍。
+**让 AI 助手参与《原神》千星奇域创作：查平台资料，写节点和 Lua，处理工程文件与素材。**
 
-**Windows x64** · Codex / Claude Code / DeepSeek Harness 等 · 社区项目，独立于米哈游 · **当前版本 `4.1.0`** · [下载完整 ZIP](https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v4.1.0/Genshin-UGC-4.1.0-windows-x64.zip)
+Genshin-UGC 把五个领域的 Skill、可追溯的平台资料和本地工具装进同一个插件。你描述制作目标，助手根据工程与平台资料调用工具，交付代码、文件和必要的检查结果。
 
-- **先查再写。** 节点能用在哪类图、有哪些端口，Lua API 的参数和返回值，都从随包资料查，不靠猜。
-- **改文件不动原件。** 修改 `.gil` 时另存新文件并回读核对，原文件保持不变。
-- **交付前先过一遍。** 本地检查 Lua 语法、节点连线和素材控件预算，需要时生成软件预览。
+**当前版本 `4.1.0`** · Windows x64 · Codex / Claude Code / DeepSeek Harness / 通用 Agent Plugins 接入 · 社区项目，独立于米哈游
 
-> 本地检查通过，不等于在游戏里可用。产物仍需导入千星奇域编辑器，并进游戏验证。
+[**开始使用**](docs/getting-started.md) · [下载完整 ZIP](https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v4.1.0/Genshin-UGC-4.1.0-windows-x64.zip) · [使用文档](docs/README.md) · [开发路线](ROADMAP.md) · [反馈问题](https://github.com/savormundane/Genshin-UGC-plugin/issues/new/choose)
 
-## 能让助手做什么
+## 能帮你完成什么
 
-| 你想做的事 | 助手会用到 | 可以这样说 |
+| 你的任务 | 提供的输入 | 可以得到的结果 |
 | --- | --- | --- |
-| 接手旧地图，看清里面有什么 | 工程检查（只读） | “只读检查 `level.gil`，列出模板和节点图的挂载关系。” |
-| 写服务端或客户端的节点图 | Graph Code | “查一下‘启动定时器’节点，再写一个 60 秒倒计时。” |
-| 写带交互的界面脚本 | Client Lua | “查按钮回调 API，写一个带点击反馈的 HUD 脚本并检查语法。” |
-| 对比两版地图，或只换一段脚本 | GIL | “对比 `old.gil` 和 `new.gil`，把 `hud.lua` 替换进指定脚本，另存后回读。” |
-| 把 PNG 图标转成图元 | 素材 | “按 200 个矩形预算拟合 `icon.png`，给我预览和误差汇总。” |
+| 看懂、接手已有工程 | 工程目录或 `.gil` 文件 | 模板、实体、节点图与资源引用的只读报告 |
+| 编写节点逻辑 | 玩法规则、目标对象与平台版本 | 节点和端口查询、Graph Code、编译产物与连接检查 |
+| 制作客户端界面 | 控件目标、已有脚本或交互要求 | Client Lua 源码、API 查询、源码装配与检查 |
+| 修改或比较工程文件 | 原始 GIL、明确的修改目标 | 差异报告、局部修改计划、另存的文件与回读结果 |
+| 制作图像素材 | PNG、矩形预算或分层素材 | 图元数据、Lua、软件预览、误差与成本报告 |
 
-每个领域的完整示例见[使用示例](docs/examples.md)，术语见[术语表](docs/glossary.md)。
+五个领域共享协议、多人会话、存储、动画和制作工具，助手按任务组合使用。每项能力的输入、产出和后续操作见[使用示例](docs/examples.md)。
+
+### 看一个实际产物
+
+[蓝金徽章案例](examples/hello-assets/README.md)包含原始 PNG、制作命令、Lua 数据、预览和报告。下图是插件实际生成的软件预览：128×128 输入转换成 **9 个矩形**，预算为 16 个，Lua 数据为 245 字节。
+
+![插件实际生成的蓝金徽章软件预览](examples/hello-assets/generated/preview.png)
+
+这是用于看清输入、成本和产物格式的最小案例。已有 4.1.0 工具可以处理[示例输入](examples/hello-assets/input.png)；示例文件随当前源码提供，尚未收入已发布的 4.1.0 ZIP。
+
+### 为什么把这些能力放在一起
+
+- **根据资料制作。** 节点签名、客户端 API 和平台版本规则有明确来源，查询与制作使用同一套资料。
+- **接着已有工程做。** 读取真实对象和脚本映射，按支持的操作修改并另存文件，保留原始输入。
+- **交付可继续使用的成果。** 除了建议，还可以交付源码、GIA/GIL、素材和报告；按本次任务选择检查。
+
+本地检查与软件预览说明它们覆盖的结果；编辑器导入和游戏内表现另行判断。完整范围见[运行要求与支持范围](docs/compatibility.md)。
 
 ## 安装
 
-**需要** Windows x64、Python 和 Node.js，版本见[运行要求与验证](docs/compatibility.md)。首次安装要联网下载锁定的 Python 依赖。
+需要 Windows x64、Python、Node.js 和对应 AI 客户端，具体版本见[运行要求](docs/compatibility.md)。首次安装联网下载锁定的 Python 依赖。
 
-1. 确认你的客户端命令能在 PowerShell 中运行（`codex` 或 `claude`）。
-2. 复制对应命令到 PowerShell 运行。
+**Codex**：确认 `codex` 命令可用，在 PowerShell 运行：
 
-   | 客户端 | 命令 |
-   | --- | --- |
-   | Codex | `& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.1.0/install.ps1'))) -Agent codex` |
-   | Claude Code | `& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.1.0/install.ps1'))) -Agent claude-code` |
+```powershell
+& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.1.0/install.ps1'))) -Agent codex
+```
 
-3. 按提示选择已有工程目录，再选一个与它互不包含的输出目录，报告和生成文件会写到输出目录。
-4. 装完后新开会话，确认插件已启用。
+**Claude Code**：确认 `claude` 命令可用，将末尾参数改为 `-Agent claude-code`。
 
-DeepSeek Harness、VS Code、Cursor 等客户端的接入，以及手动安装、更新、回退和卸载，见[安装指南](docs/installation.md)。
+安装时选择一个工程目录和一个输出目录，例如 `C:\Qianxing\project` 与 `C:\Qianxing\outputs`。**还没有工程也可以先建两个空目录试用**；两个目录不能互相包含。装完后新开会话并启用插件。
+
+| 其他使用方式 | 操作入口 |
+| --- | --- |
+| DeepSeek Harness | [准备 Cordis Bundle 并加载](docs/installation.md) |
+| 支持 Agent Plugins 的客户端 | [准备本地插件目录并导入](docs/installation.md) |
+| 只用 CLI，或手动解压完整 ZIP | [配置独立运行环境](docs/runtime-environment.md) |
+| 更新、回退、卸载或排查安装问题 | [安装指南](docs/installation.md) |
+
+普通使用者下载 **Release 的完整 Windows ZIP**；GitHub 自动生成的 `Source code` 包主要用于阅读和开发。完整安装步骤与各客户端差异都集中在安装指南。
 
 ## 第一次使用
 
-在新会话里把这段提示发给助手。
+无需准备私人地图，先把下面这段发给已启用插件的助手：
 
-> 请调用 Genshin-UGC 的 `nodes_lookup` 查询服务端“启动定时器”节点。告诉我调用签名、各输入端口的类型，以及定时器序列该怎么填。
+> 请调用 Genshin-UGC 的 `nodes_lookup` 查询服务端“启动定时器”节点。告诉我各输入端口的类型，并解释定时器序列 `[1, 3, 5, 7]` 的含义。
 
-返回结果可对照下表。
+工具返回的输入应包含目标实体、定时器名称、是否循环和浮点数列表形式的定时器序列。这个序列表示从启动起第 1、3、5、7 秒触发事件。具体返回结构与下一步的素材任务见[首次使用指南](docs/getting-started.md)。
 
-| 项目 | 结果 |
+已经有工程时，从一个具体目标开始，例如“只读检查这张地图的挂载关系”或“把这张图标转换成矩形素材”。不用先读完所有技术资料。
+
+## 支持哪些创作
+
+- **2D 与界面制作**：节点逻辑、客户端 Lua、图元、动画及相关工程文件处理。
+- **原生 3D 场景开发辅助**：已有实体、运动器、镜头、碰撞等平台资料、节点能力和部分声明配置检查。自动写入与生成目前只覆盖已实现的结构，完整 3D 场景生成仍是[后续方向](ROADMAP.md)。
+- **已有工程维护**：查询、诊断、差异比较和已支持字段的局部修改。未知格式与字段按工具合同处理。
+
+完整发行包以 Windows x64 为目标。客户端接入方式、其他系统和各项检查的适用范围见[运行要求与支持范围](docs/compatibility.md)。
+
+## 找文档、提建议、参与开发
+
+| 你现在想做什么 | 去哪里 |
 | --- | --- |
-| 调用 | `启动定时器(game, 目标实体, 定时器名称, 是否循环, 定时器序列)` |
-| 数据输入 | 目标实体（实体）、定时器名称（字符串）、是否循环（布尔值）、定时器序列（浮点数列表） |
-| 序列怎么填 | 从小到大排列、单位为秒的时间点，最多 100 个，例如 `[1, 3, 5, 7]` |
+| 安装后开始做第一个任务 | [开始使用](docs/getting-started.md) |
+| 按任务寻找教程与命令 | [使用文档](docs/README.md) |
+| 查询平台规则、API 与制作合同 | [技术参考](references/README.md) |
+| 看下一步重点、认领具体工作 | [开发路线](ROADMAP.md) · [Issues](https://github.com/savormundane/Genshin-UGC-plugin/issues) |
+| 报错、提需求或指出文档看不懂 | [反馈入口](https://github.com/savormundane/Genshin-UGC-plugin/issues/new/choose) |
+| 修改代码、资料或文档 | [贡献指南](CONTRIBUTING.md) · [项目结构](docs/contributing/architecture.md) |
+| 了解已经发布了什么 | [版本记录](CHANGELOG.md) · [Releases](https://github.com/savormundane/Genshin-UGC-plugin/releases) |
 
-在客户端查看工具调用记录，确认 `nodes_lookup` 成功返回一个 `server` 节点。
+欢迎分享具体使用场景与卡住的步骤。无法判断问题属于哪个技术领域也可以反馈；不需要先学会所有术语。
 
-也可以从命令行查询同一目录。进入解压后的 `Genshin-UGC` 目录，用专用环境的 `Scripts\python.exe` 运行下方命令。环境配置见[独立运行环境](docs/runtime-environment.md)。
+## 致谢与许可
 
-```powershell
-& '<专用 Python 的绝对路径>' .\scripts\qianxing.py nodes '启动定时器' --scope server --limit 1
-```
+感谢 [Ayaya](https://github.com/AyayaXiaowan/Ayaya_Miliastra_Editor)、[miliastra-beyond-simulator](https://github.com/1475505/miliastra-beyond-simulator)、[Miliastra-knowledge](https://github.com/1475505/Miliastra-knowledge)、[GEIMG](https://docs.lumkfs.cn/GEIMG-WIKI/Download/)、奇匠学院及社区贡献的工具、资料与研究。
 
-## 常见问题
-
-- **该下载哪个包？** 手动安装用上方的完整 ZIP。GitHub 自动生成的源码包只用于浏览和开发。
-- **会改我的工程文件吗？** 不会直接改。需要修改时另存新文件，原文件保留。输出写在你选的输出目录。
-- **可以只用命令行吗？** 可以。解压完整 ZIP，配置专用 Python 后运行 `scripts/qianxing.py`。见[独立运行环境](docs/runtime-environment.md)。
-- **安装时找不到 Python，或装完看不到工具？** 用 `-Python` 指定真实的解释器路径，装完后新开会话再看。见[安装排障](docs/installation.md#失败后续装)。
-- **它保证关卡在游戏里能跑吗？** 不保证。检查分五层，本地只覆盖前两层，见[运行要求与验证](docs/compatibility.md)。
-
-## 文档与反馈
-
-[使用文档](docs/README.md) · [参与贡献](CONTRIBUTING.md) · [版本记录](CHANGELOG.md)
-
-感谢 [Ayaya](https://github.com/AyayaXiaowan/Ayaya_Miliastra_Editor)、[miliastra-beyond-simulator](https://github.com/1475505/miliastra-beyond-simulator)、[Miliastra-knowledge](https://github.com/1475505/Miliastra-knowledge)、[GEIMG](https://docs.lumkfs.cn/GEIMG-WIKI/Download/)、奇匠学院及社区贡献的工具、资料与研究。自有代码采用 GPL-3.0-only，第三方内容保留各自的权利、许可与署名。[许可证](LICENSE) · [第三方声明](THIRD_PARTY_NOTICES.md) · [来源清单](PUBLIC_SOURCES.json)
+自有代码采用 GPL-3.0-only，第三方内容保留各自的权利、许可与署名。[许可证](LICENSE) · [第三方声明](THIRD_PARTY_NOTICES.md) · [来源清单](PUBLIC_SOURCES.json) · [安全问题](SECURITY.md)
