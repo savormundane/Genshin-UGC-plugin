@@ -24,7 +24,7 @@
 
 ## 安装
 
-**需要：** Windows x64、Python 3.11 或 3.12、Node.js 22+（DeepSeek Harness 需 24.9+）。首次安装要联网下载锁定的 Python 依赖。
+**需要** Windows x64、Python 和 Node.js，版本见[运行要求与验证](docs/compatibility.md)。首次安装要联网下载锁定的 Python 依赖。
 
 1. 确认你的客户端命令能在 PowerShell 中运行（`codex` 或 `claude`）。
 2. 复制对应命令到 PowerShell 运行。

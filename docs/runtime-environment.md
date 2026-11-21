@@ -1,6 +1,6 @@
 # 独立运行环境
 
-如果只使用命令行，可解压完整 ZIP，在解压后的 `Genshin-UGC` 目录里配置专用 Python。完整环境面向 Windows x64，使用 Python 3.11 或 3.12 和 Node.js 22+。通过 DeepSeek Harness 接入时使用 Node.js 24.9+。
+如果只使用命令行，可解压完整 ZIP，在解压后的 `Genshin-UGC` 目录里配置专用 Python。配置前请核对[运行要求与验证](compatibility.md)中的操作系统、Python 和 Node.js 要求。
 
 ```text
 EXISTING_PYTHON scripts/configure_runtime.py --python EXISTING_PYTHON --runtime NEW_RUNTIME_DIRECTORY --project PROJECT_ROOT --outputs SEPARATE_OUTPUT_ROOT --config RUNTIME_CONFIG

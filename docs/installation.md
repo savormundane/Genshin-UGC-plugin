@@ -1,6 +1,6 @@
 # 安装、更新与卸载
 
-完整工具包面向 **Windows x64**，需提前安装 **Python 3.11 或 3.12** 和 **Node.js 22+**。安装器会检查 Node 版本，DeepSeek Harness 接入需要 **Node.js 24.9+**。首次安装需要联网拉取锁定的 Python 依赖。
+安装前请核对[运行要求与验证](compatibility.md)中的操作系统、Python 和 Node.js 要求。首次安装需要联网拉取锁定的 Python 依赖。
 
 安装器会提示选择两个目录，也可通过 `-Project` 和 `-Outputs` 预先指定。
 
@@ -15,7 +15,7 @@
 | --- | --- | --- |
 | **Codex** | `codex` | 自动注册，新开会话确认已启用 |
 | **Claude Code** | `claude-code` | 自动注册，新开会话在 `/plugin` 确认 |
-| **DeepSeek Harness**（`0.2.2-rc.5`） | `deepseek-harness` | 记下 `bundle_directory`，在客户端添加插件目录（需 Node 24.9+） |
+| **DeepSeek Harness**（`0.2.2-rc.5`） | `deepseek-harness` | 记下 `bundle_directory`，在客户端添加插件目录 |
 | **VS Code / Cursor / Copilot CLI / Kiro / Antigravity / 通用客户端** | `agent-plugins` | 记下 `plugin_directory`，按下方对应客户端导入 |
 
 ## Codex
@@ -40,7 +40,7 @@
 
 ## DeepSeek Harness
 
-需要适配版本 DeepSeek Harness `0.2.2-rc.5` 和 **Node.js 24.9+**。
+本指南适用于 DeepSeek Harness `0.2.2-rc.5`。接入前请按[运行要求与验证](compatibility.md)核对 Node.js 版本。
 
 1. 在 PowerShell 运行准备命令，记下输出中的 `bundle_directory` 路径。
 
@@ -121,7 +121,7 @@
 
 ## 失败后续装
 
-* **找不到 Python**：安装 Python 3.11 或 3.12，或直接用 `-Python` 指定真实 `python.exe` 路径。
+* **找不到 Python**：按[运行要求与验证](compatibility.md)安装 Python，或用 `-Python` 指定已安装的解释器 `python.exe` 路径。
 * **安装中断**：保留失败目录，用完全相同的参数加上 `-Resume` 重跑即可。Codex 与 Claude Code 均支持依赖与冒烟检查阶段续装；Codex 还支持已登记的激活阶段续装。若提示版本已安装完成，请改用上方回退流程。Claude Code 若在启用阶段中断，按错误提示核对插件列表中的条目后再试。
 * **客户端看不到工具**：新开会话检查插件是否已启用；如客户端弹出本地工具信任确认，核对后批准。手动导入时确保选的是准备命令输出的目录（或 Cursor 修改后的副本）。
 * **产物已生成但需核对游戏内效果**：按 [运行要求与验证](compatibility.md) 导入千星奇域编辑器并进游戏试运行。
