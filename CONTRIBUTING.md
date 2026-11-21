@@ -4,7 +4,7 @@
 
 ## 开始之前
 
-- 阅读 [README](README.md)、[维护者文档](docs/contributing/README.md)和[支持状态](docs/compatibility.md)。
+- 阅读 [README](README.md)、[维护者文档](docs/contributing/README.md)和[运行要求与验证](docs/compatibility.md)。
 - 先搜索已有 Issue / PR，避免重复反馈。一般问题可创建 Issue；涉及安全漏洞请先阅读 [SECURITY.md](SECURITY.md)。
 - 本工具按千星奇域的 **工程检查、Graph Code、Client Lua、GIL、Assets** 能力域组织 Skill。协议、多人会话、存储与诊断属于可复用共享能力，不宜只因为某个具体游戏而新增 Skill。
 
