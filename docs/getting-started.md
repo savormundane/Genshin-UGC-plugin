@@ -28,19 +28,7 @@
 
 如果助手只给出解释、没有调用工具，提醒它实际调用 `nodes_lookup`。如果工具不可见，按[安装排障](installation.md#失败后续装)检查插件是否启用及安装目录是否保留完整。
 
-## 3. 可选：做出一个不依赖私人工程的小素材
-
-仓库提供了一份[完整蓝金徽章案例](../examples/hello-assets/README.md)：128×128 的输入 PNG，已经实际生成 9 个矩形、Lua 数据、预览和报告。可以先打开[生成预览](../examples/hello-assets/generated/preview.png)，再用自己的环境处理同一张图。
-
-下载案例的 [input.png](../examples/hello-assets/input.png) 到项目目录中的 `hello-assets` 子目录，向能执行本地命令的助手发送：
-
-> 用 Genshin-UGC 的 `assets generate` 处理项目目录里的 `hello-assets/input.png`。输出网格设为 128×128，目标为 rectangles，颜色上限为 4，矩形预算为 16。使用插件已配置的 Python，把结果保存到独立输出目录的新子目录，并给我 `preview.png`、实际矩形数和文件位置。
-
-不需要游戏工程或私人图片。生成器写出 `asset.json`、`data.lua`、`preview.png`、`report.json`、`manifest.json`；案例还提供图形源与本次运行参数，便于自己修改颜色和尺寸。
-
-本例使用 Linux 上的本地素材生成器制作，预览展示颜色和几何；在游戏界面使用仍需接入实际控件。本案例为当前源码新增，已发布的 4.1.0 ZIP 不含这些案例文件，但已有工具可以处理下载的输入图。只接入 MCP、不能执行本地命令的客户端，可以先完成上面的节点查询。
-
-## 接下来做什么
+## 3. 选择实际制作任务
 
 | 你手上有什么 | 下一步 |
 | --- | --- |
