@@ -85,6 +85,6 @@ Genshin-UGC 把五个领域的 Skill、可追溯的平台资料和本地工具�
 
 ## 致谢与许可
 
-感谢 [Ayaya](https://github.com/AyayaXiaowan/Ayaya_Miliastra_Editor)、[miliastra-beyond-simulator](https://github.com/1475505/miliastra-beyond-simulator)、[Miliastra-knowledge](https://github.com/1475505/Miliastra-knowledge)、[GEIMG](https://docs.lumkfs.cn/GEIMG-WIKI/Download/)、奇匠学院及社区贡献的工具、资料与研究。
+感谢 [Ayaya](https://github.com/AyayaXiaowang/Ayaya_Miliastra_Editor)、[miliastra-beyond-simulator](https://github.com/1475505/miliastra-beyond-simulator)、[Miliastra-knowledge](https://github.com/1475505/Miliastra-knowledge)、[GEIMG](https://docs.lumkfs.cn/GEIMG-WIKI/Download/)、奇匠学院及社区贡献的工具、资料与研究。
 
 自有代码采用 GPL-3.0-only，第三方内容保留各自的权利、许可与署名。[许可证](LICENSE) · [第三方声明](THIRD_PARTY_NOTICES.md) · [来源清单](PUBLIC_SOURCES.json) · [安全问题](SECURITY.md)
