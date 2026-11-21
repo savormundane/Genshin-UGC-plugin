@@ -41,11 +41,11 @@ DeepSeek Harness、VS Code、Cursor 等客户端的接入，以及手动安装�
 
 ## 第一次使用
 
-在新会话里试一次节点查询：
+在新会话里把这段提示发给助手。
 
-> 查一下服务端“启动定时器”节点。告诉我调用方式、各输入端口的类型，并指出序列应该传什么。
+> 请调用 Genshin-UGC 的 `nodes_lookup` 查询服务端“启动定时器”节点。告诉我调用签名、各输入端口的类型，以及定时器序列该怎么填。
 
-随包工具会命中一个服务端节点：
+返回结果可对照下表。
 
 | 项目 | 结果 |
 | --- | --- |
@@ -53,7 +53,13 @@ DeepSeek Harness、VS Code、Cursor 等客户端的接入，以及手动安装�
 | 数据输入 | 目标实体（实体）、定时器名称（字符串）、是否循环（布尔值）、定时器序列（浮点数列表） |
 | 序列怎么填 | 从小到大排列、单位为秒的时间点，最多 100 个，例如 `[1, 3, 5, 7]` |
 
-能得到这样的回答，说明插件和本地工具已经连通。命令行也能查同一份目录：`python scripts/qianxing.py nodes 启动定时器 --scope server --limit 1`。
+在客户端查看工具调用记录，确认 `nodes_lookup` 成功返回一个 `server` 节点。
+
+也可以从命令行查询同一目录。进入解压后的 `Genshin-UGC` 目录，用专用环境的 `Scripts\python.exe` 运行下方命令。环境配置见[独立运行环境](docs/runtime-environment.md)。
+
+```powershell
+& '<专用 Python 的绝对路径>' .\scripts\qianxing.py nodes '启动定时器' --scope server --limit 1
+```
 
 ## 常见问题
 

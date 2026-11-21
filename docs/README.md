@@ -5,5 +5,6 @@
 - [使用示例](examples.md) · 检查工程、编译节点和 Lua、修改 GIL 或生成素材。
 - [运行要求与验证](compatibility.md) · 核对依赖和报告状态，确定下一步要在哪里验证。
 - [术语表](glossary.md) · 查 Skill、Graph Code、GIL 和宿主等常用词。
+- [技术参考索引](../references/README.md) · 查找各领域的进阶资料和排障说明。
 
 [维护者文档](contributing/README.md)
