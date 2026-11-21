@@ -1,6 +1,6 @@
 # 使用文档
 
-从你要完成的任务开始。安装和日常使用看这里；平台 API 与内部制作合同在[技术参考](../references/README.md)，维护仓库看[维护者文档](contributing/README.md)。
+从你要完成的任务开始。安装和日常使用看这里；平台 API 与内部制作合同在[技术参考](../references/README.md)，参与开发看[开发者文档](contributing/README.md)。
 
 ## 第一次来
 
@@ -31,4 +31,4 @@
 
 [开发路线](../ROADMAP.md)说明当前重点；[Issues](https://github.com/savormundane/Genshin-UGC-plugin/issues)记录具体任务；[版本记录](../CHANGELOG.md)说明已经交付的变化。路线图里的计划不代表当前版本已经支持。
 
-[返回首页](../README.md) · [参与贡献](../CONTRIBUTING.md) · [维护者文档](contributing/README.md)
+[返回首页](../README.md) · [参与贡献](../CONTRIBUTING.md) · [开发者文档](contributing/README.md)
