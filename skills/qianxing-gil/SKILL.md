@@ -9,7 +9,7 @@ description: 检查、比较和安全修改千星奇域GIL/GIA容器，处理脚
 
 | 任务 | 按需资料与工具 |
 | --- | --- |
-| 已摆放物件的世界变换 | [三维实体读取和变换](../../references/native-entity-transform.md) · `set_entity_transform` |
+| 原生场景及物件局部写回 | [场景 GIA 与 GIL 修改](../../references/native-scene.md)；核对模型引用、位置与对象身份 |
 | 比较和局部修改 | [原生修改](../../references/native-changes.md)；`native diff/plan/apply` |
 | 图、信号、结构体、实体和模板挂载 | [原生维护](../../references/native-maintenance.md)、[详细操作](references/native-operations.md) |
 | Lua嵌入与最终脚本检查 | [最终Lua检查](../../references/client-check.md) |
@@ -20,4 +20,6 @@ description: 检查、比较和安全修改千星奇域GIL/GIA容器，处理脚
 
 跨GIL迁移仅限工具明确支持的身份及引用，不直接复制带旧引用的字段，不承诺全工程ID重映射。最终文件审计覆盖新增消费者和挂载；编译回读、模型、编辑器导入和宿主运行按[验证边界](../../references/validation.md)分别报告。
 
-使用 MCP 编辑现有工程时，先以 `project_inspect` 读取对象，把 `inputs_sha256.input` 用作 `native_plan` 的基底摘要。可直接给 `native_plan` 传 schema 2 的 `patch`。审阅 `result.difference` 后，以同一基底和 `outputs_sha256["plan.json"]` 调用 `native_apply`。用 `native_diff` 检查保护范围。[MCP 参数](../../references/local-mcp.md#审阅并另存已有工程)
+使用 MCP 编辑现有工程时，以 `project_inspect` 的 `selector` 精确定位对象，将 `inputs_sha256.input` 传给 `native_plan`。审阅变更后，用 `outputs_sha256["plan.json"]` 调用 `native_apply`，最后用 `native_diff` 核对允许范围。 [调用合同](../../references/local-mcp.md)
+
+已摆放物件也可按 [三维实体变换](../../references/native-entity-transform.md) 核对模型、坐标和保护范围。

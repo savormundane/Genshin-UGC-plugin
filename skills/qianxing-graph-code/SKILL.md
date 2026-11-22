@@ -5,7 +5,7 @@ description: 编写和修复千星奇域客户端／服务端节点图及复合�
 
 # Graph Code
 
-先用 MCP `nodes_lookup` 或 `qianxing.py nodes QUERY --scope server|client` 确认图作用域、调用签名与端口，再编写 DSL 并运行 `build`。Graph Code 使用受限 DSL，节点可编译只说明离线合同通过。客户端控件的 Lua API 见 [Client Lua](../client-controls-lua/SKILL.md)。
+先用 MCP `nodes_lookup` 或 `qianxing.py nodes QUERY --scope server|client` 确认图作用域、调用签名与端口。编写后用 `graph check SOURCE.py` 按原文件和行号修正单文件问题，再运行 `build` 检查项目资源并导出。客户端控件的 Lua API 见 [Client Lua](../client-controls-lua/SKILL.md)。
 
 - 编写、验证、导出：[操作指南](references/workflow-details.md)、[语法](../../references/graph-code-syntax.md)、[编译错误](references/validation-fixes.md)。复用Ayaya桥接，不执行项目业务源码冒充静态验证。
 - 变量、端口及结构体身份：[图变量](../../references/native-graph-variables.md)、[数据流审计](../../references/native-dataflow-validation.md)。区分节点定义与平台已确认语义。

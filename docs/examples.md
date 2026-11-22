@@ -42,7 +42,7 @@
 
 适用于已校准的标量默认值和选定的定时器序列等操作。模板和实例覆盖分别选择。应用计划时保留原始 GIL。[原生局部编辑](../references/native-changes.md#局部编辑)
 
-源码版可用 `project_inspect` 的 `selector` 查看依赖和引用者。审阅时核对实际变更和保护范围。应用后回读前后的值、输出文件及摘要。正式包 4.1.0 可用补丁文件和 CLI 执行同一原生操作。[MCP 调用顺序](../references/local-mcp.md#审阅并另存已有工程) · [CLI 修改计划](../references/native-changes.md)
+可用 `project_inspect` 的 `selector` 查看依赖和引用者。审阅时核对实际变更和保护范围。应用后回读前后的值、输出文件及摘要。也可用补丁文件和 CLI 执行同一操作。[MCP 调用顺序](../references/local-mcp.md#审阅并另存已有工程) · [CLI 修改计划](../references/native-changes.md)
 
 ## 图片转图元
 

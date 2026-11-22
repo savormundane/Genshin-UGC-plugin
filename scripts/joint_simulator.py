@@ -35,10 +35,11 @@ class Client:
                     if kind.endswith('List')and packet['params'][i]=={}:packet['params'][i]=[]
         return out
 
-def script_from_gil(raw,mapping):
+def script_from_gil(raw,mapping,*,bindings=None):
     from level_authoring import inspect_bindings
-    bindings=inspect_bindings(raw);_,root=container(raw);matches=[get(e,5)for s in vals(root,50)for e in vals(fields(s),1)if get(e,3)==mapping.encode()]
-    if len(matches)!=1:raise ValueError('Exact unique embedded Lua mapping required')
+    if bindings is None:bindings=inspect_bindings(raw)
+    _,root=container(raw);matches=[get(e,5)for s in vals(root,50)for e in vals(fields(s),1)if get(e,3)==mapping.encode()]
+    if len(matches)!=1 or matches[0] is None:raise ValueError('Exact unique embedded Lua mapping required')
     return matches[0].decode('utf-8-sig'),bindings
 def execute(spec,base,trace=None):
     schema(spec,('schema','clients','server','steps','faults','assertions','observations','clock'),('clients','steps'))
@@ -51,7 +52,7 @@ def execute(spec,base,trace=None):
         if fault['action']not in('drop','duplicate','delay','reorder'):raise ValueError('Unknown transport fault')
         if 'occurrence'in fault and(type(fault['occurrence'])!=int or fault['occurrence']<1):raise ValueError('Positive fault occurrence required')
         if fault['action']in('delay','reorder')and(type(fault.get('delay'))not in(int,float)or not 0<=fault['delay']<=3600):raise ValueError('Nonnegative finite transport delay required')
-    if trace is not None:trace['journal']=journal
+    if trace is not None:trace.update(journal=journal,inputs=inputs,phase='startup')
     if 'clock'in spec:
         schema(spec['clock'],('start',),('start',));clock=spec['clock']['start']
         if type(clock)not in(int,float)or not 0<=clock<1e12:raise ValueError('Finite nonnegative model clock required')
@@ -73,7 +74,9 @@ def execute(spec,base,trace=None):
             if selection['name']not in state:raise ValueError('Selected initial native variable missing')
             initial_variables[key]=state[selection['name']]
         variable_bindings[item['id']]=selections
-        path=resolve(base,item['source']);raw=path.read_bytes();inputs[str(path)]=sha(raw);mapping=item.get('mapping','main.lua')
+        path=resolve(base,item['source']);mapping=item.get('mapping','main.lua')
+        if trace is not None:trace.update(source=str(path),client=item['id'],mapping=mapping)
+        raw=path.read_bytes();inputs[str(path)]=sha(raw)
         source,bindings=script_from_gil(raw,mapping)if path.suffix.lower()=='.gil'else(raw.decode('utf-8-sig'),None)
         clients[item['id']]=Client(source,bindings,mapping,item.get('canvas',(1600,900)),item.get('params'),initial_variables)
     server=None
@@ -89,7 +92,9 @@ def execute(spec,base,trace=None):
             if type(entity)!=int or entity<0 or not isinstance(name,str)or not name or type(count)!=int or count<1:raise ValueError('Invalid required timer event contract')
             if (entity,name)in timer_keys:raise ValueError('Duplicate required timer identity')
             timer_keys.add((entity,name))
-        path=resolve(base,s['source']);raw=path.read_bytes();inputs[str(path)]=sha(raw);server=NativeModel(raw,s.get('initial'),s.get('graph_ids'),s.get('instances'),s.get('entity_guids'),s.get('level_entity'))
+        path=resolve(base,s['source'])
+        if trace is not None:trace.update(source=str(path),client='server',mapping=None)
+        raw=path.read_bytes();inputs[str(path)]=sha(raw);server=NativeModel(raw,s.get('initial'),s.get('graph_ids'),s.get('instances'),s.get('entity_guids'),s.get('level_entity'))
         server.timers.time=clock
     def enqueue(source,target,name,params):
         nonlocal serial
@@ -119,8 +124,8 @@ def execute(spec,base,trace=None):
                 c=clients[target];c.call(c.h.receive,name,c.to_lua(params))
             collect()
     collect();drain()
-    for step in spec['steps']:
-        if trace is not None:trace.update(step=step,clock=clock)
+    for step_index,step in enumerate(spec['steps'],1):
+        if trace is not None:trace.update(phase='step',step_index=step_index,step=step,clock=clock)
         op=step['op']
         if op=='tick':
             dt=step['dt']
@@ -174,9 +179,19 @@ def execute(spec,base,trace=None):
             else:raise ValueError('Unknown joint operation')
         collect();drain()
     values={}
-    for a in spec.get('assertions',[]):
+    assertions=spec.get('assertions',[])
+    for assertion_index,a in enumerate(assertions,1):
+        if trace is not None:trace.update(phase='assertion',assertion_index=assertion_index,clock=clock)
         actual=clients[a['client']].plain(clients[a['client']].h.value(a['path']))
-        if actual!=a['equals']or isinstance(actual,bool)!=isinstance(a['equals'],bool):raise ValueError('Joint assertion failed '+a['path'])
+        if actual!=a['equals']or isinstance(actual,bool)!=isinstance(a['equals'],bool):
+            message='Joint assertion failed '+a['path']
+            if trace is not None:
+                try:canonical(actual)
+                except (TypeError,ValueError):actual=repr(actual)
+                trace['diagnostic']={'code':'joint_assertion_failed','message':message,'phase':'assertion',
+                                     'assertion_index':assertion_index,'client':a['client'],'field':a['path'],
+                                     'expected':a['equals'],'actual':actual,'time':clock}
+            raise ValueError(message)
     for a in spec.get('observations',[]):values[a['name']]=clients[a['client']].plain(clients[a['client']].h.value(a['path']))
     gaps=[]
     if not spec.get('assertions'):gaps.append('no assertions executed')
@@ -189,7 +204,42 @@ def execute(spec,base,trace=None):
             if count<requirement['minimum_events']:gaps.append('required timer events not reached: '+canonical({**requirement,'actual':count}))
     for i,(rule,hits)in enumerate(zip(spec.get('faults',[]),fault_hits)):
         if rule.get('required',True)and not hits:gaps.append('required fault not exercised: '+str(i))
-    return {'schema':2,'layer':'lua_model','execution_status':'passed','acceptance':{'status':'not_checked'if gaps else'passed','gaps':gaps},'evidence':{'lua_model':'passed'if spec.get('assertions')else'not_checked','native_graph_model':('passed'if server.work else'not_checked')if server else'not_applicable','editor':'not_checked','host':'not_checked','real_storage_reentry':'not_checked'},'inputs':inputs,'journal':journal,'pending_packets':len(queue),'faults':[{'rule':rule,'hits':hits,'status':'passed'if hits else'not_checked'}for rule,hits in zip(spec.get('faults',[]),fault_hits)],'observations':values,'assertions':len(spec.get('assertions',[])),'executed_graphs':sorted(server.executed_graphs)if server else [],'server_work':server.work if server else 0,'variable_syncs':variable_syncs,'server_variables':server.db if server else {},'lifecycle_events':[event for event in server.event_log if 'lifecycle'in event]if server else [],'timer_events':[event for event in server.event_log if 'timer'in event]if server else [],'host_tested':False,'editor_tested':False}
+    acceptance={'status':'not_checked' if gaps else 'passed','gaps':gaps}
+    checks={'assertions':{'status':'passed' if assertions else 'not_checked','executed':len(assertions)},
+            'coverage':acceptance}
+    return {'schema':2,'layer':'lua_model','execution_status':'passed','status':acceptance['status'],
+            'acceptance':acceptance,'checks':checks,
+            'diagnostics':[{'code':'joint_coverage_missing','message':gap}for gap in gaps],
+            'evidence':{'lua_model':'passed'if assertions else'not_checked','native_graph_model':('passed'if server.work else'not_checked')if server else'not_applicable','editor':'not_checked','host':'not_checked','real_storage_reentry':'not_checked'},'inputs':inputs,'journal':journal,'pending_packets':len(queue),'faults':[{'rule':rule,'hits':hits,'status':'passed'if hits else'not_checked'}for rule,hits in zip(spec.get('faults',[]),fault_hits)],'observations':values,'assertions':len(assertions),'executed_graphs':sorted(server.executed_graphs)if server else [],'server_work':server.work if server else 0,'variable_syncs':variable_syncs,'server_variables':server.db if server else {},'lifecycle_events':[event for event in server.event_log if 'lifecycle'in event]if server else [],'timer_events':[event for event in server.event_log if 'timer'in event]if server else [],'host_tested':False,'editor_tested':False}
+
+
+def evaluate(spec,base):
+    """Collect the same failure and coverage report in the CLI and MCP workers."""
+    trace={}
+    try:
+        return execute(spec,base,trace)
+    except Exception as exc:
+        import traceback
+        diagnostic=trace.pop('diagnostic',None)
+        if diagnostic is None:
+            diagnostic={'code':'joint_model_failed','message':str(exc),'phase':trace.get('phase','input')}
+            if diagnostic['phase']=='step':
+                diagnostic.update(step_index=trace['step_index'],actual=trace['step'],time=trace['clock'])
+            elif diagnostic['phase']=='startup':
+                diagnostic.update({key:trace[key] for key in ('client','source','mapping') if key in trace})
+            elif diagnostic['phase']=='assertion':
+                diagnostic.update(assertion_index=trace['assertion_index'],time=trace['clock'])
+        assertion_failed=diagnostic['code']=='joint_assertion_failed'
+        return {'schema':2,'layer':'lua_model','status':'failed',
+                'execution_status':'passed' if assertion_failed else 'failed',
+                'acceptance':{'status':'failed','gaps':[]},
+                'checks':{'assertions':{'status':'failed' if assertion_failed else 'not_checked',
+                                        'executed':diagnostic.get('assertion_index',0)}},
+                'diagnostics':[diagnostic],'inputs':trace.get('inputs',{}),
+                'error':str(exc),'trace':trace,'stack':traceback.format_exc(),
+                'editor_tested':False,'host_tested':False}
+
+
 class SimulationFailure(ValueError):
     def __init__(self,detail):self.detail=detail;super().__init__('Joint model failed: '+canonical(detail))
 def run(spec,base,timeout=30):
@@ -202,9 +252,7 @@ def run(spec,base,timeout=30):
         raise ValueError('Joint model failed: '+r.stderr[-3000:])
     return json.loads(r.stdout)
 if __name__=='__main__':
-    v=json.loads(sys.stdin.read());trace={}
-    try:result=execute(v['spec'],v['base'],trace)
-    except Exception as exc:
-        import traceback
-        print(canonical({'error':str(exc),'trace':trace,'stack':traceback.format_exc()}));raise SystemExit(2)
+    v=json.loads(sys.stdin.read())
+    result=evaluate(v['spec'],v['base'])
     print(canonical(result))
+    if result['status']=='failed':raise SystemExit(2)

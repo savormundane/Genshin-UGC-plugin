@@ -4,6 +4,8 @@
 
 schema 2支持client、level、storage、native、assets、protocol、protocol_native、animation、graphs、gil、simulation、experiment、platform、project，至少一项；可增加portable配置启用[可迁移制作与重建](portable-delivery.md)。client选择source或assembly；其余阶段以spec路径引用同名指南中的配置。native选择base，以及spec或[摘要绑定plan](native-changes.md)其中之一；与level新建互斥。所有配置相对各自文件解析，输出必须是新目录。
 
+可选 `scene` 阶段以 `spec` 引用布局并交付独立 GIA。拟合质量见 `evidence.asset_fit_quality`。[原生场景](native-scene.md)
+
 可选 beyond 阶段见[模拟器后端](beyond-backend.md)，以 spec 指定场景；支持 `@level` 绑定本轮最终GIL和默认随包后端的portable交付。外部Lua模型与软件预览独立报告，任一必需断言失败不提交输出。
 
 最终GIL在模拟前自动执行[工程对象与引用检查](project-index.md)，核对已校准客户端层级、脚本及原生引用。project.spec可以声明其它GIL/GIA和必需关系；存在最终GIL时清单必须恰有一个@level输入，不能只验证无关参考文件。失败不提交；未索引引用仍在报告中列出，不证明任意ID迁移安全。

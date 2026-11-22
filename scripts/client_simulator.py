@@ -1,7 +1,16 @@
 """Run the explicit client API subset in Lua 5.3; no renderer/editor/host emulator."""
 from pathlib import Path
 import argparse,hashlib,json,math,os,re,subprocess,sys
+from authoring_io import read_json
 PLUGIN=Path(__file__).resolve().parents[1]
+
+
+class ClientSimulationFailure(ValueError):
+ def __init__(self,message,detail):
+  super().__init__(message)
+  self.detail=detail
+
+
 def _run_in_process(source,scenario,bindings=None,mapping='main.lua'):
  try:from lupa.lua53 import LuaRuntime
  except ImportError:raise ValueError('离线模拟需要Lua5.3解释器：安装lupa==2.6到当前Python环境；不影响关卡生成和其他CLI')
@@ -36,10 +45,13 @@ def _run_in_process(source,scenario,bindings=None,mapping='main.lua'):
   limit()
   try:return fn(*args)
   finally:clear()
+ activity={'phase':'load'}
  try:
   call(h.load,source)
+  activity={'phase':'startup'}
   call(h.boot)
-  for step in steps:
+  for step_index,step in enumerate(steps,1):
+   activity={'phase':'step','step_index':step_index}
    if not isinstance(step,dict) or 'op' not in step:raise ValueError('步骤需要op')
    op=step['op']
    if op=='tick':
@@ -73,13 +85,22 @@ def _run_in_process(source,scenario,bindings=None,mapping='main.lua'):
     call(h.fire,target,family,step['event'],convert(step.get('data',{})))
    else:raise ValueError('未知模拟步骤：'+str(op))
   checked=[]
-  for item in assertions:
+  for assertion_index,item in enumerate(assertions,1):
+   activity={'phase':'assertion','assertion_index':assertion_index}
    if not isinstance(item,dict) or set(item)!={'path','equals'} or not isinstance(item['path'],str) or not re.fullmatch(r'[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*',item['path']):raise ValueError('断言需要path与equals，只支持字段路径')
    actual=h.value(item['path']);expected=item['equals']
    if type(expected) not in (str,int,float,bool,type(None)):raise ValueError('断言期望仅支持标量')
    if actual!=expected or (type(actual)==bool)!=(type(expected)==bool):raise ValueError('模拟断言失败：'+item['path']+'，预期='+repr(expected)+'，实际='+repr(actual))
    checked.append(item['path'])
- except Exception as e:raise ValueError('客户端离线模型执行失败：'+str(e)) from e
+ except Exception as e:
+  message=str(e)
+  line=re.search(r'\[string "client"\]:(\d+):',message)
+  diagnostic={'code':'lua_model_failed','message':message.split('\nstack traceback:',1)[0],**activity}
+  if line:
+   diagnostic['line']=int(line[1])
+  raise ClientSimulationFailure('客户端离线模型执行失败：'+message,{
+   'diagnostic':diagnostic,'logs':[h.logs[i] for i in range(1,len(h.logs)+1)],
+  }) from e
  def plain(v):
   if hasattr(v,'items'):
    keys=list(v.keys())
@@ -98,10 +119,11 @@ def run(source,scenario,bindings=None,mapping='main.lua',timeout=10):
  except subprocess.TimeoutExpired as e:raise ValueError('模拟执行超时，已终止本次独立模型进程；可能存在循环或回调过慢') from e
  try:response=json.loads(result.stdout)
  except ValueError as e:raise ValueError('模型进程未返回有效报告：'+result.stderr[-1200:]) from e
- if result.returncode or not response.get('ok'):raise ValueError(response.get('error','模型进程失败'))
+ if result.returncode or not response.get('ok'):
+  raise ClientSimulationFailure(response.get('error','模型进程失败'),response.get('detail',{}))
  return {**response['result'],'isolated_process':True,'timeout_seconds':timeout}
 
-def main(argv=None):
+def legacy_main(argv):
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('source');p.add_argument('--scenario',required=True);p.add_argument('--level');p.add_argument('--mapping',default='main.lua');p.add_argument('--out');p.add_argument('--timeout',type=float,default=10);a=p.parse_args(argv)
  if a.out and Path(a.out).exists():raise ValueError('模拟报告已存在，请指定新文件')
  scene=json.loads(Path(a.scenario).read_text(encoding='utf-8-sig'))
@@ -131,12 +153,102 @@ def main(argv=None):
   with Path(a.out).open('x',encoding='utf-8') as f:json.dump(result,f,ensure_ascii=False,indent=2)
  return result
 
+
+def check_startup(path, mapping=None, timeout=10):
+ path=Path(path).resolve()
+ raw=path.read_bytes()
+ report={'schema':2,'layer':'lua_model','scope':'startup','source':str(path),
+         'input_sha256':hashlib.sha256(raw).hexdigest(),'mapping':mapping,'logs':[],
+         'checks':{'startup':{'status':'not_checked'}},'diagnostics':[],
+         'editor':'not_checked','host':'not_checked'}
+ bindings=None
+ if path.suffix.lower()=='.gil':
+  from level_authoring import inspect_bindings
+  from joint_simulator import script_from_gil
+  bindings=inspect_bindings(raw)
+  names=[s['name'] for s in bindings['scripts']]
+  if mapping is None and len(names)==1:
+   mapping=names[0]
+  if names.count(mapping)!=1:
+   report.update(status='failed',diagnostics=[{
+    'code':'lua_mapping_required','message':'Choose one exact embedded script using --mapping.',
+    'source':str(path),'expected':mapping,'available_mappings':names,
+   }])
+   return report
+  source,_=script_from_gil(raw,mapping,bindings=bindings)
+ elif path.suffix.lower()=='.lua' and mapping is None:
+  source=raw.decode('utf-8-sig')
+ else:
+  raise ValueError('Startup check accepts .lua or .gil; --mapping requires a GIL')
+ report['mapping']=mapping
+ report['source_sha256']=hashlib.sha256(source.encode('utf-8')).hexdigest()
+ try:
+  startup=run(source,{'schema':1},bindings,mapping or 'main.lua',timeout)
+ except ValueError as exc:
+  detail=getattr(exc,'detail',{})
+  diagnostic=detail.get('diagnostic',{'code':'lua_model_failed','message':str(exc)})
+  report.update(status='failed',logs=detail.get('logs',[]),
+                diagnostics=[{**diagnostic,'source':str(path),'mapping':mapping}])
+ else:
+  report.update(status='passed',logs=startup['logs'],live_controls=startup['live_controls'])
+ report['checks']['startup']['status']=report['status']
+ return report
+
+
+def main(argv=None):
+ args=list(sys.argv[1:] if argv is None else argv)
+ commands=('check','run','preview')
+ # Retain the positional-source form, including a file whose name is a command.
+ if args and args[0] not in ('-h','--help') and (
+     args[0] not in commands or any(a=='--scenario' or a.startswith('--scenario=') for a in args[1:])):
+  return legacy_main(args)
+ parser=argparse.ArgumentParser(prog='qianxing.py simulate',description=__doc__,
+                                epilog='Legacy: simulate SOURCE --scenario SCENE [--mapping NAME] [--out REPORT]')
+ sub=parser.add_subparsers(dest='operation',required=True)
+ check=sub.add_parser('check',help='Execute a single script through modeled startup')
+ check.add_argument('input');check.add_argument('--mapping');check.add_argument('--timeout',type=float,default=10)
+ joint=sub.add_parser('run',help='Validate a schema 2 client and native graph scenario')
+ joint.add_argument('input');joint.add_argument('--out');joint.add_argument('--timeout',type=float,default=10)
+ preview=sub.add_parser('preview',help='Render a Beyond scene, optionally with assertions')
+ preview.add_argument('input');preview.add_argument('--out',required=True);preview.add_argument('--backend')
+ parsed=parser.parse_args(args)
+ path=Path(parsed.input).resolve()
+ try:
+  if parsed.operation=='check':
+   result=check_startup(path,parsed.mapping,parsed.timeout)
+  elif parsed.operation=='preview':
+   from beyond_backend import run as run_beyond
+   result=run_beyond(path,parsed.backend,parsed.out,preview=True)
+  else:
+   from joint_simulator import run as run_joint, SimulationFailure
+   if parsed.out and Path(parsed.out).exists():
+    raise ValueError('Output exists; use a new report path')
+   try:
+    result=run_joint(read_json(path),path.parent,parsed.timeout)
+   except SimulationFailure as exc:
+    result=exc.detail
+   if parsed.out:
+    with Path(parsed.out).open('x',encoding='utf-8') as stream:
+     json.dump(result,stream,ensure_ascii=False,indent=2)
+ except (ValueError,OSError,TypeError,KeyError,ImportError,subprocess.SubprocessError) as exc:
+  result={'status':'failed','checks':{},'diagnostics':[
+   {'code':'simulation_input_or_runtime','message':str(exc),'source':str(path)}
+  ]}
+ print(json.dumps(result,ensure_ascii=False,indent=2))
+ return 0 if result['status']=='passed' else 2
+
+
 if __name__=='__main__':
  if sys.argv[1:]==['--worker']:
   try:
    request=json.loads(sys.stdin.read());value=_run_in_process(**request);print(json.dumps({'ok':True,'result':value},ensure_ascii=False,allow_nan=False))
   except Exception as error:
-   print(json.dumps({'ok':False,'error':str(error)},ensure_ascii=False));raise SystemExit(2)
+   print(json.dumps({'ok':False,'error':str(error),'detail':getattr(error,'detail',{})},ensure_ascii=False));raise SystemExit(2)
  else:
-  try:print(json.dumps(main(),ensure_ascii=False,indent=2))
+  try:
+   result=main()
+   if isinstance(result,dict):
+    print(json.dumps(result,ensure_ascii=False,indent=2))
+   else:
+    raise SystemExit(result)
   except (ValueError,OSError,TypeError,KeyError) as error:print(str(error),file=sys.stderr);raise SystemExit(2)

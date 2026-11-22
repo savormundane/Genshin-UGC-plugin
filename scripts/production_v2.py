@@ -9,7 +9,7 @@ def produce(path,out,evidence=None):
     if 'portable'in job:
         from portable_delivery import produce as produce_portable
         return produce_portable(path,out,{}if evidence is None else evidence)
-    schema(job,('schema','client','client_check','level','storage','native','assets','protocol','protocol_native','animation','graphs','gil','simulation','experiment','platform','project','ui','resources','beyond'),('schema',))
+    schema(job,('schema','client','client_check','level','storage','native','assets','protocol','protocol_native','animation','graphs','gil','simulation','experiment','platform','project','ui','resources','beyond','scene'),('schema',))
     if len(job)==1:raise ValueError('No production stages')
     evidence={}if evidence is None else evidence
     inputs={str(path):sha(Path(path).read_bytes())};stages=[];executions=[]
@@ -30,6 +30,10 @@ def produce(path,out,evidence=None):
     platform_report=None;platform_configuration=None
     client_contract=None
     ui_spec=None
+    scene_path = None
+    if 'scene' in job:
+        schema(job['scene'], ('spec',), ('spec',))
+        scene_path = track(resolve(base, job['scene']['spec']))
     resource_check=None
     if 'resources'in job:
         from resource_catalogue import check as check_resources
@@ -130,6 +134,15 @@ def produce(path,out,evidence=None):
             state('resource_contract')
             evidence['resource_contract'].update(scope='declared_resource_uses',artifact_references_verified=False,report='resource-report.json')
         write_json(stage/'environment.json',environment)
+        if scene_path is not None:
+            from scene_authoring import build as build_scene
+
+            result = build_scene(scene_path, stage/'scene')
+            for source, digest in result['inputs'].items():
+                if inputs.setdefault(source, digest) != digest:
+                    raise ValueError('Scene input changed: ' + source)
+            state('native_static_scene')
+            evidence['native_static_scene'].update(report='scene/manifest.json', objects=result['object_count'])
         if platform_report is not None:
             write_json(stage/'platform-configuration.json',platform_configuration)
             write_json(stage/'platform-report.json',platform_report);state('platform_configuration')
@@ -149,6 +162,7 @@ def produce(path,out,evidence=None):
             from storage_authoring import build,attach
             sp=track(resolve(base,job['storage']['spec']));storage_spec=read_json(sp);build(sp,stage/'storage')
             state('storage_generation')
+        fitted_assets={}
         if 'assets'in job:
             legacy['assets']=[];asset_names=set()
             for item in job['assets']:
@@ -159,6 +173,7 @@ def produce(path,out,evidence=None):
                     from asset_fit import build
                     result=build(track(resolve(base,item['source'])),track(resolve(base,item['spec'])),stage/'fitted-assets'/item['name'])
                     inputs.update(result['inputs']);state('asset_fit')
+                    fitted_assets[item['name']]={'report':f"fitted-assets/{item['name']}/catalog.json",**result['quality']}
                 elif item.get('kind')=='gia':
                     from native_assets import build
                     source=track(resolve(base,item['source']));sp=track(resolve(base,item['spec']));build(source,sp,stage/'native-assets'/item['name']);state('native_assets')
@@ -410,7 +425,10 @@ def produce(path,out,evidence=None):
             evidence.setdefault(name,{'status':'not_applicable'})
         if graph_spec:evidence['compilation_readback']={'status':'passed','report':'build/graphs/replacement-report.json'if graph_spec.get('schema')==2 else'build/graphs/build-report.json'}
         if any(item.get('kind')=='gia'for item in job.get('assets',[])):evidence['software_preview']={'status':'passed','path':'native-assets'}
-        if any(item.get('kind')=='fit'for item in job.get('assets',[])):evidence['fitted_software_preview']={'status':'passed','layer':'software_preview','path':'fitted-assets'}
+        if fitted_assets:
+            evidence['fitted_software_preview']={'status':'passed','layer':'software_preview','path':'fitted-assets'}
+            quality_status='passed' if all(a['target_reached'] for a in fitted_assets.values()) else 'failed'
+            evidence['asset_fit_quality']={'status':quality_status,'layer':'software_preview','assets':fitted_assets}
         evidence['editor']={'status':'not_checked'};evidence['host']={'status':'not_checked'};evidence['real_storage_reentry']={'status':'not_checked'}
         evidence['v3_pipeline']={'status':'passed'}
         # Copy only stable reviewable artifacts; internal jobs contain temporary paths.

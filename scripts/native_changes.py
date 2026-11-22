@@ -89,7 +89,7 @@ def difference(before,after,allowed=None,*,include_spatial=True):
             'protected':protected,'complete_semantic_diff':False,'unindexed':sorted(set(left['unindexed'])|set(right['unindexed'])),
             'editor':'not_checked','host':'not_checked'}
     if include_spatial and before != after:
-        from native_scene import spatial_objects
+        from native_entity_transform import spatial_objects
         spatial=[]
         for header,root in ((bh,bfields),(ah,afields)):
             spatial.append({(key('level',kind,1,ident) if kind=='gia_resource' else key('level',kind,ident)):props

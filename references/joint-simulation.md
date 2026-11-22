@@ -1,6 +1,6 @@
 # 客户端与原生图联合模型
 
-能力名：joint-simulation。scripts/joint_simulator.py在独立进程中创建多个Lua 5.3实例，并连接scripts/native_model.py读取最终GIL的受限执行器。需要lupa==2.8的lua53，默认有进程超时和回调指令预算。
+`simulate run SCENE.json` 在独立进程中创建 Lua 5.3 实例，并可连接最终 GIL 的受限原生图执行器。使用[专用 Python 环境](../docs/runtime-environment.md)，执行有进程超时和回调指令预算。断言失败报告包含第一处失败的索引、字段、预期值和实际值。
 
 场景schema=2，clients为{id,source,mapping?,canvas?,params?}数组，source可以是Lua或GIL。GIL直接提取精确匹配的内嵌脚本与模板绑定。server可声明source、graph_ids及initial，后者按玩家字符串ID保存变量。steps支持tick、invoke、cursor、key、lifecycle、signal、settle、reenter。signal明确source、target、name、params；客户端请求与原生输出共用确定性队列。
 

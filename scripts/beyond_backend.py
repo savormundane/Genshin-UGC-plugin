@@ -4,8 +4,10 @@ import argparse,json,subprocess,tempfile,shutil
 from authoring_io import read_json,sha,schema,resolve,output_directory,write_json,finish
 PIN='02a5ea2cd38bb5bcf7a7ce6dd745be3bb1ae655c'
 BUNDLED=Path(__file__).resolve().parent.parent/'vendor/beyond'
-def run(path,backend,out,*,final_gil=None):
-    path=Path(path).resolve();backend=Path(backend or BUNDLED).resolve();spec=read_json(path)
+def run(path,backend,out,*,final_gil=None,preview=False):
+    path=Path(path).resolve();backend=Path(backend or BUNDLED).resolve()
+    spec_bytes=path.read_bytes()
+    spec=json.loads(spec_bytes.decode('utf-8-sig'))
     schema(spec,('schema','project','gil','scripts','case','render','render_checks'),('scripts','case'))
     if ('project'in spec)==('gil'in spec):raise ValueError('Choose project or gil')
     if not isinstance(spec['scripts'],list)or not spec['scripts']:raise ValueError('Explicit scripts required')
@@ -19,6 +21,7 @@ def run(path,backend,out,*,final_gil=None):
             bound.append({'source':'level.gil','sha256':digest,'mapping':item.get('mapping'),'control_guid':item.get('control_guid',item.get('root_guid'))})
         elif item.get('sha256')=='@level':raise ValueError('@level digest requires @level source')
     if type(spec.get('render',False)) is not bool:raise ValueError('render must be boolean')
+    if preview:spec['render']=True
     if 'render_checks'in spec:
         if not spec.get('render') or not isinstance(spec['render_checks'],list) or not spec['render_checks']:raise ValueError('Render checks require rendering and a nonempty list')
         for check in spec['render_checks']:
@@ -36,15 +39,17 @@ def run(path,backend,out,*,final_gil=None):
         dirty=subprocess.run(['git','-C',str(backend),'status','--porcelain','--untracked-files=no'],capture_output=True,text=True,check=True).stdout
         if dirty:raise ValueError('Modified backend source refused')
     if revision!=PIN:raise ValueError('Unsupported backend commit')
-    if not spec['case'].get('asserts'):raise ValueError('Nonempty assertions required')
-    inputs={str(path):sha(path.read_bytes())};scripts=[]
+    if not isinstance(spec['case'],dict):raise ValueError('Beyond case must be an object')
+    if not preview and not spec['case'].get('asserts'):raise ValueError('Nonempty assertions required')
+    inputs={str(path):sha(spec_bytes)};scripts=[]
     gil=None;project_data=None
     if 'gil'in spec:
         from beyond_gil import convert
-        source=resolve(path.parent,spec['gil']['source']);inputs[str(source)]=sha(source.read_bytes())
-        gil=convert(source.read_bytes(),spec['gil'])
+        source=resolve(path.parent,spec['gil']['source']);raw=source.read_bytes();inputs[str(source)]=sha(raw)
+        gil=convert(raw,spec['gil'])
     else:
-        project=resolve(path.parent,spec['project']);inputs[str(project)]=sha(project.read_bytes());project_data=read_json(project)
+        project=resolve(path.parent,spec['project']);raw=project.read_bytes();inputs[str(project)]=sha(raw)
+        project_data=json.loads(raw.decode('utf-8-sig'))
     mounted=set()
     for item in spec['scripts']:
         schema(item,('source','sha256','mapping','controlId','controlAsset','control_guid','path'),('source','sha256','path'))
@@ -81,12 +86,33 @@ def run(path,backend,out,*,final_gil=None):
         proc=subprocess.run([node,str(Path(__file__).with_name('beyond_worker.mjs')),str(td/'job.json'),str(td/'result.json')],capture_output=True,text=True,encoding='utf-8',timeout=45)
         if proc.returncode:raise ValueError('External simulator failed: '+proc.stderr[-3000:])
         result=read_json(td/'result.json')
-        if result.get('passed')is not True:raise ValueError('External assertions failed: '+json.dumps(result,ensure_ascii=False))
-        with output_directory(out)as stage:
+        passed=result.get('passed') is True
+        if not preview and (not passed or result['checks']['assertions']['executed']==0):
+            raise ValueError('External assertions failed: '+json.dumps(result,ensure_ascii=False))
+        status='passed' if passed else 'failed'
+        destination=Path(out).resolve()
+        if not passed:destination=destination.with_name(destination.name+'.diagnostics')
+        report={'status':status,'backend_commit':revision,'final_gil_bindings':bound,'layer':'external_lua_model',
+                'report':result,'checks':result['checks'],'diagnostics':result['diagnostics'],'logs':result['logs'],
+                'editor':'not_checked','host':'not_checked',
+                'rendering':result['checks']['render_assertions']['status'],
+                'preview_generated':result['checks']['preview']['generated'],'render_layer':'software_preview',
+                'native_graph_model':'not_applicable',
+                'template_identity':'selected_native_guid_bindings' if gil else 'explicit_project_binding_not_native_equivalence'}
+        if not passed and destination.exists():
+            report['diagnostics'].append({'code':'diagnostics_output_exists',
+                                          'message':'Diagnostics path already exists. Choose a new --out path.',
+                                          'path':str(destination)})
+            return {**report,'inputs':inputs,'output':None,'diagnostics_output':None}
+        with output_directory(destination)as stage:
             for name in ('preview.png','render.json','converted-project.json'):
                 if (td/name).is_file():shutil.copy2(td/name,stage/name)
-            write_json(stage/'external-simulation.json',{'status':'passed','backend_commit':revision,'final_gil_bindings':bound,'layer':'external_lua_model','report':result,'editor':'not_checked','host':'not_checked','rendering':'passed' if spec.get('render_checks') else 'not_checked','preview_generated':spec.get('render',False),'render_layer':'software_preview','native_graph_model':'not_applicable','template_identity':'selected_native_guid_bindings' if gil else 'explicit_project_binding_not_native_equivalence'})
-            return finish(stage,inputs,kind='external-simulation',status='passed',backend_commit=revision)
+            write_json(stage/'external-simulation.json',report)
+            manifest=finish(stage,inputs,kind='external-simulation',status=status,backend_commit=revision)
+        if preview:
+            return {**report,'inputs':inputs,'output':str(destination) if passed else None,
+                    'diagnostics_output':str(destination) if not passed else None}
+        return manifest
 def main(argv=None):
     p=argparse.ArgumentParser();p.add_argument('spec');p.add_argument('--backend');p.add_argument('--out',required=True);a=p.parse_args(argv)
     print(json.dumps(run(a.spec,a.backend,a.out),ensure_ascii=False));return 0

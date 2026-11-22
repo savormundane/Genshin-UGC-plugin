@@ -1,12 +1,23 @@
 # 客户端离线模型与环境自检
 
-## 执行Lua模型
+## 启动检查、预览与场景
+
+```text
+python scripts/qianxing.py simulate check client.lua
+python scripts/qianxing.py simulate check LEVEL.gil --mapping main.lua
+python scripts/qianxing.py simulate preview samples/beyond-button/preview.json --out NEW_PREVIEW
+python scripts/qianxing.py simulate run SCENE.json --out NEW_REPORT.json
+```
+
+`check` 执行已建模的启动回调，返回脚本身份、日志和首条失败的源行。GIL 只有一份脚本时自动选中，多份时用 `--mapping` 精确选择。`preview` 使用 [Beyond 软件预览](beyond-backend.md)，可先看画面再编写断言。`run` 读取 [schema 2 联合场景](joint-simulation.md)，以场景中声明的路径为准。空断言或必需覆盖不足时，`run` 报告 `not_checked` 并返回非零退出码。MCP `simulate` 返回同样的结论。
+
+## 既有单脚本场景
 
 ```text
 python scripts/qianxing.py simulate client.lua --scenario SCENE.json --level LEVEL.gil --mapping main.lua --out SIMULATION.json
 ```
 
-需要当前Python可导入lupa==2.8的lua53模块。解释器是执行依赖，模型代码随包内置，不调用其他项目的API桩。--level可选，提供时从实际文件读取模板GUID与脚本映射，不使用固定小序号。
+使用[专用 Python 环境](../docs/runtime-environment.md)中的 Lua 5.3 模块。模型代码随包提供。传入 `--level` 时从实际 GIL 读取模板 GUID 与脚本映射。
 
 也可直接模拟交付文件中的脚本：
 

@@ -10,9 +10,9 @@ def flow_catalog():
     # Read declarations as data through the existing AST catalogue; never execute
     # third-party node implementations. The bundled writer uses these ordinals
     # when no NodeEditorPack index override is present.
-    from node_build import catalog
+    from node_build import node_definitions
     declarations={}
-    for entry in catalog(limit=10000)['nodes']:
+    for entry in node_definitions():
         key=(entry['scope'],entry['name'])
         shape={kind:sum(p[1]=='流程'for p in entry.get(side,[]))
                for kind,side in((1,'inputs'),(2,'outputs'))}

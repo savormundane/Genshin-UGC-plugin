@@ -3,8 +3,8 @@ DOMAINS={
     'editor':'qianxing-editor','graph':'qianxing-graph-code','client':'client-controls-lua',
     'gil':'qianxing-gil','assets':'qianxing-assets'}
 DOMAIN_TOOLS={
-    'editor':['docs','platform','project','resources','ids','ui'],
-    'graph':['nodes','build'],'client':['client','simulate'],
+    'editor':['docs','platform','project','resources','ids','ui','scene'],
+    'graph':['nodes','graph','build'],'client':['client','simulate'],
     'gil':['native','level','inspect','verify'],'assets':['assets']}
 # Capability IDs remain those published by capabilities.py. Empty ownership means
 # a shared tool, not an invented sixth platform domain.
@@ -13,7 +13,7 @@ OWNERS={
     'mcp':(), 'native':('gil',),'storage':('editor','graph','client','gil'),
     'protocol':('graph','client'),'ui':('client',),'assembly':('client',),
     'simulation':('graph','client'),'algorithms':('client',),'native_assets':('assets','gil'),
-    'production':(), 'platform':('editor',),'project':('editor',),'native_changes':('gil',)}
+    'production':(), 'platform':('editor',),'project':('editor',),'native_changes':('gil',),'scene':('editor','gil','assets')}
 WORKFLOWS={
     'multiplayer':{'domains':['graph','client'],'capabilities':['protocol','simulation'],'guide':'references/workflows/qianxing-multiplayer/README.md'},
     'animation':{'domains':['client','assets'],'capabilities':['ui','assembly'],'guide':'references/workflows/qianxing-animation/README.md'},

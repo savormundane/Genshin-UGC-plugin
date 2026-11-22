@@ -12,16 +12,17 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 
 两个目录必须已存在且互不包含，输出目录不得与插件源码重叠。也可通过UGC_PROJECT_ROOT和UGC_OUTPUT_ROOT环境变量指定；缺失时拒绝启动。包内mcp.json通过Node启动器读取独立runtime.json中的解释器和目录绑定；直接CLI入口仍可显式传参。宿主实际加载与SDK协议调用分别验证。
 
-协议只走 stdout，执行日志走 stderr 或请求临时日志。当前提供十九个工具。
+协议只走 stdout，执行日志走 stderr 或请求临时日志。当前提供二十个工具。
 
 | 工具 | 参数与行为 |
 | --- | --- |
-| doctor | 只读检查执行依赖 |
+| doctor | 检查执行依赖并显示实际插件路径、版本与能力指纹 |
 | capabilities | 返回当前实现和证据边界 |
 | api_lookup | symbol。查询客户端 Lua API、来源与推导状态 |
 | diagnose | spec、sha256。按配置执行只读的环境、Lua、GIL 和素材检查 |
 | docs_search | version、query：检索固定版本资料 |
 | nodes_lookup | query、scope、limit 均可选。查询 Graph Code 调用、作用域、签名和端口。scope 为 all、client 或 server，limit 默认 20，范围 1 到 100 |
+| resources_lookup | version、query、mode、limit。查询目录中记录的模型及模板身份 |
 | native_inspect / native_audit | input，可选 sha256。读取或审计指定原生文件 |
 | project_inspect | input、可选 sha256、selector、transitive。按 key、kind、name 或 id 选择唯一对象，查看依赖和引用者 |
 | client_check | input，可选 sha256、mapping、contract、contract_sha256。编译 Lua 正文，可选择单个 GIL 映射或检查 API 合同 |
@@ -41,7 +42,7 @@ input/spec/plan/contract相对工程根目录，或为工程/输出根内绝对�
 
 ## 审阅并另存已有工程
 
-以下参数对应源码版 Unreleased。正式 4.1.0 可用[补丁文件和 CLI](native-changes.md#局部编辑)执行同一原生操作。
+
 
 1. 调用 `project_inspect`，例如传入 `{"input":"level.gil","selector":{"kind":"template","id":1086324737}}`。复用 `inputs_sha256.input`。追踪一个模板参数时，可选中变量的完整 `key` 并开启 `transitive`。
 2. 给 `native_plan` 传入基底的 `input`、`sha256` 和新 `output`，将包含 `base_sha256`、`allowed_top_level_fields` 和 `operations` 的 schema 2 对象作为 `patch`。内联补丁中的相对 `source` 以项目目录为准。使用 `spec` 文件时以该文件的目录为准，并提供 `spec_sha256`。

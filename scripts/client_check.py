@@ -123,6 +123,15 @@ def check(raw,kind,*,mapping=None,source_map=None,contract=None):
             report['checks']['control_templates']=templates['status']
             if templates['status']=='failed':report['status']='failed'
             elif templates['status']=='not_checked'and report['status']!='failed':report['status']='not_checked'
+    if bodies:
+        next_steps = []
+        if kind=='gil' and mapping is None and len(bodies)>1:
+            next_steps.append({'code':'select_lua_mapping','message':'Use client check INPUT --mapping NAME to check one of the listed script mappings.'})
+        if contract is None:
+            next_steps.append({'code':'api_contract_missing','message':'The default check compiles Lua syntax. Supply --contract (MCP: contract) to check API calls and declared references.'})
+        if report['checks']['syntax']=='passed':
+            next_steps.append({'code':'check_startup','message':'Run simulate check INPUT with the same mapping to execute modeled startup callbacks.'})
+        report['next_steps']=next_steps
     return report
 
 

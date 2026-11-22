@@ -8,7 +8,7 @@
 2. 写出事件入口→条件→状态读写→动作→完成/失败/重置；标明实体目标、变量类型、信号字段/顺序、权限和跨会话生命周期。保持客户端请求与服务器确认的边界。
 3. 用 `python scripts/qianxing.py nodes "实体创建时" --scope server` 查询实际节点签名；按需要查函数/别名、输入/输出和具体端口类型，再读对应节点实现与官方说明。不从其他图的标题猜类型 ID。
 4. 编写 Graph Code 类结构源码及 docstring 中的 graph_id、graph_name、graph_type。客户端图还须明确技能/过滤器等类别，不能沿用服务器事件模型。必要的信号、结构体和复合资源先在支持资源中定义。
-5. 用统一 build 执行严格校验、模型生成、GIA/GIL 输出和回读；保留源码、模型、构建日志、文件摘要和字段变化。失败时不降级为空图或跳过校验。
+5. 编辑过程中用 `graph check SOURCE.py` 对单文件运行同一套严格解析与规则，按诊断的原始文件、行号和端口修改。准备交付时用 `build` 加载项目资源、生成 GIA/GIL 并回读。
 
 ## 统一命令
 
@@ -17,9 +17,12 @@
     python scripts/qianxing.py plan --kind game --interface lua --multiplayer --format both
     python scripts/qianxing.py inspect 当前基底.gil --out 新清点报告.json
     python scripts/qianxing.py nodes "打印字符串" --scope server
+    python scripts/qianxing.py graph check graphs/server.py
     python scripts/qianxing.py build build.json --out 当前项目的新交付目录
 
 plan 根据已判定的任务类型列出责任分工，不是自然语言需求解析器；需求分析由技能完成。仅修改 Lua 时选择 kind=lua、format=source，不触发节点图制作。图模块选择 kind=nodes。inspect 不会修改输入，已有报告拒绝覆盖。
+
+`graph check` 使用内置目录和规则，省去完整运行目录复制及导出。报告中的 `project_resources=not_checked` 提示通过完整构建核对项目专有信号、结构体、复合节点与挂载。
 
 ## 构建描述 schema 1
 

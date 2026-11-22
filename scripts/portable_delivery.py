@@ -45,7 +45,7 @@ def collect(path,options,*,snapshot_root=None):
             if 'client'in value:
                 c=value['client'];reference(source,c,'assembly'if 'assembly'in c else'source','assembly'if 'assembly'in c else None)
             if 'backend'in value.get('beyond',{}):raise ValueError('Portable Beyond requires the bundled backend; omit backend')
-            for key in('level','storage','graphs','simulation','experiment','platform','project','client_check','ui','resources','beyond'):
+            for key in('level','storage','graphs','simulation','experiment','platform','project','client_check','ui','resources','beyond','scene'):
                 if key in value:reference(source,value[key],'spec',key)
             for key in('native','storage','gil'):
                 if key in value:
@@ -80,10 +80,12 @@ def collect(path,options,*,snapshot_root=None):
             for item in value['scripts']:reference(source,item,'source')
         elif kind=='project':
             for item in value['artifacts']:reference(source,item,'source')
-        elif kind=='resources':
+        elif kind in ('resources', 'scene'):
             for i in range(len(value.get('catalogues',[]))):reference(source,value['catalogues'],i,'resource_catalogue')
         elif kind=='resource_catalogue':
-            for item in value['resources']:reference(source,item['source'],'path')
+            for item in value['resources']:
+                reference(source,item['source'],'path')
+                if 'dimensions_source' in item:reference(source,item['dimensions_source'],'path')
     visit(path,'job')
     for item in options.get('dependencies',[]):
         raw=base/item

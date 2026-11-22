@@ -24,6 +24,8 @@ regions为`[[left,top,right,bottom],...]`，限制新增／调整范围。`--ini
 
 每层输出primitives.json、preview.png、asset.json、data.lua，顶层输出catalog.json、state.json及摘要清单。Lua复用矩形合同，通过[点阵运行支持](pixel-runtime.md)接入调用方的控件模板。曲线先重建为像素，再无损合并为矩形；预览与矩形数据一致，不等于原图无损或宿主矢量曲线。
 
+`catalog.json` 和交付清单汇总各层的误差、矩形数、`stop_reason` 与 `target_reached`。顶层 `quality` 列出未达目标的层。制作链在 `evidence.asset_fit_quality` 引用同一结论和各素材报告。预算内的近似结果可按检查点继续迭代。
+
 gia=true使用相同矩形数据与已校准XY平面封装；空图拒绝GIA输出。保留来源、颜色、坐标和锚点，并用导入器回读。编辑器与设备仍待验：空工程导入后核对颜色、边缘、大小和锚点，再在目标设备检查控件预算。软件PNG不代表实际视觉验收或FPS。
 
 制作链schema 2可用assets项`{"name":"icon","kind":"fit","source":"icon.png","spec":"fit.json"}`，输出到fitted-assets/icon。portable收集分层清单及图片，重建遵守[执行确认](portable-delivery.md)。旧GE资料与未替代能力见[兼容边界](ge-asset-compatibility.md)。

@@ -5,6 +5,12 @@
 素材由插件自有asset_core与asset_pipeline实现，共用图像处理、预算检查、预览及交付。Agent根据目标选择输出类型，用户无需选择框架。默认生成矩形控件数据；需要文本控件时选text。auto固定选择rectangles，不在预算超限时静默换路线或降低质量。
 
 ```text
+python scripts/qianxing.py assets preview SOURCE.png --max-controls 900 --display 1600 900 --out NEW_PREVIEW
+```
+
+`preview` 接受与 `generate` 相同的生成参数。原参数超预算时会对比降色、缩小网格以及同时调整两项的候选。`report.json` 给出各组控件数、预算达成情况、透明度变化和归一化的预乘 RGBA 误差。默认按原参数的网格比较，也可指定目标显示尺寸。差异图越亮表示该像素的颜色或透明度变化越大。富文本仍以量化网格作为参考。选定后把对应的 `parameters` 交给 `generate`，可复现候选的参考网格和控件数。
+
+```text
 python scripts/qianxing.py assets generate SOURCE.png --out NEW_DIRECTORY --target auto --step 2 --colors 96 --alpha-min 128 --max-controls 900
 python scripts/qianxing.py assets generate SOURCE.png --out NEW_DIRECTORY --target text --width 64 --height 64 --columns 32 --max-bytes 4096 --cell 16 --max-controls 300
 python scripts/qianxing.py assets generate SOURCE.json --out NEW_DIRECTORY --target rectangles

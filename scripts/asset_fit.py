@@ -181,31 +181,51 @@ def build(source,spec_path,out,resume=None,steps=None,initial=None):
         states={};catalog=[]
         for i,(name,image,digest) in enumerate(items):
             layer_cfg={**cfg,'max_controls':quotas[i]} if version==2 else cfg
-            state,preview=fit(image,layer_cfg,binding,previous.get('layers',{}).get(name),steps,seed_data.get('layers',{}).get(name,{}).get('shapes'))
+            previous_layer=previous.get('layers',{}).get(name)
+            state,preview=fit(image,layer_cfg,binding,previous_layer,steps,seed_data.get('layers',{}).get(name,{}).get('shapes'))
             states[name]=state;dest=stage/name;dest.mkdir();data=rectangle_data(preview)
             if len(data['rects'])>quotas[i]:raise ValueError('Lowered rectangle controls exceed max_controls; no output committed')
             record={'schema':1,'size':list(image.size),'coordinate_space':'top_left_pixels','anchor':cfg['anchor'],'source_sha256':digest,'config':cfg,'binding':binding,'primitives':state['shapes'],
                     'primitive_count':len(state['shapes']),'rectangle_controls':len(data['rects']),'error':state['errors'][-1],'error_history':state['errors'],'work_done':state['work_done'],
                     'preview':'software reconstruction','editor':'not_checked','host':'not_checked'}
-            write_json(dest/'primitives.json',record);preview.save(dest/'preview.png')
+            reached=record['error']<=cfg['target_error']
+            if version==2:
+                stop_reason=state['stop_reason']
+            elif reached:
+                stop_reason='target_reached'
+            elif state['work_done']==cfg['work']:
+                stop_reason='work_exhausted'
+            elif steps is not None and state['work_done']==(previous_layer or {}).get('work_done',0)+steps:
+                stop_reason='step_limit'
+            else:
+                stop_reason='no_allowed_pixels'
+            quality={'target_error':cfg['target_error'],'target_reached':reached,'stop_reason':stop_reason}
+            record.update(quality)
+            preview.save(dest/'preview.png')
             write_json(dest/'asset.json',{'schema':1,'generator':'genshin-ugc-assets','target':'rectangles','grid_size':list(image.size),'controls':len(data['rects']),'data':data})
             if cfg['gia']:
                 from native_assets import export_rectangles
                 (dest/'asset.gia').write_bytes(export_rectangles(data,cfg['anchor'],name))
             (dest/'data.lua').write_text('return '+lua({'w':image.width,'h':image.height,'maxRects':len(data['rects']),**data})+'\n',encoding='utf-8')
-            catalog.append({'name':name,'path':name+'/asset.json','primitives':record['primitive_count'],'controls':record['rectangle_controls'],'error':record['error']})
+            catalog.append({'name':name,'path':name+'/asset.json','primitives':record['primitive_count'],
+                            'controls':record['rectangle_controls'],'error':record['error'],**quality})
             if version==2:
-                metrics=dict(control_budget=quotas[i],palette_size=len(data['palette']),lua_utf8_bytes=(dest/'data.lua').stat().st_size,stats=state['stats'],stop_reason=state['stop_reason'],target_reached=state['target_reached'])
+                metrics=dict(control_budget=quotas[i],palette_size=len(data['palette']),lua_utf8_bytes=(dest/'data.lua').stat().st_size,stats=state['stats'])
                 record.update(schema=2,cost_history=state['history'],**metrics)
-                write_json(dest/'primitives.json',record);catalog[-1].update(metrics)
+                catalog[-1].update(metrics)
+            write_json(dest/'primitives.json',record)
         if version==2 and sum(r['controls'] for r in catalog)>total: raise ValueError('Total control budget exceeded')
         checkpoint={'schema':version,'binding':binding,'layers':states}
         if initial_data: checkpoint['initial_data']=initial_data
         write_json(stage/'state.json',checkpoint)
-        summary={'schema':version,'layers':catalog,'binding':binding}
+        unmet_layers=[r['name'] for r in catalog if not r['target_reached']]
+        quality={'status':'failed' if unmet_layers else 'passed','target_error':cfg['target_error'],
+                 'target_reached':not unmet_layers,'unmet_layers':unmet_layers}
+        summary={'schema':version,'layers':catalog,'binding':binding,'quality':quality}
         if version==2: summary.update(max_total_controls=total,total_controls=sum(r['controls'] for r in catalog),total_lua_utf8_bytes=sum(r['lua_utf8_bytes'] for r in catalog),budget_kind='tool delivery budget; not platform limit')
         write_json(stage/'catalog.json',summary)
-        return finish(stage,inputs,kind='asset-fit',binding=binding,layers=catalog,editor='not_checked',host='not_checked')
+        return finish(stage,inputs,kind='asset-fit',binding=binding,layers=catalog,quality=quality,
+                      editor='not_checked',host='not_checked')
 
 
 def main(argv=None):

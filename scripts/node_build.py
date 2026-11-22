@@ -2,6 +2,7 @@
 from pathlib import Path
 import ast,collections,hashlib,json,os,re,shutil,subprocess,sys,tempfile
 from level_inventory import inspect_file,container,fields,vals,unique
+from graph_validation import GraphBuildError
 
 PLUGIN=Path(__file__).resolve().parents[1]
 RUNTIME=PLUGIN/'vendor/ayaya'
@@ -52,9 +53,9 @@ def route(kind='game',interface='lua',multiplayer=False,output='gil',task_mode=N
         routing['loading'] = 'Start with shared diagnose. Select a domain from the fault object; the legacy primary field alone is not a loading decision.'
     return routing
 
-def catalog(query='',scope='all',limit=20):
-    if scope not in ['all','client','server']:raise ValueError('Unknown node scope')
-    items=[];terms=query.casefold().split()
+def node_definitions(query='',scope='all'):
+    normalized=query.casefold().strip()
+    items=[];terms=normalized.split()
     for folder in ['client','server'] if scope=='all' else [scope]:
         for p in sorted((RUNTIME/'plugins/nodes'/folder).rglob('*.py')):
             t=ast.parse(p.read_text(encoding='utf-8-sig'))
@@ -72,21 +73,53 @@ def catalog(query='',scope='all',limit=20):
                         meta['outputs']=[p for p in meta.get('outputs',[])if p[1]=='流程']
                     text=json.dumps(meta,ensure_ascii=False).casefold()+' '+func.name.casefold()
                     if terms and not all(term in text for term in terms):continue
-                    items.append({'scope':folder,'call':func.name,'signature':ast.unparse(func.args),
-                                  **{k:meta[k] for k in ['name','category','semantic_id','inputs','outputs','description','aliases','dynamic_port_type'] if k in meta},
-                                  'implementation':p.relative_to(PLUGIN).as_posix()})
-    return {'matches':len(items),'nodes':items[:limit]}
+                    names=(str(meta.get('name','')).casefold(),func.name.casefold())
+                    aliases=meta.get('aliases') or []
+                    if isinstance(aliases,str):aliases=[aliases]
+                    if normalized in names:
+                        rank=0
+                    elif normalized and any(s.casefold().startswith(normalized) for s in (*names,*aliases) if isinstance(s,str)):
+                        rank=1
+                    else:
+                        rank=2
+                    items.append((rank,{'scope':folder,'call':func.name,'signature':ast.unparse(func.args),
+                                       **{k:meta[k] for k in ['name','category','semantic_id','inputs','outputs','description','aliases','dynamic_port_type'] if k in meta},
+                                       'implementation':p.relative_to(PLUGIN).as_posix()}))
+    items.sort(key=lambda match:match[0])
+    return [item for _,item in items]
+
+
+def catalog(query='',scope='all',limit=20):
+    if not isinstance(query,str) or scope not in ('all','client','server') or type(limit)!=int or not 1<=limit<=100:
+        raise ValueError('Node query requires a string, all/client/server scope and a limit from 1 to 100')
+    items=node_definitions(query,scope)
+    result={'matches':len(items),'nodes':items[:limit]}
+    if not items:
+        result['hint']='Try a shorter node name, a catalog alias, or scope=all.'
+    return result
 
 def metadata(path):
-    tree=ast.parse(path.read_text(encoding='utf-8-sig'))
+    try:
+        tree=ast.parse(path.read_text(encoding='utf-8-sig'),filename=str(path))
+    except SyntaxError as exc:
+        raise GraphBuildError(str(exc),[{'code':'graph_syntax','severity':'error','message':exc.msg,
+                                        'source':str(path),'line':exc.lineno}]) from exc
     text=ast.get_docstring(tree) or ''
     result={k:v.strip() for k,v in re.findall(r'^\s*(graph_id|graph_name|graph_type):\s*(.+)$',text,re.M)}
-    if not all(result.get(k) for k in ['graph_id','graph_name','graph_type']):raise ValueError('Graph Code must declare graph_id, graph_name and graph_type: '+str(path))
+    if not all(result.get(k) for k in ('graph_id','graph_name','graph_type')):
+        message='Graph Code must declare graph_id, graph_name and graph_type'
+        raise GraphBuildError(message+': '+str(path),[{'code':'graph_metadata','severity':'error','message':message,'source':str(path)}])
+    if result['graph_type'] not in ('server','client'):
+        message='Graph Code graph_type must be server or client'
+        raise GraphBuildError(message+': '+str(path),[{'code':'graph_scope','severity':'error','message':message,'source':str(path)}])
     if result['graph_type']=='server':
         parents={child:parent for parent in ast.walk(tree)for child in ast.iter_child_nodes(parent)}
         for call in ast.walk(tree):
             if isinstance(call,ast.Call)and isinstance(call.func,ast.Name)and call.func.id=='创建实体'and not isinstance(parents.get(call),ast.Expr):
-                raise ValueError('创建实体 has no official value output; call it as a statement and query the GUID separately: '+str(path)+':'+str(call.lineno))
+                message='创建实体 has no official value output; call it as a statement and query the GUID separately'
+                raise GraphBuildError(f'{message}: {path}:{call.lineno}',[
+                    {'code':'graph_entity_create_output','severity':'error','message':message,'source':str(path),'line':call.lineno},
+                ])
     return result
 
 def normalize_new_graph_variables(path,expected):
@@ -185,20 +218,36 @@ def build(spec_path,out_dir,preserve_container_order=False,structure_bindings=()
         for index,(source,scope,category,meta) in enumerate(sources):
             path=project/'节点图'/scope/category/(str(index)+'_'+source.name);path.parent.mkdir(parents=True,exist_ok=True)
             shutil.copyfile(source,path);paths.append(path);shutil.copyfile(source,stage/'sources'/path.name)
-        def call(label,args):
+        source_paths={path:item[0] for path,item in zip(paths,sources)}
+        def remap_source_paths(text):
+            for staged,original in source_paths.items():
+                text=text.replace(str(staged),str(original)).replace(staged.as_posix(),original.as_posix())
+                for ascii_only in (False,True):
+                    old=json.dumps(str(staged),ensure_ascii=ascii_only)[1:-1]
+                    new=json.dumps(str(original),ensure_ascii=ascii_only)[1:-1]
+                    text=text.replace(old,new)
+            return text
+
+        def call(label,args,*,validation=False):
             cmd=[sys.executable,'-X','utf8','-B',*map(str,args)]
             if os.environ.get('UGC_BUILD_BOUNDARY'):
                 cmd=[sys.executable,'-X','utf8','-B',str(PLUGIN/'scripts/dependency_runner.py'),*map(str,args)]
             r=subprocess.run(cmd,cwd=runtime,capture_output=True,text=True,encoding='utf-8',timeout=180)
-            (stage/'logs'/(label+'.txt')).write_text(r.stdout+r.stderr,encoding='utf-8')
+            diagnostic=remap_source_paths(r.stdout+r.stderr)
+            (stage/'logs'/(label+'.txt')).write_text(diagnostic,encoding='utf-8')
             logs.append({'stage':label,'exit_code':r.returncode})
             if r.returncode:
-                diagnostic=r.stdout+r.stderr
+                rows=[]
+                if validation and r.stdout.strip():
+                    try:rows=json.loads(remap_source_paths(r.stdout))['diagnostics']
+                    except (ValueError,KeyError):pass
                 if len(diagnostic)>16000:diagnostic=diagnostic[:12000]+'\n[diagnostic truncated]\n'+diagnostic[-4000:]
-                raise ValueError(label+' failed:\n'+diagnostic)
+                raise GraphBuildError(label+' failed:\n'+diagnostic,rows or [
+                    {'code':'graph_build_stage_failed','stage':label,'message':diagnostic},
+                ])
         runner=runtime/'private_extensions/run_ugc_file_tools.py';up_out=runtime/'private_extensions/ugc_file_tools/out'
         for index,path in enumerate(paths):
-            call('validate-'+str(index),['-m','app.cli.graph_tools','validate-file',path,'--strict'])
+            call('validate-'+str(index),[PLUGIN/'scripts/graph_validation.py','--worker',path,runtime],validation=True)
             call('model-'+str(index),[runner,'tool','export_graph_model_json_from_graph_code','--graph-code',path,'--output-json','model_'+str(index)+'.json'])
             shutil.copyfile(up_out/('model_'+str(index)+'.json'),stage/'models'/('model_'+str(index)+'.json'))
         args=[runner,'tool','export_project_graphs_to_gia','--project-root',project,'--out-dir','build_gia']

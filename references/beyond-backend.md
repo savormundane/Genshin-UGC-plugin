@@ -3,8 +3,11 @@
 能力名：beyond-backend。插件随包提供固定提交 02a5ea2cd38bb5bcf7a7ce6dd745be3bb1ae655c 的 miliastra-beyond-simulator 源码、GPL-3.0-only 许可证和 Windows x64 运行依赖。需要 Node 22+，无需另外下载模拟器或安装 npm 包。其他系统的原生渲染依赖尚未随包提供。默认模拟后端不变。
 
 ```text
+python scripts/qianxing.py simulate preview samples/beyond-button/preview.json --out NEW_PREVIEW
 python scripts/qianxing.py beyond SPEC.json --out NEW_DIRECTORY
 ```
+
+先用[按钮示例](../samples/beyond-button/README.md)看 PNG、控件树和点击日志。`simulate preview` 始终请求软件画面，可省略断言。已声明的断言仍执行，失败时返回非零。可取得的画面和报告写入独立的 `NEW_PREVIEW.diagnostics`，报告包含首项失败的预期与观测值。原 `beyond` 和制作链入口用于正式场景检查，要求执行断言。
 
 可用 --backend PATH 指定同一提交的干净独立检出；缺依赖时失败，不自动安装。默认加载 vendor/beyond 并核对随包文件摘要。
 
@@ -39,4 +42,4 @@ render:true 生成透明背景 preview.png 和 render.json；render_checks 按�
 
 路径相对配置目录。已有输出、摘要不符、断言失败、依赖损坏和 45 秒超时不提交正式结果。报告区分 external_lua_model、software_preview、native_graph_model、editor、host；编辑器和实机始终待验。不运行浏览器、游戏 GUI 自动化或截图识别。
 
-软件预览用于检查控件布局和渲染。涉及最终 GIL 时，按交付报告核对输入摘要，并在千星奇域中确认实际挂载和效果。[第三方声明](../THIRD_PARTY_NOTICES.md)
+软件预览用于检查控件布局和渲染。涉及最终 GIL 时，按交付报告核对输入摘要。[第三方声明](../THIRD_PARTY_NOTICES.md)

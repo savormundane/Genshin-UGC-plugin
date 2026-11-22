@@ -1,7 +1,7 @@
 """Unified native static asset generation; no external fitter process is launched."""
 from pathlib import Path
 import argparse, hashlib, json, math, os, sys, tempfile
-from authoring_io import sha_file
+from authoring_io import sha_file, output_directory, write_json, finish
 
 MAX_SOURCE_PIXELS = 16_777_216
 MAX_GRID_PIXELS = 1_048_576
@@ -50,11 +50,8 @@ def lua(value):
     if isinstance(value,dict):return '{'+','.join('['+lua(k)+']='+lua(v) for k,v in value.items())+'}'
     raise ValueError('Unsupported Lua value')
 
-def generate(source, output, *, target='auto', width=None, height=None, step=1, colors=96, alpha_min=128, max_controls=None, columns=64, max_bytes=4096, cell=16, fit='auto'):
-    from PIL import Image
-    from asset_core import harden, compile_prepared, open_single_image
-    source=Path(source).resolve();output=Path(output).resolve()
-    if output.exists():raise ValueError('Output exists; select a new directory')
+def prepare_source(source, *, target='auto', width=None, height=None, step=1, colors=96, alpha_min=128, max_controls=None, columns=64, max_bytes=4096, cell=16, fit='auto'):
+    from asset_core import open_single_image
     if target not in ('auto','rectangles','text'):raise ValueError('Unknown target')
     target='rectangles' if target=='auto' else target
     for name,value,cap in [('step',step,None),('colors',colors,256),('alpha_min',alpha_min,255),('columns',columns,None),('max_bytes',max_bytes,None),('cell',cell,None)]:positive(value,name,cap)
@@ -70,22 +67,40 @@ def generate(source, output, *, target='auto', width=None, height=None, step=1, 
             raise ValueError(f'Grid {size[0]}x{size[1]} exceeds {MAX_GRID_PIXELS} pixels; increase --step or reduce --width and --height')
         return size
     if width is not None:grid_size(width,height)
+    raw = None
     if source.suffix.lower()=='.json':
         raw=source.read_bytes()
         original=hashlib.sha256(raw).hexdigest()
         image=procedural(json.loads(raw))
-        source_kind='shapes'
+        size=grid_size(*image.size)
     else:
         original=sha_file(source)
         with open_single_image(source,MAX_SOURCE_PIXELS) as im:
             size=grid_size(*im.size)
             image=im.convert('RGBA')
-        source_kind='image'
-    source_size=list(image.size)
-    if source_kind=='shapes':size=grid_size(*source_size)
-    image=harden(image,alpha_min).convert('RGBa').resize(size,Image.Resampling.BOX).convert('RGBA')
-    image=harden(image,alpha_min)
-    preview,data,count=compile_prepared(image,target,colors,columns,max_bytes,cell,fit)
+    parameters = {'step':step,'colors':colors,'alpha_min':alpha_min,'columns':columns,
+                  'max_bytes':max_bytes,'cell':cell,'fit':fit,'max_controls':max_controls}
+    return image, size, original, raw, target, parameters
+
+
+def compile_grid(image, size, target, parameters):
+    from PIL import Image
+    from asset_core import harden, compile_prepared
+    resized = image.convert('RGBa').resize(size, Image.Resampling.BOX).convert('RGBA')
+    return compile_prepared(harden(resized, parameters['alpha_min']), target, parameters['colors'],
+                            parameters['columns'], parameters['max_bytes'], parameters['cell'], parameters['fit'])
+
+
+def generate(source, output, **options):
+    from asset_core import harden
+    source=Path(source).resolve();output=Path(output).resolve()
+    if output.exists():raise ValueError('Output exists; select a new directory')
+    image, size, original, raw, target, parameters = prepare_source(source, **options)
+    source_size = list(image.size)
+    source_kind = 'shapes' if raw is not None else 'image'
+    image = harden(image, parameters['alpha_min'])
+    preview, data, count = compile_grid(image, size, target, parameters)
+    max_controls = parameters['max_controls']
     if max_controls is not None and count>max_controls:
         adjust='use a smaller grid or fewer colors' if target=='rectangles' else 'use a smaller grid or review --columns and --max-bytes'
         raise ValueError(f'{count} controls exceed budget {max_controls} ({target}, {size[0]}x{size[1]} grid); {adjust}')
@@ -93,7 +108,7 @@ def generate(source, output, *, target='auto', width=None, height=None, step=1, 
     else:
         payload={'tiles':[{'x':t['x'],'y':t['y'],'width':t['width'],'height':t['height'],'fontSize':t['font_size'],'text':t['text']} for t in data['tiles']]};coordinate='top_left_design_units'
     report={'schema':1,'generator':'genshin-ugc-assets','source_kind':source_kind,'source_sha256':original,'source_size':source_size,'grid_size':list(size),'target':target,'controls':count,'coordinate_space':coordinate,
-            'parameters':{'step':step,'colors':colors,'alpha_min':alpha_min,'columns':columns,'max_bytes':max_bytes,'cell':cell,'fit':fit,'max_controls':max_controls},
+            'parameters':parameters,
             'preview_kind':'quantized reference raster; not host rendering','external_process_started':False,'gil_written':False,'host_tested':False}
     asset={**report,'data':data}
     output.parent.mkdir(parents=True,exist_ok=True)
@@ -111,6 +126,94 @@ def generate(source, output, *, target='auto', width=None, height=None, step=1, 
         os.rename(stage,output)
     return report
 
+
+def preview(source, output, *, display=None, **options):
+    from PIL import Image, ImageChops, ImageStat
+    from asset_core import harden
+
+    source = Path(source).resolve()
+    if Path(output).exists():
+        raise ValueError('Output exists; select a new directory')
+    if display is not None:
+        if not isinstance(display,(list,tuple)) or len(display)!=2:
+            raise ValueError('Display requires width and height')
+        for value in display:
+            positive(value, 'display dimension')
+        if math.prod(display)>MAX_SOURCE_PIXELS:
+            raise ValueError(f'Display exceeds {MAX_SOURCE_PIXELS} pixels')
+    image, size, digest, _, target, parameters = prepare_source(source, **options)
+    display_size = tuple(display) if display is not None else size
+    display_pixels = math.prod(display_size)
+    source_display = image.convert('RGBa').resize(display_size, Image.Resampling.BOX)
+    source_alpha = source_display.getchannel(3)
+    source_mask = source_alpha.point([0]+[255]*255)
+    source_size = list(image.size)
+    image = harden(image, parameters['alpha_min'])
+    limit = parameters['max_controls']
+    colors = parameters['colors']
+    reduced_size = tuple((dimension+1)//2 for dimension in size)
+    candidates = [('original',size,colors)]
+    alternatives = [('fewer-colors',size,max(1,colors//2)),
+                    ('smaller-grid',reduced_size,colors),
+                    ('smaller-grid-fewer-colors',reduced_size,max(1,colors//2))]
+    rows = []
+    seen = set()
+    with output_directory(output) as stage:
+        source_display.convert('RGBA').save(stage/'source.png')
+        for name, grid, palette_limit in candidates:
+            if (grid,palette_limit) in seen:
+                continue
+            seen.add((grid,palette_limit))
+            settings = {**parameters,'target':target,'width':grid[0],'height':grid[1],
+                        'step':1,'colors':palette_limit}
+            raster, _, controls = compile_grid(image, grid, target, settings)
+            within_budget = None if limit is None else controls<=limit
+            if name=='original' and within_budget is False:
+                candidates.extend(alternatives)
+            dest = stage/name
+            dest.mkdir()
+            raster.save(dest/'preview.png')
+            displayed = raster.convert('RGBa').resize(display_size, Image.Resampling.BOX)
+            if grid!=display_size:
+                displayed.convert('RGBA').save(dest/'display.png')
+            delta = ImageChops.difference(source_display, displayed)
+            red, green, blue, alpha = delta.split()
+            intensity = ImageChops.lighter(ImageChops.lighter(red,green),ImageChops.lighter(blue,alpha))
+            intensity.save(dest/'difference.png')
+            mask = displayed.getchannel(3).point([0]+[255]*255)
+            gained = ImageChops.subtract(mask,source_mask).histogram()[255]
+            lost = ImageChops.subtract(source_mask,mask).histogram()[255]
+            rows.append({
+                'name':name, 'parameters':settings, 'grid_size':list(grid), 'controls':controls,
+                'within_budget':within_budget,
+                'error':sum(ImageStat.Stat(delta).sum2)/(display_pixels*4*255**2),
+                'alpha':{'changed_pixels':display_pixels-alpha.histogram()[0],
+                         'became_visible':gained,'became_transparent':lost},
+                'preview':name+'/preview.png',
+                'display_preview':name+('/display.png' if grid!=display_size else '/preview.png'),
+                'difference':name+'/difference.png',
+            })
+        feasible = [row['name'] for row in rows if row['within_budget'] is True]
+        budget_status = 'not_checked' if limit is None else 'passed' if feasible else 'failed'
+        diagnostics = []
+        if budget_status=='failed':
+            diagnostics.append({'code':'asset_budget_unmet',
+                                'message':'None of the tested settings meets the control budget. Try a different grid, palette, or text chunk size.',
+                                'expected':limit,'actual':min(row['controls'] for row in rows)})
+        report = {
+            'schema':1, 'kind':'asset-preview', 'status':'passed',
+            'source_sha256':digest, 'source_size':source_size, 'display_size':list(display_size),
+            'display_source':'source.png','target':target,
+            'preview_kind':'quantized reference grid' if target=='text' else 'software rectangle reference',
+            'error_metric':'normalized premultiplied RGBA MSE on the display grid',
+            'checks':{'budget':{'status':budget_status,'limit':limit,'feasible_candidates':feasible}},
+            'diagnostics':diagnostics,'candidates':rows,'host':'not_checked',
+        }
+        write_json(stage/'report.json', report)
+        finish(stage, {str(source):digest}, kind='asset-preview')
+    return report
+
+
 def main(argv=None):
     # Keep established info/text/layouts commands available through the same public entry.
     args=list(sys.argv[1:] if argv is None else argv)
@@ -126,13 +229,40 @@ def main(argv=None):
     if args and args[0] in ('info','text','layouts'):
         from assets_text import main as legacy
         return legacy(args)
-    p=argparse.ArgumentParser(description=__doc__);s=p.add_subparsers(dest='op',required=True)
-    c=s.add_parser('generate');c.add_argument('source');c.add_argument('--out',required=True);c.add_argument('--target',choices=['auto','rectangles','text'],default='auto')
-    for key,default in [('width',None),('height',None),('step',1),('colors',96),('alpha-min',128),('max-controls',None),('columns',64),('max-bytes',4096),('cell',16)]:c.add_argument('--'+key,type=int,default=default)
-    c.add_argument('--fit',choices=['auto','fixed'],default='auto');a=p.parse_args(args)
+    p=argparse.ArgumentParser(prog='qianxing.py assets',description=__doc__)
+    s=p.add_subparsers(dest='op',required=True)
+    for name, description in (('generate','Write selected asset data'),('preview','Compare settings before generation')):
+        c=s.add_parser(name,help=description)
+        c.add_argument('source')
+        c.add_argument('--out',required=True)
+        c.add_argument('--target',choices=['auto','rectangles','text'],default='auto')
+        for key,default in [('width',None),('height',None),('step',1),('colors',96),('alpha-min',128),
+                            ('max-controls',None),('columns',64),('max-bytes',4096),('cell',16)]:
+            c.add_argument('--'+key,type=int,default=default)
+        c.add_argument('--fit',choices=['auto','fixed'],default='auto')
+        if name=='preview':
+            c.add_argument('--display',nargs=2,type=int,metavar=('WIDTH','HEIGHT'))
+    for name, description in (('fit','Fit primitives to an image or layer manifest'),
+                              ('check','Inspect asset statistics'),('diff','Compare asset statistics'),
+                              ('import-gia','Read calibrated native rectangle assets'),
+                              ('info','Inspect GIL UI import targets'),('text','Generate legacy text data'),
+                              ('layouts','List supported rich-text layouts')):
+        s.add_parser(name, help=description)
+    a=p.parse_args(args)
+    opts=vars(a).copy()
+    operation=opts.pop('op')
+    source=opts.pop('source')
+    out=opts.pop('out')
     try:
-        opts=vars(a).copy();opts.pop('op');source=opts.pop('source');out=opts.pop('out')
-        print(json.dumps(generate(source,out,**opts),ensure_ascii=False,indent=2));return 0
+        result = preview(source,out,**opts) if operation=='preview' else generate(source,out,**opts)
+        print(json.dumps(result,ensure_ascii=False,indent=2))
+        return 0
     except (ValueError,OSError,ImportError,TypeError,KeyError) as e:
-        print(str(e),file=sys.stderr);return 2
+        if operation=='preview':
+            print(json.dumps({'status':'failed','checks':{},'diagnostics':[
+                {'code':'asset_preview_failed','message':str(e),'source':str(source)}
+            ]},ensure_ascii=False))
+        else:
+            print(str(e),file=sys.stderr)
+        return 2
 if __name__=='__main__':raise SystemExit(main())

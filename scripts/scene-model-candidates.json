@@ -1,0 +1,41 @@
+[
+  {
+    "id": 20001038,
+    "name": "山石平台",
+    "category": "地貌",
+    "selection": "preview_only",
+    "source": {
+      "url": "https://github.com/8itlab/genshin-miliastra-mcp/blob/70470757d6fcb319c5afec13b178c87f2d8d54b3/knowledge/samples/gil/mhysk6rycl8m_%E5%9C%BA%E6%99%AF%E5%9C%B0%E5%BD%A2.gil",
+      "kind": "historical_editor_sample"
+    }
+  },
+  {
+    "id": 20002056,
+    "name": "深色石地板",
+    "category": "建筑布景",
+    "selection": "preview_only",
+    "source": {
+      "url": "https://github.com/8itlab/genshin-miliastra-mcp/blob/70470757d6fcb319c5afec13b178c87f2d8d54b3/docs/PLATFORM_RULES.zh-CN.md#场景与资产导入",
+      "kind": "historical_import"
+    }
+  },
+  {
+    "id": 20002217,
+    "name": "门楼",
+    "category": "建筑布景",
+    "selection": "preview_only",
+    "source": {
+      "url": "https://github.com/Crazyfourrrrrrrrrrr/XingGou/blob/5e05593e1c392c2a65885317111a1fa8425f7854/docs/VALIDATION.md",
+      "kind": "historical_model_mapping"
+    }
+  },
+  {
+    "name": "白盒围墙",
+    "category": "组合配方",
+    "selection": "whitebox_recipe",
+    "source": {
+      "url": "https://act.mihoyo.com/ys/ugc/tutorial/detail/mhs4glrkbr32",
+      "kind": "documented_shapes"
+    }
+  }
+]

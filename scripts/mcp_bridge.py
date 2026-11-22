@@ -3,7 +3,7 @@ from pathlib import Path
 import argparse,asyncio,json,os,re,sys,tempfile,math
 from authoring_io import PLUGIN,sha_file,schema,read_json,write_json
 
-OPERATIONS={'doctor':(), 'capabilities':(), 'docs_search':('version','query'),'api_lookup':('symbol',),'nodes_lookup':(),'diagnose':('spec','sha256'),
+OPERATIONS={'doctor':(), 'capabilities':(), 'docs_search':('version','query'),'api_lookup':('symbol',),'nodes_lookup':(),'resources_lookup':('version',),'diagnose':('spec','sha256'),
             'native_inspect':('input',),'native_audit':('input',),
             'project_inspect':('input',),'client_check':('input',),
             'native_diff':('input','other'),
@@ -17,8 +17,10 @@ READ_FILE_OPERATIONS={
     'native_inspect':('sha256',),'native_audit':('sha256',),'project_inspect':('sha256','selector','transitive'),
     'native_diff':('sha256','other_sha256','allowed_top_level_fields'),
     'client_check':('sha256','contract','contract_sha256','mapping'),
+    'resources_lookup':('query','mode','limit','catalogue','catalogue_sha256'),
 }
-OPTIONAL_FIELDS={**READ_FILE_OPERATIONS,'native_plan':('patch','spec','spec_sha256'),'nodes_lookup':('query','scope','limit'),'verify':('trusted_inputs_sha256',)}
+OPTIONAL_FIELDS={**READ_FILE_OPERATIONS,'native_plan':('patch','spec','spec_sha256'),
+                 'nodes_lookup':('query','scope','limit'),'verify':('trusted_inputs_sha256',)}
 
 async def finish_worker(process):
     """Finish cleanup before releasing the request directory."""
@@ -108,7 +110,7 @@ class Bridge:
             supplied=set(args)&{'patch','spec','spec_sha256'}
             if supplied not in ({'patch'}, {'spec','spec_sha256'}):
                 raise ValueError('Provide patch, or provide spec with spec_sha256')
-            if 'patch' in args and not isinstance(args['patch'], dict):
+            if 'patch' in args and not isinstance(args['patch'],dict):
                 raise ValueError('patch must be a schema 2 object')
         if operation=='project_inspect' and 'transitive' in args:
             if 'selector' not in args or type(args['transitive']) is not bool:
@@ -116,11 +118,12 @@ class Bridge:
         if 'contract_sha256'in args and 'contract'not in args:raise ValueError('Contract path required')
         if 'mapping'in args and (not isinstance(args['mapping'],str) or not args['mapping']):
             raise ValueError('Nonempty Lua mapping required')
-        if operation=='nodes_lookup':
-            query=args.get('query','');scope=args.get('scope','all');limit=args.get('limit',20)
-            if not isinstance(query,str) or scope not in ('all','client','server') or type(limit)is not int or not 1<=limit<=100:
-                raise ValueError('Node query requires a string, all/client/server scope and a limit from 1 to 100')
-        for field,digest_field in(('input','sha256'),('spec','spec_sha256'if operation=='native_plan'else'sha256'),('other','other_sha256'),('plan','plan_sha256'),('contract','contract_sha256')):
+        if 'catalogue_sha256' in args and 'catalogue' not in args:raise ValueError('Catalogue path required')
+        if operation=='resources_lookup':
+            limit=args.get('limit',20)
+            if type(limit) is not int or not 1<=limit<=100:
+                raise ValueError('Resource lookup limit must be from 1 to 100')
+        for field,digest_field in(('catalogue','catalogue_sha256'),('input','sha256'),('spec','spec_sha256'if operation=='native_plan'else'sha256'),('other','other_sha256'),('plan','plan_sha256'),('contract','contract_sha256')):
             if field not in args:continue
             path=self.path(args[field]);actual=sha_file(path)
             if not automatic or digest_field in args:
@@ -165,7 +168,10 @@ class Bridge:
             if progress:await progress(2,3,'Core result checked; ready to commit')
             await asyncio.sleep(0)
             status=result.get('status', 'failed'if result.get('passed')is False else'passed')
-            if destination and status!='passed':return {'schema':2,'operation':operation,'status':status,'result':result,'output':None}
+            if destination and status!='passed':
+                response={'schema':2,'operation':operation,'status':status,'result':result,'output':None}
+                if 'error' in result:response['error']=result['error']
+                return response
             output_hashes=None
             if destination:
                 delivery=scratch/'delivery'

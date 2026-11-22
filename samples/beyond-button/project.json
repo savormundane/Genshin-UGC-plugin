@@ -1,0 +1,144 @@
+{
+  "layoutSchemaVersion": 2,
+  "meta": {
+    "name": "Button preview",
+    "assetType": "server-control-template"
+  },
+  "canvasId": "pc-16-9",
+  "selectedId": "button",
+  "root": {
+    "id": "server",
+    "kind": "server-container",
+    "name": "Controls",
+    "transformByPlatform": {
+      "KEYBOARD": {
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "rotation": {"x": 0, "y": 0, "z": 0},
+        "anchorMin": {"x": 0, "y": 0},
+        "anchorMax": {"x": 1, "y": 1},
+        "offset": {"x": 0, "y": 0},
+        "size": {"x": 0, "y": 0},
+        "pivot": {"x": 0.5, "y": 0.5}
+      },
+      "TOUCHSCREEN": {
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "rotation": {"x": 0, "y": 0, "z": 0},
+        "anchorMin": {"x": 0, "y": 0},
+        "anchorMax": {"x": 1, "y": 1},
+        "offset": {"x": 0, "y": 0},
+        "size": {"x": 0, "y": 0},
+        "pivot": {"x": 0.5, "y": 0.5}
+      },
+      "CONTROLLER_CONSOLE": {
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "rotation": {"x": 0, "y": 0, "z": 0},
+        "anchorMin": {"x": 0, "y": 0},
+        "anchorMax": {"x": 1, "y": 1},
+        "offset": {"x": 0, "y": 0},
+        "size": {"x": 0, "y": 0},
+        "pivot": {"x": 0.5, "y": 0.5}
+      },
+      "CONTROLLER_MOBILE": {
+        "scale": {"x": 1, "y": 1, "z": 1},
+        "rotation": {"x": 0, "y": 0, "z": 0},
+        "anchorMin": {"x": 0, "y": 0},
+        "anchorMax": {"x": 1, "y": 1},
+        "offset": {"x": 0, "y": 0},
+        "size": {"x": 0, "y": 0},
+        "pivot": {"x": 0.5, "y": 0.5}
+      }
+    },
+    "children": [
+      {
+        "id": "root",
+        "kind": "container",
+        "name": "Root",
+        "showCursor": true,
+        "transformByPlatform": {
+          "KEYBOARD": {
+            "scale": {"x": 1, "y": 1, "z": 1},
+            "rotation": {"x": 0, "y": 0, "z": 0},
+            "anchorMin": {"x": 0, "y": 0},
+            "anchorMax": {"x": 1, "y": 1},
+            "offset": {"x": 0, "y": 0},
+            "size": {"x": 0, "y": 0},
+            "pivot": {"x": 0.5, "y": 0.5}
+          },
+          "TOUCHSCREEN": {
+            "scale": {"x": 1, "y": 1, "z": 1},
+            "rotation": {"x": 0, "y": 0, "z": 0},
+            "anchorMin": {"x": 0, "y": 0},
+            "anchorMax": {"x": 1, "y": 1},
+            "offset": {"x": 0, "y": 0},
+            "size": {"x": 0, "y": 0},
+            "pivot": {"x": 0.5, "y": 0.5}
+          },
+          "CONTROLLER_CONSOLE": {
+            "scale": {"x": 1, "y": 1, "z": 1},
+            "rotation": {"x": 0, "y": 0, "z": 0},
+            "anchorMin": {"x": 0, "y": 0},
+            "anchorMax": {"x": 1, "y": 1},
+            "offset": {"x": 0, "y": 0},
+            "size": {"x": 0, "y": 0},
+            "pivot": {"x": 0.5, "y": 0.5}
+          },
+          "CONTROLLER_MOBILE": {
+            "scale": {"x": 1, "y": 1, "z": 1},
+            "rotation": {"x": 0, "y": 0, "z": 0},
+            "anchorMin": {"x": 0, "y": 0},
+            "anchorMax": {"x": 1, "y": 1},
+            "offset": {"x": 0, "y": 0},
+            "size": {"x": 0, "y": 0},
+            "pivot": {"x": 0.5, "y": 0.5}
+          }
+        },
+        "children": [
+          {
+            "id": "button",
+            "kind": "button",
+            "name": "Action",
+            "transformByPlatform": {
+              "KEYBOARD": {
+                "scale": {"x": 1, "y": 1, "z": 1},
+                "rotation": {"x": 0, "y": 0, "z": 0},
+                "anchorMin": {"x": 0.5, "y": 0.5},
+                "anchorMax": {"x": 0.5, "y": 0.5},
+                "offset": {"x": 0, "y": 0},
+                "size": {"x": 150, "y": 50},
+                "pivot": {"x": 0.5, "y": 0.5}
+              },
+              "TOUCHSCREEN": {
+                "scale": {"x": 1, "y": 1, "z": 1},
+                "rotation": {"x": 0, "y": 0, "z": 0},
+                "anchorMin": {"x": 0.5, "y": 0.5},
+                "anchorMax": {"x": 0.5, "y": 0.5},
+                "offset": {"x": 0, "y": 0},
+                "size": {"x": 150, "y": 50},
+                "pivot": {"x": 0.5, "y": 0.5}
+              },
+              "CONTROLLER_CONSOLE": {
+                "scale": {"x": 1, "y": 1, "z": 1},
+                "rotation": {"x": 0, "y": 0, "z": 0},
+                "anchorMin": {"x": 0.5, "y": 0.5},
+                "anchorMax": {"x": 0.5, "y": 0.5},
+                "offset": {"x": 0, "y": 0},
+                "size": {"x": 150, "y": 50},
+                "pivot": {"x": 0.5, "y": 0.5}
+              },
+              "CONTROLLER_MOBILE": {
+                "scale": {"x": 1, "y": 1, "z": 1},
+                "rotation": {"x": 0, "y": 0, "z": 0},
+                "anchorMin": {"x": 0.5, "y": 0.5},
+                "anchorMax": {"x": 0.5, "y": 0.5},
+                "offset": {"x": 0, "y": 0},
+                "size": {"x": 150, "y": 50},
+                "pivot": {"x": 0.5, "y": 0.5}
+              }
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}

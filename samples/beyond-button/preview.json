@@ -1,0 +1,20 @@
+{
+  "schema": 2,
+  "project": "project.json",
+  "scripts": [
+    {
+      "source": "button.lua",
+      "sha256": "b850a541a68fc96141bdd2d13ef0fd05ef762b1c72ea564b5b4c591864ff5e71",
+      "controlId": "root",
+      "controlAsset": "server-control-template",
+      "path": "main"
+    }
+  ],
+  "case": {
+    "format": "qxqy-autotest",
+    "version": 1,
+    "name": "One button",
+    "events": [{"t": 0, "kind": "click", "name": "Action"}],
+    "asserts": [{"kind": "log", "contains": "Button clicked"}]
+  }
+}

@@ -250,8 +250,9 @@ def _produce(spec_path,out,evidence):
     return report
 
 class ProductionError(ValueError):
-    def __init__(self,message,evidence):
+    def __init__(self,message,evidence,diagnostics=None):
         super().__init__(message);self.production_evidence=evidence
+        if diagnostics is not None:self.diagnostics=diagnostics
 
 def produce(spec_path,out,next_output=False):
     out=Path(out).resolve()
@@ -263,4 +264,4 @@ def produce(spec_path,out,next_output=False):
     except (ValueError,OSError,TypeError,KeyError) as exc:
         for value in evidence.values():
             if value.get('reason')=='in_progress':value.update(status='failed',reason=str(exc))
-        raise ProductionError(str(exc),evidence) from exc
+        raise ProductionError(str(exc),evidence,getattr(exc,'diagnostics',None)) from exc

@@ -423,15 +423,25 @@ def optimize(graph,pure_ids,fanout_cap):
 def apply(data,spec,base):
     schema(spec,('schema','base_sha256','allowed_top_level_fields','operations','strict_audit'),('base_sha256','allowed_top_level_fields','operations'))
     if sha(data)!=spec['base_sha256']:raise ValueError('Base hash mismatch')
+    from native_scene_edits import SCENE_EDITS
+    from native_scene_settings import SETTINGS_EDITS
+
     allowed=spec['allowed_top_level_fields'];before=container(data)[1];logs=[]
     for op in spec['operations']:
-        m=model(data);kind=op['op']
+        kind=op['op']
         if kind=='set_entity_transform':
-            from native_scene import set_entity_transform
+            from native_entity_transform import set_entity_transform
             if 5 not in allowed:raise ValueError('Entity transform edits require allowed top-level field 5')
             data,detail=set_entity_transform(data,op)
             logs.append({'op':kind,**detail})
             continue
+        scene_edit=SCENE_EDITS.get(kind) or SETTINGS_EDITS.get(kind)
+        if scene_edit is not None:
+            if container(data)[0][1:4] != (1, 806, 2):raise ValueError('Scene edits require a calibrated GIL baseline')
+            data,detail=scene_edit(data,op)
+            logs.append({'op':kind,**detail})
+            continue
+        m=model(data)
         if kind=='set_custom_variable_default':
             from native_variables import set_default
             data,detail=set_default(data,m,op)

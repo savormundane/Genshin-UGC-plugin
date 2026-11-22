@@ -37,6 +37,7 @@
       "test_native_graph_variables.py",
       "test_native_variables.py",
       "test_native_changes.py",
+      "test_native_scene.py",
       "test_native_authoring.py",
       "test_native_ports.py",
       "test_native_dictionaries.py",
@@ -84,6 +85,13 @@
     "fixtures/**/*"
   ],
   "coverage": {
+    "scene": [
+      "test_native_scene.py::NativeSceneTests.test_static_readback_and_production",
+      "test_native_scene.py::NativeSceneTests.test_reject_unknown_candidate_and_invalid_transform",
+      "test_native_scene.py::NativeSceneTests.test_witness_mode_and_digest_remain_bound",
+      "test_native_scene.py::NativeSceneTests.test_transform_plan_changes_only_selected_coordinates",
+      "test_native_scene.py::NativeSceneTests.test_dimensions_are_bound_to_measurement"
+    ],
     "mcp": [
       "test_mcp_service.py::MCPTests.test_stdio_cli_parity_and_two_native_flows",
       "test_mcp_service.py::MCPTests.test_cancel_and_nested_input_boundary",

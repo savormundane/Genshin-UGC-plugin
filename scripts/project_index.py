@@ -16,7 +16,7 @@ def build(data,namespace='level',*,include_spatial=True):
     m=model(data);validation=audit(data);header,root=container(data)
     spatial={}
     if include_spatial:
-        from native_scene import spatial_objects
+        from native_entity_transform import spatial_objects
         spatial=spatial_objects(header,root)
     objects=[];references=[];variable_accesses=[];issues=list(validation['issues']);unknown=list(validation['unresolved'])
     def obj(kind,ident,name='',scope=(),**details):
@@ -94,11 +94,29 @@ def build(data,namespace='level',*,include_spatial=True):
         if g['kind']=='composite':
             for mapping in vals(fields(g['raw']),4):
                 link(owner,key(namespace,'node',*scope,get(mapping,2,0)),'composite_interface',port=list(slot(mapping)))
+    from native_scene import ordinary_object
+
+    placed = {}
+    if include_spatial and m['format'] == 'gil':
+        for section in vals(root, 5):
+            for raw in vals(fields(section), 1):
+                try:
+                    scene = ordinary_object(raw)
+                except ValueError:
+                    # The general index also reads records outside this calibrated scene subset.
+                    continue
+                if scene is not None:
+                    placed[scene['record_id']] = scene
     for entity in m['entities']:
         kind='template'if entity['section']==4 else'entity'
         ident=entity['entity_id']
         detail=spatial.get((kind,ident))
-        obj(kind,ident,**({'name':detail['name'],'spatial':detail} if detail else {}))
+        scene = placed.get(ident) if kind == 'entity' else None
+        props = {'name':detail['name'],'spatial':detail} if detail else {}
+        if scene:
+            props.setdefault('name',scene['name'])
+            props['scene']=scene
+        obj(kind,ident,**props)
     from native_variables import summary,audit as audit_variables
     variables=defaultdict(dict)
     for record in m['custom_variables']['records']:
@@ -244,8 +262,12 @@ def build(data,namespace='level',*,include_spatial=True):
     for r in references:
         count=counts[r['target']];r['resolution']='resolved'if count==1 else'ambiguous'if count else'missing'
         if count!=1:issues.append({'error':'ambiguous reference'if count else'dangling reference',**r})
+    script_mappings = [
+        {'mapping':o['name'],'id':o['id'],'key':o['key'],'artifact':o['artifact'],'sha256':o['sha256']}
+        for o in objects if o['kind']=='script'
+    ]
     return {'schema':2,'status':'failed'if issues else'not_checked'if unknown else'passed','artifacts':{namespace:{'format':m['format'],'sha256':sha(data)}},
-            'objects':objects,'references':references,'graph_variable_accesses':variable_accesses,'issues':issues,'unresolved':unknown,'scope':'calibrated native and client object references',
+            'objects':objects,'script_mappings':script_mappings,'references':references,'graph_variable_accesses':variable_accesses,'issues':issues,'unresolved':unknown,'scope':'calibrated native and client object references',
             'complete_reference_index':False,'unindexed':['arbitrary_component_payloads','custom_variable_access_and_literal_targets','graph_variable_dynamic_access_and_overrides','implicit_graph_structure_identity','untyped_numeric_constants','dynamic_Lua_identifiers','platform_resource_catalogue'],
             'editor':'not_checked','host':'not_checked'}
 
@@ -273,7 +295,7 @@ def inspect(path,level=None):
         if source is not None:inputs[str(source)]=digest
         reports.append(build(raw,name))
     result={**reports[0],'artifacts':{k:v for r in reports for k,v in r['artifacts'].items()},'inputs':inputs}
-    for field in('objects','references','graph_variable_accesses','issues','unresolved'):result[field]=[v for r in reports for v in r[field]]
+    for field in('objects','script_mappings','references','graph_variable_accesses','issues','unresolved'):result[field]=[v for r in reports for v in r[field]]
     requirements=spec.get('required_references',[])
     if not isinstance(requirements,list):raise ValueError('required_references must be a list')
     for requirement in requirements:
@@ -310,7 +332,7 @@ def consumers(report,selector,transitive=False):
             'references':edges,'dependencies':[o for o in report['objects']if o['key']in dependency_keys],
             'dependency_references':dependencies,'issue_count':len(report['issues']),'unresolved_count':len(report['unresolved']),
             'complete_reference_index':report['complete_reference_index'],'unindexed':report['unindexed'],
-            'artifacts':report['artifacts'],'editor':'not_checked','host':'not_checked'}
+            'artifacts':report['artifacts'],'inputs':report.get('inputs',{}),'script_mappings':report['script_mappings'],'editor':'not_checked','host':'not_checked'}
 
 
 def main(argv=None):

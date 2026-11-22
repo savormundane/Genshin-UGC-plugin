@@ -33,7 +33,7 @@
 确认 `codex` 命令可用后，在 PowerShell 运行安装命令。
 
 ```powershell
-& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.1.0/install.ps1'))) -Agent codex
+& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.1.1/install.ps1'))) -Agent codex
 ```
 
 安装成功时，输出中的 `installed` 是版本号，`runtime_smoke: passed` 表示安装器已完成本地工具自检。打开新会话，在插件列表确认 Genshin-UGC 已启用，按[第一次使用](getting-started.md)查询一个节点即可开始制作。
@@ -43,7 +43,7 @@
 确认 `claude` 命令可用后，在 PowerShell 运行安装命令。
 
 ```powershell
-& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.1.0/install.ps1'))) -Agent claude-code
+& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.1.1/install.ps1'))) -Agent claude-code
 ```
 
 打开新会话，在 `/plugin` 中确认插件已启用，试一次 API 查询确认本地工具连通。
@@ -55,7 +55,7 @@
 1. 在 PowerShell 运行准备命令，记下输出中的 `bundle_directory` 路径。
 
    ```powershell
-   & ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.1.0/install.ps1'))) -Agent deepseek-harness
+   & ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.1.1/install.ps1'))) -Agent deepseek-harness
    ```
 
 2. 在目标配置中打开 **Plugins → Add plugin**，粘贴刚才的目录路径。
@@ -66,7 +66,7 @@
 客户端能识别这类本地插件，并能在本机 Windows 会话中运行本地工具时，可以尝试复用同一份安装包。先在 PowerShell 运行准备命令。
 
 ```powershell
-& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.1.0/install.ps1'))) -Agent agent-plugins
+& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.1.1/install.ps1'))) -Agent agent-plugins
 ```
 
 记下输出的 `plugin_directory`，接下来按所用客户端导入。**保留整个版本目录及其原位置**：插件旁边的 `runtime` 和 `runtime.json` 都会被使用；DeepSeek Harness 还需要同级的 `cordis-bundle`。只复制插件子目录，或搬动配套环境，会使原配置中的路径失效。
@@ -103,12 +103,12 @@
 
 手动安装时先下载完整包，再核对摘要。
 
-1. 前往 [4.1.0 Release 页面](https://github.com/savormundane/Genshin-UGC-plugin/releases/tag/v4.1.0) 下载 `Genshin-UGC-4.1.0-windows-x64.zip`。
+1. 前往 [4.1.1 Release 页面](https://github.com/savormundane/Genshin-UGC-plugin/releases/tag/v4.1.1) 下载 `Genshin-UGC-4.1.1-windows-x64.zip`。
 2. 在 GitHub Release 附件详情（或 [Release API](https://docs.github.com/en/rest/releases/assets)）查看该 ZIP 的 SHA-256，本机用 `Get-FileHash -Algorithm SHA256` 核对一致。
 3. 保留原 ZIP，将其解压到同一父目录，进入解压出的 `Genshin-UGC` 目录运行安装命令，按需替换 `-Agent`。
 
    ```powershell
-   .\install.ps1 -Agent codex -Archive ..\Genshin-UGC-4.1.0-windows-x64.zip -Sha256 '<GitHub 显示的 ZIP SHA-256>'
+   .\install.ps1 -Agent codex -Archive ..\Genshin-UGC-4.1.1-windows-x64.zip -Sha256 '<GitHub 显示的 ZIP SHA-256>'
    ```
 
 只使用命令行工具见 [独立运行环境](runtime-environment.md)；自建客户端适配见 [客户端适配](contributing/development.md#客户端适配)。

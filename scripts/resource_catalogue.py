@@ -5,7 +5,87 @@ from authoring_io import schema,sha,read_json,resolve
 from platform_profiles import show,CATALOGUE
 
 
-def catalogue(version,extensions=()):
+MODEL_SELECTIONS = ('native_verified', 'preview_only', 'whitebox_recipe')
+MODEL_CANDIDATES = Path(__file__).with_name('scene-model-candidates.json')
+
+
+def model_row(row, directory, version, inputs, samples):
+    schema(row, ('type', 'id', 'name', 'category', 'mode', 'dimensions', 'dependencies',
+                 'source', 'selection', 'dimensions_source', 'model_id', 'origin', 'preview_url'),
+           ('name', 'category', 'mode', 'source', 'selection'))
+    selection = row['selection']
+    ident = row.get('id')
+    if selection not in MODEL_SELECTIONS or row['mode'] not in ('classic', 'beyond', 'both'):
+        raise ValueError('Invalid model selection or mode')
+    if any(not isinstance(row[key], str) or not row[key].strip() for key in ('name', 'category')):
+        raise ValueError('Model name and category must be nonempty')
+    if ident is not None and (type(ident) is not int or not 0 < ident <= 0xffffffff):
+        raise ValueError('Invalid model template ID')
+    if selection == 'native_verified' and (ident is None or row['mode'] == 'both'):
+        raise ValueError('A native model sample is bound to one template ID and one observed mode')
+    if 'model_id' in row and (type(row['model_id']) is not int or row['model_id'] <= 0):
+        raise ValueError('Invalid model ID')
+    source = row['source']
+    schema(source, ('path', 'sha256', 'line', 'url'), ('path', 'sha256'))
+    path = resolve(directory, source['path'])
+    if path not in samples:
+        raw = path.read_bytes()
+        samples[path] = (sha(raw), raw)
+    digest, raw = samples[path]
+    if digest != source['sha256']:
+        raise ValueError('Model source digest mismatch')
+    inputs[str(path)] = digest
+    if selection == 'native_verified':
+        from native_scene import static_objects
+
+        key = (path, digest)
+        if key not in samples:
+            samples[key] = {record['template_id'] for record in static_objects(raw)}
+        if ident not in samples[key]:
+            raise ValueError('Model template is absent from native static sample: ' + str(ident))
+    elif 'line' in source and (type(source['line']) is not int
+                              or not 1 <= source['line'] <= len(raw.decode('utf-8-sig').splitlines())):
+        raise ValueError('Model source line absent')
+    dims = row.get('dimensions')
+    if dims is not None:
+        from native_scene import vector
+
+        dims = vector(dims, 'Model dimensions')
+        if min(dims) < 0:
+            raise ValueError('Model dimensions must be nonnegative')
+    checked_dimensions = False
+    if 'dimensions_source' in row:
+        from native_scene import vector
+
+        evidence = row['dimensions_source']
+        schema(evidence, ('path', 'sha256'), ('path', 'sha256'))
+        measurement_path = resolve(directory, evidence['path'])
+        measurement_raw = measurement_path.read_bytes()
+        measurement_hash = sha(measurement_raw)
+        if measurement_hash != evidence['sha256']:
+            raise ValueError('Model dimension source digest mismatch')
+        measurement = json.loads(measurement_raw.decode('utf-8-sig'))
+        if (not isinstance(measurement, dict) or measurement.get('template_id') != ident
+                or vector(measurement.get('dimensions_m'), 'Measured model dimensions') != dims):
+            raise ValueError('Model dimensions differ from their measurement record')
+        inputs[str(measurement_path)] = measurement_hash
+        checked_dimensions = True
+    deps = row.get('dependencies')
+    if deps is not None and (not isinstance(deps, list) or any(
+        not isinstance(d, dict) or set(d) != {'type', 'id'}
+        or not isinstance(d['type'], str) or type(d['id']) is not int for d in deps
+    )):
+        raise ValueError('Invalid model dependencies')
+    return {
+        **row, 'id': ident, 'dimensions': dims, 'dependencies': deps, 'version': version,
+        'source': {**source, 'path': str(path)}, 'dimensions_verified': checked_dimensions,
+        'evidence': 'native_static_record' if selection == 'native_verified' else 'declared',
+        'target_metadata': 'caller_declared' if selection == 'native_verified' else 'candidate',
+    }
+
+
+def catalogue(version, extensions=(), *, include_model_candidates=False):
+    samples = {}
     document=show(version,'mh4imrrhzdzi');rows=[];inputs={str((Path(__file__).resolve().parents[1]/document['path']).resolve()):document['sha256'],str(CATALOGUE.resolve()):sha(CATALOGUE.read_bytes())}
     for number,line in enumerate(document['content'].splitlines(),1):
         match=re.fullmatch(r'\|\s*(\d+)\s*\|\s*([^|]+?)\s*\|',line)
@@ -16,11 +96,14 @@ def catalogue(version,extensions=()):
                                    'source_version':document['source_version'],'inherited':document['inherited']}})
     if not rows:raise ValueError('Character catalogue source table absent')
     for filename in extensions:
-        path=Path(filename).resolve();raw=path.read_bytes();spec=read_json(path);inputs[str(path)]=sha(raw)
+        path=Path(filename).resolve();raw=path.read_bytes();spec=json.loads(raw.decode('utf-8-sig'));inputs[str(path)]=sha(raw)
         schema(spec,('schema','version','resources'),('version','resources'))
         if spec['version']!=version:raise ValueError('Resource catalogue version mismatch')
         if not isinstance(spec['resources'],list):raise ValueError('Resource rows required')
         for row in spec['resources']:
+            if isinstance(row, dict) and row.get('type') == 'model':
+                rows.append(model_row(row, path.parent, version, inputs, samples))
+                continue
             schema(row,('type','id','name','mode','dimensions','dependencies','source'),('type','id','name','mode','dimensions','dependencies','source'))
             if row['type']not in('character','image','template','sound','effect','item','equipment','skill','unit_status','faction','currency'):raise ValueError('Unsupported resource type')
             if type(row['id'])is not int or row['id']<0 or not isinstance(row['name'],str)or not row['name']:raise ValueError('Invalid resource identity')
@@ -35,9 +118,20 @@ def catalogue(version,extensions=()):
             if type(source['line'])is not int or not 1<=source['line']<=len(source_raw.decode('utf-8-sig').splitlines()):raise ValueError('Resource provenance line absent')
             inputs[str(source_path)]=sha(source_raw)
             rows.append({**row,'version':version,'evidence':'declared','source':{**source,'path':str(source_path)}})
+    if include_model_candidates:
+        raw = MODEL_CANDIDATES.read_bytes()
+        inputs[str(MODEL_CANDIDATES)] = sha(raw)
+        existing = {row['id'] for row in rows if row['type'] == 'model' and row['id'] is not None}
+        for model in json.loads(raw):
+            if model.get('id') not in existing:
+                rows.append({
+                    **model, 'type': 'model', 'id': model.get('id'), 'mode': None,
+                    'dimensions': None, 'dependencies': None, 'candidate_for_version': version,
+                    'evidence': 'declared', 'dimensions_verified': False,
+                })
     seen=set()
     for row in rows:
-        identity=(row['type'],row['id'])
+        identity=(row['type'],row['id'] if row['id'] is not None else row['name'])
         if identity in seen:raise ValueError('Duplicate resource identity: '+str(identity))
         seen.add(identity)
     for row in rows:
@@ -45,8 +139,9 @@ def catalogue(version,extensions=()):
             deps=[(d['type'],d['id'])for d in row['dependencies']]
             if len(deps)!=len(set(deps)):raise ValueError('Duplicate resource dependency')
             if set(deps)-seen:raise ValueError('Missing resource dependency')
-    return {'schema':2,'version':version,'resources':sorted(rows,key=lambda r:(r['type'],r['id'])),'inputs':inputs,
-            'scope':'documented_characters_and_explicit_resource_metadata','complete_platform_catalogue':False,'host':'not_checked'}
+    return {'schema':2,'version':version,'resources':sorted(rows,key=lambda r:(r['type'],r['id'] is None,r['id'] or 0,r['name'])),'inputs':inputs,
+            'scope':('versioned_resource_metadata_and_model_candidates' if include_model_candidates else
+                     'documented_characters_and_explicit_resource_metadata'),'complete_platform_catalogue':False,'host':'not_checked'}
 
 
 def check(path):
@@ -70,7 +165,7 @@ def check(path):
             if row is None:errors.append({**record,'error':'resource absent'});continue
             closure.append(record)
             if row['mode']not in(spec['mode'],'both'):errors.append({**record,'error':'mode mismatch'})
-            if row['evidence']=='declared'and not use.get('accept_declared',False):unknown.append({**record,'error':'resource metadata only declared'})
+            if row['evidence']=='declared'and (row['type']=='model' or not use.get('accept_declared',False)):unknown.append({**record,'error':'resource metadata only declared'})
             if identity==(use['type'],use['id'])and 'dimensions'in use:
                 if row['dimensions']is None:unknown.append({**record,'error':'resource dimensions unknown'})
                 elif row['dimensions']!=use['dimensions']:errors.append({**record,'error':'resource dimensions mismatch'})
@@ -116,13 +211,33 @@ def check_client(report,resources):
             'native_resource_references':'not_checked','editor':'not_checked','host':'not_checked'}
 
 
+def search(version, query='', resource_type=None, mode=None, catalogues=(), limit=None):
+    if mode not in (None, 'classic', 'beyond'):
+        raise ValueError('Resource search mode must be classic or beyond')
+    if not isinstance(query, str) or type(limit) not in (int, type(None)) or limit is not None and limit < 1:
+        raise ValueError('Resource search requires a string and a positive limit')
+    result = catalogue(version, catalogues, include_model_candidates=resource_type == 'model')
+    matches = [
+        row for row in result['resources']
+        if (resource_type is None or row['type'] == resource_type)
+        and (mode is None or row['mode'] in (None, mode, 'both'))
+        and query.casefold() in ' '.join(
+            str(row.get(key) or '') for key in ('name', 'id', 'type', 'category')
+        ).casefold()
+    ]
+    result['resources'] = matches[:limit]
+    result['matches'] = len(matches)
+    return result
+
+
 def main(argv=None):
     parser=argparse.ArgumentParser();sub=parser.add_subparsers(dest='operation',required=True)
     query=sub.add_parser('search');query.add_argument('query',nargs='?',default='');query.add_argument('--version',required=True);query.add_argument('--catalogue',action='append',default=[])
+    query.add_argument('--type',dest='resource_type');query.add_argument('--mode',choices=['classic','beyond']);query.add_argument('--limit',type=int)
     verify=sub.add_parser('check');verify.add_argument('spec');verify.add_argument('--out')
     args=parser.parse_args(argv)
     if args.operation=='search':
-        result=catalogue(args.version,args.catalogue);result['resources']=[r for r in result['resources']if args.query.casefold()in(r['name']+' '+str(r['id'])+' '+r['type']).casefold()]
+        result=search(args.version,args.query,args.resource_type,args.mode,args.catalogue,args.limit)
     else:
         result=check(args.spec)
         if args.out:

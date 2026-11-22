@@ -1,6 +1,32 @@
 {
   "schema": 1,
   "capabilities": {
+    "scene": {
+      "rules": {
+        "implementation": "available",
+        "scope": "Explicit target, native model record evidence and transform constraints",
+        "cases": [
+          "test_native_scene.py::NativeSceneTests.test_reject_unknown_candidate_and_invalid_transform",
+          "test_native_scene.py::NativeSceneTests.test_witness_mode_and_digest_remain_bound",
+          "test_native_scene.py::NativeSceneTests.test_dimensions_are_bound_to_measurement"
+        ]
+      },
+      "generation": {
+        "implementation": "available",
+        "scope": "Static scene GIA, editable layout and resource mapping through the shared production stage",
+        "cases": [
+          "test_native_scene.py::NativeSceneTests.test_static_readback_and_production"
+        ]
+      },
+      "readback": {
+        "implementation": "available",
+        "scope": "Static object identity and world transform, and protected-byte checks during local GIL edits",
+        "cases": [
+          "test_native_scene.py::NativeSceneTests.test_static_readback_and_production",
+          "test_native_scene.py::NativeSceneTests.test_transform_plan_changes_only_selected_coordinates"
+        ]
+      }
+    },
     "mcp": {
       "rules": {
         "implementation": "available",

@@ -17,6 +17,7 @@
 - [平台版本与配置检查](platform-profiles.md)
 - [平台资源目录](resource-catalogue.md)
 - [工程对象与引用索引](project-index.md)
+- [原生 3D 场景](native-scene.md)
 - [三维实体读取和变换](native-entity-transform.md)
 - [编辑器配置](editor-configuration.md)
 - [原生 ID 分配登记](id-registry.md)
