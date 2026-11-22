@@ -8,19 +8,35 @@
 
 ## 安装并试一次查询
 
-**从市场安装**：Claude Code、桌面 Cowork、Codex 和 VS Code 可添加本仓库。DeepSeek Harness 使用本仓库的索引 URL。选中 Genshin-UGC 后，按[市场安装指南](docs/installation.md#marketplace)准备一次本地运行环境。
+### Codex
 
-**PowerShell 安装**：
-
-确认本机已有 Python、Node.js 和可用的 `codex` 命令，然后在 PowerShell 运行下方命令。用 Claude Code 时，将末尾改为 `-Agent claude-code`。[运行要求](docs/compatibility.md)
-
-```powershell
-& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.1.2/install.ps1'))) -Agent codex
+```text
+codex plugin marketplace add savormundane/Genshin-UGC-plugin
+codex plugin add genshin-ugc-public@genshin-ugc
 ```
 
-选择一个项目目录和一个互不包含的输出目录。没有现成工程时，项目目录可以为空。安装后在新会话启用插件，按首次使用指南查询服务端的“启动定时器”。[首次使用与预期结果](docs/getting-started.md)
+### Claude
 
-DeepSeek Harness、其他本地插件客户端，以及手动安装、更新和卸载见[安装指南](docs/installation.md)。只用终端可直接配置[独立运行环境](docs/runtime-environment.md)。
+有 `claude` 命令时可直接在终端安装，也可在 [Claude 插件界面](docs/installation.md#claude)添加同一个市场。
+
+```text
+claude plugin marketplace add savormundane/Genshin-UGC-plugin
+claude plugin install genshin-ugc-public@genshin-ugc
+```
+
+### DeepSeek Harness
+
+在 **Discover → Add index source** 添加下方地址，然后安装 **Genshin-UGC**。[DSH 市场步骤](docs/installation.md#deepseek-harness)
+
+```text
+https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/main/marketplace/dsh-index.json
+```
+
+其他兼容客户端可参考 [Agent Plugins 通用导入](docs/installation.md#agent-plugins)。
+
+市场安装后，按指南[一次性准备本地工具](docs/installation.md#一次性准备本地工具)。各客户端可共用同版本的运行环境。准备完成后在新会话查询服务端「启动定时器」，确认工具连通。[首次使用与预期结果](docs/getting-started.md)
+
+[PowerShell 安装](docs/installation.md#powershell-安装) · [完整 ZIP 安装](docs/installation.md#手动接入) · [独立使用 CLI](docs/runtime-environment.md)
 
 ## 用于实际创作
 
@@ -29,6 +45,16 @@ DeepSeek Harness、其他本地插件客户端，以及手动安装、更新和�
 - **辅助原生 3D 制作**。查询模型，生成独立静态 GIA，布设原生物件，配置机关、玩法资源与 HUD。[原生场景](references/native-scene.md) · [三维实体](references/native-entity-transform.md) · [支持范围](docs/compatibility.md) · [三维运动任务](https://github.com/savormundane/Genshin-UGC-plugin/issues/3)
 
 `main` 用于浏览与贡献源码。[版本记录](CHANGELOG.md)的 `Unreleased` 标记尚未进入正式下载包的改动。生成文件的编辑器导入和实际游戏表现以相应验证为准。
+
+## Skills
+
+| Skill | 适用任务 |
+| --- | --- |
+| [工程检查](skills/qianxing-editor/SKILL.md) | 查找关卡里的实体、模板和挂载关系。 |
+| [Graph Code](skills/qianxing-graph-code/SKILL.md) | 确认节点签名，编写并检查节点图。 |
+| [Client Lua](skills/client-controls-lua/SKILL.md) | 查询客户端 API，检查界面脚本。 |
+| [GIL](skills/qianxing-gil/SKILL.md) | 审阅局部修改计划，另存 GIL 并核对差异。 |
+| [素材](skills/qianxing-assets/SKILL.md) | 将 PNG 转成图元，比较候选方案的效果和控件预算。 |
 
 ## 参与项目
 

@@ -1,170 +1,126 @@
 # 安装、更新与卸载
 
-使用插件不需要先学 Git，也不需要克隆仓库。选择下方对应客户端的安装命令，或下载 Release 中的完整 Windows ZIP 即可。GitHub 自动生成的 `Source code (zip)` / `Source code (tar.gz)` 用于查看和开发源码，不是面向使用者的完整安装包。
+选择客户端的市场入口。也可以使用 [PowerShell 安装](#powershell-安装)、[完整 Windows ZIP](#手动接入)或[独立命令行](runtime-environment.md)。
 
-安装前请核对[运行要求与支持范围](compatibility.md)中的操作系统、Python 和 Node.js 要求。首次安装需要联网拉取锁定的 Python 依赖。
+安装前核对 [Windows x64、Python 和 Node.js 要求](compatibility.md#运行要求)。首次准备环境需要联网获取锁定的 Python 依赖。
 
-[返回首页](../README.md) · [第一次使用](getting-started.md) · [独立使用命令行](runtime-environment.md)
+[返回首页](../README.md) · [第一次使用](getting-started.md)
 
 ## Marketplace
 
-在客户端添加市场，再安装 Genshin-UGC。各客户端共用下方准备的本地运行环境。
+添加市场并安装插件后，按[一次性准备本地工具](#一次性准备本地工具)接通 MCP。
 
-| 客户端 | 添加市场与安装 |
-| --- | --- |
-| Claude Code | 在会话内运行 `/plugin marketplace add savormundane/Genshin-UGC-plugin`，再运行 `/plugin install genshin-ugc-public@genshin-ugc`。 |
-| Claude 桌面 Cowork | 从 Cowork 打开 **Customize → Plugins → Add → Add marketplace**，输入 `savormundane/Genshin-UGC-plugin`。添加 Genshin-UGC 后在本地 Cowork 会话使用 MCP。 |
-| Codex | 运行 `codex plugin marketplace add savormundane/Genshin-UGC-plugin`，再运行 `codex plugin add genshin-ugc-public@genshin-ugc`，或从客户端的插件市场选择该条目。 |
-| VS Code | 从 **Agent Customizations → Browse → Configure Marketplaces → Add Marketplace** 添加 `savormundane/Genshin-UGC-plugin`，再从该市场安装 `genshin-ugc-public`。使用支持 Agent Plugins 和本地 MCP 的会话。 |
-| DeepSeek Harness | 在 **Plugins → Experimental plugins** 启用 **Custom plugin indexes**。打开 **Discover → Add index source**，填入下方 URL，再选择 **Genshin-UGC** 安装。当前入口面向 `0.2.2-rc.5`。 |
+### Codex
+
+在终端添加市场并安装插件。
+
+```text
+codex plugin marketplace add savormundane/Genshin-UGC-plugin
+codex plugin add genshin-ugc-public@genshin-ugc
+```
+
+添加市场后，也可从 Codex 的插件列表选择 Genshin-UGC。
+
+### Claude
+
+在 **Customize → Plugins → Add → Add marketplace** 添加 `savormundane/Genshin-UGC-plugin`，再从市场安装 Genshin-UGC。也可在终端添加同一个条目。
+
+```text
+claude plugin marketplace add savormundane/Genshin-UGC-plugin
+claude plugin install genshin-ugc-public@genshin-ugc
+```
+
+使用本地 MCP 时，选择支持本机工具的 Claude 会话。完整 ZIP 用于解压后安装，Claude 的插件上传有文件数限制。 [Claude 插件说明](https://support.claude.com/en/articles/13837440-use-plugins-in-claude) · [ZIP 上传要求](https://platform.claude.com/docs/en/manage-claude/plugins-api#upload-requirements)
+
+### DeepSeek Harness
+
+1. 在 **Plugins → Experimental plugins** 启用 **Custom plugin indexes**。
+2. 在 **Discover → Add index source** 添加下方地址。
+3. 选择 **Genshin-UGC** 安装。当前入口面向 `0.2.2-rc.5`。
 
 ```text
 https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/main/marketplace/dsh-index.json
 ```
 
+### Agent Plugins
+
+其他支持 Agent Plugins 和本地 stdio MCP 的客户端，可通过其市场入口添加 `savormundane/Genshin-UGC-plugin`，再安装 `genshin-ugc-public`。如果客户端提供的是本地目录导入，按[从本地目录导入](#从本地目录导入)操作。
+
 ### 一次性准备本地工具
 
-按[运行要求](compatibility.md)准备 Windows x64、Python 和 Node.js。在 PowerShell 运行下方命令，选择互不包含的项目目录和输出目录。已用此命令准备过相同版本的用户可直接打开新会话。
-
-```powershell
-& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.1.2/install.ps1'))) -Agent agent-plugins -Version 4.1.2
-```
-
-成功时显示 `prepared` 和 `runtime_smoke: passed`。重开客户端会话，按[第一次使用](getting-started.md)调用 `nodes_lookup`。从市场更新插件后，先准备它所用的新版本运行环境。若使用 `-Root` 自选安装位置，请在启动客户端前将环境变量 `UGC_PUBLIC_INSTALL_ROOT` 设为同一个绝对路径。客户端需能找到 `node`。
-
-Claude 网页聊天可读取 Skill，本地 MCP 需使用 Claude Code 或桌面 Cowork 的本地会话。Release 的完整 ZIP 用于解压后安装，Claude 上传受文件数限制，请使用市场入口。 [Claude 插件说明](https://support.claude.com/en/articles/13837440-use-plugins-in-claude) · [ZIP 上传要求](https://platform.claude.com/docs/en/manage-claude/plugins-api#upload-requirements)
-
-## 准备输入与输出目录
-
-安装器会提示选择两个目录，也可通过 `-Project` 和 `-Outputs` 预先指定。
-
-- **项目目录**：读取你提供的工程、Lua 或图片。还没有工程时，可以先创建一个空目录来查询资料。
-- **独立输出目录**：保存报告与生成文件，必须与项目目录互不包含。
-
-例如，使用 `C:\Qianxing\project` 和 `C:\Qianxing\outputs` 两个同级目录。先创建 `project`，安装器会创建所选的输出目录。不要把 `outputs` 放在 `project` 内，也不要选择整个磁盘。
-
-如果 Python 未加入 PATH 或命中了商店占位符，用 `-Python` 指定真实解释器路径。默认安装根目录为 `$env:LOCALAPPDATA\Genshin-UGC-Public`（可用 `-Root` 修改）。
-
-## 客户端与 `-Agent` 参数速查
-
-| 接入方式 | `-Agent` 参数 | 安装后操作 |
-| --- | --- | --- |
-| **Codex** | `codex` | 自动注册，新开会话确认已启用 |
-| **Claude Code** | `claude-code` | 自动注册，新开会话在 `/plugin` 确认 |
-| **DeepSeek Harness**（`0.2.2-rc.5`） | `deepseek-harness` | 记下 `bundle_directory`，在客户端添加插件目录 |
-| **通用本地插件**（支持相应导入方式的客户端） | `agent-plugins` | 记下 `plugin_directory`，再由客户端导入；这不代表所有客户端已实测支持 |
-
-前两种方式由安装器注册插件；后两种方式准备文件和运行环境，最后一步在客户端完成。其他客户端的具体导入入口见[其他客户端](#其他客户端)。
-
-## Codex
-
-确认 `codex` 命令可用后，在 PowerShell 运行安装命令。
-
-```powershell
-& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.1.2/install.ps1'))) -Agent codex
-```
-
-安装成功时，输出中的 `installed` 是版本号，`runtime_smoke: passed` 表示安装器已完成本地工具自检。打开新会话，在插件列表确认 Genshin-UGC 已启用，按[第一次使用](getting-started.md)查询一个节点即可开始制作。
-
-## Claude Code
-
-确认 `claude` 命令可用后，在 PowerShell 运行安装命令。
-
-```powershell
-& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.1.2/install.ps1'))) -Agent claude-code
-```
-
-打开新会话，在 `/plugin` 中确认插件已启用，试一次 API 查询确认本地工具连通。
-
-## DeepSeek Harness
-
-本指南适用于 DeepSeek Harness `0.2.2-rc.5`。接入前请按[运行要求与支持范围](compatibility.md)核对 Node.js 版本。
-
-1. 在 PowerShell 运行准备命令，记下输出中的 `bundle_directory` 路径。
-
-   ```powershell
-   & ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.1.2/install.ps1'))) -Agent deepseek-harness
-   ```
-
-2. 在目标配置中打开 **Plugins → Add plugin**，粘贴刚才的目录路径。
-3. 启用插件后开启新会话并试一次 API 查询；若客户端提示重启，重启后再试。
-
-## 其他客户端
-
-客户端能识别这类本地插件，并能在本机 Windows 会话中运行本地工具时，可以尝试复用同一份安装包。先在 PowerShell 运行准备命令。
+按下方命令准备运行环境。安装器会提示[选择项目和输出目录](#准备输入与输出目录)。
 
 ```powershell
 & ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.1.2/install.ps1'))) -Agent agent-plugins
 ```
 
-记下输出的 `plugin_directory`，接下来按所用客户端导入。**保留整个版本目录及其原位置**：插件旁边的 `runtime` 和 `runtime.json` 都会被使用；DeepSeek Harness 还需要同级的 `cordis-bundle`。只复制插件子目录，或搬动配套环境，会使原配置中的路径失效。
+成功时显示 `prepared` 和 `runtime_smoke: passed`。同版本已准备过的环境可以直接复用。打开一个新会话，按[第一次使用](getting-started.md)查询服务端「启动定时器」。
 
-### VS Code
+客户端需能找到 `node`。安装时使用 `-Root` 自选位置的用户，应在启动客户端前将 `UGC_PUBLIC_INSTALL_ROOT` 设为同一个绝对路径。
 
-1. 打开命令面板运行 **Chat: Open Customizations**，切换到 **Plugins**。
-2. 点击 **User** 或 **Workspace** 旁的 **+**，填入刚才的 `plugin_directory`。
-3. 用 Copilot 开启新会话，确认插件已启用并试一次 API 查询。参考 [VS Code 本地插件安装说明](https://code.visualstudio.com/docs/agent-customization/agent-plugins#install-a-plugin-from-source)。
+### 准备输入与输出目录
 
-### 更多本地导入方式
+- **项目目录**用于读取你提供的工程、Lua 或图片。请先创建目录，第一次查询时可以为空。
+- **输出目录**用于保存报告和生成文件，由安装器创建。项目目录与输出目录必须互不包含，例如 `C:\Qianxing\project` 和 `C:\Qianxing\outputs`。
 
-* **GitHub Copilot CLI**：运行 `copilot plugin install "<plugin_directory>"`（参考 [Copilot CLI 插件文档](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/plugins-creating#test-your-plugin-with-github-copilot-cli)）。
-* **Kiro**：在 Powers 面板选择 **Add Custom Power → Import power from a folder**，选中 `plugin_directory`（参考 [Kiro 本地安装说明](https://kiro.dev/docs/powers/installation/#from-local-path)）。
-* **Google Antigravity CLI**：运行 `agy plugin install "<plugin_directory>"`（参考 [Antigravity 文档](https://antigravity.google/docs/marketplace)）。
-* **Cursor**（需客户端允许本地插件导入，参考 [Cursor 插件说明](https://cursor.com/docs/plugins#test-plugins-locally)）：
-  1. 将完整的 `plugin_directory` 复制到 `~/.cursor/plugins/local/` 下。
-  2. 打开副本里的 `mcp.json`，将启动参数中的 `${PLUGIN_ROOT}` 改为 `${CURSOR_PLUGIN_ROOT}`，保留安装器写入的运行配置路径。
-  3. 重载 Cursor。
+也可用 `-Project` 和 `-Outputs` 指定这两个目录。默认安装根为 `$env:LOCALAPPDATA\Genshin-UGC-Public`。
 
-  Cursor 副本仍引用安装器生成的运行配置，原版本目录需要保留。更新时重新准备新版并调整其副本。
+## PowerShell 安装
 
-以上是对应客户端提供的导入途径；是否能完整加载本插件取决于客户端版本、插件格式和本地工具支持。导入后在新会话试一次查询即可判断本次接入结果；升级或卸载通过对应客户端管理。
+已有 `codex` 命令的用户可用下方命令准备环境并登记插件。Claude 用户将末尾替换为 `-Agent claude-code`，需要可用的 `claude` 命令。
 
-### 通用客户端
+```powershell
+& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.1.2/install.ps1'))) -Agent codex
+```
 
-1. 先运行上方的 `-Agent agent-plugins` 准备命令，获取 `plugin_directory` 与配套运行环境。
-2. 在客户端的「从本地目录安装插件」入口选中 `plugin_directory`（兼容列表可参考 [Agent Plugins 客户端目录](https://agent-plugins.org/compatible-clients)）。
-3. 打开新会话，确认能看到 5 个 Skill，并让助手查询一个千星奇域 API 验证本地 MCP 工具可用。
+选择[项目和输出目录](#准备输入与输出目录)，等待输出 `installed` 和 `runtime_smoke: passed`。在客户端的新会话[试一次查询](getting-started.md)。
 
-如果客户端只加载了 Skill 但支持手动配本地 MCP，可按 [客户端适配](contributing/development.md#客户端适配) 补充配置；只需要命令行时，直接按 [独立运行环境](runtime-environment.md) 配置即可。
+### 从本地目录导入
+
+| 客户端 | 准备和导入 |
+| --- | --- |
+| DeepSeek Harness | 将上方 PowerShell 命令的末尾替换为 `-Agent deepseek-harness`。在 **Plugins → Add plugin** 选择输出中的 `bundle_directory`。 |
+| Agent Plugins | 按[一次性准备本地工具](#一次性准备本地工具)运行命令，在客户端的本地目录导入入口选择输出中的 `plugin_directory`。 |
+
+准备完成后，请保留整个版本目录及原位置，客户端还需要其中的运行环境和配置。导入后在新会话[试一次查询](getting-started.md)。若客户端支持单独连接本地 MCP，可参考[客户端适配](contributing/development.md#客户端适配)。
 
 ## 手动接入
 
-手动安装时先下载完整包，再核对摘要。
+1. 从 [4.1.2 Release](https://github.com/savormundane/Genshin-UGC-plugin/releases/tag/v4.1.2) 下载 `Genshin-UGC-4.1.2-windows-x64.zip`。请在 Release 附件中选择完整包，`Source code` 提供源码。
+2. 从 [Release 附件信息](https://docs.github.com/en/rest/releases/assets)取得 ZIP 的 SHA-256，用 `Get-FileHash -Algorithm SHA256` 核对本地文件。
+3. 保留原 ZIP，将它解压到同一父目录。进入解压出的 `Genshin-UGC` 目录运行下方命令，按客户端选用 `-Agent codex`、`claude-code`、`deepseek-harness` 或 `agent-plugins`。
 
-1. 前往 [4.1.2 Release 页面](https://github.com/savormundane/Genshin-UGC-plugin/releases/tag/v4.1.2) 下载 `Genshin-UGC-4.1.2-windows-x64.zip`。
-2. 在 GitHub Release 附件详情（或 [Release API](https://docs.github.com/en/rest/releases/assets)）查看该 ZIP 的 SHA-256，本机用 `Get-FileHash -Algorithm SHA256` 核对一致。
-3. 保留原 ZIP，将其解压到同一父目录，进入解压出的 `Genshin-UGC` 目录运行安装命令，按需替换 `-Agent`。
+```powershell
+.\install.ps1 -Agent codex -Archive ..\Genshin-UGC-4.1.2-windows-x64.zip -Sha256 '<GitHub 显示的 ZIP SHA-256>'
+```
 
-   ```powershell
-   .\install.ps1 -Agent codex -Archive ..\Genshin-UGC-4.1.2-windows-x64.zip -Sha256 '<GitHub 显示的 ZIP SHA-256>'
-   ```
-
-只使用命令行工具见 [独立运行环境](runtime-environment.md)；自建客户端适配见 [客户端适配](contributing/development.md#客户端适配)。
+完成后在新会话[试一次查询](getting-started.md)。使用 DSH 或 Agent Plugins 的用户先完成[本地目录导入](#从本地目录导入)中的客户端步骤。
 
 ## 回退与卸载
 
-升级直接运行新版本的安装命令即可，各版本使用独立目录，互不覆盖。
-
-**Codex 与 Claude Code** 可用完整 ZIP 内的 `install.ps1` 离线回退或卸载。将 `-Agent` 换成所用客户端，安装时若传过 `-Root`，这里传入原值。回退时用 `-Version` 选择仍保留的版本。卸载移除所选客户端当前登记的安装。
+- **市场安装**通过客户端管理更新和卸载。升级后按[一次性准备本地工具](#一次性准备本地工具)准备对应版本的环境。
+- **PowerShell 登记的 Codex 和 Claude**可从新版安装器升级。回退或卸载可用完整 ZIP 内的命令。改用 `-Agent claude-code` 即可操作 Claude，使用过 `-Root` 的用户应传入原值。
+- **本地目录导入**通过客户端管理。升级时先准备并验证新目录，回退时重新指向保留的旧版本。
 
 ```powershell
-# 回退到之前保留的某个版本
-.\install.ps1 -Agent codex -Action rollback -Version 4.0.0
+# 回退到本机仍保留的版本
+.\install.ps1 -Agent codex -Action rollback -Version '<旧版本>'
 
-# 卸载所选客户端的当前安装
+# 卸载当前登记的安装
 .\install.ps1 -Agent codex -Action uninstall
 ```
 
-卸载保留项目、输出、版本目录和专用运行环境。同一安装根可以供多个客户端使用。清理旧文件前，请在对应客户端确认该版本已移除、没有其他客户端在用，也无需留作回退，再清理该客户端下对应的版本目录。
-
-**DeepSeek Harness 与其他自行导入的客户端**：在对应客户端的插件管理界面移除或禁用。升级时先准备并验证新版，再移除旧版；回退时重新指向之前保留的旧版目录即可。
+卸载保留项目、输出和各版本的运行环境。清理旧版本目录前，确认其他客户端已停用该版本，并且无需回退。
 
 ## 失败后续装
 
-- **找不到 Python**：按[运行要求与支持范围](compatibility.md)安装 Python，或在原安装命令末尾加 `-Python 'C:\实际路径\python.exe'`。Windows 商店占位命令不等于可用的 Python。
-- **目录冲突**：项目目录和输出目录应为两个独立目录，不能相同或互相包含；只有项目目录需要提前存在。
-- **安装中断**：保留失败目录，用完全相同的参数加上 `-Resume` 重跑即可。Codex 与 Claude Code 均支持依赖与冒烟检查阶段续装；Codex 还支持已登记的激活阶段续装。若提示版本已安装完成，请改用上方回退流程。Claude Code 若在启用阶段中断，按错误提示核对插件列表中的条目后再试。
-- **客户端看不到工具**：新开会话检查插件是否已启用；如客户端弹出本地工具信任确认，核对后批准。手动导入时确保选的是准备命令输出的目录（或 Cursor 修改后的副本），整个版本目录仍在原位置。
-- **命令行能查询、客户端不能查询**：先检查该客户端的插件与 MCP 配置，通常无需重新安装 Python 依赖。运行配置的定位方法见[独立运行环境](runtime-environment.md)。
+| 遇到的问题 | 检查方式 |
+| --- | --- |
+| 市场中找不到插件 | 核对所用客户端的仓库名或 DSH 索引 URL。DSH 需启用 **Custom plugin indexes**。必要时使用 [PowerShell 安装](#powershell-安装)。 |
+| 能看到 Skill，工具未连通 | 确认[本地环境准备](#一次性准备本地工具)已成功，客户端能找到 `node` 并允许本地 MCP。若用过 `-Root`，核对 `UGC_PUBLIC_INSTALL_ROOT` 后重启客户端。 |
+| 插件版本和运行环境不符 | 以客户端显示的插件版本为准，准备对应版本的环境。 |
+| 找不到 Python 或目录冲突 | 按[运行要求](compatibility.md#运行要求)检查 Python，必要时用 `-Python` 指定解释器绝对路径。确认[项目和输出目录](#准备输入与输出目录)互不包含。 |
+| 安装中断 | 保留失败目录，用相同参数加 `-Resume` 重跑。Claude 登记后若启用中断，按错误提示核对客户端中的条目。 |
+| CLI 能查询，客户端仍不能查询 | 检查插件是否启用、MCP 配置是否指向准备好的版本。 [连接 MCP](runtime-environment.md#连接-mcp-或切换工程) |
 
-仍无法解决时，通过 [Bug 反馈](https://github.com/savormundane/Genshin-UGC-plugin/issues/new?template=bug_report.yml) 提供版本、所用客户端、执行命令和第一条错误信息。路径、日志和截图中不需要公开的内容可先删去。
+仍无法解决时，通过 [Bug 反馈](https://github.com/savormundane/Genshin-UGC-plugin/issues/new?template=bug_report.yml)提供版本、客户端、执行命令和第一条错误信息。可先删去路径、日志和截图中无需公开的内容。

@@ -31,7 +31,6 @@ DOC_VERSIONS = {
     "README.md": {
         "current version": rf"\*\*当前版本 `({SEMVER})`\*\*",
         "download tag": rf"https://github\.com/{REPO}/releases/download/v({SEMVER})/",
-        "install command tag": INSTALL_TAG,
         "ZIP filename": ZIP_VERSION,
     },
     "docs/installation.md": {

@@ -17,10 +17,10 @@
 
 | 入口 | 仓库提供的能力 | 适用边界 |
 | --- | --- | --- |
-| Codex | 安装器准备运行环境并调用原生插件注册入口。 | 客户端需提供可用的 `codex plugin` 命令；安装后在新会话启用插件。 |
-| Claude Code | 安装器准备运行环境并调用原生插件注册入口。 | 客户端需提供可用的 `claude plugin` 命令；在 `/plugin` 管理启用状态。 |
-| DeepSeek Harness | 生成 Cordis Bundle，由客户端导入。 | 当前适配面向 `0.2.2-rc.5`，安装器要求 Node.js 24.9+；准备成功与客户端加载是两个环节。 |
-| 通用 Agent Plugins | 提供根插件清单、Skills 和本地 stdio MCP 配置。 | 需要客户端支持相应格式和本地工具。VS Code、Cursor 等导入说明属于接入途径，不是所有版本的实测保证。 |
+| Codex | 市场安装或由 PowerShell 登记插件。 | 已验证 Codex CLI 从本地市场发现并安装条目。 |
+| Claude | 同一个插件市场可从界面或命令行添加。 | 已验证 Claude Code 本地市场安装与 MCP 连通。工具调用需要可启动本地 stdio MCP 的会话。 |
+| DeepSeek Harness | 通过市场索引安装 Cordis Bundle，也可从目录导入。 | 已在 `0.2.2-rc.5` 验证索引解析、Bundle 加载和节点查询。 |
+| Agent Plugins | 提供通用插件清单、Skills 和本地 stdio MCP 配置。 | 导入方式和本地工具可用性取决于客户端的实现。 |
 | 独立 CLI | 使用专用 Python 运行 `scripts/qianxing.py`。 | 不依赖 AI 客户端；具体命令仍需相应运行依赖和有效输入。 |
 
 具体安装和导入操作集中在[安装指南](installation.md)，无需为同一个任务同时安装多个客户端。

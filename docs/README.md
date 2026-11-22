@@ -18,6 +18,8 @@
 | 将 PNG 转成图元 | [图片转图元](examples.md#图片转图元) |
 | 从源码、工程和素材组成一次交付 | [制作流程](../references/production-workflow.md) |
 
-[术语表](glossary.md) · [技术参考](../references/README.md) · [反馈问题](https://github.com/savormundane/Genshin-UGC-plugin/issues/new/choose)
+## 技术参考
 
-[开发者文档](contributing/README.md)
+[能力与资料索引](../references/README.md) · [术语表](glossary.md)
+
+[开发者文档](contributing/README.md) · [反馈问题](https://github.com/savormundane/Genshin-UGC-plugin/issues/new/choose)

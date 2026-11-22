@@ -40,7 +40,7 @@ class ReleaseTests(unittest.TestCase):
             install = f'https://raw.githubusercontent.com/{REPO}/v1.2.3/install.ps1'
             zip_name = 'Genshin-UGC-1.2.3-windows-x64.zip'
             (root/'README.md').write_text(
-                f'**当前版本 `1.2.3`**\n{github}/download/v1.2.3/{zip_name}\n{install}\n',
+                f'**当前版本 `1.2.3`**\n{github}/download/v1.2.3/{zip_name}\n',
                 encoding='utf-8',
             )
             (root/'docs/installation.md').write_text(
