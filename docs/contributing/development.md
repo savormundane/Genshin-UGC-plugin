@@ -11,9 +11,8 @@ python -B scripts/check_repository.py
 需要运行插件、修改 MCP 或调试生成工具时，用支持的 Windows、Python 和 Node.js 环境。已有插件专用 Python 可直接复用，也可在检出目录创建专用环境。[运行要求](../compatibility.md) · [复用已安装的环境](../runtime-environment.md)
 
 ```powershell
-python -m venv .venv
+uv sync --locked --no-build
 $ugcPython = (Resolve-Path .\.venv\Scripts\python.exe).Path
-& $ugcPython -m pip install --require-hashes --only-binary=:all: -r scripts/runtime-requirements.lock
 & $ugcPython -B scripts/qianxing.py doctor
 ```
 
@@ -45,10 +44,10 @@ $ugcPython = (Resolve-Path .\.venv\Scripts\python.exe).Path
 
 ## 客户端适配
 
-客户端启动 Node 和 `scripts/mcp_launcher.cjs`。把环境变量 `UGC_RUNTIME_CONFIG` 指向按[独立运行环境](../runtime-environment.md)生成的 `runtime.json`。运行配置绑定实际解释器、项目目录和输出目录，应保存在本机。
+客户端启动 Node 和 `scripts/mcp_launcher.cjs`。解释器选择与工作目录绑定见[独立运行环境](../runtime-environment.md)。
 
 - Codex 读取 `.codex-plugin/plugin.json` 和 `mcp.json`，通用接入读取根 `plugin.json` 和 `mcp.json`。
 - Claude Code 读取 `.claude-plugin/plugin.json` 和 `.mcp.json`。可用 `claude plugin validate <目录>` 检查声明。
-- DeepSeek Harness 从安装器生成的 Cordis Bundle 加载 Skills 与 MCP。
+- DeepSeek Harness 从插件根目录的 `package.json` 和 `cordis.patch.yml` 加载 Skills 与 MCP。
 
 宿主安装步骤见[安装指南](../installation.md)。维护其他接入方式时，可核对 [Agent Plugins 规范](https://agent-plugins.org/specification) · [Claude Code 插件参考](https://code.claude.com/docs/en/plugins-reference) · [DeepSeek Harness Bundle 参考](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.5/packages/preset/agent-preset/skills/dsh-doc/references/host-plugin.md)。

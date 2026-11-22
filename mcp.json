@@ -8,7 +8,7 @@
         "${PLUGIN_ROOT}/scripts/mcp_launcher.cjs"
       ],
       "env": {
-        "UGC_RUNTIME_CONFIG": "${PLUGIN_DATA}/runtime.json"
+        "UGC_PLUGIN_DATA": "${PLUGIN_DATA}"
       }
     }
   }

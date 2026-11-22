@@ -6,7 +6,7 @@
   "plugins": [
     {
       "name": "genshin-ugc-public",
-      "source": "./marketplace/genshin-ugc",
+      "source": "./",
       "description": "千星奇域 工程检查、Graph Code、Client Lua、GIL 与 Assets 开发工具"
     }
   ]

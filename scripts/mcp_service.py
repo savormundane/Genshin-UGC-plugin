@@ -7,10 +7,11 @@ from mcp.server.mcpserver import Context
 from mcp.server.mcpserver.exceptions import ToolError
 from pydantic import StrictInt
 from authoring_io import DiagnosticError
+from runtime_policy import REQUIREMENTS
 
 
 def server(bridge):
-    if version('mcp')!='2.3.0':raise ValueError('MCP service requires pinned mcp==2.3.0')
+    if version('mcp')!=REQUIREMENTS['mcp']:raise ValueError('MCP service requires pinned mcp=='+REQUIREMENTS['mcp'])
     app=MCPServer('Genshin-UGC')
     async def call(operation,ctx,**args):
         try:

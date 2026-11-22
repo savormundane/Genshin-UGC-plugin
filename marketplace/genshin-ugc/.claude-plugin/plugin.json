@@ -1,9 +1,0 @@
-{
-  "name": "genshin-ugc-public",
-  "version": "4.1.2",
-  "description": "千星奇域 工程检查、Graph Code、Client Lua、GIL 与 Assets 开发工具",
-  "author": {
-    "name": "Genshin-UGC contributors"
-  },
-  "license": "GPL-3.0-only"
-}

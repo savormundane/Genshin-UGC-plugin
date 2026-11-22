@@ -30,38 +30,20 @@ if ($Action -ne 'install') {
     if ($LASTEXITCODE -ne 0) { throw ('Installation operation failed: ' + $LASTEXITCODE) }
     return
 }
+
 function Find-SupportedPython([string]$Executable, [string[]]$Selector = @()) {
     if (!$Executable -or $Executable -match '[\\/]Microsoft[\\/]WindowsApps[\\/]') { return }
     # An unavailable launcher version can write to stderr and return nonzero.
     $ErrorActionPreference = 'Continue'
     $PSNativeCommandUseErrorActionPreference = $false
-    $probe = 'import json,sys; sys.exit(1) if sys.version_info[:2] not in ((3, 11), (3, 12)) else print(json.dumps(sys.executable))'
-    $answer = @(& $Executable @Selector -I -B -c $probe 2>$null)
+    $probe = 'import json,sys; sys.exit(1) if not ((3, int(sys.argv[1])) <= sys.version_info[:2] < (3, int(sys.argv[2]))) or sys.implementation.name != "cpython" or sys.maxsize < 2**32 else print(json.dumps(sys.executable))'
+    $answer = @(& $Executable @Selector -I -B -c $probe $minMinor $maxMinor 2>$null)
     if ($LASTEXITCODE -eq 0 -and $answer.Count -eq 1) {
         $resolved = ConvertFrom-Json -InputObject $answer[0] -ErrorAction SilentlyContinue
         if ($resolved -is [string] -and (Test-Path -LiteralPath $resolved -PathType Leaf)) { return $resolved }
     }
 }
 
-if ($Python) {
-    $requested = Get-Command -Name $Python -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
-    $Python = Find-SupportedPython $requested.Source
-} else {
-    foreach ($candidate in @(Get-Command python.exe -All -CommandType Application -ErrorAction SilentlyContinue)) {
-        $Python = Find-SupportedPython $candidate.Source
-        if ($Python) { break }
-    }
-    if (!$Python) {
-        foreach ($launcher in @(Get-Command py.exe -All -CommandType Application -ErrorAction SilentlyContinue)) {
-            foreach ($selector in @('-3.12', '-3.11')) {
-                $Python = Find-SupportedPython $launcher.Source @($selector)
-                if ($Python) { break }
-            }
-            if ($Python) { break }
-        }
-    }
-}
-if (!$Python) { throw 'A usable Python 3.11-3.12 is required. Install it or pass its executable with -Python.' }
 if ($Action -eq 'install') {
     if (!$Project) { $Project = Read-Host 'Existing project directory' }
     if (!$Outputs) { $Outputs = Read-Host 'Separate output directory (outside the project)' }
@@ -91,11 +73,47 @@ try {
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     $zip = [IO.Compression.ZipFile]::OpenRead((Resolve-Path -LiteralPath $Archive).Path)
     try {
-        $entry = @($zip.Entries | Where-Object { $_.FullName -eq 'Genshin-UGC/scripts/install_public.py' })
-        if ($entry.Count -ne 1) { throw 'Installer entry missing or duplicated.' }
-        $runner = Join-Path $taskTemp 'install_public.py'
-        [IO.Compression.ZipFileExtensions]::ExtractToFile($entry[0], $runner)
+        $minMinor = 11
+        $maxMinor = 13
+        $entries = @('scripts/install_public.py')
+        $contract = $zip.GetEntry('Genshin-UGC/pyproject.toml')
+        if ($contract) {
+            $reader = New-Object IO.StreamReader($contract.Open())
+            try { $declaration = $reader.ReadToEnd() } finally { $reader.Dispose() }
+            if ($declaration -notmatch '(?m)^requires-python\s*=\s*">=3\.(\d+),<3\.(\d+)"\s*$') {
+                throw 'Invalid Python range in verified archive.'
+            }
+            $minMinor = [int]$Matches[1]
+            $maxMinor = [int]$Matches[2]
+            $entries += @('pyproject.toml', 'scripts/runtime_policy.py')
+        }
+        New-Item -ItemType Directory -Path (Join-Path $taskTemp 'scripts') | Out-Null
+        foreach ($file in $entries) {
+            $entry = @($zip.Entries | Where-Object { $_.FullName -ceq ('Genshin-UGC/' + $file) })
+            if ($entry.Count -ne 1) { throw "Installer entry missing or duplicated: $file" }
+            [IO.Compression.ZipFileExtensions]::ExtractToFile($entry[0], (Join-Path $taskTemp $file))
+        }
+        $runner = Join-Path $taskTemp 'scripts/install_public.py'
     } finally { $zip.Dispose() }
+    if ($Python) {
+        $requested = Get-Command -Name $Python -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+        $Python = Find-SupportedPython $requested.Source
+    } else {
+        foreach ($candidate in @(Get-Command python.exe -All -CommandType Application -ErrorAction SilentlyContinue)) {
+            $Python = Find-SupportedPython $candidate.Source
+            if ($Python) { break }
+        }
+        if (!$Python) {
+            foreach ($launcher in @(Get-Command py.exe -All -CommandType Application -ErrorAction SilentlyContinue)) {
+                foreach ($selector in ((($maxMinor - 1)..$minMinor) | ForEach-Object { "-3.$_" })) {
+                    $Python = Find-SupportedPython $launcher.Source @($selector)
+                    if ($Python) { break }
+                }
+                if ($Python) { break }
+            }
+        }
+    }
+    if (!$Python) { throw "CPython 3.$minMinor–3.$($maxMinor - 1) required. Pass its executable with -Python." }
     $arguments = @('-X', 'utf8', '-B', $runner, $Action, '--agent', $Agent, '--root', $Root, '--version', $Version)
     if ($Action -eq 'install') { $arguments += @('--archive', $Archive, '--sha256', $Sha256, '--project', $Project, '--outputs', $Outputs) }
     if ($Resume) { $arguments += '--resume' }

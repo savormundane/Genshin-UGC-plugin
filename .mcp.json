@@ -7,7 +7,7 @@
         "${CLAUDE_PLUGIN_ROOT}/scripts/mcp_launcher.cjs"
       ],
       "env": {
-        "UGC_RUNTIME_CONFIG": "${CLAUDE_PLUGIN_DATA}/runtime.json"
+        "UGC_PLUGIN_DATA": "${CLAUDE_PLUGIN_DATA}"
       }
     }
   }

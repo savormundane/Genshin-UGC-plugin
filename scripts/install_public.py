@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import zipfile
+from runtime_policy import PYTHON_RANGE, supported_python
 
 MANUAL_AGENTS = ('agent-plugins', 'deepseek-harness')
 AGENTS = ('codex', 'claude-code', *MANUAL_AGENTS)
@@ -41,8 +42,8 @@ def run(command, **kwargs):
 def preflight(agent, project=None, outputs=None):
     if sys.platform != 'win32' or platform.machine().lower() not in ('amd64', 'x86_64'):
         raise ValueError('Complete bundle requires Windows x64')
-    if not (3, 11) <= sys.version_info[:2] <= (3, 12):
-        raise ValueError('Locked dependencies require Python 3.11-3.12')
+    if not supported_python(sys.version_info):
+        raise ValueError(f'Locked dependencies require CPython {PYTHON_RANGE}')
     client = None if agent in MANUAL_AGENTS else shutil.which('codex' if agent == 'codex' else 'claude')
     node = shutil.which('node')
     if not node or (agent not in MANUAL_AGENTS and not client):

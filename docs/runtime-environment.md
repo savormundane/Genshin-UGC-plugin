@@ -1,6 +1,6 @@
 # 独立运行环境
 
-CLI 和插件 MCP 使用同一套本地工具。已经通过安装器安装的用户可以直接复用专用 Python；只使用命令行的用户再按下方步骤创建环境。
+CLI 和插件 MCP 使用同一套本地工具。可复用已有 Python 或使用 uv。
 
 [安装指南](installation.md) · [运行要求与支持范围](compatibility.md)
 
@@ -27,29 +27,20 @@ $ugcCli = Join-Path $ugcState.current.home 'Genshin-UGC\scripts\qianxing.py'
 
 这段命令适用于当前仍有已登记安装的 Codex / Claude Code。DeepSeek Harness 或通用插件用户，使用准备命令输出的目录，在其所属版本目录找到上表中的 Python 与 CLI 即可。无需再次安装同一套依赖。
 
-## 只用 CLI：从完整 ZIP 配置一次
+## 只用 CLI
 
-下载[完整 Windows ZIP](https://github.com/savormundane/Genshin-UGC-plugin/releases/latest)，解压后进入 `Genshin-UGC` 目录。先确认已有 Python 与 Node.js 满足[运行要求](compatibility.md)。以下示例将环境和个人文件放在 `C:\Qianxing`；可统一替换成自己的目录。
+在包含 `pyproject.toml` 与 `uv.lock` 的插件目录执行。uv 按锁文件准备依赖，已有具备依赖的 Python 可以直接运行 `scripts/qianxing.py`。
 
 ```powershell
-# 按实际位置填写一个受支持的 Python 解释器。
-$ugcBasePython = 'C:\实际路径\python.exe'
-New-Item -ItemType Directory -Force 'C:\Qianxing\project' | Out-Null
-
-# 运行环境目录必须是尚不存在的新目录。
-& $ugcBasePython .\scripts\configure_runtime.py --python $ugcBasePython --runtime 'C:\Qianxing\runtime' --project 'C:\Qianxing\project' --outputs 'C:\Qianxing\outputs' --config 'C:\Qianxing\runtime.json'
-
-& 'C:\Qianxing\runtime\Scripts\python.exe' .\scripts\qianxing.py --help
+uv run --locked --no-build python -B .\scripts\qianxing.py --help
 ```
 
-配置命令按 `scripts/runtime-requirements.lock` 下载并安装锁定依赖，首次需要联网。项目目录需要提前存在，可以为空；输出目录由配置命令创建。项目与输出不能相同或互相包含。
-
-同参数的未完成配置可在配置命令末尾加 `--resume` 继续。已经完成的运行环境不通过重复执行该命令来覆盖；遇到依赖报错时，可用专用 Python 运行 `scripts/qianxing.py doctor` 查看具体缺项。
+已发布的 4.1.2 ZIP 使用[安装器](installation.md#powershell-安装)或现有的专用 Python。
 
 ## 连接 MCP 或切换工程
 
-手动连接 MCP 时，让客户端通过 Node 启动插件的 `scripts/mcp_launcher.cjs`，并将 `UGC_RUNTIME_CONFIG` 指向实际 `runtime.json`。完整配置见[客户端适配](contributing/development.md#客户端适配)。
+手动连接 MCP 时，让客户端通过 Node 启动插件的 `scripts/mcp_launcher.cjs`。文件工具通过 `UGC_PROJECT_ROOT` 和 `UGC_OUTPUT_ROOT` 访问两个独立的绝对目录。切换工程时更新这两个值并重启 MCP 或客户端。完整配置见[客户端适配](contributing/development.md#客户端适配)。
 
-`runtime.json` 记录本机路径，应保存在本地。切换工程时，先准备新的独立项目与输出目录，再修改当前绑定的 `runtime.json` 中 `project_root` 和 `output_root` 的绝对路径，保留 `python` 与其他字段。重启该 MCP 连接或打开新会话使配置生效。不要同时让旧任务继续写入，也无需为此重装依赖。
+`UGC_RUNTIME_CONFIG` 也可指向本机已有的 `runtime.json`，沿用其中的 Python 与目录。另行设置的目录变量优先。
 
 旧版本目录可保留用于回退；不要只移动其中的插件或运行环境子目录。[更新与回退](installation.md#回退与卸载)

@@ -2,6 +2,7 @@
 import importlib.util,importlib.metadata,json,shutil,sys,subprocess
 from authoring_io import *
 from validation_evidence import execution_inventory,validation_dependencies,backend_inventory,case_coverage
+from runtime_policy import REQUIREMENTS,supported_python
 CAPABILITIES={
  'knowledge':('knowledge.py','knowledge-reliability.md'),'diagnosis':('project_diagnosis.py','project-diagnosis.md'),'asset_inspection':('asset_inspection.py','asset-inspection.md'),
  'mcp':('mcp_service.py','local-mcp.md'),
@@ -45,6 +46,7 @@ SUPPORT={
 CAPABILITY_GROUPS = {
     'entrypoints': (
         'plugin.json', '.codex-plugin/plugin.json', 'mcp.json',
+        'pyproject.toml', 'uv.lock', 'scripts/runtime_policy.py',
         'scripts/qianxing.py', 'scripts/mcp_launcher.cjs', 'scripts/mcp_service.py', 'scripts/mcp_bridge.py',
         'scripts/mcp_worker.py', 'scripts/capability_index.py', 'scripts/capability-layers.json', 'scripts/capabilities.py',
     ),
@@ -117,9 +119,9 @@ def doctor(compare=None):
         probe=subprocess.run([node,'--version'],capture_output=True,text=True)
         if probe.returncode==0:node_version=probe.stdout.strip()
     versions={d.metadata['Name'].lower():d.version for d in importlib.metadata.distributions() if d.metadata['Name']}
-    dependencies={name:{'required':required,'installed':versions.get(name),'status':'not_checked' if name not in versions else 'passed' if versions[name]==required else 'failed'} for name,required in {'mcp':'2.3.0','lupa':'2.6','pillow':'12.0.0'}.items()}
+    dependencies={name:{'required':required,'installed':versions.get(name),'status':'not_checked' if name not in versions else 'passed' if versions[name]==required else 'failed'} for name,required in REQUIREMENTS.items()}
     imports=subprocess.run([sys.executable,'-B','-c','import mcp,lupa.lua53,PIL'],capture_output=True,text=True)
-    supported=(3,11)<=sys.version_info[:2]<=(3,12)
+    supported=sys.implementation.name=='cpython' and supported_python(sys.version_info)
     node_supported=bool(node_version and node_version.lstrip('v').split('.')[0].isdigit() and int(node_version.lstrip('v').split('.')[0])>=22)
     status='failed' if not supported or not node_supported or imports.returncode or any(r['status']=='failed' for r in dependencies.values()) else 'not_checked' if any(r['status']=='not_checked' for r in dependencies.values()) else 'passed'
     fingerprint_files = (

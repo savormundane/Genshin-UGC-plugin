@@ -4,6 +4,9 @@ import argparse,json,subprocess,tempfile,shutil
 from authoring_io import read_json,sha,schema,resolve,output_directory,write_json,finish
 PIN='02a5ea2cd38bb5bcf7a7ce6dd745be3bb1ae655c'
 BUNDLED=Path(__file__).resolve().parent.parent/'vendor/beyond'
+# npm-compatible Git installations omit these upstream ignore rules.
+NON_RUNTIME_GITIGNORE={'dsh-plugin/.gitignore','client/lua-runtime/.gitignore',
+                       'node_modules/qxqy-lua-runtime/.gitignore'}
 def run(path,backend,out,*,final_gil=None,preview=False):
     path=Path(path).resolve();backend=Path(backend or BUNDLED).resolve()
     spec_bytes=path.read_bytes()
@@ -33,6 +36,7 @@ def run(path,backend,out,*,final_gil=None,preview=False):
         manifest=read_json(bundle);revision=manifest['commit']
         for name,digest in manifest['files'].items():
             target=(backend/name).resolve()
+            if name in NON_RUNTIME_GITIGNORE and not target.exists():continue
             if not target.is_relative_to(backend) or not target.is_file() or sha(target.read_bytes())!=digest:raise ValueError('Bundled backend integrity failure: '+name)
     else:
         revision=subprocess.run(['git','-C',str(backend),'rev-parse','HEAD'],capture_output=True,text=True,check=True).stdout.strip()

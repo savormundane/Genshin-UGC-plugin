@@ -8,7 +8,7 @@
       "name": "genshin-ugc-public",
       "source": {
         "source": "local",
-        "path": "./marketplace/genshin-ugc"
+        "path": "./"
       },
       "policy": {
         "installation": "AVAILABLE",

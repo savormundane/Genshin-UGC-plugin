@@ -22,6 +22,7 @@ READ_FILE_OPERATIONS={
 }
 OPTIONAL_FIELDS={**READ_FILE_OPERATIONS,'native_plan':('patch','spec','spec_sha256','summary'),'produce':('summary',),
                  'nodes_lookup':('query','scope','limit'),'verify':('rebuild','portable','trusted_inputs_sha256','artifacts_only')}
+UNBOUND_OPERATIONS={'doctor','capabilities','docs_search','api_lookup','nodes_lookup','resources_lookup'}
 
 async def finish_worker(process):
     """Finish cleanup before releasing the request directory."""
@@ -73,8 +74,13 @@ class Bridge:
                          [('ordinary','UGC_MCP_TIMEOUT_SECONDS','120'),('build','UGC_MCP_BUILD_TIMEOUT_SECONDS','900')]}
         if any(not math.isfinite(value) or not 0 < value <= 3600 for value in self.timeouts.values()):
             raise ValueError('MCP timeouts must be finite seconds in (0, 3600]')
+        if not project and not output_root:
+            self.project=self.output_root=None
+            return
+        if not project or not output_root:raise ValueError('Set both UGC_PROJECT_ROOT and UGC_OUTPUT_ROOT')
         self.project=Path(project).resolve(strict=True);self.output_root=Path(output_root).resolve(strict=True)
         if not self.project.is_dir()or not self.output_root.is_dir():raise ValueError('Project/output roots must be directories')
+        if self.project == Path(self.project.anchor):raise ValueError('Project root must be a specific directory')
         if self.project.is_relative_to(self.output_root)or self.output_root.is_relative_to(self.project):raise ValueError('Project and output roots must be disjoint')
         if self.output_root.is_relative_to(PLUGIN)or PLUGIN.is_relative_to(self.output_root):raise ValueError('Output root overlaps plugin source')
 
@@ -105,6 +111,14 @@ class Bridge:
         if operation not in OPERATIONS:raise ValueError('Unknown bridge operation')
         required=OPERATIONS[operation]
         schema(arguments,required+OPTIONAL_FIELDS.get(operation,()),required)
+        if self.project is None:
+            if operation not in UNBOUND_OPERATIONS or {'catalogue','catalogue_sha256'} & arguments.keys():
+                raise DiagnosticError('mcp.workspace_required',
+                                      'Set UGC_PROJECT_ROOT and UGC_OUTPUT_ROOT to use project files',phase=operation)
+            with tempfile.TemporaryDirectory(prefix='qianxing-mcp-catalogue-') as temporary:
+                root=Path(temporary);project=root/'project';outputs=root/'outputs'
+                project.mkdir();outputs.mkdir()
+                return await Bridge(project,outputs)._call(operation,arguments,progress)
         args=dict(arguments);bound={};input_hashes={}
         automatic=operation in READ_FILE_OPERATIONS
         if 'summary' in args and type(args['summary']) is not bool:raise ValueError('summary must be a boolean')
@@ -207,7 +221,8 @@ def main(argv=None):
         command=sub.add_parser(name);command.add_argument('--project',default=os.environ.get('UGC_PROJECT_ROOT'));command.add_argument('--output-root',default=os.environ.get('UGC_OUTPUT_ROOT'))
         if name=='call':command.add_argument('request')
     args=parser.parse_args(argv)
-    if not args.project or not args.output_root:parser.error('Explicit project/output roots or UGC_PROJECT_ROOT/UGC_OUTPUT_ROOT required')
+    if bool(args.project)!=bool(args.output_root) or args.operation=='call' and not args.project:
+        parser.error('Explicit project/output roots or UGC_PROJECT_ROOT/UGC_OUTPUT_ROOT required')
     bridge=Bridge(args.project,args.output_root)
     if args.operation=='serve':
         from mcp_service import server

@@ -6,6 +6,7 @@
     "name": "Genshin-UGC contributors"
   },
   "skills": "./skills/",
+  "mcpServers": "./mcp.json",
   "interface": {
     "displayName": "Genshin-UGC",
     "shortDescription": "工程配置、节点图、Lua、GIL与素材",

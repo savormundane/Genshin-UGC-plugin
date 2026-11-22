@@ -21,53 +21,15 @@ PLUGIN_SCHEMA = 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json'
 
 class ProtocolTests(unittest.TestCase):
     @unittest.skipUnless(sys.platform == 'win32' and shutil.which('node'), 'Windows Node.js required')
-    def test_marketplace_launcher_uses_only_the_prepared_runtime(self):
-        entry = ROOT / 'marketplace/genshin-ugc'
-        if not entry.is_dir():
-            self.skipTest('Marketplaces are excluded from the release ZIP')
-        version = installer.read_json(entry / 'plugin.json')['version']
-        with tempfile.TemporaryDirectory(prefix='ugc 市场 ') as temporary:
-            root = Path(temporary)
-            env = {**os.environ, 'LOCALAPPDATA': str(root)}
-            env.pop('UGC_PUBLIC_INSTALL_ROOT', None)
-            command = ['node', str(entry / 'launch.cjs')]
-            missing = subprocess.run(command, env=env, capture_output=True, text=True, encoding='utf-8')
-            self.assertEqual((missing.returncode, missing.stdout), (2, ''))
-            self.assertIn(f'-Agent agent-plugins -Version {version}', missing.stderr)
-
-            install_root = root / 'custom runtime'
-            home = install_root / 'versions/agent-plugins' / version
-            bundle = home / 'Genshin-UGC'
-            scripts = bundle / 'scripts'
-            scripts.mkdir(parents=True)
-            (scripts / 'mcp_launcher.cjs').write_text(
-                'console.log(JSON.stringify({ config: process.env.UGC_RUNTIME_CONFIG, cwd: process.cwd() }))',
-                encoding='utf-8',
-            )
-            python = home / 'runtime/Scripts/python.exe'
-            python.parent.mkdir(parents=True)
-            python.touch()
-            config = home / 'runtime.json'
-            installer.save(config, {'schema': 1, 'python': str(python)})
-            installer.save(home / 'preparation.json', {
-                'agent': 'agent-plugins', 'prepared': version, 'runtime_smoke': 'passed',
-                'plugin_directory': str(bundle), 'config': str(config),
-            })
-            env.update(UGC_PUBLIC_INSTALL_ROOT=str(install_root), UGC_RUNTIME_CONFIG='unrelated.json')
-            manifest = bundle / 'plugin.json'
-            installer.save(manifest, {'name': 'genshin-ugc-public', 'version': '0.0.0'})
-            mismatch = subprocess.run(command, env=env, capture_output=True, text=True, encoding='utf-8')
-            self.assertEqual((mismatch.returncode, mismatch.stdout), (2, ''))
-            self.assertIn(f'Expected the public Genshin-UGC {version} runtime', mismatch.stderr)
-            installer.save(manifest, {'name': 'genshin-ugc-public', 'version': version})
-            for descriptor, token in (('mcp.json', '${PLUGIN_ROOT}'), ('.mcp.json', '${CLAUDE_PLUGIN_ROOT}')):
-                with self.subTest(descriptor=descriptor):
-                    server, = installer.read_json(entry / descriptor)['mcpServers'].values()
-                    args = [arg.replace(token, str(entry)) for arg in server['args']]
-                    result = subprocess.run([server['command'], *args], env=env,
-                                            capture_output=True, text=True, encoding='utf-8')
-                    self.assertEqual(result.returncode, 0, result.stderr)
-                    self.assertEqual(json.loads(result.stdout), {'config': str(config), 'cwd': str(bundle)})
+    def test_launcher_rejects_invalid_explicit_python(self):
+        with tempfile.TemporaryDirectory(prefix='ugc launcher ') as temporary:
+            env = {**os.environ, 'UGC_PUBLIC_INSTALL_ROOT': temporary, 'UGC_PYTHON': 'relative.exe'}
+            env.pop('UGC_RUNTIME_CONFIG', None)
+            env.pop('UGC_PLUGIN_DATA', None)
+            result = subprocess.run(['node', str(ROOT / 'scripts/mcp_launcher.cjs')],
+                                    env=env, capture_output=True, text=True, encoding='utf-8', timeout=10)
+            self.assertEqual((result.returncode, result.stdout), (2, ''))
+            self.assertIn('UGC_PYTHON must be an absolute path', result.stderr)
 
     def test_release_descriptors(self):
         core = installer.read_json(ROOT / 'plugin.json')
@@ -88,7 +50,7 @@ class ProtocolTests(unittest.TestCase):
                 self.assertEqual(descriptor['mcpServers'], {installer.MCP_NAME: {
                     'type': 'stdio', 'command': 'node',
                     'args': [anchor + '/scripts/mcp_launcher.cjs'],
-                    'env': {'UGC_RUNTIME_CONFIG': data + '/runtime.json'},
+                    'env': {'UGC_PLUGIN_DATA': data},
                 }})
         self.assertEqual(len(list((ROOT / 'skills').glob('*/SKILL.md'))), 5)
         self.assertTrue((ROOT / 'scripts/mcp_launcher.cjs').is_file())

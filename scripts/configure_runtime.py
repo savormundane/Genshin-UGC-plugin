@@ -1,6 +1,7 @@
 """Explicit local installation step; never executed implicitly by an MCP query."""
 from pathlib import Path
 import argparse,json,subprocess,sys,os,hashlib
+from runtime_policy import PYTHON_RANGE,supported_python
 
 def configure(python,destination,project,outputs,config,resume=False):
     python=Path(python).resolve(strict=True);destination=Path(destination).resolve()
@@ -16,7 +17,7 @@ def configure(python,destination,project,outputs,config,resume=False):
     elif resume:raise ValueError('No unfinished runtime to resume')
     if project.is_relative_to(outputs) or outputs.is_relative_to(project):raise ValueError('Project and output roots must be disjoint')
     version=json.loads(subprocess.check_output([str(python),'-c','import sys,json;print(json.dumps(list(sys.version_info[:2])))'],text=True))
-    if not (3,11)<=tuple(version)<=(3,12):raise ValueError('Locked dependencies require Python 3.11-3.12; Python 3.10 is unsupported')
+    if not supported_python(version):raise ValueError(f'Locked dependencies require CPython {PYTHON_RANGE}')
     destination.mkdir(parents=True,exist_ok=True)
     journal.write_text(json.dumps(binding),encoding='utf-8')
     subprocess.run([str(python),'-m','venv',str(destination)],check=True)

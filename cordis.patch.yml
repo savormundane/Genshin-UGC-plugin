@@ -1,6 +1,6 @@
 - insert:
     - id: genshin-ugc-paths
-      name: ./dsh-paths.mjs
+      name: ./scripts/dsh-paths.mjs
     - id: genshin-ugc-skills
       name: '@deepseek-ai/dsh-skill-filesystem'
       inject: [genshinUgcPaths]

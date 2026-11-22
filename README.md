@@ -29,14 +29,12 @@ claude plugin install genshin-ugc-public@genshin-ugc
 在 **插件 → 添加插件** 粘贴下方地址，直接安装 **Genshin-UGC**。
 
 ```text
-git+https://github.com/savormundane/Genshin-UGC-plugin.git#main&path:/marketplace/genshin-ugc
+git+https://github.com/savormundane/Genshin-UGC-plugin.git#main
 ```
-
-[DSH 市场安装](docs/installation.md#从市场安装)
 
 其他兼容客户端可参考 [Agent Plugins 通用导入](docs/installation.md#agent-plugins)。
 
-从市场或 DSH 直装后，工程读写、编译和素材处理还需要[安装本地运行环境](docs/installation.md#安装本地运行环境)。各客户端可共用同版本的环境。
+本地工具优先使用已有 Python 环境，缺依赖时由 uv 按锁文件安装。见[运行依赖与工程目录](docs/installation.md#运行依赖与工程目录)。
 
 [PowerShell 安装](docs/installation.md#powershell-安装) · [完整 ZIP 安装](docs/installation.md#手动接入) · [独立使用 CLI](docs/runtime-environment.md)
 
