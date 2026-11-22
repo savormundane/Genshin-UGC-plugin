@@ -22,7 +22,7 @@ DeepSeek Harness、其他本地插件客户端，以及手动安装、更新和�
 
 - **接手已有工程**。读取 GIL 的实体、模板、图和脚本关系，生成局部修改计划并另存文件。[检查和修改 GIL](docs/examples.md#局部修改-gil)
 - **制作逻辑、界面和素材**。查询节点签名、用项目声明快检并编译 Graph Code，检查和预览 Client Lua，试算 PNG 图元的控件预算。[按任务查找](docs/examples.md)
-- **辅助原生 3D 制作**。查询模型，生成独立静态 GIA，布设原生物件，配置机关、玩法资源与 HUD。[原生场景](references/native-scene.md) · [三维实体](references/native-entity-transform.md) · [支持范围](docs/compatibility.md) · [开发路线](ROADMAP.md)
+- **辅助原生 3D 制作**。查询模型，生成独立静态 GIA，布设原生物件，配置机关、玩法资源与 HUD。[原生场景](references/native-scene.md) · [三维实体](references/native-entity-transform.md) · [支持范围](docs/compatibility.md) · [三维运动任务](https://github.com/savormundane/Genshin-UGC-plugin/issues/3)
 
 `main` 用于浏览与贡献源码。[版本记录](CHANGELOG.md)的 `Unreleased` 标记尚未进入正式下载包的改动。生成文件的编辑器导入和实际游戏表现以相应验证为准。
 

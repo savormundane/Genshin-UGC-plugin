@@ -1,6 +1,7 @@
 {
   "schema": 1,
   "exclude_prefixes": [
-    "samples/seeds/"
+    "samples/seeds/",
+    ".github/"
   ]
 }

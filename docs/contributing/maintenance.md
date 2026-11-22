@@ -19,4 +19,4 @@ python -B scripts/prepare_release.py --notes ../release-notes.md --output ../rel
 3. 确认附件名称、大小和 SHA-256 与审阅结果一致，再公开 Release。传输中断时从原草稿核对并补传缺失项。
 4. 从公开页面重新下载 ZIP，核对 SHA-256，并试读 README 和安装指南中的当前版本链接。按变更范围选择安装和运行检查。
 
-仓库的 [Repository checks](../../.github/workflows/repository-check.yml) 可手动启动。若使用 GitHub CLI 建立草稿，先推送标签，再使用 `--draft --verify-tag --notes-file`。[GitHub CLI 发布命令](https://cli.github.com/manual/gh_release_create)
+若使用 GitHub CLI 建立草稿，先推送标签，再使用 `--draft --verify-tag --notes-file`。[GitHub CLI 发布命令](https://cli.github.com/manual/gh_release_create)

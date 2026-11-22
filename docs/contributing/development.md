@@ -1,5 +1,7 @@
 # 本地开发与检查
 
+按任务从[工具导航](../../scripts/README.md)定位模块。修改工具时核对 CLI、MCP 和包内引用。更新平台资料时核对[来源与摘要](../../references/knowledge-reliability.md)。
+
 从仓库根运行以下命令。只改文档时，系统 Python 就能运行仓库检查。
 
 ```powershell
