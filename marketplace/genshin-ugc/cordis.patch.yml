@@ -1,0 +1,19 @@
+- insert:
+    - id: genshin-ugc-paths
+      name: ./dsh-paths.mjs
+    - id: genshin-ugc-skills
+      name: '@deepseek-ai/dsh-skill-filesystem'
+      inject: [genshinUgcPaths]
+      config:
+        providerName: genshin-ugc-public
+        includeDefaultRoots: false
+        customSkillDirs: !!js '[ctx.genshinUgcPaths.skills]'
+    - id: genshin-ugc-mcp
+      name: '@deepseek-ai/dsh-mcp-client'
+      inject: [genshinUgcPaths]
+      config:
+        serverName: genshin_ugc
+        transport: stdio
+        command: node
+        args: !!js '[ctx.genshinUgcPaths.launcher]'
+        toolCallTimeoutMs: 930000

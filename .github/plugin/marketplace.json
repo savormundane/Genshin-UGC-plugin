@@ -1,0 +1,13 @@
+{
+  "name": "genshin-ugc",
+  "owner": {
+    "name": "Genshin-UGC contributors"
+  },
+  "plugins": [
+    {
+      "name": "genshin-ugc-public",
+      "source": "./marketplace/genshin-ugc",
+      "description": "千星奇域 工程检查、Graph Code、Client Lua、GIL 与 Assets 开发工具"
+    }
+  ]
+}

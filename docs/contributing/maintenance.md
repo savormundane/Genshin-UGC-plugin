@@ -2,6 +2,8 @@
 
 发布前核对三份插件清单、安装器默认版本、README、安装指南及 CHANGELOG。手动从仓库根运行 `python scripts/check_repository.py`，可检查当前版本、下载链接、安装命令及第一方 Markdown 链接。普通文档改动可先记在 `Unreleased`，公开源码可先于最新正式包更新。
 
+定版时运行 `python -B scripts/marketplace_release.py`，从三份正式清单与五个 Skill 生成市场文件。将生成结果纳入准备发布的提交。DSH 索引固定到已提交的 Bundle，等完整运行包可用后运行 `python -B scripts/marketplace_release.py --dsh-source vX.Y.Z`，单独提交更新的索引。只有市场入口变化时，可用包含该入口的完整提交 SHA，继续指向同版本的正式运行包。
+
 ## 准备本地发布包
 
 使用 Git 和 Python 3.11 或 3.12。打包脚本只用标准库和 Git，无需创建插件运行环境。先提交准备发布的更改，按改动运行[本地检查](development.md)，在仓库外写好更新说明，再运行打包命令。

@@ -2,6 +2,11 @@
   "schema": 1,
   "exclude_prefixes": [
     "samples/seeds/",
-    ".github/"
+    ".github/",
+    "marketplace/"
+  ],
+  "exclude_files": [
+    ".agents/plugins/marketplace.json",
+    ".claude-plugin/marketplace.json"
   ]
 }

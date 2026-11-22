@@ -51,11 +51,18 @@ def build_release(source, output, layout='auto', archive_root=None):
         raise ValueError('Output must be outside the source directory')
     policy_path = source / 'distribution.json'
     policy = json.loads(policy_path.read_text(encoding='utf-8')) if policy_path.exists() else {'schema': 1, 'exclude_prefixes': []}
-    if not isinstance(policy, dict) or set(policy) != {'schema', 'exclude_prefixes'} or policy['schema'] != 1 or not isinstance(policy['exclude_prefixes'], list):
+    if (not isinstance(policy, dict) or policy.get('schema') != 1
+            or policy.keys() - {'schema', 'exclude_prefixes', 'exclude_files'}
+            or not isinstance(policy.get('exclude_prefixes'), list)
+            or not isinstance(policy.get('exclude_files', []), list)):
         raise ValueError('Invalid distribution policy')
     excluded = policy['exclude_prefixes']
+    excluded_files = policy.get('exclude_files', [])
     if any(not isinstance(p, str) or not p.endswith('/') or p.startswith('/') or ':' in p or '\\' in p or '..' in p.split('/') for p in excluded):
         raise ValueError('Unsafe distribution exclusion')
+    if any(not isinstance(p, str) or ':' in p or '\\' in p
+           or any(part in ('', '.', '..') for part in p.split('/')) for p in excluded_files):
+        raise ValueError('Unsafe distribution file exclusion')
     archive_root = archive_root or source.name
     if not re.fullmatch(r'[A-Za-z0-9_.-]+', archive_root) or archive_root in ('.', '..'):
         raise ValueError('Invalid archive root')
@@ -66,7 +73,10 @@ def build_release(source, output, layout='auto', archive_root=None):
         parts = f.relative_to(source).parts
         if any(p in ('.git', '.venv', '__pycache__', '.pytest_cache') for p in parts):
             continue
-        if f.is_file() and f.name not in ('AGENTS.md', '.env', '.env.local') and f.suffix not in ('.pyc','.pyo') and not any(f.relative_to(source).as_posix().startswith(p) for p in excluded):
+        relative = '/'.join(parts)
+        if relative in excluded_files or any(relative.startswith(p) for p in excluded):
+            continue
+        if f.is_file() and f.name not in ('AGENTS.md', '.env', '.env.local') and f.suffix not in ('.pyc','.pyo'):
             files.append(f)
     if not files:
         raise ValueError('No package files')
@@ -141,7 +151,8 @@ def build_release(source, output, layout='auto', archive_root=None):
         else:
             # POSIX rename overwrites a file created during the build.
             os.link(staged, output)
-    return {'layout': layout, 'excluded_prefixes': excluded, 'files': len(files), 'skills': len(entries),
+    return {'layout': layout, 'excluded_prefixes': excluded, 'excluded_files': excluded_files,
+            'files': len(files), 'skills': len(entries),
             'zip_bytes': file_size,
             'largest_file_bytes': max(f.stat().st_size for f in files),
             'sha256': digest,

@@ -117,8 +117,16 @@ def check(root: Path = ROOT) -> list[str]:
         if not (root / relative).is_file():
             errors.append(f"Missing required file: {relative}")
 
+    if (root / "marketplace").exists():
+        from marketplace_release import check_marketplace
+
+        try:
+            errors.extend(check_marketplace(root))
+        except (OSError, ValueError, KeyError, TypeError, IndexError) as exc:
+            errors.append(f"Marketplace configuration: {exc}")
+
     docs = list(root.glob("*.md"))
-    for directory in ("docs", "skills", "references", "scripts", ".github"):
+    for directory in ("docs", "skills", "references", "scripts", ".github", "marketplace"):
         docs.extend((root / directory).rglob("*.md"))
     provenance = root / "PUBLIC_SOURCES.json"
     raw_paths = set()

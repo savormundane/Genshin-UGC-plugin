@@ -1,7 +1,7 @@
 """Manual release check: actual ZIP structure, extraction and content identity."""
 from pathlib import Path
 import hashlib,json,tempfile,unittest,zipfile
-from check_repository import check, MANIFESTS, REQUIRED_FILES
+from check_repository import check, MANIFESTS, REPO, REQUIRED_FILES
 from package_release import build_release, validate_windows_names
 from install_public import extract,read_json
 
@@ -36,6 +36,16 @@ class ReleaseTests(unittest.TestCase):
                 path = root/name
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(json.dumps({'version': '1.2.3'}) if name in MANIFESTS else '# Neutral\n', encoding='utf-8')
+            github = f'https://github.com/{REPO}/releases'
+            install = f'https://raw.githubusercontent.com/{REPO}/v1.2.3/install.ps1'
+            zip_name = 'Genshin-UGC-1.2.3-windows-x64.zip'
+            (root/'README.md').write_text(
+                f'**当前版本 `1.2.3`**\n{github}/download/v1.2.3/{zip_name}\n{install}\n',
+                encoding='utf-8',
+            )
+            (root/'docs/installation.md').write_text(
+                f'{github}/tag/v1.2.3\n{install}\n{zip_name}\n', encoding='utf-8',
+            )
             (root/'install.ps1').write_text("param([string]$Version = '1.2.3')", encoding='utf-8')
             changelog = root/'CHANGELOG.md'
             changelog.write_text('# Changes\n\n## Unreleased\n\n## 1.2.2\n\n## 1.2.3\n', encoding='utf-8')
@@ -53,6 +63,8 @@ class ReleaseTests(unittest.TestCase):
                 for entry in archive.infolist():
                     path=Path(entry.filename);relative=Path(*path.parts[1:])
                     self.assertNotIn('.git',path.parts)
+                    self.assertNotIn('marketplace', relative.parts)
+                    self.assertNotEqual(relative.name, 'marketplace.json')
                     self.assertFalse(entry.filename.endswith('GE_IMG_Tool.exe'))
                     self.assertFalse(entry.filename.endswith('Invoke-Geimg.ps1'))
                     self.assertFalse(entry.filename.endswith('GEIMG LOGO.png'))

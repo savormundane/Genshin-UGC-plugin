@@ -1,0 +1,27 @@
+{
+  "name": "genshin-ugc-dsh",
+  "version": "4.1.2",
+  "description": "千星奇域 工程检查、Graph Code、Client Lua、GIL 与 Assets 开发工具",
+  "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/savormundane/Genshin-UGC-plugin.git",
+    "directory": "marketplace/genshin-ugc"
+  },
+  "engines": {
+    "dsh": "0.2.2-rc.5"
+  },
+  "files": [
+    "cordis.patch.yml",
+    "dsh-paths.mjs",
+    "launch.cjs",
+    "plugin.json",
+    "skills/",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

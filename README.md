@@ -8,6 +8,10 @@
 
 ## 安装并试一次查询
 
+**从市场安装**：Claude Code、桌面 Cowork、Codex 和 VS Code 可添加本仓库。DeepSeek Harness 使用本仓库的索引 URL。选中 Genshin-UGC 后，按[市场安装指南](docs/installation.md#marketplace)准备一次本地运行环境。
+
+**PowerShell 安装**：
+
 确认本机已有 Python、Node.js 和可用的 `codex` 命令，然后在 PowerShell 运行下方命令。用 Claude Code 时，将末尾改为 `-Agent claude-code`。[运行要求](docs/compatibility.md)
 
 ```powershell

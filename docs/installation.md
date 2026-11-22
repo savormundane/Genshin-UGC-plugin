@@ -6,6 +6,34 @@
 
 [返回首页](../README.md) · [第一次使用](getting-started.md) · [独立使用命令行](runtime-environment.md)
 
+## Marketplace
+
+在客户端添加市场，再安装 Genshin-UGC。各客户端共用下方准备的本地运行环境。
+
+| 客户端 | 添加市场与安装 |
+| --- | --- |
+| Claude Code | 在会话内运行 `/plugin marketplace add savormundane/Genshin-UGC-plugin`，再运行 `/plugin install genshin-ugc-public@genshin-ugc`。 |
+| Claude 桌面 Cowork | 从 Cowork 打开 **Customize → Plugins → Add → Add marketplace**，输入 `savormundane/Genshin-UGC-plugin`。添加 Genshin-UGC 后在本地 Cowork 会话使用 MCP。 |
+| Codex | 运行 `codex plugin marketplace add savormundane/Genshin-UGC-plugin`，再运行 `codex plugin add genshin-ugc-public@genshin-ugc`，或从客户端的插件市场选择该条目。 |
+| VS Code | 从 **Agent Customizations → Browse → Configure Marketplaces → Add Marketplace** 添加 `savormundane/Genshin-UGC-plugin`，再从该市场安装 `genshin-ugc-public`。使用支持 Agent Plugins 和本地 MCP 的会话。 |
+| DeepSeek Harness | 在 **Plugins → Experimental plugins** 启用 **Custom plugin indexes**。打开 **Discover → Add index source**，填入下方 URL，再选择 **Genshin-UGC** 安装。当前入口面向 `0.2.2-rc.5`。 |
+
+```text
+https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/main/marketplace/dsh-index.json
+```
+
+### 一次性准备本地工具
+
+按[运行要求](compatibility.md)准备 Windows x64、Python 和 Node.js。在 PowerShell 运行下方命令，选择互不包含的项目目录和输出目录。已用此命令准备过相同版本的用户可直接打开新会话。
+
+```powershell
+& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.1.2/install.ps1'))) -Agent agent-plugins -Version 4.1.2
+```
+
+成功时显示 `prepared` 和 `runtime_smoke: passed`。重开客户端会话，按[第一次使用](getting-started.md)调用 `nodes_lookup`。从市场更新插件后，先准备它所用的新版本运行环境。若使用 `-Root` 自选安装位置，请在启动客户端前将环境变量 `UGC_PUBLIC_INSTALL_ROOT` 设为同一个绝对路径。客户端需能找到 `node`。
+
+Claude 网页聊天可读取 Skill，本地 MCP 需使用 Claude Code 或桌面 Cowork 的本地会话。Release 的完整 ZIP 用于解压后安装，Claude 上传受文件数限制，请使用市场入口。 [Claude 插件说明](https://support.claude.com/en/articles/13837440-use-plugins-in-claude) · [ZIP 上传要求](https://platform.claude.com/docs/en/manage-claude/plugins-api#upload-requirements)
+
 ## 准备输入与输出目录
 
 安装器会提示选择两个目录，也可通过 `-Project` 和 `-Outputs` 预先指定。

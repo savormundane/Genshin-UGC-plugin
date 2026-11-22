@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- 公开仓库提供 Claude、DeepSeek Harness、Codex 和 VS Code 的市场入口，共用一次本地环境准备。
 - 精简公开仓库的检查与贡献入口，开发路线集中在 Issues。后续安装包排除 GitHub 仓库配置。
 
 ## 4.1.2

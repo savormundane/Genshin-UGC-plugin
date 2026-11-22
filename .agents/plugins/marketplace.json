@@ -1,0 +1,20 @@
+{
+  "name": "genshin-ugc",
+  "interface": {
+    "displayName": "Genshin-UGC"
+  },
+  "plugins": [
+    {
+      "name": "genshin-ugc-public",
+      "source": {
+        "source": "local",
+        "path": "./marketplace/genshin-ugc"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}
