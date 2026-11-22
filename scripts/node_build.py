@@ -98,9 +98,9 @@ def catalog(query='',scope='all',limit=20):
         result['hint']='Try a shorter node name, a catalog alias, or scope=all.'
     return result
 
-def metadata(path):
+def metadata(path, code=None):
     try:
-        tree=ast.parse(path.read_text(encoding='utf-8-sig'),filename=str(path))
+        tree=ast.parse(path.read_text(encoding='utf-8-sig') if code is None else code,filename=str(path))
     except SyntaxError as exc:
         raise GraphBuildError(str(exc),[{'code':'graph_syntax','severity':'error','message':exc.msg,
                                         'source':str(path),'line':exc.lineno}]) from exc
@@ -163,14 +163,17 @@ def normalize_new_graph_variables(path,expected):
         path.write_bytes(bytes(head)+payload+data[-4:])
     return changed
 
-def build(spec_path,out_dir,preserve_container_order=False,structure_bindings=()):
+def build(spec_path,out_dir,preserve_container_order=False,structure_bindings=(),*,resolved_bindings=None):
     spec_path=Path(spec_path).resolve();base=spec_path.parent
-    job=json.loads(spec_path.read_text(encoding='utf-8-sig'))
+    from authoring_io import sha
+    from native_bindings import Bindings, bindings_for_gil, expand_graph, read_bindings
+    spec_bytes=spec_path.read_bytes()
+    job=json.loads(spec_bytes.decode('utf-8-sig'))
     if job.get('schema')==2:
         from native_build import build as build_native
         return build_native(spec_path,out_dir)
     if job.get('schema')!=SCHEMA:raise ValueError('Expected build schema 1')
-    allowed={'schema','graphs','formats','base_gil','project_resources','include_sections','allowed_top_level_fields','required_mounts','max_stored_nodes'}
+    allowed={'schema','graphs','formats','base_gil','project_resources','include_sections','allowed_top_level_fields','required_mounts','max_stored_nodes','bindings'}
     if set(job)-allowed:raise ValueError('Unknown job keys: '+repr(sorted(set(job)-allowed)))
     graphs=job.get('graphs');formats=job.get('formats',['gia'])
     if not isinstance(graphs,list) or not graphs:raise ValueError('Provide at least one graph source')
@@ -188,36 +191,40 @@ def build(spec_path,out_dir,preserve_container_order=False,structure_bindings=()
     output=Path(out_dir).resolve()
     if output.exists():raise ValueError('输出目录已存在，请指定新目录，避免覆盖已有产物')
     if output.is_relative_to(PLUGIN):raise ValueError('Build output must be outside the plugin')
-    inputs={str(spec_path):digest(spec_path)}
+    inputs={str(spec_path):sha(spec_bytes)}
     if baseline:inputs[str(baseline)]=digest(baseline)
-    sources=[];ids=set();names=set()
+    bindings=resolved_bindings if resolved_bindings is not None else Bindings()
+    if job.get('bindings'):
+        path=resolve_input(job['bindings'],base)
+        bindings,inputs[str(path)]=read_bindings(path,baseline.read_bytes() if baseline else None)
+    sources=[];source_texts={};ids=set();names=set()
     for item in graphs:
         if not isinstance(item,dict) or set(item)-{'source','scope','category'}:raise ValueError('Invalid graph descriptor')
         source=resolve_input(item['source'],base)
         if source.is_symlink() or not source.is_file():raise ValueError('Graph source must be a regular file')
-        meta=metadata(source);scope=item.get('scope',meta['graph_type'])
+        raw=source.read_bytes();code=raw.decode('utf-8-sig')
+        meta=metadata(source,code);scope=item.get('scope',meta['graph_type'])
         if scope not in ['server','client'] or scope!=meta['graph_type']:raise ValueError('Scope does not match Graph Code metadata')
         category=item.get('category','技能节点图' if scope=='client' else '')
         if category not in ['','技能节点图','布尔过滤器节点图','整数过滤器节点图','状态节点图']:raise ValueError('Unsupported graph category')
         if meta['graph_id'] in ids or meta['graph_name'] in names:raise ValueError('Graph IDs and names must be unique')
-        ids.add(meta['graph_id']);names.add(meta['graph_name']);sources.append((source,scope,category,meta));inputs[str(source)]=digest(source)
+        ids.add(meta['graph_id']);names.add(meta['graph_name']);sources.append((source,scope,category,meta));inputs[str(source)]=sha(raw)
+        source_texts[source]=(raw,expand_graph(code,source,bindings))
     logs=[]
     with tempfile.TemporaryDirectory(prefix='qianxing-node-build-') as td:
         work=Path(td);runtime=work/'runtime';copy_tree(RUNTIME,runtime)
         project=runtime/'assets/资源库/项目存档/BuildProject';project.mkdir(parents=True)
         if job.get('project_resources'):
             resources=resolve_input(job['project_resources'],base)
-            if not resources.is_dir():raise ValueError('project_resources must be a directory')
-            if (resources/'节点图').exists() and any((resources/'节点图').rglob('*.py')):raise ValueError('Declare all graph sources in graphs; project_resources must contain supporting resources only')
-            for resource in resources.rglob('*'):
-                if resource.is_file():inputs[str(resource.resolve())]=digest(resource)
-            copy_tree(resources,project)
-            # Never keep stale generated UI bundles from an earlier page revision.
+            from graph_resources import merge_resources
+            inputs.update(merge_resources([resources],project))
         stage=work/'delivery';stage.mkdir();(stage/'sources').mkdir();(stage/'models').mkdir();(stage/'gia').mkdir();(stage/'logs').mkdir()
         paths=[]
         for index,(source,scope,category,meta) in enumerate(sources):
             path=project/'节点图'/scope/category/(str(index)+'_'+source.name);path.parent.mkdir(parents=True,exist_ok=True)
-            shutil.copyfile(source,path);paths.append(path);shutil.copyfile(source,stage/'sources'/path.name)
+            original,compiled=source_texts[source]
+            path.write_bytes(compiled.encode('utf-8'));paths.append(path)
+            (stage/'sources'/path.name).write_bytes(original)
         source_paths={path:item[0] for path,item in zip(paths,sources)}
         def remap_source_paths(text):
             for staged,original in source_paths.items():
@@ -258,7 +265,10 @@ def build(spec_path,out_dir,preserve_container_order=False,structure_bindings=()
         exported=list((up_out/'build_gia').rglob('*.gia'))
         if not exported:raise ValueError('No GIA was generated')
         summaries=[];composite_summaries={};signal_audits=[];gia_structures=[];gia_variable_types=[]
+        from native_gia import bind_skill_notifications
         for index,gia in enumerate(exported):
+            bound,changes=bind_skill_notifications(gia.read_bytes(),names)
+            if changes:gia.write_bytes(bound)
             signal_versions=[]
             if preserve_container_order:
                 from native_gia import bind_generated_variable_types
@@ -307,6 +317,8 @@ def build(spec_path,out_dir,preserve_container_order=False,structure_bindings=()
             for section,flag in [('templates','templates'),('instances','instances'),('structs','structs'),('signals','signals'),('ui','ui-widget-templates')]:
                 if section not in sections:args+=['--skip-'+flag]
             newgil=up_out/'level.gil';args += [baseline,newgil];call('gil-writeback',args)
+            bound,changes=bind_skill_notifications(newgil.read_bytes(),names)
+            if changes:newgil.write_bytes(bound)
             normalization=normalize_new_graph_variables(newgil,{g['name']:g for g in summaries})
             if preserve_container_order and structure_bindings:
                 from native_core import bind_structures
@@ -402,6 +414,10 @@ def build(spec_path,out_dir,preserve_container_order=False,structure_bindings=()
                 'gia_variable_type_bindings':gia_variable_types,
                 'editor_expanded_nodes':None,'editor_imported':False,'host_tested':False,
                 'playable_level_verified':False,'note':'GIA node modules and GIL containers still require editor/runtime acceptance; unconfigured mounts are not fabricated.'}
+        if job.get('bindings'):
+            report['binding_identity']='passed' if baseline else 'not_checked'
+            if gil_result is not None and bindings.ids:
+                json_new(stage/'bindings.json',bindings_for_gil((stage/'level.gil').read_bytes(),bindings))
         report['files_sha256']={p.relative_to(stage).as_posix():digest(p) for p in stage.rglob('*') if p.is_file()}
         json_new(stage/'build-report.json',report)
         output.parent.mkdir(parents=True,exist_ok=True)

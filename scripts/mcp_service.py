@@ -1,10 +1,12 @@
 """Official MCP SDK stdio adapter for the shared fixed-operation bridge."""
 from importlib.metadata import version
-from typing import Any
+import json
+from typing import Any, Literal
 from mcp.server import MCPServer
 from mcp.server.mcpserver import Context
 from mcp.server.mcpserver.exceptions import ToolError
 from pydantic import StrictInt
+from authoring_io import DiagnosticError
 
 
 def server(bridge):
@@ -13,6 +15,8 @@ def server(bridge):
     async def call(operation,ctx,**args):
         try:
             return await bridge.call(operation,{k:v for k,v in args.items() if v is not None},ctx.report_progress)
+        except DiagnosticError as exc:
+            raise ToolError(json.dumps({'error':str(exc),'diagnostics':exc.diagnostics},ensure_ascii=False)) from exc
         except (ValueError,OSError) as exc:
             raise ToolError(str(exc)) from exc
 
@@ -41,6 +45,12 @@ def server(bridge):
         """Find Graph Code nodes by name, invocation, or port metadata in all, client, or server scope."""
         return await call('nodes_lookup',ctx,query=query,scope=scope,limit=limit)
     @app.tool(structured_output=True)
+    async def graph_check(input:str,ctx:Context,sha256:str|None=None,job:str|None=None,job_sha256:str|None=None,
+                          bindings:str|None=None,bindings_sha256:str|None=None)->dict[str,Any]:
+        """Validate a Graph Code file with optional production-job declarations. Returns diagnostics and input digests."""
+        return await call('graph_check',ctx,input=input,sha256=sha256,job=job,job_sha256=job_sha256,
+                          bindings=bindings,bindings_sha256=bindings_sha256)
+    @app.tool(structured_output=True)
     async def resources_lookup(version:str,ctx:Context,query:str='',mode:str='beyond',limit:int=20,
                                catalogue:str|None=None,catalogue_sha256:str|None=None)->dict[str,Any]:
         """Find native model candidates or template IDs witnessed by a project catalogue."""
@@ -56,9 +66,10 @@ def server(bridge):
         return await call('native_audit',ctx,input=input,sha256=sha256)
     @app.tool(structured_output=True)
     async def project_inspect(input:str,ctx:Context,sha256:str|None=None,
-                              selector:dict[str,str|StrictInt]|None=None,transitive:bool|None=None)->dict[str,Any]:
-        """Read native objects and script mappings, or select one object and its known dependencies and consumers."""
-        return await call('project_inspect',ctx,input=input,sha256=sha256,selector=selector,transitive=transitive)
+                              selector:dict[str,str|StrictInt]|None=None,transitive:bool|None=None,
+                              scope:Literal['scene','gameplay']|None=None,summary:bool=False)->dict[str,Any]:
+        """Find native objects and references. Use scene for transforms or gameplay for typed resources and consumers."""
+        return await call('project_inspect',ctx,input=input,sha256=sha256,selector=selector,transitive=transitive,scope=scope,summary=summary)
     @app.tool(structured_output=True)
     async def client_check(input:str,ctx:Context,sha256:str|None=None,contract:str|None=None,
                            contract_sha256:str|None=None,mapping:str|None=None)->dict[str,Any]:
@@ -66,9 +77,9 @@ def server(bridge):
         return await call('client_check',ctx,input=input,sha256=sha256,contract=contract,
                           contract_sha256=contract_sha256,mapping=mapping)
     @app.tool(structured_output=True)
-    async def produce(spec:str,sha256:str,output:str,ctx:Context)->dict[str,Any]:
+    async def produce(spec:str,sha256:str,output:str,ctx:Context,summary:bool=False)->dict[str,Any]:
         """Build a trusted project into a new output directory; cancellation prevents commit."""
-        return await call('produce',ctx,spec=spec,sha256=sha256,output=output)
+        return await call('produce',ctx,spec=spec,sha256=sha256,output=output,summary=summary)
     @app.tool(structured_output=True)
     async def native_apply(input:str,sha256:str,plan:str,plan_sha256:str,output:str,ctx:Context)->dict[str,Any]:
         """Apply a reviewed native plan, preserving the original and existing outputs."""
@@ -81,9 +92,9 @@ def server(bridge):
                           allowed_top_level_fields=allowed_top_level_fields)
     @app.tool(structured_output=True)
     async def native_plan(input:str,sha256:str,output:str,ctx:Context,patch:dict[str,Any]|None=None,
-                          spec:str|None=None,spec_sha256:str|None=None)->dict[str,Any]:
+                          spec:str|None=None,spec_sha256:str|None=None,summary:bool=False)->dict[str,Any]:
         """Plan a GIL edit from an inline patch or a digest-bound spec. Review result.difference and use outputs_sha256 for native_apply."""
-        return await call('native_plan',ctx,input=input,sha256=sha256,output=output,patch=patch,spec=spec,spec_sha256=spec_sha256)
+        return await call('native_plan',ctx,input=input,sha256=sha256,output=output,patch=patch,spec=spec,spec_sha256=spec_sha256,summary=summary)
     @app.tool(structured_output=True)
     async def simulate(spec:str,sha256:str,output:str,ctx:Context)->dict[str,Any]:
         """Run the corresponding CLI core with digest-bound inputs and exclusive outputs."""
@@ -101,8 +112,9 @@ def server(bridge):
         """Run the corresponding CLI core with digest-bound inputs and exclusive outputs."""
         return await call('logs_diagnose',ctx,spec=spec,sha256=sha256)
     @app.tool(structured_output=True)
-    async def verify(input:str,sha256:str,rebuild:bool,portable:bool,ctx:Context,trusted_inputs_sha256:str|None=None)->dict[str,Any]:
-        """Static portable verification never executes package code. Rebuild requires explicit trusted project-input approval."""
+    async def verify(input:str,sha256:str,ctx:Context,rebuild:bool=False,portable:bool=False,
+                     trusted_inputs_sha256:str|None=None,artifacts_only:bool=False)->dict[str,Any]:
+        """Verify artifacts, source digests, or a portable closure. Rebuild uses an explicitly trusted input digest."""
         return await call('verify',ctx,input=input,sha256=sha256,rebuild=rebuild,portable=portable,
-                          trusted_inputs_sha256=trusted_inputs_sha256)
+                          trusted_inputs_sha256=trusted_inputs_sha256,artifacts_only=artifacts_only)
     return app

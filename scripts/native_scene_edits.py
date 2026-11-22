@@ -1,17 +1,17 @@
-"""Scoped GIL edits for already-recognized 3D objects and their decorations."""
+"""Scoped GIL edits for 3D objects and their decorations."""
+from collections import Counter
 import re
 import struct
 
-from authoring_io import schema
-from level_inventory import container, fields, unique, vals
+from authoring_io import resolve, schema
+from level_inventory import container, entity_graph_ids, fields, unique, vals
 from level_authoring import flt, integer, msg, set_section, stream, text, vi
 from native_core import get, replace_message
 from native_scene import (
-    OBJECT_ID_END, OBJECT_ID_START, encode_vector, ordinary_object,
-    read_transform, read_vector, typed_record, vector,
+    GIL_HEADER, OBJECT_ID_END, OBJECT_ID_START, TRS, encode_vector, is_object_id, ordinary_object,
+    placed_details, read_gia, read_templates, read_transform, read_vector, singular, typed_record, vector,
 )
 
-TRS = ('position_m', 'rotation_deg', 'scale')
 WHITEBOX = {10009001: '长方体', 10009002: '球体', 10009008: '圆柱', 10009009: '圆锥'}
 DECORATION_START = 0x40000001
 DECORATION_END = 0x400FFFFF
@@ -45,15 +45,18 @@ def patch_fields(data, updates):
     return b''.join(result)
 
 
-def patch_vector(body, values):
-    return patch_fields(body, {number: (5, value or None) for number, value in enumerate(values, 1)})
+def patch_vector(body, values, *, preserve_zero=False):
+    stored = {field: raw for field, wire, raw, _ in fields(body) if wire == 5} if preserve_zero else {}
+    updates = {axis: (5, value if value or (axis in stored and struct.unpack('<f', stored[axis])[0] == 0) else None)
+               for axis, value in enumerate(values, 1)}
+    return patch_fields(body, updates)
 
 
-def patch_vectors(body, changes):
+def patch_vectors(body, changes, *, preserve_zero=False):
     updated = {}
     for number, value in changes.items():
         current = get(body, number, default=b'')
-        updated[number] = (2, patch_vector(current, value))
+        updated[number] = (2, patch_vector(current, value, preserve_zero=preserve_zero))
     return patch_fields(body, updated)
 
 
@@ -69,6 +72,126 @@ def select_record(section, field, ident, label):
     if type(ident) is not int or ident <= 0:
         raise ValueError('Invalid ' + label + ' ID')
     return one((raw for raw in vals(fields(section), field) if get(raw, 1, 0) == ident), label)
+
+
+def next_object_ids(data, root):
+    occupied = (get(raw, 1, 0) for n in (4, 5) for raw in vals(fields(unique(root, n, default=b'')), 1))
+    start = max((i for i in occupied if is_object_id(i)), default=OBJECT_ID_START - 1) + 1
+    for ident in range(start, OBJECT_ID_END + 1):
+        if vi(ident) not in data:
+            yield ident
+
+
+def append_library_entries(library, kind, code, identities, *, create=False):
+    entries = b''.join(msg(5, integer(1, code) + integer(2, ident)) for ident in identities)
+    tabs = [tab for tab in vals(fields(library), 1) if get(tab, 1, 0) == kind]
+    if not tabs and create:
+        return library + msg(1, integer(1, kind) + msg(2, text(1, 'root') + integer(3, 1))
+                             + msg(3, text(1, '未分类页签') + integer(3, 2) + entries))
+    tab = one(tabs, 'Native library tab '+str(kind))
+    listing = get(tab, 3)
+    if listing is None:
+        raise ValueError('Native library tab has no uncategorized listing')
+    updated = replace_message(tab, 3, listing, listing + entries)
+    return replace_message(library, 1, tab, updated)
+
+
+def rename_transform_object(raw, name, changes, property_field=5, component_field=6):
+    if not isinstance(name, str) or not name.strip() or '\0' in name:
+        raise ValueError('Placed object name must be nonempty')
+    label = typed_record(raw, property_field, 1, strict=True)
+    body = patch_fields(get(label, 11), {1: (2, name.encode('utf-8'))})
+    raw = replace_message(raw, property_field, label, patch_fields(label, {11: (2, body)}))
+    if any(key in changes for key in TRS):
+        transform = typed_record(raw, component_field, 1, strict=True)
+        body = transform_edits(get(transform, 11), changes)
+        raw = replace_message(raw, component_field, transform, patch_fields(transform, {11: (2, body)}))
+    return raw
+
+
+def duplicate_entities(data, op):
+    schema(op, ('op', 'copies'), ('op', 'copies'))
+    copies = op['copies']
+    if not isinstance(copies, list) or not copies:
+        raise ValueError('Provide a nonempty list of placed entity copies')
+    _, root = container(data)
+    section = singular(root, 5)
+    library = singular(root, 6)
+    if section is None or library is None:
+        raise ValueError('Calibrated placed-object section and library required')
+    tab = select_record(library, 1, 3, 'Placed-object library tab')
+    listing = singular(fields(tab), 3)
+    if listing is None:
+        raise ValueError('Placed-object library listing absent')
+    members = Counter(get(entry, 2, 0) for entry in vals(fields(listing), 5) if get(entry, 1, 0) == 200)
+    records = {get(raw, 1, 0): raw for raw in vals(fields(section), 1)}
+    templates = read_templates(root)
+    available = next_object_ids(data, root)
+    additions = []
+    result = []
+    keys = set()
+    for copy in copies:
+        schema(copy, ('key', 'source_entity_id', 'name', *TRS), ('key', 'source_entity_id', 'name'))
+        key, source, name = copy['key'], copy['source_entity_id'], copy['name']
+        if not isinstance(key, str) or not key.strip() or key in keys:
+            raise ValueError('Copy keys must be unique nonempty strings')
+        keys.add(key)
+        if not is_object_id(source) or source not in records or members[source] != 1:
+            raise ValueError('Source must be an ordinary placed object listed exactly once: ' + str(source))
+        original = records[source]
+        detail = placed_details(original, templates)
+        if not detail['transform_editable']:
+            raise ValueError('Source is outside the calibrated copy format: ' + str(source))
+        if any((n, w) not in ((1,0),(2,2),(5,2),(6,2),(7,2),(8,0)) for n,w,_,_ in fields(original)):
+            raise ValueError('Uncalibrated fields on placed object: ' + str(source))
+        _, decoration_ids = decoration_links(original, 5)
+        if decoration_ids:
+            raise ValueError('Placed object has instance-owned decorations: ' + str(source))
+        # Other components are copied verbatim. An embedded self ID would
+        # require a calibrated remapping contract before it can be duplicated.
+        if any(w == 2 and vi(source) in value for _,w,value,_ in fields(original)):
+            raise ValueError('Placed object contains an embedded reference to its own ID: ' + str(source))
+        assigned = next(available, None)
+        if assigned is None:
+            raise ValueError('Ordinary object ID range exhausted')
+        clone = rename_transform_object(original, name, copy)
+        clone = patch_fields(clone, {1: (0, assigned)})
+        additions.append(msg(1, clone))
+        result.append({'key': key, 'source_entity_id': source, 'entity_id': assigned,
+                       'graph_ids': list(entity_graph_ids(clone)),
+                       **placed_details(clone, templates)})
+    updated_library = append_library_entries(library, 3, 200, [item['entity_id'] for item in result])
+    output = set_section(set_section(data, 5, section + b''.join(additions)), 6, updated_library)
+    return output, {'copies': result}
+
+
+def place_static_scene(data, op, base):
+    schema(op, ('op', 'source', 'version', 'mode', 'prototypes', 'offset_m'),
+           ('op', 'source', 'version', 'mode', 'prototypes'))
+    from scene_authoring import MODE, VERSION
+    if (op['version'], op['mode']) != (VERSION, MODE):
+        raise ValueError('Static GIA placement supports platform 7.2 in beyond mode')
+    assets = read_gia(resolve(base, op['source']).read_bytes(), static_only=True)
+    if not assets:
+        raise ValueError('Static scene GIA has no objects')
+    mapping = op['prototypes']
+    required = {str(obj['template_id']) for obj in assets}
+    if not isinstance(mapping, dict) or mapping.keys() != required or not all(is_object_id(i) for i in mapping.values()):
+        raise ValueError('Provide a placed prototype ID for each platform template in the GIA')
+    _, root = container(data)
+    placed = {get(raw, 1, 0): raw for raw in vals(fields(singular(root, 5, default=b'')), 1)}
+    for template, ident in mapping.items():
+        reference = ordinary_object(placed.get(ident, b''))
+        if not reference or str(reference['template_id']) != template or not reference['static']:
+            raise ValueError(f'Prototype {ident} must be a static placed instance of platform template {template}')
+    offset = vector(op.get('offset_m', [0, 0, 0]), 'Scene offset')
+    copies = [
+        {'key': str(item['record_id']), 'source_entity_id': mapping[str(item['template_id'])],
+         'name': item['name'], 'position_m': [v + delta for v, delta in zip(item['position_m'], offset)],
+         'rotation_deg': item['rotation_deg'], 'scale': item['scale']}
+        for item in assets
+    ]
+    return duplicate_entities(data, {'op': 'duplicate_entities', 'copies': copies})
 
 
 def set_object_transform(data, op):
@@ -91,6 +214,39 @@ def set_object_transform(data, op):
     return set_section(data, 5, replace_message(section, 1, target, newer)), {'before': before, 'after': after}
 
 
+def set_entity_transform(data, op):
+    schema(op, ('op', 'section', 'entity_id', *TRS), ('op', 'section', 'entity_id'))
+    if type(op['section']) is not int or op['section'] != 5 or not is_object_id(op['entity_id']):
+        raise ValueError('Select a calibrated placed entity in section 5')
+    changes = {n: vector(op[name], name, positive=name == 'scale')
+               for n, name in enumerate(TRS, 1) if name in op}
+    if not changes:
+        raise ValueError('Specify at least one position_m, rotation_deg, or scale')
+    header, root = container(data)
+    if header[1:4] != GIL_HEADER:
+        raise ValueError('Entity transform edits require a calibrated GIL container')
+    ident = op['entity_id']
+    section = singular(root, 5, default=b'')
+    target = select_record(section, 1, ident, 'Placed entity')
+    singular(fields(target), 1, 0)
+    templates = read_templates(root)
+    before = placed_details(target, templates)
+    if not before['transform_editable']:
+        raise ValueError('Entity transform layout or scale is outside the calibrated write scope')
+    component = typed_record(target, 6, 1, strict=True)
+    body = singular(fields(component), 11)
+    changed = patch_vectors(body, changes, preserve_zero=True)
+    newer = replace_message(target, 6, component, replace_message(component, 11, body, changed))
+    result = data if target == newer else set_section(data, 5, replace_message(section, 1, target, newer))
+    _, observed_root = container(result)
+    observed = select_record(singular(observed_root, 5), 1, ident, 'Written entity')
+    after = placed_details(observed, templates)
+    expected = before['transform'] | {TRS[n - 1]: value for n, value in changes.items()}
+    if after != {**before, 'transform': expected}:
+        raise ValueError('Placed entity transform readback differs')
+    return result, {'section': 5, 'entity_id': ident, 'before': before, 'after': after}
+
+
 def colour_value(colour):
     if not isinstance(colour, str) or not re.fullmatch('#[a-fA-F0-9]{6}', colour):
         raise ValueError('Colour must be #RRGGBB')
@@ -102,7 +258,10 @@ def describe_decoration(record):
     transform = typed_record(record, 5, 1)
     label = typed_record(record, 4, 1)
     colour = typed_record(record, 5, 22)
-    if get(record, 3, 0) != 1 or owner is None or transform is None or label is None:
+    template_part = get(get(record, 12, default=b''), 1, 0)
+    marker = get(record, 3, 0)
+    if (owner is None or transform is None or label is None
+            or (marker != 1 and not (marker is None and template_part is not None))):
         raise ValueError('Unsupported decoration record')
     parent = get(get(owner, 50, default=b''), 502, 0)
     tr = get(transform, 11)
@@ -138,6 +297,8 @@ def set_decoration(data, op):
     rows = unique(root, 27, default=b'')
     original = select_record(rows, decoration_type, op['decoration_id'], 'Decoration')
     before = describe_decoration(original)
+    if (sec == 4) != (get(original,3,0)==1):
+        raise ValueError('Decoration and owner scope differ')
     _, ids = decoration_links(owner, sec)
     if before['owner_id'] != op['entity_id'] or before['decoration_id'] not in ids:
         raise ValueError('Decoration links do not identify the same owner')
@@ -245,18 +406,32 @@ def dynamic_object(data, op):
     return section, target
 
 
+def dynamic_target(data, op):
+    number = op.get('section', 5)
+    if type(number) is not int or number not in (4,5):
+        raise ValueError('Dynamic object section must be 4 (template) or 5 (instance)')
+    _, root = container(data)
+    if number == 4:
+        section = unique(root,4,default=b'')
+        target = select_record(section,1,op['entity_id'],'Ordinary object template')
+        if op['entity_id'] not in read_templates(root) or get(target,9,0,0) or typed_record(target,7,3) is None:
+            raise ValueError('Select an ordinary dynamic object template with a graph component')
+        inherited = b''
+    else:
+        section,target = dynamic_object(data,op)
+        locator = get(target,2,default=b'')
+        template = get(locator,1,0)
+        inherited = (select_record(unique(root,4,default=b''),1,template,'Native object template')
+                     if template and get(locator,2,0,0)==0 else b'')
+    return number,section,target,inherited
+
+
 def add_box_trigger(data, op):
-    schema(op, ('op', 'entity_id', 'offset_m', 'size_m'), ('op', 'entity_id', 'size_m'))
-    section, target = dynamic_object(data, op)
-    if typed_record(target, 7, 5) is not None:
-        raise ValueError('Target already has a trigger record')
-    template = get(target, 2, default=b'')
-    template_id = get(template, 1, 0)
-    if template_id and get(template, 2, 0, 0) == 0:
-        _, root = container(data)
-        owner = select_record(unique(root, 4, default=b''), 1, template_id, 'Trigger template')
-        if typed_record(owner, 8, 5) is not None:
-            raise ValueError('Target already inherits a trigger from its template')
+    schema(op, ('op', 'section','entity_id', 'offset_m', 'size_m'), ('op', 'entity_id', 'size_m'))
+    number,section,target,inherited = dynamic_target(data,op)
+    carrier = 8 if number==4 else 7
+    if typed_record(target,carrier,5) is not None or typed_record(inherited,8,5) is not None:
+        raise ValueError('Target already has a local or inherited trigger')
     size = vector(op['size_m'], 'Trigger size', positive=True)
     offset = vector(op.get('offset_m', [0, 0, 0]), 'Trigger offset')
     if max(size) > 500:
@@ -267,17 +442,115 @@ def add_box_trigger(data, op):
         integer(1, 1) + integer(2, 1) + msg(3, b'\x01\x02') + msg(4, area)
         + text(502, '触发器 序号:1') + msg(503, b'\x00')
     )
-    config = msg(7, integer(1, 5) + integer(2, 1) + msg(15, msg(1, trigger)))
+    config = msg(carrier, integer(1, 5) + integer(2, 1) + msg(15, msg(1, trigger)))
     rows = fields(target)
-    at = next((i for i, row in enumerate(rows) if row[0] > 7), len(rows))
+    at = next((i for i, row in enumerate(rows) if row[0] > carrier), len(rows))
     newer = b''.join(row[3] for row in rows[:at]) + config + b''.join(row[3] for row in rows[at:])
-    actual = get(get(typed_record(newer, 7, 5), 15), 1)
+    actual = get(get(typed_record(newer, carrier, 5), 15), 1)
     if actual != trigger:
         raise ValueError('Collision trigger readback failed')
-    return set_section(data, 5, replace_message(section, 1, target, newer)), {
+    return set_section(data, number, replace_message(section, 1, target, newer)), {
         'entity_id': op['entity_id'], 'trigger_id': 1, 'targets': ['character'],
         'offset_m': offset, 'size_m': size,
     }
+
+
+def add_native_movers(data, op):
+    from authoring_io import PLUGIN, sha_file
+    from native_gameplay import name_value, number
+    from platform_profiles import CATALOGUE, check
+    from scene_authoring import MODE, VERSION
+    schema(op, ('op','section','entity_id','version','mode','motions','follow'), ('entity_id','version','mode'))
+    if (op['version'],op['mode'])!=(VERSION,MODE):
+        raise ValueError('Mover creation requires 7.2 beyond')
+    section_id,section,target,inherited = dynamic_target(data,op)
+    field = 8 if section_id==4 else 7
+    motions = op.get('motions',[])
+    follow = op.get('follow',False)
+    if not isinstance(motions,list) or type(follow) is not bool or not (motions or follow):
+        raise ValueError('Declare motions or attach a follow component')
+    if follow and motions:
+        raise ValueError('Author a follow component or a basic mover list on this target')
+    if any(typed_record(target,field,k) is not None or typed_record(inherited,8,k) is not None for k in (4,9)):
+        raise ValueError('Target already has a local or inherited mover component')
+    loops = {'once':1000,'bounce':1001,'restart':1002}
+    baseline = msg(502,integer(2,1000)+msg(502))
+    rotation_body = (msg(1,encode_vector([1,0,1]))+msg(2)+integer(3,5501)+flt(4,1)
+                     +integer(6,5600)+flt(7,1))
+    untouched = (msg(512,integer(1,4)+msg(15,rotation_body)+baseline)
+                 +msg(513,integer(1,2)+msg(13)+msg(502,integer(2,1000)+msg(502)+integer(503,1))))
+    names,kinds,records,details = set(),[],[],[]
+    for i,item in enumerate(motions,1):
+        schema(item, ('name','active','seconds','displacement_m','waypoints','loop'), ('name',))
+        label = name_value(item['name'])
+        active = item.get('active',False)
+        if type(active) is not bool or label in names:
+            raise ValueError('Mover names must be unique and active must be boolean')
+        names.add(label)
+        if 'waypoints'in item:
+            steps,loop = item['waypoints'],item.get('loop','once')
+            if not isinstance(steps,list) or not 1<=len(steps)<=20 or loop not in loops or 'displacement_m'in item or 'seconds'in item:
+                raise ValueError('Path mover requires 1–20 waypoints and loop once, bounce or restart')
+            path = integer(2,loops[loop])
+            for step in steps:
+                schema(step, ('position_m','rotation_deg','seconds'), ('seconds',))
+                position = vector(step.get('position_m',[0,0,0]),'Path waypoint offset')
+                rotation = vector(step.get('rotation_deg',[0,0,0]),'Path waypoint rotation')
+                seconds = number(step['seconds'],'Path travel time')
+                if not 0<seconds<=600:raise ValueError('Path travel time must be in (0, 600]')
+                path += msg(501,msg(2,encode_vector(position))+msg(3,encode_vector(rotation))+flt(4,seconds)
+                            +integer(5,900)+msg(7)+msg(8))
+            body = integer(1,2)+msg(13)+msg(502,path+msg(502))
+            kind = 'path'
+        else:
+            if not {'seconds','displacement_m'}.issubset(item) or 'loop'in item:
+                raise ValueError('Linear motion requires seconds and displacement_m')
+            seconds = number(item['seconds'],'Linear motion seconds')
+            offset = vector(item['displacement_m'],'Linear motion displacement')
+            if not 0<seconds<=600 or not any(offset):
+                raise ValueError('Linear motion requires nonzero displacement and 0 < seconds <= 600')
+            velocity = vector([v/seconds for v in offset],'Linear motion velocity')
+            body = msg(11,flt(1,seconds)+msg(2,encode_vector(velocity))+msg(501,encode_vector(offset)))+baseline
+            kind = 'linear'
+        kinds.append(kind)
+        record = text(1,label)+(integer(2,1) if active else b'')+integer(501,i)+msg(511,body)+untouched
+        records.append(msg(3,record))
+        details.append({'motion_id':i,'name':label,'kind':kind,'active':active})
+    checked = check({'schema':2,'version':op['version'],'mode':op['mode'],
+                     'objects':[{'id':str(op['entity_id']),'kind':'movers','active':kinds}]})
+    if checked['status']!='passed':raise ValueError('Platform mover compatibility did not pass')
+    if motions:
+        target_new = target+msg(field,integer(1,4)+integer(2,1)+msg(14,b''.join(records)+integer(505,1)))
+    else:
+        target_new = target
+    if follow:
+        # A graph assigns the runtime target and enables this attachment.
+        body = (text(2,'default')+msg(3,flt(1,1)+flt(3,1))+msg(4)+integer(5,1200)
+                +integer(6,1100)+msg(7,msg(11))+text(502,'完全跟随'))
+        target_new += msg(field,integer(1,9)+integer(2,1)+msg(19,body))
+    sources = {CATALOGUE.relative_to(PLUGIN).as_posix(): sha_file(CATALOGUE)}
+    sources.update({info['path']:info['sha256'] for info in checked['sources'].values()})
+    changed = set_section(data,section_id,replace_message(section,1,target,target_new))
+    return changed, {'section':section_id,'entity_id':op['entity_id'],'motions':details,'follow':follow,'platform_sources':sources}
+
+
+def set_native_preset_state(data,op):
+    from native_gameplay import int_range
+    schema(op,('op','section','entity_id','state_id','value'),('section','entity_id','state_id','value'))
+    number,section,target,_=dynamic_target(data,op)
+    field=7 if number==4 else 6
+    block=typed_record(target,field,2,strict=True)
+    payload=get(block or b'',12)
+    if payload is None:
+        raise ValueError('Target has no calibrated model preset states')
+    ident=int_range(op['state_id'],'Model preset state ID')
+    value=int_range(op['value'],'Model preset state value',0,0xffffffff)
+    state=select_record(payload,2,ident,'Model preset state')
+    new_state=patch_fields(state,{2:(0,value or None)})
+    updated=replace_message(block,12,payload,replace_message(payload,2,state,new_state))
+    edited=replace_message(target,field,block,updated)
+    return set_section(data,number,replace_message(section,1,target,edited)),{
+        'section':number,'entity_id':op['entity_id'],'state_id':ident,'before':get(state,2,0,0),'after':get(new_state,2,0,0)}
 
 
 
@@ -331,5 +604,6 @@ def set_linear_motion(data, op):
 
 
 SCENE_EDITS = {fn.__name__: fn for fn in (
-    set_object_transform, set_decoration, append_decorations, add_box_trigger, set_linear_motion,
+    duplicate_entities, set_object_transform, set_entity_transform, set_decoration, append_decorations,
+    add_box_trigger, add_native_movers, set_linear_motion, set_native_preset_state,
 )}

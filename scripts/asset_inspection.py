@@ -6,6 +6,7 @@ from authoring_io import read_json,sha
 def inspect(path):
     from PIL import Image
     path=Path(path);raw=path.read_bytes();image=None;controls=None;representation='image';extra={}
+    checks={};diagnostics=[]
     if path.suffix.lower()=='.json':
         value=read_json(path)
         if isinstance(value,dict) and value.get('schema')==1 and 'shapes'in value:
@@ -35,6 +36,22 @@ def inspect(path):
                 controls=len(tiles);extra={'text_bytes':sum(len(t['text'].encode('utf-8')) for t in tiles),'tiles':tiles,'raster':'not_checked'}
             else:raise ValueError('Unknown asset representation')
             if value['controls']!=controls:raise ValueError('Declared control count differs from payload')
+            parameters=value.get('parameters',{})
+            for check,key,counts in [('control_budget','max_controls',[controls]),
+                                     *([('text_tile_bytes','max_bytes',[len(t['text'].encode('utf-8')) for t in tiles])]
+                                       if representation=='text' else [])]:
+                limit=parameters.get(key)
+                if limit is not None and (type(limit) is not int or limit<1):
+                    raise ValueError(f'{key} must be a positive integer')
+                actual=max(counts,default=0)
+                status='not_checked' if limit is None else 'failed' if actual>limit else 'passed'
+                checks[check]={'status':status,'limit':limit,'actual':actual}
+                if status=='failed':
+                    diagnostic={'code':'asset_'+check+'_exceeded','message':f'{key} limit exceeded',
+                                'expected':limit,'actual':actual}
+                    if check=='text_tile_bytes':
+                        diagnostic['tiles']=[{'index':index,'bytes':size} for index,size in enumerate(counts) if size>limit]
+                    diagnostics.append(diagnostic)
         else:raise ValueError('Unsupported asset JSON; expected shapes or generated asset schema 1')
     else:
         with Image.open(path)as original:
@@ -45,14 +62,20 @@ def inspect(path):
         pixels=list(image.getdata());extra={'size':list(image.size),'rgba_colors':len(set(pixels)),
              'transparent_pixels':sum(p[3]==0 for p in pixels),'partial_alpha_pixels':sum(0<p[3]<255 for p in pixels),
              'rgba_sha256':sha(image.tobytes())}
-    return {'schema':1,'status':'passed','source_sha256':sha(raw),'source_bytes':len(raw),'representation':representation,'controls':controls,
-            **extra,'scope':'input legality and representation statistics','platform_compatibility':'not_checked','host':'not_checked'}
+    return {'schema':1,'status':'failed' if diagnostics else 'passed','source_sha256':sha(raw),'source_bytes':len(raw),'representation':representation,'controls':controls,
+            **extra,'checks':checks,'diagnostics':diagnostics,'scope':'input legality and representation statistics','platform_compatibility':'not_checked','host':'not_checked'}
 
 def difference(left,right):
     a=inspect(left);b=inspect(right)
     keys=set(a)|set(b);ignore={'source_sha256','status','schema','scope','platform_compatibility','host'}
-    return {'schema':1,'status':'passed','before':a,'after':b,'changes':{k:{'before':a.get(k),'after':b.get(k)} for k in sorted(keys-ignore) if a.get(k)!=b.get(k)},'comparison':'representation statistics and exact normalized RGBA digest when available','host':'not_checked'}
+    return {'schema':1,'status':'failed' if any(row['status']=='failed' for row in (a,b)) else 'passed','before':a,'after':b,'changes':{k:{'before':a.get(k),'after':b.get(k)} for k in sorted(keys-ignore) if a.get(k)!=b.get(k)},'comparison':'representation statistics and exact normalized RGBA digest when available','host':'not_checked'}
 
 def main(argv=None):
     p=argparse.ArgumentParser();sub=p.add_subparsers(dest='operation',required=True);s=sub.add_parser('check');s.add_argument('input');d=sub.add_parser('diff');d.add_argument('input');d.add_argument('other')
-    a=p.parse_args(argv);r=inspect(a.input) if a.operation=='check' else difference(a.input,a.other);print(json.dumps(r,ensure_ascii=False,indent=2));return 0
+    a=p.parse_args(argv)
+    try:
+        r=inspect(a.input) if a.operation=='check' else difference(a.input,a.other)
+    except (ValueError,OSError,KeyError,TypeError) as exc:
+        r={'schema':1,'status':'failed','checks':{},'diagnostics':[{'code':'asset_inspection_failed','message':str(exc)}]}
+    print(json.dumps(r,ensure_ascii=False,indent=2))
+    return 2 if r['status']=='failed' else 0

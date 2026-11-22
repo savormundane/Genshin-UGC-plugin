@@ -10,6 +10,7 @@ description: 检查、比较和安全修改千星奇域GIL/GIA容器，处理脚
 | 任务 | 按需资料与工具 |
 | --- | --- |
 | 原生场景及物件局部写回 | [场景 GIA 与 GIL 修改](../../references/native-scene.md)；核对模型引用、位置与对象身份 |
+| 道具经济、职业技能、原生界面与存档写入 | [原生玩法制作](../../references/native-gameplay.md) |
 | 比较和局部修改 | [原生修改](../../references/native-changes.md)；`native diff/plan/apply` |
 | 图、信号、结构体、实体和模板挂载 | [原生维护](../../references/native-maintenance.md)、[详细操作](references/native-operations.md) |
 | Lua嵌入与最终脚本检查 | [最终Lua检查](../../references/client-check.md) |

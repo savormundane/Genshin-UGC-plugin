@@ -4,13 +4,41 @@
 
 场景schema=2，clients为{id,source,mapping?,canvas?,params?}数组，source可以是Lua或GIL。GIL直接提取精确匹配的内嵌脚本与模板绑定。server可声明source、graph_ids及initial，后者按玩家字符串ID保存变量。steps支持tick、invoke、cursor、key、lifecycle、signal、settle、reenter。signal明确source、target、name、params；客户端请求与原生输出共用确定性队列。
 
-faults为{name,source?,target?,occurrence?,action,delay?}列表，action支持drop、duplicate、delay及以延迟实现的reorder。assertions为{client,path,equals}；observations为{client,path,name}，报告保留实际队列时间线、待投递包和原生工作量。
+`faults` 声明信号名、方向、发生次数和 `drop`、`duplicate`、`delay` 或 `reorder` 行为。报告记录规则命中、计划投递、实际投递和丢弃数。断言逐层比较对象字段与数组元素，布尔值与数字分别比较，数值相等的整数和浮点数视为同值。失败时给出首个不一致的 `value_path`。
 
 ```text
-python scripts/qianxing.py simulate - --scenario SCENE.json --timeout 30 --out NEW_REPORT.json
+python scripts/qianxing.py simulate run SCENE.json --timeout 30 --out NEW_REPORT.json
 ```
 
 produce场景中的@level引用本轮最终GIL。原生模型支持已实现的信号、条件、局部变量、自定义变量、列表、结构体和成就计数子集；遇到未实现节点或常量形状失败，不以成功桩放行。settle复制当前模型数据库到模型持久层，reenter从该层重建；它们不是平台保存和重进证据。
+
+## 纯原生场景
+
+将 `clients` 设为 `[]`，给出 `server.source` 和从 GIL 查到的 `server.graph_ids`。只有已挂载的普通服务端图可执行。用 `project inspect LEVEL.gil --scope scene --key GRAPH_KEY` 查询挂载实例，可用 `server.instances` 指定其中一个或多个。下例的图和实例 ID 应替换为实际查询结果。
+
+```json
+{
+  "schema": 2,
+  "clients": [],
+  "server": {
+    "source": "level.gil",
+    "graph_ids": [1073741825],
+    "instances": [{"graph_id": 1073741825, "owner_entity": 1077936129}]
+  },
+  "steps": [{"op": "entity_created", "entity": 1077936129}],
+  "assertions": [{"entity": 1077936129, "path": "model_visible", "equals": false}]
+}
+```
+
+`model_visible` 来自本次模型执行的「激活/关闭模型显示」节点。未收到可见性命令的实体返回 `null`。`model_visibility_events` 记录每次状态写入的实体、节点和模型时间。纯原生模式的报告层为 `native_graph_model`，CLI 和 MCP 共用断言与覆盖检查。模型可见性是逻辑状态，报告不测量渲染效果。
+
+匀速基础直线运动器以 GIL 中已校准的动态摆放实例为目标，使用世界坐标 XYZ、米和米每秒。推进到持续时间后保留终点，下一段运动从该位置开始。用 `position_m` 写断言，或在步骤中记录多次位置。报告 `motion_events` 含启动时间、实体、图、节点、初始位置、速度和持续时间，`observation_steps` 保留各次取样的时刻和值。
+
+```json
+{"op":"observe","entity":1077936129,"path":"position_m","name":"after_tick"}
+```
+
+模拟覆盖已执行的节点路径。碰撞、同时生效的多个运动器、局部朝向合成和真实宿主调度仍以相应宿主检查为准。计时器序号与 GUID 输入见[原生计时器模型](native-timers.md)。
 
 不模拟真实渲染、完整调度、所有Tween或平台权限。输入通过指定控件投递，不自动完成像素命中；原有schema 1模型接口继续使用。验证覆盖两种客户端数量、真实最终图信号投递、独立状态、延迟与重复、错误节点和超时。
 
@@ -18,7 +46,9 @@ clock可给{start:0}明确初始模型时刻；时间仅由tick推进。中性�
 
 列表构造／局部变量在单次事件中保留对象身份。自定义变量读取、列表取项、结构体拆分、局部变量及赋值保留容器引用；清除、插入、移除、修改和连接列表直接作用于该对象。负索引、越界索引与非列表输入失败。传输投递时复制调用方数据，已发出的回包保留发送时的数据快照，不随后续容器操作改变。原生图没有实际执行时报告native_graph_model=not_checked；未命中的传输故障也单独标为not_checked，不因场景完成而宣称已覆盖。
 
-图的自身实体由最终GIL的实例挂载读取，同图多挂载分别执行。模板实例或独立图测试可在server.instances显式声明[{graph_id,owner_entity}]，重复实例与不存在的图拒绝；未绑定所属实体的图执行Get_Self_Entity会失败，不使用信号发送者代替。
+自身实体由最终 GIL 的实例挂载与实例引用的本地模板确定。同一图在两个玩家实例上执行时各取该玩家的变量。使用 `server.instances` 选择真实实例，`mounts` 记录直接挂载和模板来源，`executed_instances` 记录实际执行的图与实体。混合模型的显式实例配置继续支持独立图测试。
+
+原生变量断言用 `{"entity":1086324738,"path":"variable","variable":"course_best","equals":2}`。已校准的整数、布尔、浮点、字符串先取模板默认值，再应用实例覆盖，最后应用 `server.initial`。读取未校准的原生默认值时，该路径标为 `not_checked`。观测步骤还可记录指定时刻的变量快照。原生和 Lua 断言数分别记录，持久层结算和重进结果属于模型证据。
 
 监听信号的事件源实体为接收图所属实体，信号来源实体为本次发送者，两者分别输出。需要读取事件源GUID时，场景须提供server.entity_guids，例如{"21":10021,"22":10022}；模型不把运行实体编号当作GUID，也不返回固定占位值。未绑定所属实体或未提供所需GUID时失败。
 
@@ -32,7 +62,7 @@ clock可给{start:0}明确初始模型时刻；时间仅由tick推进。中性�
 
 有限循环模型按原生起始值和终止值的闭区间执行，每次先执行循环体，完成或跳出后执行完成出口。跳出节点须连接当前活跃循环的跳出输入；无效入口、非整数边界、递归进入同一活跃循环或超出执行预算失败。循环计数计入server_work，即使循环体为空也受预算限制。此支持不代表列表迭代循环或完整宿主调度已实现。
 
-execution_status表示运行是否成功，acceptance表示是否满足场景验收。没有断言、配置的server.graph_ids未全部执行、服务端未执行或必需故障未命中时acceptance保持not_checked。faults条目的required默认true；只有明确非验收故障可设false，命中状态仍如实报告。produce要求声明的模拟acceptance=passed，否则回滚，不提交正式输出。观察实验可读取未验收的观察结果，但不得以此声称场景通过。
+`execution_status` 报告模型运行状态，`acceptance` 报告验收状态。无断言、服务端图未覆盖或必需故障的投递证据不足时，结果为 `not_checked`。场景结束默认要求待投递数为零。需要在延迟包送达前采样时，把该规则设为 `required:false`，并用 `expected_pending_packets` 声明预期数量。produce要求声明的模拟acceptance=passed，否则回滚，不提交正式输出。观察实验可读取未验收的观察结果，但不得以此声称场景通过。
 
 原生实体创建使用显式entity_created步骤，规则及边界见[native-lifecycle](native-lifecycle.md)。只对已配置图实例派发创建事件，不默认自动初始化所有图。报告新增lifecycle_events，其他生命周期未实现时不作通过声明。
 

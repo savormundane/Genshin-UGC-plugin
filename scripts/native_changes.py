@@ -10,7 +10,8 @@ from project_index import build,key
 
 
 def snapshot(data):
-    index=build(data,include_spatial=False);m=model(data);_,root=container(data)
+    # Keep the stored plan difference contract stable for existing scene objects.
+    index=build(data,include_scene=False,include_gameplay=False);m=model(data);_,root=container(data)
     objects={o['key']:{k:v for k,v in o.items()if k!='sha256'or o['kind']!='document'}for o in index['objects']}
     raw={}
     for g in m['graphs']+m['composite_graphs']:
@@ -55,7 +56,7 @@ def snapshot(data):
     return index,objects,raw,references
 
 
-def difference(before,after,allowed=None,*,include_spatial=True):
+def difference(before,after,allowed=None,*,include_spatial=True,include_points=True,include_gameplay=True,include_gameplay_references=True):
     if allowed is not None and (not isinstance(allowed,list)or any(type(v)!=int or not 1<=v<=536870911 for v in allowed)or len(allowed)!=len(set(allowed))):
         raise ValueError('Unique valid allowed top-level field numbers required')
     bh,bfields=container(before);ah,afields=container(after)
@@ -88,14 +89,61 @@ def difference(before,after,allowed=None,*,include_spatial=True):
             'envelope':{'before':list(bh[1:4]),'after':list(ah[1:4]),'changed':bh[1:4]!=ah[1:4]},
             'protected':protected,'complete_semantic_diff':False,'unindexed':sorted(set(left['unindexed'])|set(right['unindexed'])),
             'editor':'not_checked','host':'not_checked'}
-    if include_spatial and before != after:
-        from native_entity_transform import spatial_objects
-        spatial=[]
-        for header,root in ((bh,bfields),(ah,afields)):
-            spatial.append({(key('level',kind,1,ident) if kind=='gia_resource' else key('level',kind,ident)):props
-                            for (kind,ident),props in spatial_objects(header,root).items()})
-        rows=changed(*spatial)
-        if rows:result['spatial_objects']=rows
+    if include_spatial and before!=after:
+        from native_scene import spatial_objects
+        scenes=[{key('level',kind,*((1,) if kind=='gia_resource' else ()),ident):detail
+                 for (kind,ident),detail in spatial_objects(header,root).items()}
+                for header,root in ((bh,bfields),(ah,afields))]
+        changes=changed(*scenes)
+        if changes:result['spatial_objects']=changes
+    if include_points and bh[3]==2 and ah[3]==2 and [r for n,w,v,r in bfields if n==11]!=[r for n,w,v,r in afields if n==11]:
+        from native_scene_settings import point_settings,spawn_references
+        points=[]
+        for rows in (bfields,afields):
+            level=next(iter(vals(rows,11)),b'')
+            spawns=spawn_references(level)
+            points.append({str(p['point_id']):p for row in vals(fields(get(level,5,default=b'')),1)
+                           if (p:=point_settings(row,spawns))['point_id'] is not None})
+        changes=changed(*points)
+        if changes:result['scene_points']=changes
+    if include_gameplay and bh[3]==2 and ah[3]==2 and any(
+            r['key'] in ('11','12','15','16') for r in result['top_level_fields']):
+        from native_gameplay import config_name
+        from level_inventory import unique
+        gameplay=[]
+        for rows in (bfields,afields):
+            records={}
+            for r in vals(fields(unique(rows,15,default=b'')),1):
+                ident,kind=get(r,1,0),get(r,2,0)
+                if ident is not None:
+                    records[key('level','resource',kind,ident)]={'kind':kind,'id':ident,'name':config_name(r),'sha256':sha(r)}
+            settings=unique(rows,11,default=b'')
+            for label,items in (('respawn',get(settings,4,default=b'')),('player_group',get(settings,6,default=b''))):
+                for r in vals(fields(items),1):
+                    ident=get(r,1,0)
+                    if ident is not None:
+                        records[key('level',label,ident)]={'id':ident,'sha256':sha(r)}
+            for r in vals(fields(unique(rows,12,default=b'')),1):
+                name=get(r,1,default=b'').decode('utf-8')
+                records[key('level','global_timer',name)]={'name':name,'sha256':sha(r)}
+            gameplay.append(records)
+        changes=changed(*gameplay)
+
+        if changes:result['gameplay_records']=changes
+    if include_gameplay_references and bh[3]==2 and ah[3]==2:
+        from native_gameplay_index import build_gameplay
+        reports = [build_gameplay(raw) for raw in (before, after)]
+        edges = [Counter(canonical(e) for e in report['references']) for report in reports]
+        if edges[0] != edges[1]:
+            result['gameplay_references'] = {
+                'added': [{'reference': json.loads(edge), 'count': count} for edge, count in sorted((edges[1]-edges[0]).items())],
+                'removed': [{'reference': json.loads(edge), 'count': count} for edge, count in sorted((edges[0]-edges[1]).items())]}
+        for side, report in zip(('before','after'), reports):
+            if report['issues']:
+                result['validation'][side]['issues'].extend(report['issues'])
+                result['validation'][side]['status']='failed'
+        if reports[1]['issues']:
+            result['status']='failed'
     return result
 
 
@@ -117,8 +165,8 @@ def plan(data,spec,base,destination):
     for index,op in enumerate(spec['operations']):
         if 'source'not in op:continue
         source=resolve(base,op['source']);token='@input:'+str(index);digest=sha(source.read_bytes())
-        reference=os.path.relpath(source,destination) if source.anchor.casefold()==destination.anchor.casefold() else str(source)
-        inputs[token]={'source':reference.replace('\\','/'),'sha256':digest}
+        location=os.path.relpath(source,destination) if source.drive==destination.drive else str(source)
+        inputs[token]={'source':Path(location).as_posix(),'sha256':digest}
         bound['operations'][index]['source']=token;op['source']=str(source)
     if spec.get('strict_audit',True)is not True:raise ValueError('Modification plans require strict audit')
     output,applied=apply(data,spec,base)
@@ -130,6 +178,17 @@ def plan(data,spec,base,destination):
             'result_sha256':sha(output),'difference':diff}
     result['plan_sha256']=fingerprint(result)
     return result
+
+
+def plan_summary(record, destination='plan.json'):
+    diff=record['difference']
+    return {'schema':2,'kind':record['kind'],'status':diff['status'],'report':str(destination),
+            'base_sha256':diff['before_sha256'],'result_sha256':record['result_sha256'],
+            'plan_sha256':record['plan_sha256'],'inputs':record['inputs'],
+            'checks':{'protected_bytes':diff['protected']['unchanged'],
+                      'project_references':diff['validation']['after']['status']},
+            'changed_top_level_fields':[int(change['key']) for change in diff['top_level_fields']],
+            'diagnostics':diff['validation']['after']['issues']+diff['validation']['after']['unresolved']}
 
 
 def apply_plan(data,record,base):
@@ -155,9 +214,11 @@ def apply_plan(data,record,base):
     if used!=set(record['inputs']):raise ValueError('Unused native plan input')
     output,report=apply(data,spec,base)
     if sha(output)!=record['result_sha256']:raise ValueError('Native plan result digest mismatch')
-    # Plans created before spatial readback retain their original review contract.
     actual=difference(data,output,spec['allowed_top_level_fields'],
-                      include_spatial='spatial_objects' in record['difference'])
+                      include_spatial='spatial_objects' in record['difference'],
+                      include_points='scene_points' in record['difference'],
+                      include_gameplay='gameplay_records' in record['difference'],
+                      include_gameplay_references='gameplay_references' in record['difference'])
     if actual['status']!='passed'or actual!=record['difference']:raise ValueError('Native plan difference changed')
     for source,digest in inputs.items():
         if sha(Path(source).read_bytes())!=digest:raise ValueError('Native plan input changed during apply')

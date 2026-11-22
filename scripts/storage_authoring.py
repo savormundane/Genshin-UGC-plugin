@@ -10,12 +10,18 @@ from level_inventory import fields,vals
 def validate(spec):
     version=spec.get('schema')if isinstance(spec,dict)else None
     if version not in(2,3):raise ValueError('Storage schema must be 2 or 3')
-    schema(spec,('schema','name','struct_id','template_id','graph_id','host_entity_id','fields','slots','dictionary','previous_dictionary','capacity_bytes','record_version','achievements'),('name','struct_id','template_id','graph_id','fields','slots','capacity_bytes'),version=version)
+    schema(spec,('schema','name','struct_id','template_id','graph_id','host_entity_id','fields','slots','dictionary','previous_dictionary','capacity_bytes','record_version','compatible_record_version','achievements'),('name','struct_id','template_id','graph_id','fields','slots','capacity_bytes'),version=version)
     if not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]{0,31}',spec['name']):raise ValueError('Invalid storage name')
     if type(spec['slots'])!=int or not 1<=spec['slots']<=32:raise ValueError('slots must be 1..32')
     if len(spec['name']+'_slot_'+str(spec['slots']))>20:raise ValueError('Generated storage variable name exceeds native 20-character limit')
     if type(spec['capacity_bytes'])!=int or spec['capacity_bytes']<1:raise ValueError('Positive capacity required')
     if type(spec.get('record_version',1))!=int or not 1<=spec.get('record_version',1)<=65535:raise ValueError('record_version must be 1..65535')
+    if 'compatible_record_version'in spec:
+        old=spec['compatible_record_version']
+        if version!=3 or type(old)is not int or not 1<=old<spec.get('record_version',1):
+            raise ValueError('compatible_record_version requires a lower schema 3 record version with the same field layout')
+        if spec.get('previous_dictionary') is not None and spec.get('previous_dictionary')!=spec.get('dictionary'):
+            raise ValueError('Record version upgrade requires an unchanged integer-list dictionary')
     for key in ('struct_id','template_id','graph_id'):
         if type(spec[key])!=int or not 2**30<=spec[key]<2**31:raise ValueError('Explicit application ID required')
     seen=set()
@@ -109,7 +115,7 @@ def attach(data,spec):
         merged=old+b''.join(msg(4,a)for a in vals(fields(achievements),4));merged=put(put(merged,2,1,0),5,1,0)
         data=set_section(data,25,put(settings,3,merged))
     return register_definitions(data)
-def generate(spec,stage):
+def generate(spec,stage,*,server_only=False):
     s=validate(spec);name=s['name'];fs=s['fields'];signals=[];methods=[]
     annotations={'integer':'整数','boolean':'布尔值','integer_list':'整数列表'}
     wire=wire_fields(s);version=s.get('record_version',1)
@@ -167,8 +173,25 @@ def generate(spec,stage):
     folder=stage/'resources/管理配置/信号';folder.mkdir(parents=True)
     for signal,params in signals:
         (folder/(signal+'.py')).write_text('SIGNAL_ID = '+repr(signal)+'\nSIGNAL_PAYLOAD = '+repr({'signal_name':signal,'parameters':params})+'\n',encoding='utf-8')
+    if server_only:
+        guarded=[]
+        for method in methods:
+            signature,*body=method.splitlines()
+            guard=['        qx_owner: "实体" = 获取自身实体(self.game)',
+                   '        if 信号来源实体 == qx_owner:']
+            guarded.append('\n'.join([signature,*guard,*['    '+line for line in body]]))
+        methods=guarded
     code='"""\ngraph_id: '+str(s['graph_id'])+'\ngraph_name: '+name+'\ngraph_type: server\n"""\nfrom app.runtime.engine.graph_prelude_server import *\nclass '+name+':\n    def __init__(self, game, owner_entity):\n        self.game = game\n        self.owner_entity = owner_entity\n    def register_handlers(self):\n        return\n'+'\n\n'.join(methods)+'\n'
     (stage/'storage.py').write_text(code,encoding='utf-8')
+    write_json(stage/'storage.json',s)
+    report={'signals':len(signals),'slots':s['slots'],'fields':len(fs),'record_version':version,
+            'capacity_bytes':s['capacity_bytes'],'default_logical_bytes':(40 if s['schema']==3 else 8)+sum(
+                8 if f['type']=='integer'else 1 if f['type']=='boolean'else 8*len(f['default'])for f in fs),
+            'capacity_kind':'application logical payload and codec budget; host quota unverified',
+            'native_config_created':True,'compiled':False}
+    if server_only:
+        write_json(stage/'server-signals.json',{'request_source':'player entity','definitions':dict(signals)})
+        return {**report,'transport':'server'}
     from asset_pipeline import lua
     (stage/'contract.lua').write_text('return '+lua(s)+'\n',encoding='utf-8')
     (stage/'runtime.lua').write_bytes((PLUGIN/'scripts/runtime_storage.lua').read_bytes())
@@ -223,12 +246,11 @@ end
     if s['schema']==3:
         from storage_v3 import client_adapter
         (stage/'client_adapter.lua').write_text(client_adapter(s,adapter),encoding='utf-8')
-    write_json(stage/'storage.json',s)
-    return {'signals':len(signals),'slots':s['slots'],'fields':len(fs),'record_version':version,'capacity_bytes':s['capacity_bytes'],'default_logical_bytes':(40 if s['schema']==3 else 8)+sum(8 if f['type']=='integer'else 1 if f['type']=='boolean'else 8*len(f['default'])for f in fs),'capacity_kind':'application logical payload and codec budget; host quota unverified','native_config_created':True,'compiled':False}
-def build(path,out):
+    return report
+def build(path,out,*,server_only=False):
     p=Path(path).resolve();s=validate(read_json(p))
     with output_directory(out)as stage:
-        info=generate(s,stage);return finish(stage,{str(p):sha(p.read_bytes())},kind='storage',**info)
+        info=generate(s,stage,server_only=server_only);return finish(stage,{str(p):sha(p.read_bytes())},kind='storage',**info)
 def diagnose(events):
     groups={}
     for e in events:

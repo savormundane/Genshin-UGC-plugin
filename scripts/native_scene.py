@@ -1,4 +1,5 @@
 """Native ordinary object records and independent static GIA packages."""
+from collections import Counter
 import struct
 
 from level_inventory import container, fields, unique, vals
@@ -8,6 +9,8 @@ OBJECT_ID_START = 0x40400001
 OBJECT_ID_END = 0x404FFFFF
 FLOAT32_MAX = 3.4028234663852886e38
 STATIC_GIA_HEADER = (1, 806, 3)
+GIL_HEADER = (1, 806, 2)
+TRS = ('position_m', 'rotation_deg', 'scale')
 
 
 def vector(value, label, *, positive=False):
@@ -25,22 +28,41 @@ def encode_vector(values):
     return b''.join(flt(i, value) for i, value in enumerate(values, 1) if value)
 
 
-def read_vector(value):
+def singular(rows, number, wire=2, default=None):
+    matches = [(w, value) for field, w, value, _ in rows if field == number]
+    if not matches:
+        return default
+    if len(matches) != 1 or matches[0][0] != wire:
+        raise ValueError(f'Ambiguous or incompatible native field {number}')
+    return matches[0][1]
+
+
+def read_vector(value, *, require_axes=False):
     rows = fields(value)
-    if any(number in (1, 2, 3) and wire != 5 for number, wire, _, _ in rows):
-        raise ValueError('Unsupported transform coordinate wire type')
-    return vector([struct.unpack('<f', unique(rows, i, 5, bytes(4)))[0] for i in (1, 2, 3)], 'Native vector')
+    axes = [singular(rows, i, 5, None if require_axes else bytes(4)) for i in (1, 2, 3)]
+    if None in axes:
+        raise ValueError('Missing explicit native scale axis')
+    return vector([struct.unpack('<f', raw)[0] for raw in axes], 'Native vector')
 
 
-def typed_record(core, field, kind):
-    matching = [raw for raw in vals(fields(core), field) if unique(fields(raw), 1, 0) == kind]
+def typed_record(core, field, kind, *, strict=False):
+    read = singular if strict else unique
+    matching = [raw for raw in vals(fields(core), field) if read(fields(raw), 1, 0) == kind]
     if len(matching) > 1:
         raise ValueError('Ambiguous native record of kind ' + str(kind))
     return matching[0] if matching else None
 
 
-def read_transform(body):
+def read_transform(body, *, explicit=False):
     rows = fields(body)
+    if explicit:
+        result = {}
+        for number, name in enumerate(TRS, 1):
+            raw = singular(rows, number)
+            if raw is None:
+                raise ValueError(f'Missing calibrated {name} vector')
+            result[name] = read_vector(raw, require_axes=name == 'scale')
+        return result
     return {
         name: read_vector(unique(rows, field, default=default))
         for name, field, default in (
@@ -50,11 +72,171 @@ def read_transform(body):
     }
 
 
+def is_object_id(ident):
+    return type(ident) is int and OBJECT_ID_START <= ident <= OBJECT_ID_END
+
+
+def model_reference(ident, source):
+    return {'type': 'template', 'id': ident, 'source': source, 'resource_verified': False}
+
+
+def object_body(raw, property_field, component_field, space):
+    label = typed_record(raw, property_field, 1, strict=True)
+    component = typed_record(raw, component_field, 1, strict=True)
+    if label is None or component is None:
+        raise ValueError('Calibrated name and transform components required')
+    name_fields = fields(singular(fields(label), 11, default=b''))
+    name = singular(name_fields, 1, default=b'').decode('utf-8')
+    body = singular(fields(component), 11)
+    if not name or body is None:
+        raise ValueError('Calibrated name and transform bodies required')
+    marker = singular(name_fields, 2, 0, 0)
+    if marker not in (0, 1):
+        raise ValueError('Uncalibrated static-unit marker')
+    types = sorted({kind for part in vals(fields(raw), component_field)
+                    if (kind := singular(fields(part), 1, 0)) is not None})
+    transform = {'space': space, 'axes': 'native_xyz_y_up', **read_transform(body, explicit=True)}
+    return {'name': name, 'transform': transform, 'component_types': types}, marker == 1
+
+
+def placed_details(raw, templates, space='world'):
+    rows = fields(raw)
+    locator = fields(singular(rows, 2, default=b''))
+    ident = singular(locator, 1, 0)
+    category = singular(locator, 2, 0, 0)
+    companion = singular(rows, 8, 0)
+    if not ident:
+        raise ValueError('Placed template locator absent')
+    if category == 1 and companion == ident:
+        template = {'scope': 'platform', 'id': ident}
+        model = model_reference(ident, 'instance_locator')
+    elif category == 0 and ident in templates:
+        model_id = templates[ident]['model']['id']
+        if companion not in (None, model_id):
+            raise ValueError('Instance and project template model locators disagree')
+        template = {'scope': 'project', 'id': ident}
+        model = model_reference(model_id, 'project_template')
+    else:
+        raise ValueError('Missing or unsupported placed template locator')
+    info, static = object_body(raw, 5, 6, space)
+    return {**info, 'template': template, 'model': model, 'static': static,
+            'transform_editable': space == 'world' and min(info['transform']['scale']) > 0}
+
+
+def identified_records(records):
+    """Return each decodable record with its identity or a concrete identity error."""
+    for raw in records:
+        try:
+            ident = singular(fields(raw), 1, 0)
+        except ValueError as exc:
+            yield None, raw, str(exc)
+            continue
+        yield ident, raw, None if ident else 'Native record identity absent'
+
+
+def read_templates(root, unresolved=None):
+    records = [row for group in vals(root, 4) for row in vals(fields(group), 1)]
+    records = list(identified_records(records))
+    counts = Counter(ident for ident, _, _ in records)
+    templates = {}
+    for ident, raw, error in records:
+        try:
+            if error or counts[ident] != 1 or not is_object_id(ident):
+                raise ValueError(error or 'Ambiguous or unsupported project template identity')
+            model_id = singular(fields(raw), 2, 0)
+            if not model_id:
+                raise ValueError('Project template has no calibrated model locator')
+            info, _ = object_body(raw, 6, 7, 'template_default')
+            templates[ident] = {**info, 'model': model_reference(model_id, 'template_record'),
+                                'transform_editable': False}
+        except ValueError as exc:
+            if unresolved is not None:
+                unresolved.append({'section': 4, 'id': ident, 'error': str(exc)})
+    return templates
+
+
+def spatial_objects(header, root, unresolved=None):
+    """Read calibrated placed/template transforms and owner-local decorations."""
+    if header[1:4] == STATIC_GIA_HEADER:
+        try:
+            records = read_gia_records(root)
+        except ValueError as exc:
+            if unresolved is not None:
+                unresolved.append({'section': 1, 'error': str(exc)})
+            return {}
+        return {('gia_resource', obj['record_id']): {
+            'name': obj['name'], 'static': obj['static'], 'transform_editable': False,
+            'template': {'scope': 'platform', 'id': obj['template_id']},
+            'model': model_reference(obj['template_id'], 'instance_locator'),
+            'transform': {'space': 'asset_world', 'axes': 'native_xyz_y_up', **{key: obj[key] for key in TRS}},
+        } for obj in records}
+    if header[1:4] != GIL_HEADER:
+        return {}
+    from native_scene_edits import decoration_links
+
+    templates = read_templates(root, unresolved)
+    objects = {('template', ident): detail for ident, detail in templates.items()}
+    decoration_rows = []
+    for group in vals(root, 27):
+        try:
+            decoration_rows.extend(fields(group))
+        except ValueError as exc:
+            if unresolved is not None:
+                unresolved.append({'section': 27, 'error': str(exc)})
+    for section, kind in ((4, 'template'), (5, 'entity')):
+        groups = vals(root, section)
+        records = list(identified_records(raw for group in groups for raw in vals(fields(group), 1)))
+        counts = Counter(ident for ident, _, _ in records)
+        parts = list(identified_records(vals(decoration_rows, 1 if section == 4 else 2)))
+        part_counts = Counter(ident for ident, _, _ in parts)
+        decorations = {ident: raw for ident, raw, error in parts if not error and part_counts[ident] == 1}
+        for ident, raw, error in records:
+            try:
+                if error or counts[ident] != 1:
+                    raise ValueError(error or 'Ambiguous scene object identity')
+                if kind == 'entity':
+                    if not is_object_id(ident):
+                        raise ValueError('Uncalibrated placed-object identity range')
+                    detail = placed_details(raw, templates)
+                    if len(groups) != 1:
+                        detail['transform_editable'] = False
+                    objects[kind, ident] = detail
+                _, part_ids = decoration_links(raw, section)
+            except ValueError as exc:
+                if unresolved is not None and (kind == 'entity' or ident in templates):
+                    unresolved.append({'section': section, 'id': ident, 'error': str(exc)})
+                continue
+            read_parts = []
+            for part_id in part_ids:
+                try:
+                    part = decorations.get(part_id)
+                    if part is None:
+                        raise ValueError('Decoration target absent or ambiguous')
+                    rows = fields(part)
+                    marker = singular(rows, 3, 0)
+                    owner = typed_record(part, 4, 40, strict=True)
+                    parent = singular(fields(singular(fields(owner or b''), 50, default=b'')), 502, 0)
+                    if marker != (1 if section == 4 else None) or parent != ident:
+                        raise ValueError('Decoration owner link disagrees with its native record')
+                    model_id = singular(rows, 2, 0)
+                    if not model_id:
+                        raise ValueError('Decoration has no calibrated model locator')
+                    info, _ = object_body(part, 4, 5, 'owner_local')
+                    read_parts.append({'id': part_id, **info, 'model': model_reference(model_id, 'decoration_record')})
+                except ValueError as exc:
+                    if unresolved is not None:
+                        unresolved.append({'section': 27, 'id': part_id, 'owner_section': section,
+                                           'owner_id': ident, 'error': str(exc)})
+            if read_parts and (kind, ident) in objects:
+                objects[kind, ident]['decorations'] = read_parts
+    return objects
+
+
 def ordinary_object(core):
     """Recognize placed ordinary platform objects, including the static marker."""
     record = fields(core)
     ident = unique(record, 1, 0)
-    if ident is None or not OBJECT_ID_START <= ident <= OBJECT_ID_END:
+    if not is_object_id(ident):
         return None
     locator = fields(unique(record, 2, default=b''))
     template = unique(locator, 1, 0)
@@ -82,6 +264,10 @@ def read_gia(data, *, static_only=False):
     header, root = container(data)
     if header[1:4] != STATIC_GIA_HEADER:
         raise ValueError('Expected a supported GIA container')
+    return read_gia_records(root, static_only=static_only)
+
+
+def read_gia_records(root, *, static_only=False):
     if static_only and any(n not in (1, 3) or w != 2 for n, w, _, _ in root):
         raise ValueError('Static scene contains unexpected resource records')
     objects = []

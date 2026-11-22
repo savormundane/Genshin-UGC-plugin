@@ -50,26 +50,40 @@ python scripts/qianxing.py scene inspect scene-output/scene.gia
 
 `scene.gia` 按独立静态单位组织。`scene.json` 可继续编辑，`scene-resources.json` 将布局键关联到包内记录、模板 ID 和回读变换。保留原布局位置及目录引用，或移动布局时按新目录调整 `catalogues`。`manifest.json` 绑定输入样本、目录和输出摘要。按 `IMPORT.md` 在编辑器的资产导入导出管理中加载并转存，存档后取用编辑器实际分配的身份。
 
-制作链 schema 2 中用 `"scene": {"spec": "layout.json"}` 执行同一生成器，输出位于 `scene/`。与 `graphs`、`level` 一起声明时，场景 GIA 作为独立资产交付。要建立原生挂载，先导入并保存场景或使用已有基底，再对实际存档操作。使用 portable 时，目录、GIA/GIL 样本和尺寸记录须位于声明的输入根内。
+制作链 schema 2 中用 `"scene": {"spec": "layout.json"}` 执行同一生成器，输出位于 `scene/`。在同一任务的修改补丁中使用 `place_static_scene` 和 `"source":"@scene"` 可以把布局写入 GIL 基底。补丁的 `prototypes` 按平台模型 ID 映射到基底里具有相同模型的静态实例。使用 portable 时，目录、GIA/GIL 样本和尺寸记录须位于声明的输入根内。
 
 ## 修改已有 GIL
 
-先用 `scene inspect LEVEL.gil` 查看变换、装饰物、触发器与关卡配置，或用 `project inspect LEVEL.gil` 查看已校准放置对象及消费者。配置为 `native plan` 的 schema 2 用法，绑定原始 GIL 的 `base_sha256` 和表中所需的 `allowed_top_level_fields`，再用 `native apply --plan` 写出新的 GIL。步骤和保护范围见[原生修改](native-changes.md)。
+先用 `scene inspect LEVEL.gil` 查看场景、触发器和关卡配置，或用 `project inspect LEVEL.gil --scope scene` 查询原生物件、自定义元件实例与已知挂载。配置为 `native plan` 的 schema 2 用法，绑定原始 GIL 的 `base_sha256` 和表中所需的 `allowed_top_level_fields`，再用 `native apply --plan` 写出新的 GIL。步骤和保护范围见[原生修改](native-changes.md)。
 
 | 操作 | 对象与参数 | 可写章节 |
 | --- | --- | --- |
+| `place_static_scene` | 以 `source` 选择已生成的静态 GIA，按 `prototypes` 复用同模型实例，指定 `version:"7.2"`、`mode:"beyond"` 和可选整体 `offset_m`。 | 5、6 |
+| `duplicate_entities` | `copies` 逐项给 `key`、`name`、`source_entity_id` 和可选变换。保留原模板与已有图挂载。适用于已校准的普通实例。 | 5、6 |
+| `place_model_instances` | 从同版本模式的 `source` GIL 中选择普通原生平台模型实例。每个 `instances` 条目填写 `key`、`name`、`model_entity_id`、`position_m`。 | 5、6 |
+| `create_object_templates` | 从 `source` 绑定纯动态原生模型样本，给 `version`、`mode`。 `templates` 每项为 `key`、`name`、`model_entity_id`，可选 `scale` 和支持的白盒 `parts`。 | 4、6、27 |
+| `instantiate_object_templates` | `instances` 项逐个设置 `template_id` 或同一补丁前序的 `template_key`，再给 `key`、`name`、`position_m` 及可选变换。实例装饰物使用独立 ID 并保留模板来源。 | 5、6、27 |
 | `set_object_transform` | `section:5` 与 `entity_id` 选择一个已放置的普通静态对象，给 `position_m`、`rotation_deg`、`scale` 中要改的值。 | 5 |
+| `set_entity_transform` | `section:5` 和 `entity_id` 选择已有实例，支持已识别的平台物件与本地元件实例。提供要改的 `position_m`、`rotation_deg` 或 `scale`。基底和结果均须通过严格原生审计与工程引用检查。 | 5 |
 | `append_decorations` | `section:4` 与 `entity_id` 选择已有装饰列表的动态白盒或空模型元件。`parts` 每项给 `shape_id`、`name`、局部 `position_m`，可选 `rotation_deg`、`scale`、`color_rgb`、`solid`。 | 4、27 |
 | `set_decoration` | `section`、`entity_id`、`decoration_id` 唯一定位现有零件，再给要改的局部变换或 `color_rgb`。 | 27 |
-| `add_box_trigger` | `entity_id` 选择已有图组件、尚无触发器的普通动态场景对象。设置 `size_m` 和可选 `offset_m`。触发器 ID 为 1，匹配进入的角色实体。 | 5 |
+| `add_box_trigger` | `entity_id` 选择已有图组件、尚无触发器的普通动态场景对象。可传 `section:4` 编辑模板。设置 `size_m` 和可选 `offset_m`。触发器 ID 为 1，匹配进入的角色实体。 | 4 或 5 |
+| `add_native_movers` | `entity_id` 与 `version:"7.2"`、`mode:"beyond"`。 `motions` 填有名称的直线运动或路径，路径项可给 `waypoints:[{position_m,rotation_deg,seconds}]` 和 `loop`。 `position_m` 为初始物件的相对偏移。独立使用 `follow:true` 加跟随组件并由节点图分配目标。 | 4 或 5 |
 | `set_linear_motion` | `entity_id`、`motion_id` 选择已有的直线运动器，显式给 `version`、`mode`、`seconds` 与 `displacement_m`。保留运动器身份和启动设置。 | 5 |
+| `set_native_preset_state` | `section`、`entity_id` 与 `state_id` 选择模型已有的状态记录，写入对应模型的 `value`。取值以该模型预设为准。运行时可用实体创建图设置初始模型显示，并用同一组节点切换可见性。 | 4 或 5 |
 | `set_scene_camera` | `camera_id` 选择已有模板，给 `distance_m` 或 `fov_deg`。更新已校准的关联距离，保留镜头类型和安装关系。 | 18 |
 | `set_scene_point` | `point_id` 选择已有预设点或被出生点引用的预设点，给 `position_m` 或 `rotation_deg`。 | 11 |
+| `add_scene_points` | 为 `points` 的每项填写 `name`、`position_m`、可选 `rotation_deg` 和 `point_id`。添加后可绑定为复苏检查点。 | 11 |
 | `set_terrain_cells` | `terrain_id`、`version:"7.2"`、`mode:"beyond"`。`cells` 每项提供 `index:[x,z]` 和可选矩形另一角 `to:[x,z]`，以及要改的层数、材质、水体、路径或直线斜坡。 | 7 |
 | `set_fixed_environment_hour` | `environment_id`、`hour` 调整已有无曲线固定天空的时间项。 | 15 |
 | `set_point_light` | `light_id`，提供 `position_m`、`radius_m`、`range_m`、`intensity` 中要改的值。环境与光源的既有链接保留。 | 15 |
+| `add_point_light` | `environment_id`、`name`、`position_m` 创建点光源并登记到指定环境。可设 `radius_m`、`range_m`、`intensity`。 | 6、15 |
+
+`set_entity_transform` 使用场景查询返回的 `spatial.transform`。向量均按原生 XYZ 顺序，Y 向上。位置单位为米，旋转为原生角度，缩放各轴为正数。只改指定向量，保留目标的其余组件。用 `native diff --allow-fields 5` 检查输出，`spatial_objects` 给出已识别的空间差异。动态物件写入的是初始布设，运行中节点图仍可更新它。
 
 白盒形状 ID 支持长方体 `10009001`、球体 `10009002`、圆柱 `10009008` 和圆锥 `10009009`。颜色为 `#RRGGBB`。新增装饰写到元件，场景已有实例的装饰列表独立保留。`scene preview LEVEL.gil --template-id ID --out PREVIEW` 用 Pillow 绘制俯视和侧视中零件的轴对齐近似。
+
+`scene export-whitebox LEVEL.gil --template-id ID --out OUTPUT` 将原点空模型元件的白盒零件另存为独立 `whitebox.gia`。它随包记录形状、局部变换、颜色和依赖索引。使用 `"scene":{"whitebox":{"source":"@level","template_id":ID}}` 可在制作任务最终 GIL 上执行相同导出。交互、组件和每个实例的修改由 GIL 版本承载。 [原生玩法制作](native-gameplay.md)
 
 查看地形栅格时用 `scene inspect LEVEL.gil --terrain-id ID`。每格 5 米，每层 2.5 米，可读取格心、顶部高度、水面、路径及斜坡。平格用顶部高度定位布景，斜坡的落点高度需要按落点复核。写入只改已有格。材质使用 `grass`、`tile`、`sand`、`stone_wall`、`snow`。地块 `layers` 加上 `water_layers` 的合计从 1 到 20。道路用 `path:true`，水体用 `water_layers`，直线斜坡用 `slope` 的 `+z`、`+x`、`-z`、`-x` 或 `flat`，方向对应下降的一侧。水体和道路、直线斜坡分格布设。先保存关卡副本，再按需要烘焙寻路。
 

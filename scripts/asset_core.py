@@ -116,27 +116,29 @@ def compile_tiles(image, *, width, height, alpha_min=128, columns=64, max_bytes=
 def text_tiles(image, columns, max_bytes, cell, fit):
     width,height=image.size
     pixels=image.load()
-    def markup(colors):
-        runs=[]
-        for color in colors:
-            if runs and runs[-1][0]==color:runs[-1][1]+=1
-            else:runs.append([color,1])
-        return ''.join('<color=#%02X%02X%02X>'%color+'■'*count+'</color>' for color,count in runs)
+    tag_bytes=len('<color=#000000></color>')
+    pixel_bytes=len('■'.encode('utf-8'))
     tiles=[]
     for y in range(height):
         x=0
         while x<width:
             if not pixels[x,y][3]:x+=1;continue
-            start=x; colors=[]
-            while x<width and pixels[x,y][3] and len(colors)<columns:
-                candidate=colors+[pixels[x,y][:3]]
-                if len(markup(candidate).encode('utf-8'))>max_bytes:
-                    if not colors:raise ValueError('Byte budget cannot hold one colored pixel')
+            start=x;runs=[];used_bytes=0
+            while x<width and pixels[x,y][3] and x-start<columns:
+                color=pixels[x,y][:3]
+                new_run=not runs or runs[-1][0]!=color
+                increment=pixel_bytes + (tag_bytes if new_run else 0)
+                if used_bytes+increment>max_bytes:
+                    if not runs:raise ValueError('Byte budget cannot hold one colored pixel')
                     break
-                colors=candidate;x+=1
-            text=markup(colors)
-            tiles.append({'x':start*cell,'y':y*cell,'width':(columns if fit=='fixed' else len(colors))*cell,
-                          'height':cell,'columns':len(colors),'text':text,'font_size':cell})
+                if new_run:runs.append([color,1])
+                else:runs[-1][1]+=1
+                used_bytes+=increment
+                x+=1
+            text=''.join('<color=#%02X%02X%02X>'%color+'■'*count+'</color>' for color,count in runs)
+            count=x-start
+            tiles.append({'x':start*cell,'y':y*cell,'width':(columns if fit=='fixed' else count)*cell,
+                          'height':cell,'columns':count,'text':text,'font_size':cell})
     return tiles
 
 

@@ -202,7 +202,7 @@ def build(source,spec_path,out,resume=None,steps=None,initial=None):
             quality={'target_error':cfg['target_error'],'target_reached':reached,'stop_reason':stop_reason}
             record.update(quality)
             preview.save(dest/'preview.png')
-            write_json(dest/'asset.json',{'schema':1,'generator':'genshin-ugc-assets','target':'rectangles','grid_size':list(image.size),'controls':len(data['rects']),'data':data})
+            write_json(dest/'asset.json',{'schema':1,'generator':'genshin-ugc-assets','target':'rectangles','grid_size':list(image.size),'controls':len(data['rects']),'parameters':{'max_controls':quotas[i]},'data':data})
             if cfg['gia']:
                 from native_assets import export_rectangles
                 (dest/'asset.gia').write_bytes(export_rectangles(data,cfg['anchor'],name))

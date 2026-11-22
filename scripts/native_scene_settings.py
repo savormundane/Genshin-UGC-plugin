@@ -2,10 +2,10 @@
 import struct
 
 from authoring_io import schema
-from level_authoring import msg, set_section
+from level_authoring import flt, integer, msg, set_section, text
 from level_inventory import container, fields, unique, vals
 from native_core import get, replace_message
-from native_scene import read_vector, typed_record, vector
+from native_scene import encode_vector, read_vector, typed_record, vector
 from native_scene_edits import patch_fields, patch_vectors, select_record
 
 TERRAIN_MATERIALS = {'grass': 0, 'tile': 1, 'sand': 2, 'stone_wall': 4, 'snow': 5}
@@ -77,6 +77,46 @@ def point_settings(record, spawns):
 
 def spawn_references(section):
     return {get(entry, 2, 0) for entry in vals(fields(get(section, 3, default=b'')), 2)}
+
+
+def add_scene_points(data, op):
+    schema(op, ('op', 'points'), ('op', 'points'))
+    if not isinstance(op['points'], list) or not op['points']:
+        raise ValueError('Provide at least one preset point')
+    _, root = container(data)
+    section = unique(root, 11)
+    if section is None:
+        raise ValueError('Calibrated level settings section required')
+    points = get(section, 5, default=b'')
+    spawns = spawn_references(section)
+    existing = [point_settings(p, spawns) for p in vals(fields(points), 1)]
+    ids = {p['point_id'] for p in existing}
+    if len(ids) != len(existing) or None in ids or not spawns.issubset(ids):
+        raise ValueError('Preset point identities or spawn references are inconsistent')
+    names = {p['name'] for p in existing}
+    records = []
+    created = []
+    next_id = max({0x40000000, *ids}) + 1
+    for point in op['points']:
+        schema(point, ('point_id', 'name', 'position_m', 'rotation_deg'), ('name', 'position_m'))
+        name = point['name']
+        if not isinstance(name, str) or not name.strip() or '\0' in name or name in names:
+            raise ValueError('Preset point name must be unique and nonempty')
+        while next_id in ids:
+            next_id += 1
+        ident = point.get('point_id', next_id)
+        if type(ident) is not int or not 0x40000001 <= ident < 0x40400000 or ident in ids:
+            raise ValueError('Preset point ID is already used or outside the calibrated range')
+        ids.add(ident)
+        names.add(name)
+        position = vector(point['position_m'], 'Preset point position')
+        rotation = vector(point.get('rotation_deg', [0, 0, 0]), 'Preset point rotation')
+        record = (integer(1, ident) + msg(2, encode_vector(position)) + msg(3, encode_vector(rotation))
+                  + text(501, name) + integer(502, 1))
+        records.append(msg(1, record))
+        created.append(point_settings(record, spawns))
+    result = patch_fields(section, {5: (2, points + b''.join(records))})
+    return set_section(data, 11, result), {'points': created}
 
 
 def set_scene_point(data, op):
@@ -303,6 +343,39 @@ def set_point_light(data, op):
     }
 
 
+def add_point_light(data, op):
+    from native_gameplay import config_name,config_payload,config_record,config_records,name_value,next_config_id,number,replace_payload
+    from native_scene_edits import append_library_entries
+    schema(op, ('op','environment_id','name','position_m','radius_m','range_m','intensity'),
+           ('op','environment_id','name','position_m'))
+    _, root = container(data)
+    section,library = unique(root,15,default=b''),unique(root,6)
+    if library is None:raise ValueError('Light creation requires a native resource library')
+    sky = config_record(section,op['environment_id'],26)
+    _,_,body = config_payload(sky,70,75)
+    listing = get(body,2,default=b'')
+    names = {config_name(r) for r in config_records(section) if get(r,2,0)==27}
+    name = name_value(op['name'])
+    if name in names:raise ValueError('Point light name must be unique')
+    position = vector(op['position_m'],'Point light position')
+    radius = number(op.get('radius_m',10),'Light radius')
+    visibility = number(op.get('range_m',100),'Light range')
+    intensity = number(op.get('intensity',3),'Light intensity')
+    if radius<=0 or visibility<=0:raise ValueError('Point light range and radius must be positive')
+    ident = next_config_id(section,1182793728)
+    new_light = integer(1,ident)+integer(2,27)+msg(4,integer(1,1)+msg(11,text(1,name)))
+    effect = integer(1,3)+flt(2,radius)+flt(3,intensity)
+    point = flt(2,visibility)+msg(3,encode_vector(position))+msg(4)+msg(51,effect)
+    new_light += msg(4,integer(1,69)+msg(74,msg(1,msg(1,point)+integer(2,1))))
+    slot = max((get(r,1,0,0) for r in vals(fields(listing),1)),default=0)+1
+    linked = listing+msg(1,integer(1,slot)+integer(2,ident))
+    updated = replace_payload(sky,70,75,patch_fields(body,{2:(2,linked)}))
+    section = replace_message(section,1,sky,updated)+msg(1,new_light)
+    data = set_section(data,15,section)
+    return set_section(data,6,append_library_entries(library,55,5300,[ident],create=True)), {
+        'environment_id':op['environment_id'],'light':light_settings(new_light)}
+
+
 def inspect_settings(root):
     level = unique(root, 11, default=b'')
     spawns = spawn_references(level)
@@ -317,5 +390,6 @@ def inspect_settings(root):
 
 
 SETTINGS_EDITS = {fn.__name__: fn for fn in (
-    set_scene_camera, set_scene_point, set_terrain_cells, set_fixed_environment_hour, set_point_light,
+    set_scene_camera, set_scene_point, add_scene_points, set_terrain_cells, set_fixed_environment_hour, set_point_light,
+    add_point_light,
 )}

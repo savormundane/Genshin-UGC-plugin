@@ -1,8 +1,10 @@
 """Restricted interpreter of emitted native graphs. Unknown nodes fail explicitly."""
+from collections import Counter, defaultdict
 from copy import deepcopy
+import math
 import struct
 from native_core import model,get,slot,ref,node_catalog,definition_id,port_type
-from level_inventory import fields,vals
+from level_inventory import container,fields,vals
 
 CONTAINER_TYPES=(7,8,9,10,11,13,15,22,23,24,25,26,27)
 
@@ -33,33 +35,85 @@ def constant(value):
     if cls is None:return 0
     raise ValueError('Unsupported native constant class '+str(cls))
 
+class UncalibratedVariable(ValueError):
+    def __init__(self, entity, variable, reason):
+        self.entity=entity
+        self.variable=variable
+        super().__init__(f'Native variable {variable!r} on entity {entity} has no calibrated initial value: {reason}')
+
+
 class NativeModel:
-    def __init__(self,data,initial=None,graph_ids=None,instances=None,entity_guids=None,level_entity=None):
-        self.model=model(data);self.db=deepcopy(initial or {});self.persisted=deepcopy(self.db);self.out=[];self.logs=[];self.achievements={};self.work=0
+    def __init__(self,data,initial=None,graph_ids=None,instances=None,entity_guids=None,level_entity=None,*,
+                 mounted_only=False,timer_index_base=1):
+        self.model=model(data);self.out=[];self.logs=[];self.achievements={};self.work=0
         self.entity_guids={}
         for entity,guid in (entity_guids or {}).items():
             if not str(entity).isdigit() or type(guid)!=int or guid<0:raise ValueError('Invalid entity GUID mapping')
             self.entity_guids[str(entity)]=guid
         self.event_log=[];self.created_entities=set();self.removed_entities=set();self.level_entity=level_entity
+        self.model_visibility={}
+        self.scene_data=data;self.scene_objects=None;self.linear_motions={}
+        entity_counts=Counter(e['entity_id'] for e in self.model['entities'] if e['section']==5)
+        self.entities={ident for ident,count in entity_counts.items() if ident is not None and count==1}
         self.roles={};self.signal_sizes={};self.graphs=[g for g in self.model['graphs']if graph_ids is None or g['id']in graph_ids]
         graph_map={g['id']:g for g in self.graphs}
-        mounts=[{'graph_id':m['graph_id'],'owner_entity':m['entity_id']}for m in self.model['mounts']if m['section']==5 and m['graph_id']in graph_map]
+        origins = defaultdict(list)
+        template_counts = Counter(e['entity_id'] for e in self.model['entities'] if e['section'] == 4)
+        template_mounts = defaultdict(list)
+        for mount in self.model['mounts']:
+            graph, owner = mount['graph_id'], mount['entity_id']
+            if graph not in graph_map:
+                continue
+            if mount['section'] == 5:
+                origins[graph,owner].append({'section':5,'entity_id':owner})
+            elif template_counts[owner] == 1:
+                template_mounts[owner].append(graph)
+        parent_templates = {}
+        _, root = container(data)
+        for section in vals(root,5):
+            for row in vals(fields(section),1):
+                owner = get(row,1,0)
+                locators = vals(fields(row),2)
+                if owner not in self.entities or len(locators) != 1 or get(locators[0],2,0,0) != 0:
+                    continue
+                template = get(locators[0],1,0)
+                if template_counts[template] == 1:
+                    parent_templates[owner] = template
+        if instances is None or mounted_only:
+            for owner,template in parent_templates.items():
+                for graph in template_mounts.get(template,()):
+                    origins[graph,owner].append({'section':4,'entity_id':template})
+        self.initialize_variables(initial, parent_templates, {k for k,v in template_counts.items() if k is not None and v==1})
+        mounts = [{'graph_id':graph,'owner_entity':owner} for graph,owner in origins]
+        if mounted_only:
+            if self.model['format']!='gil' or not graph_ids or set(graph_ids)!=set(graph_map):
+                raise ValueError('Native-only simulation requires exact graph IDs from a GIL')
+            if any(get(get(g['raw'],1,default=b''),2,0)!=20000 for g in self.graphs):
+                raise ValueError('Native-only simulation requires ordinary server graphs')
+            if (any(owner not in self.entities or len(sources)!=len({source['section'] for source in sources})
+                    for (_,owner),sources in origins.items()) or {graph for graph,_ in origins}!=set(graph_map)):
+                raise ValueError('Selected server graph must have unique native placed-entity mounts')
         if instances is not None:
             seen=set()
             for item in instances:
                 if set(item)!={'graph_id','owner_entity'}or item['graph_id']not in graph_map or type(item['owner_entity'])!=int:raise ValueError('Invalid graph instance')
                 key=(item['graph_id'],item['owner_entity'])
                 if key in seen:raise ValueError('Duplicate graph instance')
+                if mounted_only and key not in origins:
+                    raise ValueError('Selected graph instance is not mounted to that entity in the GIL')
                 seen.add(key)
             mounts=instances
+        if mounted_only and {m['graph_id'] for m in mounts}!=set(graph_map):
+            raise ValueError('Select a mounted instance for every requested graph')
+        self.mount_origins=[{**m,'origins':origins.get((m['graph_id'],m['owner_entity']),[])} for m in mounts]
         self.instances=[(graph_map[m['graph_id']],m['owner_entity'])for m in mounts]
         if level_entity is not None and(type(level_entity)is not int or level_entity<0 or not any(owner==level_entity for _,owner in self.instances)):
             raise ValueError('Level entity requires a modeled graph instance')
         mounted={m['graph_id']for m in mounts}
         self.instances.extend((g,None)for g in self.graphs if g['id']not in mounted)
-        self.catalog=node_catalog()[0];self.locals={};self.executed_graphs=set()
+        self.catalog=node_catalog()[0];self.locals={};self.executed_graphs=set();self.executed_instances=set()
         from native_timers import TimerClock
-        self.timers=TimerClock()
+        self.timers=TimerClock(timer_index_base)
         self.data_edges={}
         for graph in self.graphs:
             incoming={}
@@ -96,6 +150,48 @@ class NativeModel:
                     actual=constant(get(signal_pin,3,default=b''))if signal_pin else None
                     if actual not in self.signal_sizes:raise ValueError('Unknown native listener signal '+str(actual))
                 if actual is not None:self.listeners.setdefault(actual,[]).append((graph,owner,event_id))
+    def initialize_variables(self, initial, parent_templates, template_ids):
+        from native_variables import scalar_default, scalar_payload
+        declarations=defaultdict(dict)
+        for record in self.model['custom_variables']['records']:
+            values=declarations[record['section'],record['entity_id']]
+            name=record['name']
+            if name in values:
+                values[name]=(False, 'ambiguous declarations')
+                continue
+            try:
+                values[name]=(True,scalar_default(scalar_payload(record),record['type_id']))
+            except (ValueError,struct.error) as exc:
+                values[name]=(False,str(exc))
+        self.db={}
+        self.uncalibrated_variables={}
+        owners=self.entities | template_ids
+        for owner in sorted(owners):
+            defaults=declarations.get((4,parent_templates.get(owner,owner if owner not in self.entities else None)),{})
+            overrides=declarations.get((5,owner),{}) if owner in self.entities else {}
+            for name,(known,value) in (defaults | overrides).items():
+                if known:
+                    self.db.setdefault(str(owner),{})[name]=value
+                else:
+                    self.uncalibrated_variables[str(owner),name]=value
+        if initial is not None:
+            if not isinstance(initial,dict) or any(not isinstance(v,dict) for v in initial.values()):
+                raise ValueError('Native initial variables require an object of entity variable maps')
+            for owner,values in initial.items():
+                self.db.setdefault(str(owner),{}).update(deepcopy(values))
+        self.persisted=deepcopy(self.db)
+
+    def variable(self, entity, name, *, fallback_type=None):
+        values=self.db.get(str(entity),{})
+        if name in values:
+            return values[name]
+        reason=self.uncalibrated_variables.get((str(entity),name))
+        if reason is not None:
+            raise UncalibratedVariable(entity,name,reason)
+        if fallback_type is not None:
+            return default_value(fallback_type)
+        raise ValueError(f'Native variable {name!r} is absent on entity {entity}')
+
     def title(self,n):
         ident=definition_id(n,self.model['definitions']);d=self.model['definitions'].get(ident)
         return get(d,200,default=b'').decode('utf-8')if d else self.catalog.get(ident,{}).get('Name','Unknown_'+str(ident))
@@ -152,9 +248,26 @@ class NativeModel:
         for name,listeners in self.listeners.items():self.listeners[name]=[item for item in listeners if item[1]!=entity]
         for key in list(self.timers.entries):
             if key[0]==entity:del self.timers.entries[key]
+        self.linear_motions.pop(entity,None)
         emitted=self._dispatch(pending)
         self.event_log.append({'lifecycle':'entity_removed','entity':entity,'guid':guid,'time':self.timers.time,'handlers':len(pending)})
         return emitted
+
+    def position_m(self,entity):
+        if entity not in self.entities or entity in self.removed_entities:
+            raise ValueError('Position requires a live placed entity')
+        if self.scene_objects is None:
+            from level_inventory import container
+            from native_scene import spatial_objects
+            self.scene_objects=spatial_objects(*container(self.scene_data))
+        detail=self.scene_objects.get(('entity',entity))
+        if detail is None:
+            raise ValueError('Entity position is outside the calibrated scene layout')
+        motion=self.linear_motions.get(entity)
+        if motion is None:
+            return detail['transform']['position_m'].copy()
+        elapsed=min(self.timers.time-motion['time'],motion['seconds'])
+        return [origin+speed*elapsed for origin,speed in zip(motion['position_m'],motion['velocity_m_s'])]
 
     def tick(self,dt):
         emitted=[]
@@ -174,6 +287,7 @@ class NativeModel:
         # FIFO model scheduling: generated variable events run after the active event flow.
         for graph,owner,event_id,source,params,change in pending:
             self.executed_graphs.add(graph['id'])
+            self.executed_instances.add((graph['id'],owner))
             nodes=graph['nodes'];self.locals={};constructed={};active=set();loops={}
             def pin(n,k,i):return next((p for p in vals(fields(n),4)if slot(p)==(k,i)),None)
             def inp(n,i):
@@ -216,8 +330,7 @@ class NativeModel:
                     if title=='Get_Custom_Variable':
                         entity,variable_name=inp(n,0),inp(n,1)
                         if entity in self.removed_entities:raise ValueError('Variable target entity removed')
-                        if variable_name in self.db.get(str(entity),{}):return self.db[str(entity)][variable_name]
-                        return default_value(port_type(n,4,0,self.model['definitions']))
+                        return self.variable(entity,variable_name,fallback_type=port_type(n,4,0,self.model['definitions']))
                     if title=='Get_Corresponding_Value_From_List':
                         value,index=inp(n,0),inp(n,1)
                         if type(index)!=int or not 0<=index<len(value):raise ValueError('Native list index out of range')
@@ -283,32 +396,83 @@ class NativeModel:
                         follow(n,1);return
                     elif title=='Break_Loop':pass
                     elif title in('Start_Timer','Pause_Timer','Resume_Timer','Stop_Timer'):
-                        if inp(n,0)in self.removed_entities:raise ValueError('Timer target entity removed')
+                        target=inp(n,0)
+                        if target in self.removed_entities:raise ValueError('Timer target entity removed')
                         if title=='Start_Timer':
-                            if (pin(n,3,4)is not None or (ident,4)in self.data_edges[graph['id']])and inp(n,4)!=0:raise ValueError('Timer extra GUID input is not modeled')
-                            self.timers.command('start',inp(n,0),inp(n,1),inp(n,2),inp(n,3))
-                        else:self.timers.command(title.split('_')[0].lower(),inp(n,0),inp(n,1))
+                            source_guid=self.data_edges[graph['id']].get((ident,4))
+                            if pin(n,3,4) is not None or source_guid is not None:
+                                guid=inp(n,4)
+                                if guid!=0:
+                                    from native_ports import server_builtin
+                                    if (not server_builtin(n,79) or source_guid!=(event_id,1) or target!=owner
+                                            or guid!=self.entity_guids.get(str(owner))):
+                                        raise ValueError('Timer extra GUID must match the target event owner')
+                            self.timers.command('start',target,inp(n,1),inp(n,2),inp(n,3))
+                        else:self.timers.command(title.split('_')[0].lower(),target,inp(n,1))
+                    elif title=='Multiple_Branches' and self.builtin_event(n,3):
+                        selected,labels=inp(n,0),inp(n,1)
+                        if (type(selected) not in (int,str) or not isinstance(labels,list)
+                                or any(type(label) is not type(selected) for label in labels)
+                                or len(set(labels))!=len(labels)):
+                            raise ValueError('Multiple branches require distinct typed case labels')
+                        branch=labels.index(selected)+1 if selected in labels else 0
+                    elif title=='Add_Uniform_Basic_Linear_Motion_Device' and self.builtin_event(n,84):
+                        from native_ports import server_builtin
+                        if not server_builtin(n,84):
+                            raise ValueError('Uncalibrated linear motion node locator')
+                        target,name,seconds,speed=(inp(n,i) for i in range(4))
+                        if (type(target) is not int or not isinstance(name,str) or not name
+                                or type(seconds) not in (int,float) or not math.isfinite(seconds) or seconds<=0
+                                or not isinstance(speed,dict) or set(speed)!=set('xyz')
+                                or any(type(v) not in (int,float) or not math.isfinite(v) for v in speed.values())):
+                            raise ValueError('Linear motion requires an entity, name, positive duration and finite velocity')
+                        now=self.timers.time
+                        prior=self.linear_motions.get(target)
+                        if prior and now<prior['time']+prior['seconds']:
+                            raise ValueError('Overlapping linear motions are outside the modeled scope')
+                        position=self.position_m(target)
+                        if self.scene_objects['entity',target]['static']:
+                            raise ValueError('Linear motion requires a dynamic placed entity')
+                        motion={'motion':name,'entity':target,'time':now,'seconds':seconds,
+                                'graph':graph['id'],'node':ident,'position_m':position,
+                                'velocity_m_s':[speed[axis] for axis in 'xyz']}
+                        self.linear_motions[target]=motion
+                        self.event_log.append(motion)
+                    elif title=='Activate_Disable_Model_Display' and self.builtin_event(n,308):
+                        from native_ports import server_builtin
+                        if not server_builtin(n,308):
+                            raise ValueError('Uncalibrated model visibility node locator')
+                        target,visible=inp(n,0),inp(n,1)
+                        if type(target) is not int or target not in self.entities or target in self.removed_entities or type(visible) is not bool:
+                            raise ValueError('Model visibility requires a placed entity and a Boolean value')
+                        if (port_type(n,3,0,self.model['definitions']),port_type(n,3,1,self.model['definitions']))!=(1,4):
+                            raise ValueError('Model visibility node input contract differs')
+                        self.model_visibility[target]=visible
+                        self.event_log.append({'entity':target,'model_visible':visible,'graph':graph['id'],
+                                               'node':ident,'time':self.timers.time})
                     elif title=='Set_Custom_Variable':
                         target,key,value=inp(n,0),inp(n,1),inp(n,2)
                         if target in self.removed_entities:raise ValueError('Variable target entity removed')
                         typ=port_type(n,3,2,self.model['definitions'])
                         if typ is None:raise ValueError('Unresolved custom variable value type')
-                        before=self.db.get(str(target),{}).get(key)
-                        if before is None and typ not in CONTAINER_TYPES:before=default_value(typ)
                         trigger=inp(n,3)if pin(n,3,3)is not None else True
                         if type(trigger)is not bool:raise ValueError('Variable event trigger must be boolean')
                         if pin(n,3,4)is not None and inp(n,4)!=trigger:raise ValueError('Variable event trigger mirror mismatch')
-                        self.db.setdefault(str(target),{})[key]=value
                         if trigger:
-                            change_value={'name':key,'type':typ,'before':deepcopy(before),'after':deepcopy(value)}
+                            change_value=None
                             for listener_graph,listener_owner in self.instances:
                                 if listener_owner!=target:continue
                                 for listener_id,listener in listener_graph['nodes'].items():
                                     if self.title(listener)!='When_Custom_Variable_Changes':continue
                                     listener_type=port_type(listener,4,3,self.model['definitions'])
                                     if listener_type is None:raise ValueError('Unresolved variable event type')
-                                    if listener_type==typ:pending.append((listener_graph,listener_owner,listener_id,None,[],change_value))
+                                    if listener_type!=typ:continue
+                                    if change_value is None:
+                                        before=None if typ in CONTAINER_TYPES else self.variable(target,key,fallback_type=typ)
+                                        change_value={'name':key,'type':typ,'before':deepcopy(before),'after':deepcopy(value)}
+                                    pending.append((listener_graph,listener_owner,listener_id,None,[],change_value))
                             self.event_log.append({'entity':target,'variable':key,'type':typ})
+                        self.db.setdefault(str(target),{})[key]=value
                     elif title in('Clear_List','Insert_Value_Into_List','Remove_Value_From_List','Modify_Value_in_List','Concatenate_List'):
                         value=inp(n,0)
                         if not isinstance(value,list):raise ValueError('Native list operation requires a list')
@@ -337,7 +501,7 @@ class NativeModel:
                     elif role and role[1]==3:
                         payload=deepcopy([inp(n,1+i)for i in range(len(role[2]))])
                         emitted.append({'name':role[0],'params':payload,'target':inp(n,0)})
-                    else:raise ValueError('Unsupported native execution '+title)
+                    else:raise ValueError(f"Unsupported native execution {title} in graph {graph['id']}, node {ident}")
                 follow(n,branch)
             execute(event_id)
         self.out.extend(emitted);return emitted

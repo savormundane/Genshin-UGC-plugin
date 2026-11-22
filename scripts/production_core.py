@@ -120,22 +120,25 @@ def replace_lua(data,mapping,code):
     if unique(fields(newentry[2]),5)!=code:raise ValueError('Lua readback mismatch')
     return result
 
-def _produce(spec_path,out,evidence):
+def _produce(spec_path,out,evidence,*,include_runtime=True,fallback_gil=None):
     from asset_pipeline import lua
-    path=Path(spec_path).resolve();base=path.parent;job=load(path)
+    from authoring_io import ProductionInputs, require_active_baseline
+    path=Path(spec_path).resolve();base=path.parent
+    job_bytes=path.read_bytes();job=json.loads(job_bytes.decode('utf-8-sig'))
     if job.get('schema')==2:
         from production_v2 import produce as produce_v2
         evidence['v3_pipeline']={'status':'not_checked','reason':'in_progress'}
-        return produce_v2(path,out,evidence)
+        return produce_v2(path,out,evidence,job=job,job_digest=sha(job_bytes))
     keys(job,('schema','client','protocol','protocol_native','assets','animation','graphs','gil','level'),('schema',))
     if type(job['schema'])!=int or job['schema']!=1 or len(job)==1:raise ValueError('No production stages')
     if 'protocol_native' in job and (type(job['protocol_native'])!=bool or 'protocol' not in job):raise ValueError('protocol_native requires boolean and protocol')
     out=Path(out).resolve()
     if out.exists():raise ValueError('输出目录已存在：'+str(out)+'；可用 produce --next 创建新编号目录，或指定新的 --out；原目录不会被覆盖')
     evidence['specification']={'status':'passed','reason':''}
-    inputs={str(path):sha(path.read_bytes())};stages=[]
+    inputs=ProductionInputs({str(path):sha(job_bytes)});stages=[]
     def read(value):
-        p=input_path(value,base);raw=p.read_bytes();inputs[str(p)]=sha(raw);return raw
+        p=input_path(str(value) if isinstance(value,Path) else value,base)
+        raw=p.read_bytes();inputs.bind(p,sha(raw),'production');return raw
     def emit(dest,v):dest.write_text(json.dumps(v,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     out.parent.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='ugc-production-',dir=out.parent) as td:
@@ -150,8 +153,8 @@ def _produce(spec_path,out,evidence):
             from level_authoring import compile_spec
             state('level_generation','not_checked','in_progress')
             keys(job['level'],('spec',),('spec',));level_path=input_path(job['level']['spec'],base)
-            inputs[str(level_path)]=sha(level_path.read_bytes())
-            data,binding=compile_spec(load(level_path),level_path.parent);inputs.update(binding['source_sha256'])
+            data,binding=compile_spec(json.loads(read(level_path).decode('utf-8-sig')),level_path.parent)
+            inputs.merge(binding['source_sha256'],'level')
             (stage/'level.gil').write_bytes(data);emit(stage/'client-bindings.json',binding)
             (stage/'template_indices.lua').write_text('return '+lua(binding['template_indices'])+'\n',encoding='utf-8')
             stages.append('native_level_generation');state('level_generation','passed');state('client_bindings','passed')
@@ -163,11 +166,13 @@ def _produce(spec_path,out,evidence):
                 keys(item,('name','source','options'),('name','source'))
                 name=item['name']
                 if not isinstance(name,str) or not re.fullmatch(r'[A-Za-z0-9_-]+',name) or name in generated_assets:raise ValueError('Invalid/duplicate asset name')
-                src=input_path(item['source'],base);inputs[str(src)]=sha(src.read_bytes());destination=stage/'assets'/name
-                generate(src,destination,**item.get('options',{}));generated_assets[name]=destination/'asset.json'
+                src=inputs.track(input_path(item['source'],base),'assets');destination=stage/'assets'/name
+                asset=generate(src,destination,**item.get('options',{}))
+                inputs.bind(src,asset['source_sha256'],'assets');generated_assets[name]=destination/'asset.json'
             stages.append('asset_generation');state('assets','passed',count=len(generated_assets))
         else:state('assets','not_applicable')
-        runtime=PLUGIN/'scripts/production_runtime.lua';(stage/'runtime.lua').write_bytes(runtime.read_bytes())
+        if include_runtime:
+            runtime=PLUGIN/'scripts/production_runtime.lua';(stage/'runtime.lua').write_bytes(runtime.read_bytes())
         if 'protocol' in job:
             state('protocol_contract','not_checked','in_progress')
             v=protocol(job['protocol']);emit(stage/'protocol.json',v);(stage/'protocol.lua').write_text('return '+lua(v)+'\n',encoding='utf-8');stages.append('protocol_validation_and_export')
@@ -184,26 +189,38 @@ def _produce(spec_path,out,evidence):
                     key=name[7:]
                     if key not in generated_assets:raise ValueError('Unknown generated asset: '+key)
                     frame['asset']=str(generated_assets[key])
-            v=animation(animation_spec,base);inputs.update({k:h for k,h in v.pop('source_sha256').items() if not Path(k).is_relative_to(stage)});emit(stage/'animation.json',v);(stage/'animation.lua').write_text('return '+lua(v)+'\n',encoding='utf-8');stages.append('animation_validation_and_export');state('animation','passed')
+            v=animation(animation_spec,base);inputs.merge({k:h for k,h in v.pop('source_sha256').items() if not Path(k).is_relative_to(stage)},'animation');emit(stage/'animation.json',v);(stage/'animation.lua').write_text('return '+lua(v)+'\n',encoding='utf-8');stages.append('animation_validation_and_export');state('animation','passed')
+        active_gil=stage/'level.gil' if 'level' in job else fallback_gil
         if 'graphs' in job:
             state('graphs','not_checked','in_progress')
             from node_build import build
-            keys(job['graphs'],('spec',),('spec',));p=input_path(job['graphs']['spec'],base);inputs[str(p)]=sha(p.read_bytes())
-            graph_spec=load(p)
+            keys(job['graphs'],('spec',),('spec',));p=input_path(job['graphs']['spec'],base)
+            graph_spec=json.loads(read(p).decode('utf-8-sig'))
             if layout is not None:
                 resources=stage/'protocol-resources'
-                if graph_spec.get('project_resources'):shutil.copytree(input_path(graph_spec['project_resources'],p.parent),resources)
-                else:resources.mkdir()
-                shutil.copytree(stage/'protocol-native/resources',resources,dirs_exist_ok=True)
+                from graph_resources import merge_resources
+                roots=[input_path(graph_spec['project_resources'],p.parent)] if graph_spec.get('project_resources') else []
+                receipt=merge_resources([*roots,stage/'protocol-native/resources'],resources)
+                inputs.merge({key:value for key,value in receipt.items() if not Path(key).is_relative_to(stage)},'graph_resources')
                 graph_spec['project_resources']=str(resources)
                 graph_spec['include_sections']=list(dict.fromkeys(graph_spec.get('include_sections',['graphs'])+['signals']))
             for item in graph_spec['graphs']:item['source']=str(input_path(item['source'],p.parent))
-            if graph_spec.get('base_gil'):graph_spec['base_gil']=str(input_path(graph_spec['base_gil'],p.parent))
-            elif 'level' in job:graph_spec['base_gil']=str(stage/'level.gil')
+            if graph_spec.get('base_gil'):
+                requested=input_path(graph_spec['base_gil'],p.parent)
+                require_active_baseline(read(requested),active_gil.read_bytes() if active_gil else None,
+                                        'graphs.base_gil',requested,active_gil)
+                graph_spec['base_gil']=str(requested)
+            elif active_gil:
+                graph_spec['base_gil']=str(active_gil)
             if graph_spec.get('project_resources'):graph_spec['project_resources']=str(input_path(graph_spec['project_resources'],p.parent))
+            if graph_spec.get('bindings'):graph_spec['bindings']=str(input_path(graph_spec['bindings'],p.parent))
             generated=stage/'graph-job.json';emit(generated,graph_spec);build(generated,stage/'graphs');stages.append('strict_graph_build')
             graph_report=load(stage/'graphs/build-report.json');state('graphs','passed',report='graphs/build-report.json')
-            if 'level' in job and (stage/'graphs/level.gil').exists():shutil.copyfile(stage/'graphs/level.gil',stage/'level.gil')
+            inputs.merge({p:h for p,h in graph_report.get('inputs_sha256',{}).items()
+                          if not Path(p).is_relative_to(stage)},'graphs')
+            if (stage/'graphs/level.gil').exists():
+                active_gil=stage/'graphs/level.gil'
+                if 'level' in job:shutil.copyfile(active_gil,stage/'level.gil')
             if layout is not None and (stage/'graphs/level.gil').exists():
                 from protocol_codegen import check_gil
                 state('protocol_native','not_checked','in_progress')
@@ -218,8 +235,12 @@ def _produce(spec_path,out,evidence):
                 if 'base' in g or 'graphs' not in job:raise ValueError('Ambiguous or missing graph GIL input')
                 raw=(stage/'graphs/level.gil').read_bytes()
             else:
-                if 'base' in g:raw=read(g['base'])
-                elif 'level' in job:raw=(stage/'level.gil').read_bytes()
+                if 'base' in g:
+                    raw=read(g['base'])
+                    require_active_baseline(raw,active_gil.read_bytes() if active_gil else None,
+                                            'gil.base',input_path(g['base'],base),
+                                            'graphs/level.gil' if active_gil==stage/'graphs/level.gil' else active_gil)
+                elif active_gil:raw=active_gil.read_bytes()
                 else:raise ValueError('需要gil.base或level生成配置')
             code=read(g['source']) if 'source' in g else client
             if 'level' in job and g['mapping'] in binding.get('template_aliases',{}):
@@ -240,14 +261,26 @@ def _produce(spec_path,out,evidence):
                 if not ok:raise ValueError('Lua syntax: '+str(f.relative_to(stage))+': '+str(error))
                 checked.append(f.relative_to(stage).as_posix())
             state('client_syntax','passed',files=checked)
-        for p,digest in inputs.items():
-            if sha(Path(p).read_bytes())!=digest:raise ValueError('Input changed during production')
+        inputs.verify()
         for name in ('client_syntax','protocol_contract','protocol_native','graphs','mounts','editor','host'):
             if name not in evidence:state(name,'not_checked' if name in ('client_syntax','editor','host') else 'not_applicable')
         state('lua_writeback','passed' if 'gil' in job else 'not_applicable')
-        report={'schema':2,'output_directory':str(out),'stages':stages,'source_sha256':inputs,'files_sha256':{p.relative_to(stage).as_posix():sha(p.read_bytes()) for p in stage.rglob('*') if p.is_file()},'evidence':evidence,'client_lua_syntax_checked':evidence['client_syntax']['status']=='passed','protocol_native_nodes_generated':evidence['protocol_native']['status']=='passed','mount_verified':evidence['mounts']['status']=='passed','editor_imported':False,'host_tested':False}
+        report={'schema':2,'output_directory':str(out),'specification':str(path),'stages':stages,'source_sha256':inputs,'files_sha256':{p.relative_to(stage).as_posix():sha(p.read_bytes()) for p in stage.rglob('*') if p.is_file()},'evidence':evidence,'client_lua_syntax_checked':evidence['client_syntax']['status']=='passed','protocol_native_nodes_generated':evidence['protocol_native']['status']=='passed','mount_verified':evidence['mounts']['status']=='passed','editor_imported':False,'host_tested':False}
         emit(stage/'production-report.json',report);os.rename(stage,out)
     return report
+
+def produce_summary(report):
+    files=report.get('files',report.get('files_sha256',{}))
+    selected=('level.gil','bindings.json','scene/scene.gia','whitebox/whitebox.gia')
+    inputs=report.get('inputs',report.get('source_sha256',{}))
+    spec=report.get('specification')
+    return {'schema':report['schema'],'status':'passed','output_directory':report['output_directory'],
+            'report':'production-report.json','stages':report['stages'],
+            'spec_sha256':inputs.get(spec),'input_count':len(inputs),
+            'outputs_sha256':{name:files[name] for name in selected if name in files},'file_count':len(files),
+            'checks':{name:{k:row[k] for k in ('status','layer','report','scope') if k in row}
+                      for name,row in report['evidence'].items()},'diagnostics':[]}
+
 
 class ProductionError(ValueError):
     def __init__(self,message,evidence,diagnostics=None):
@@ -260,8 +293,12 @@ def produce(spec_path,out,next_output=False):
         requested=out;index=2
         while out.exists():out=requested.with_name(requested.name+'-'+str(index));index+=1
     evidence={'specification':{'status':'not_checked','reason':'in_progress'}}
-    try:return _produce(spec_path,out,evidence)
+    try:
+        return {**_produce(spec_path,out,evidence),'output_directory':str(out)}
     except (ValueError,OSError,TypeError,KeyError) as exc:
+        diagnostics=getattr(exc,'diagnostics',None)
+        if diagnostics and any(item.get('code')=='production.input_changed' for item in diagnostics):
+            evidence['source_integrity']={'status':'failed','layer':'static','reason':str(exc)}
         for value in evidence.values():
             if value.get('reason')=='in_progress':value.update(status='failed',reason=str(exc))
-        raise ProductionError(str(exc),evidence,getattr(exc,'diagnostics',None)) from exc
+        raise ProductionError(str(exc),evidence,diagnostics) from exc

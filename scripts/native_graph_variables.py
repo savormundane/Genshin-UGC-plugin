@@ -1,7 +1,7 @@
 """Graph-scoped declarations and server VarBase defaults; not entity defaults."""
 from collections import Counter
 from authoring_io import sha
-from native_core import get,ref,slot,port_type,structure_id,node_catalog
+from native_core import get,ref,slot,audited_port_type,structure_id,node_catalog
 from level_inventory import fields,vals
 
 
@@ -27,7 +27,7 @@ def summary(record):
         'default_sha256':sha(record['default'])if record['default']is not None else None}
 
 
-def accesses(model):
+def accesses(model,*,type_at=audited_port_type):
     """Read builtin graph-variable accesses without evaluating dynamic names."""
     declarations={}
     for record in read(model):
@@ -49,7 +49,7 @@ def accesses(model):
             item={'graph_kind':graph['kind'],'graph':graph['id'],'node':ident,
                   'operation':'write'if generic==323 else'read','name':None,
                   'name_kind':'missing','resolution':'unresolved','value_port':list(value_port),
-                  'type_id':port_type(n,*value_port,model['definitions'])}
+                  'type_id':type_at(graph,n,*value_port,model['definitions'])}
             p=next((p for p in vals(fields(n),4)if slot(p)==(3,0)),None)
             # A retained literal on a connected input is a fallback, not its
             # runtime name. Edges can be serialized only at the remote output.
@@ -126,7 +126,7 @@ def audit_value(value,expected,context,known,issues,unknown,references=None,expe
                 else:audit_value(child,typ,{**where,'value_path':[*where['value_path'],position]},known,issues,unknown,references)
 
 
-def audit(model,references=None):
+def audit(model,references=None,*,type_at=audited_port_type):
     records=read(model);issues=[];unknown=[]
     known={get(get(s,1,default=b''),1,0)for s in model['structs']}
     counts=Counter((r['graph_kind'],r['graph'],r['name'])for r in records)
@@ -146,7 +146,7 @@ def audit(model,references=None):
             declared=(record['key_type'],record['value_type'])
             if declared!=(get(subtype,1,0),get(subtype,2,0)):
                 issues.append({**context,'error':'graph variable dictionary declaration mismatch','declared':list(declared)})
-    for access in accesses(model):
+    for access in accesses(model,type_at=type_at):
         context={k:access[k]for k in('graph_kind','graph','node','operation','name')}
         if access['name_kind']=='invalid_literal':
             issues.append({**context,'error':'graph variable name literal must be string'})

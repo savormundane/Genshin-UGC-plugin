@@ -1,4 +1,5 @@
 """Independent Lua clients coupled to final native graphs through a deterministic queue."""
+from copy import deepcopy
 from pathlib import Path
 import hashlib,json,re,heapq,subprocess,sys,os
 from authoring_io import *
@@ -41,22 +42,72 @@ def script_from_gil(raw,mapping,*,bindings=None):
     _,root=container(raw);matches=[get(e,5)for s in vals(root,50)for e in vals(fields(s),1)if get(e,3)==mapping.encode()]
     if len(matches)!=1 or matches[0] is None:raise ValueError('Exact unique embedded Lua mapping required')
     return matches[0].decode('utf-8-sig'),bindings
+def differing_path(actual, expected, path=()):
+    """Return the first mismatch, keeping boolean and numeric values distinct."""
+    if type(actual) is dict and type(expected) is dict:
+        for key in expected:
+            if key not in actual:
+                return (*path,key)
+            mismatch=differing_path(actual[key],expected[key],(*path,key))
+            if mismatch is not None:
+                return mismatch
+        return next(((*path,key) for key in actual if key not in expected),None)
+    if type(actual) is list and type(expected) is list:
+        for index,(left,right) in enumerate(zip(actual,expected)):
+            mismatch=differing_path(left,right,(*path,index))
+            if mismatch is not None:
+                return mismatch
+        return None if len(actual)==len(expected) else (*path,min(len(actual),len(expected)))
+    return path if isinstance(actual,bool)!=isinstance(expected,bool) or actual!=expected else None
+
+
 def execute(spec,base,trace=None):
-    schema(spec,('schema','clients','server','steps','faults','assertions','observations','clock'),('clients','steps'))
+    schema(spec,('schema','clients','server','steps','faults','assertions','observations','clock','expected_pending_packets'),('clients','steps'))
+    expected_pending=spec.get('expected_pending_packets',0)
+    if type(expected_pending) is not int or expected_pending<0:
+        raise ValueError('expected_pending_packets must be a nonnegative integer')
     clients={};variable_bindings={};variable_syncs=[];inputs={};serial=0;queue=[];clock=0;occurrences={};journal=[]
-    if not isinstance(spec['clients'],list)or not spec['clients']:raise ValueError('At least one independent client is required')
-    fault_hits=[0 for _ in spec.get('faults',[])]
-    for fault in spec.get('faults',[]):
+    if not isinstance(spec['clients'],list) or (not spec['clients'] and 'server' not in spec):
+        raise ValueError('Provide independent clients or a native server')
+    native_only = not spec['clients']
+    layer = 'native_graph_model' if native_only else 'lua_model'
+    faults=spec.get('faults',[])
+    fault_counts=[{'hits':0,'scheduled':0,'delivered':0,'dropped':0} for _ in faults]
+    for fault in faults:
         schema(fault,('name','source','target','occurrence','action','delay','required'),('name','action'))
         if type(fault.get('required',True))is not bool:raise ValueError('fault.required must be boolean')
         if fault['action']not in('drop','duplicate','delay','reorder'):raise ValueError('Unknown transport fault')
         if 'occurrence'in fault and(type(fault['occurrence'])!=int or fault['occurrence']<1):raise ValueError('Positive fault occurrence required')
         if fault['action']in('delay','reorder')and(type(fault.get('delay'))not in(int,float)or not 0<=fault['delay']<=3600):raise ValueError('Nonnegative finite transport delay required')
-    if trace is not None:trace.update(journal=journal,inputs=inputs,phase='startup')
+    if trace is not None:trace.update(journal=journal,inputs=inputs,phase='startup',layer=layer)
     if 'clock'in spec:
         schema(spec['clock'],('start',),('start',));clock=spec['clock']['start']
         if type(clock)not in(int,float)or not 0<=clock<1e12:raise ValueError('Finite nonnegative model clock required')
+    server=None
+    if 'server'in spec:
+        from native_model import NativeModel
+        s=spec['server'];schema(s,('source','initial','graph_ids','instances','entity_guids','required_timers','level_entity','timer_index_base'),('source',))
+        graph_ids=s.get('graph_ids')
+        if native_only and (not isinstance(graph_ids,list) or not graph_ids or
+                            any(type(ident) is not int for ident in graph_ids) or len(set(graph_ids))!=len(graph_ids)):
+            raise ValueError('Native-only simulation requires explicit, unique server.graph_ids')
+        required_timers=s.get('required_timers',[])
+        if not isinstance(required_timers,list):raise ValueError('required_timers must be a list')
+        timer_keys=set()
+        for requirement in required_timers:
+            schema(requirement,('entity','name','minimum_events'),('entity','name','minimum_events'))
+            entity,name,count=requirement['entity'],requirement['name'],requirement['minimum_events']
+            if type(entity)!=int or entity<0 or not isinstance(name,str)or not name or type(count)!=int or count<1:raise ValueError('Invalid required timer event contract')
+            if (entity,name)in timer_keys:raise ValueError('Duplicate required timer identity')
+            timer_keys.add((entity,name))
+        path=resolve(base,s['source'])
+        if trace is not None:trace.update(source=str(path),client='server',mapping=None)
+        raw=path.read_bytes();inputs[str(path)]=sha(raw)
+        server=NativeModel(raw,s.get('initial'),graph_ids,s.get('instances'),s.get('entity_guids'),s.get('level_entity'),
+                           mounted_only=native_only,timer_index_base=s.get('timer_index_base',1))
+        server.timers.time=clock
     for item in spec['clients']:
+        if trace is not None:trace.update(client=item.get('id'),source=item.get('source'),mapping=item.get('mapping'))
         schema(item,('id','source','mapping','canvas','params','variables'),('id','source'))
         if item['id']in clients:raise ValueError('Duplicate client ID')
         selections=item.get('variables',[]);keys=set();initial_variables={};scope_entities={}
@@ -70,43 +121,33 @@ def execute(spec,base,trace=None):
             if selection['scope']in scope_entities and scope_entities[selection['scope']]!=selection['entity']:raise ValueError('Client variable scope has conflicting entities')
             scope_entities[selection['scope']]=selection['entity']
             keys.add(key)
-            state=spec.get('server',{}).get('initial',{}).get(str(selection['entity']),{})
-            if selection['name']not in state:raise ValueError('Selected initial native variable missing')
-            initial_variables[key]=state[selection['name']]
+            if server is None:raise ValueError('Selected variables require a native server')
+            initial_variables[key]=server.variable(selection['entity'],selection['name'])
         variable_bindings[item['id']]=selections
         path=resolve(base,item['source']);mapping=item.get('mapping','main.lua')
         if trace is not None:trace.update(source=str(path),client=item['id'],mapping=mapping)
         raw=path.read_bytes();inputs[str(path)]=sha(raw)
         source,bindings=script_from_gil(raw,mapping)if path.suffix.lower()=='.gil'else(raw.decode('utf-8-sig'),None)
         clients[item['id']]=Client(source,bindings,mapping,item.get('canvas',(1600,900)),item.get('params'),initial_variables)
-    server=None
-    if 'server'in spec:
-        from native_model import NativeModel
-        s=spec['server'];schema(s,('source','initial','graph_ids','instances','entity_guids','required_timers','level_entity'),('source',))
-        required_timers=s.get('required_timers',[])
-        if not isinstance(required_timers,list):raise ValueError('required_timers must be a list')
-        timer_keys=set()
-        for requirement in required_timers:
-            schema(requirement,('entity','name','minimum_events'),('entity','name','minimum_events'))
-            entity,name,count=requirement['entity'],requirement['name'],requirement['minimum_events']
-            if type(entity)!=int or entity<0 or not isinstance(name,str)or not name or type(count)!=int or count<1:raise ValueError('Invalid required timer event contract')
-            if (entity,name)in timer_keys:raise ValueError('Duplicate required timer identity')
-            timer_keys.add((entity,name))
-        path=resolve(base,s['source'])
-        if trace is not None:trace.update(source=str(path),client='server',mapping=None)
-        raw=path.read_bytes();inputs[str(path)]=sha(raw);server=NativeModel(raw,s.get('initial'),s.get('graph_ids'),s.get('instances'),s.get('entity_guids'),s.get('level_entity'))
-        server.timers.time=clock
     def enqueue(source,target,name,params):
         nonlocal serial
         key=(source,str(target),name);occurrences[key]=occurrences.get(key,0)+1;delay=0;copies=1
-        for index,f in enumerate(spec.get('faults',[])):
+        timing_rule=copy_rule=None
+        for index,f in enumerate(faults):
             if f['name']==name and f.get('source',source)==source and f.get('target',target)==target and f.get('occurrence',occurrences[key])==occurrences[key]:
-                fault_hits[index]+=1
-                if f['action']=='drop':return
-                if f['action']=='duplicate':copies=2
-                elif f['action']in('delay','reorder'):delay=f['delay']
-                else:raise ValueError('Unknown transport fault')
-        for _ in range(copies):serial+=1;heapq.heappush(queue,(clock+delay,serial,source,target,name,params))
+                fault_counts[index]['hits']+=1
+                if f['action']=='drop':
+                    fault_counts[index]['dropped']+=1
+                    return
+                if f['action']=='duplicate':
+                    copies=2;copy_rule=index
+                else:
+                    delay=f['delay'];timing_rule=index
+        applied=tuple(index for index in (copy_rule,timing_rule) if index is not None)
+        for index in applied:fault_counts[index]['scheduled']+=copies
+        for _ in range(copies):
+            serial+=1
+            heapq.heappush(queue,(clock+delay,serial,source,target,name,params,applied))
     def collect():
         for ident,c in clients.items():
             for p in c.packets():enqueue(ident,'server',p['name'],p['params']if isinstance(p['params'],list)else [])
@@ -115,14 +156,33 @@ def execute(spec,base,trace=None):
         while queue and queue[0][0]<=clock:
             work+=1
             if work>10000:raise ValueError('Transport budget exceeded')
-            time,order,source,target,name,params=heapq.heappop(queue);journal.append({'time':time,'source':source,'target':target,'name':name,'params':params})
+            time,order,source,target,name,params,applied=heapq.heappop(queue);journal.append({'time':time,'source':source,'target':target,'name':name,'params':params})
             if target=='server':
                 if server is None:raise ValueError('No native server configured')
                 for p in server.request(name,params,source):enqueue('server',p['target'],p['name'],p['params'])
             else:
                 if target not in clients:raise ValueError('Unknown signal target')
                 c=clients[target];c.call(c.h.receive,name,c.to_lua(params))
+            for index in applied:fault_counts[index]['delivered']+=1
             collect()
+    def observe(item,expected=False):
+        if 'entity' in item:
+            result_key='equals' if expected else 'name'
+            schema(item,('entity','path','variable',result_key),('entity','path',result_key))
+            ident=item['entity']
+            if server is None or type(ident) is not int or ident not in server.entities:
+                raise ValueError('Native observation requires a placed entity')
+            if item['path']=='variable':
+                name=item.get('variable')
+                if not isinstance(name,str) or not name:raise ValueError('Native variable observation requires a variable name')
+                return deepcopy(server.variable(ident,name))
+            if 'variable' in item:raise ValueError('variable is only used with the native variable path')
+            if item['path']=='model_visible':return server.model_visibility.get(ident)
+            if item['path']=='position_m':return server.position_m(ident)
+            raise ValueError('Unknown native observation path')
+        client=clients[item['client']]
+        return client.plain(client.h.value(item['path']))
+    values={};observation_steps=[]
     collect();drain()
     for step_index,step in enumerate(spec['steps'],1):
         if trace is not None:trace.update(phase='step',step_index=step_index,step=step,clock=clock)
@@ -147,6 +207,14 @@ def execute(spec,base,trace=None):
                 collect();drain()
                 due=server.timers.deadline()if server else None
                 if clock>=end and (due is None or due>clock):break
+        elif op=='observe':
+            schema(step,('op','entity','path','variable','name'),('op','entity','path','name'))
+            name=step['name']
+            if not isinstance(name,str) or not name or name in values:
+                raise ValueError('Observation step requires a unique nonempty name')
+            values[name]=observe({k:v for k,v in step.items() if k!='op'})
+            observation_steps.append({'name':name,'entity':step['entity'],'path':step['path'],'time':clock,'value':values[name],
+                                      **({'variable':step['variable']} if 'variable' in step else {})})
         elif op=='sync_variables':
             schema(step,('op','client','notify'),('op','client','notify'))
             if server is None or step['client']not in clients or type(step['notify'])is not bool:raise ValueError('Invalid variable synchronization target/policy')
@@ -155,9 +223,7 @@ def execute(spec,base,trace=None):
             rows=[]
             for selection in selections:
                 if selection['entity']in server.removed_entities:raise ValueError('Variable synchronization entity removed')
-                state=server.db.get(str(selection['entity']),{})
-                if selection['name']not in state:raise ValueError('Selected native variable missing')
-                rows.append({**selection,'value':state[selection['name']]})
+                rows.append({**selection,'value':server.variable(selection['entity'],selection['name'])})
             c=clients[step['client']];c.call(c.h.syncVariables,c.to_lua(rows),step['notify'])
             variable_syncs.append({'client':step['client'],'time':clock,'notify':step['notify'],'variables':selections})
         elif op in('entity_created','entity_removed'):
@@ -178,39 +244,69 @@ def execute(spec,base,trace=None):
             elif op=='lifecycle':c.call(c.h.requestLifecycle,step['name'])
             else:raise ValueError('Unknown joint operation')
         collect();drain()
-    values={}
     assertions=spec.get('assertions',[])
     for assertion_index,a in enumerate(assertions,1):
         if trace is not None:trace.update(phase='assertion',assertion_index=assertion_index,clock=clock)
-        actual=clients[a['client']].plain(clients[a['client']].h.value(a['path']))
-        if actual!=a['equals']or isinstance(actual,bool)!=isinstance(a['equals'],bool):
+        actual=observe(a,expected=True)
+        mismatch=differing_path(actual,a['equals'])
+        if mismatch is not None:
             message='Joint assertion failed '+a['path']
             if trace is not None:
                 try:canonical(actual)
                 except (TypeError,ValueError):actual=repr(actual)
                 trace['diagnostic']={'code':'joint_assertion_failed','message':message,'phase':'assertion',
-                                     'assertion_index':assertion_index,'client':a['client'],'field':a['path'],
-                                     'expected':a['equals'],'actual':actual,'time':clock}
+                                     'assertion_index':assertion_index,'field':a['path'],
+                                     **{key:a[key] for key in ('client','entity','variable') if key in a},
+                                     'expected':a['equals'],'actual':actual,'value_path':list(mismatch),'time':clock}
             raise ValueError(message)
-    for a in spec.get('observations',[]):values[a['name']]=clients[a['client']].plain(clients[a['client']].h.value(a['path']))
+    for a in spec.get('observations',[]):
+        if trace is not None:trace.update(phase='observation',clock=clock,observation=a['name'])
+        if any(row['name']==a['name'] for row in observation_steps):
+            raise ValueError('Final observation name collides with an observation step')
+        values[a['name']]=observe(a)
     gaps=[]
     if not spec.get('assertions'):gaps.append('no assertions executed')
+    native_gaps=[]
     if server:
-        if not server.work:gaps.append('native server not executed')
+        if not server.work:native_gaps.append('native server not executed')
         required=set(spec['server'].get('graph_ids',[]))
-        if required-server.executed_graphs:gaps.append('required graphs not executed: '+str(sorted(required-server.executed_graphs)))
+        if required-server.executed_graphs:native_gaps.append('required graphs not executed: '+str(sorted(required-server.executed_graphs)))
         for requirement in spec['server'].get('required_timers',[]):
             count=sum(event.get('timer')==requirement['name']and event.get('entity')==requirement['entity']for event in server.event_log)
-            if count<requirement['minimum_events']:gaps.append('required timer events not reached: '+canonical({**requirement,'actual':count}))
-    for i,(rule,hits)in enumerate(zip(spec.get('faults',[]),fault_hits)):
-        if rule.get('required',True)and not hits:gaps.append('required fault not exercised: '+str(i))
+            if count<requirement['minimum_events']:native_gaps.append('required timer events not reached: '+canonical({**requirement,'actual':count}))
+    gaps.extend(native_gaps)
+    fault_report=[]
+    for index,(rule,counts) in enumerate(zip(faults,fault_counts)):
+        observed=counts['dropped'] or (counts['scheduled']>0 and counts['scheduled']==counts['delivered'])
+        fault_report.append({'rule':rule,**counts,'status':'passed' if observed else 'not_checked'})
+        if rule.get('required',True) and not observed:
+            reason='required fault deliveries incomplete' if counts['scheduled'] else 'required fault not exercised'
+            gaps.append(f'{reason}: {index}')
+    pending_matches=len(queue)==expected_pending
+    if not pending_matches:gaps.append(f'pending packets: expected {expected_pending}, actual {len(queue)}')
     acceptance={'status':'not_checked' if gaps else 'passed','gaps':gaps}
-    checks={'assertions':{'status':'passed' if assertions else 'not_checked','executed':len(assertions)},
+    native_assertions=sum('entity' in assertion for assertion in assertions)
+    lua_assertions=len(assertions)-native_assertions
+    checks={'assertions':{'status':'passed' if assertions else 'not_checked','executed':len(assertions),
+                          'native':native_assertions,'lua':lua_assertions},
+            'transport':{'status':'passed' if pending_matches and all(not f['rule'].get('required',True) or f['status']=='passed' for f in fault_report) else 'not_checked',
+                         'pending':len(queue),'expected_pending':expected_pending},
             'coverage':acceptance}
-    return {'schema':2,'layer':'lua_model','execution_status':'passed','status':acceptance['status'],
+    return {'schema':2,'layer':layer,'execution_status':'passed','status':acceptance['status'],
             'acceptance':acceptance,'checks':checks,
             'diagnostics':[{'code':'joint_coverage_missing','message':gap}for gap in gaps],
-            'evidence':{'lua_model':'passed'if assertions else'not_checked','native_graph_model':('passed'if server.work else'not_checked')if server else'not_applicable','editor':'not_checked','host':'not_checked','real_storage_reentry':'not_checked'},'inputs':inputs,'journal':journal,'pending_packets':len(queue),'faults':[{'rule':rule,'hits':hits,'status':'passed'if hits else'not_checked'}for rule,hits in zip(spec.get('faults',[]),fault_hits)],'observations':values,'assertions':len(assertions),'executed_graphs':sorted(server.executed_graphs)if server else [],'server_work':server.work if server else 0,'variable_syncs':variable_syncs,'server_variables':server.db if server else {},'lifecycle_events':[event for event in server.event_log if 'lifecycle'in event]if server else [],'timer_events':[event for event in server.event_log if 'timer'in event]if server else [],'host_tested':False,'editor_tested':False}
+            'evidence':{'lua_model':'not_applicable' if native_only else 'passed' if lua_assertions else 'not_checked',
+                        'native_graph_model':('passed' if native_assertions and not native_gaps else 'not_checked') if server else 'not_applicable',
+                        'editor':'not_checked','host':'not_checked','real_storage_reentry':'not_checked'},
+            'inputs':inputs,'journal':journal,'pending_packets':len(queue),'faults':fault_report,'observations':values,'assertions':len(assertions),'executed_graphs':sorted(server.executed_graphs)if server else [],'server_work':server.work if server else 0,'variable_syncs':variable_syncs,'server_variables':server.db if server else {},'lifecycle_events':[event for event in server.event_log if 'lifecycle'in event]if server else [],'timer_events':[event for event in server.event_log if 'timer'in event]if server else [],
+            'mounts':server.mount_origins if server else [],
+            'executed_instances':[{'graph_id':graph,'owner_entity':owner} for graph,owner in
+                                  sorted(server.executed_instances,key=lambda pair:(pair[0], -1 if pair[1] is None else pair[1]))] if server else [],
+            'model_visibility':{str(ident):visible for ident,visible in server.model_visibility.items()} if server else {},
+            'model_visibility_events':[event for event in server.event_log if 'model_visible' in event] if server else [],
+            'motion_events':[event for event in server.event_log if 'motion' in event] if server else [],
+            'observation_steps':observation_steps,
+            'host_tested':False,'editor_tested':False}
 
 
 def evaluate(spec,base):
@@ -220,7 +316,17 @@ def evaluate(spec,base):
         return execute(spec,base,trace)
     except Exception as exc:
         import traceback
+        from native_model import UncalibratedVariable
         diagnostic=trace.pop('diagnostic',None)
+        if isinstance(exc,UncalibratedVariable):
+            gap=str(exc)
+            coverage={'status':'not_checked','gaps':[gap]}
+            return {'schema':2,'layer':trace.get('layer','lua_model'),'status':'not_checked',
+                    'execution_status':'not_checked','acceptance':coverage,
+                    'checks':{'coverage':coverage},
+                    'diagnostics':[{'code':'native_variable_default_unchecked','message':gap,
+                                    'phase':trace.get('phase','input'),'entity':exc.entity,'variable':exc.variable}],
+                    'inputs':trace.get('inputs',{}),'trace':trace,'editor_tested':False,'host_tested':False}
         if diagnostic is None:
             diagnostic={'code':'joint_model_failed','message':str(exc),'phase':trace.get('phase','input')}
             if diagnostic['phase']=='step':
@@ -230,7 +336,7 @@ def evaluate(spec,base):
             elif diagnostic['phase']=='assertion':
                 diagnostic.update(assertion_index=trace['assertion_index'],time=trace['clock'])
         assertion_failed=diagnostic['code']=='joint_assertion_failed'
-        return {'schema':2,'layer':'lua_model','status':'failed',
+        return {'schema':2,'layer':trace.get('layer','lua_model'),'status':'failed',
                 'execution_status':'passed' if assertion_failed else 'failed',
                 'acceptance':{'status':'failed','gaps':[]},
                 'checks':{'assertions':{'status':'failed' if assertion_failed else 'not_checked',

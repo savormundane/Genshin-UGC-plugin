@@ -1,10 +1,10 @@
 """Explicit input closure, immutable originals and isolated portable production."""
 from pathlib import Path
 import importlib.util,json,os,re,shutil,subprocess,sys,tempfile
-from authoring_io import PLUGIN,read_json,sha,inventory,write_json,output_directory,finish,schema
+from authoring_io import PLUGIN,ProductionInputs,read_json,sha,inventory,write_json,output_directory,finish,schema
 from validation_evidence import backend_inventory
 
-def collect(path,options,*,snapshot_root=None):
+def collect(path,options,*,snapshot_root=None,inputs=None):
     path=Path(path).resolve();base=path.parent
     schema(options,('roots','dependencies'))
     roots={'project':base,'toolchain':PLUGIN}
@@ -14,7 +14,7 @@ def collect(path,options,*,snapshot_root=None):
         if not re.fullmatch(r'[A-Za-z][A-Za-z0-9_-]*',name)or name in roots:raise ValueError('Unique portable root name required')
         roots[name]=(base/value).resolve()
     files={};configs={};bindings=[];directories={}
-    def add(source):
+    def add(source,digest=None):
         source=Path(os.path.abspath(source))
         owners=[(name,root)for name,root in roots.items()if source.is_relative_to(root)]
         if not owners:raise ValueError('Input outside declared portable roots: '+str(source))
@@ -23,8 +23,12 @@ def collect(path,options,*,snapshot_root=None):
             raise ValueError('Linked portable input: '+str(source))
         if source.is_dir():
             listing=inventory(source);directories[source]=(name+'/'+source.relative_to(root).as_posix(),listing)
-            for relative in listing:add(source/relative)
-        elif source.is_file():files[source]=name+'/'+source.relative_to(root).as_posix()
+            for relative,bound_digest in listing.items():add(source/relative,bound_digest)
+        elif source.is_file():
+            files[source]=name+'/'+source.relative_to(root).as_posix()
+            if inputs is not None:
+                if digest is None:inputs.track(source,'portable_collection')
+                else:inputs.bind(source,digest,'portable_collection')
         else:raise ValueError('Portable input missing: '+str(source))
         return source
     def reference(config,container,key,kind=None):
@@ -38,21 +42,28 @@ def collect(path,options,*,snapshot_root=None):
         if source in configs:
             if configs[source][0]!=kind:raise ValueError('Ambiguous configuration role: '+str(source))
             return
-        value=read_json(source);configs[source]=(kind,value)
+        raw=source.read_bytes()
+        if inputs is not None:inputs.bind(source,sha(raw),'portable_configuration')
+        value=json.loads(raw.decode('utf-8-sig'));configs[source]=(kind,value)
         if kind=='job':
             if value.get('schema')!=2:raise ValueError('Portable job requires schema 2')
             value.pop('portable',None)
             if 'client'in value:
                 c=value['client'];reference(source,c,'assembly'if 'assembly'in c else'source','assembly'if 'assembly'in c else None)
             if 'backend'in value.get('beyond',{}):raise ValueError('Portable Beyond requires the bundled backend; omit backend')
-            for key in('level','storage','graphs','simulation','experiment','platform','project','client_check','ui','resources','beyond','scene'):
+            for key in('level','storage','graphs','simulation','experiment','platform','project','client_check','ui','resources','beyond'):
                 if key in value:reference(source,value[key],'spec',key)
+            if 'scene'in value:
+                scene=value['scene']
+                if 'spec'in scene:reference(source,scene,'spec','scene')
+                if 'whitebox'in scene:reference(source,scene['whitebox'],'source')
             for key in('native','storage','gil'):
                 if key in value:
                     for field in('base','source'):
                         if field in value[key]:reference(source,value[key],field)
             if 'native'in value:
                 native=value['native'];reference(source,native,'plan'if 'plan'in native else'spec','native_plan'if 'plan'in native else'native')
+                if 'after_graphs'in native:reference(source,native,'after_graphs','native')
             for item in value.get('assets',[]):
                 reference(source,item,'source','fit_layers' if item.get('kind')=='fit' and Path(item['source']).suffix.lower()=='.json' else None)
                 if 'spec'in item:reference(source,item,'spec')
@@ -62,13 +73,14 @@ def collect(path,options,*,snapshot_root=None):
             for item in value[key]:
                 if 'source'in item:reference(source,item,'source')
             if kind=='graphs':
-                for key in('base_gil','project_resources'):
+                for key in('base_gil','project_resources','bindings'):
                     if value.get(key):reference(source,value,key)
         elif kind=='fit_layers':
             for layer in value['layers']:reference(source,layer,'source')
         elif kind=='native':
             for item in value['operations']:
-                if 'source'in item:reference(source,item,'source')
+                if 'source'in item and not (item.get('op')=='place_static_scene' and item['source']=='@scene'):
+                    reference(source,item,'source')
         elif kind=='native_plan':
             for item in value['inputs'].values():reference(source,item,'source')
         elif kind=='simulation':
@@ -121,9 +133,14 @@ def execute(bundle,out,trusted_inputs_sha256=None):
         traces=list(trace.glob('*.json'));reads=sorted({name for path in traces for name in read_json(path)})
         return {'status':'passed','python_processes':len(traces),'python_read_files':len(reads),'scope':'trusted Python producers and compiler children; external runtime dependencies fingerprinted','editor':'not_checked','host':'not_checked'}
 
-def produce(path,out,evidence):
-    job=read_json(path);path,roots,files,configs,bindings,directories=collect(path,job['portable'])
-    original={str(p):sha(p.read_bytes())for p in files};backends=backend_inventory()
+def produce(path,out,evidence,*,job=None,job_digest=None):
+    path=Path(path).resolve()
+    if job is None:
+        source=path.read_bytes()
+        job=json.loads(source.decode('utf-8-sig'));job_digest=sha(source)
+    original=ProductionInputs({str(path):job_digest})
+    path,roots,files,configs,bindings,directories=collect(path,job['portable'],inputs=original)
+    backends=backend_inventory()
     with output_directory(out)as stage:
         bundle=stage/'portable';work=bundle/'workspace';raw=bundle/'original'
         for relative,_ in directories.values():(work/relative).mkdir(parents=True,exist_ok=True)

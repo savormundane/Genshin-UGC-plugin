@@ -16,24 +16,25 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 
 | 工具 | 参数与行为 |
 | --- | --- |
-| doctor | 检查执行依赖并显示实际插件路径、版本与能力指纹 |
+| doctor | 返回依赖状态、当前加载路径、版本、原能力指纹和 `plugin.capability_groups` 分组摘要。用 CLI `doctor --compare PLUGIN_ROOT` 定位同版本的文件差异 |
 | capabilities | 返回当前实现和证据边界 |
 | api_lookup | symbol。查询客户端 Lua API、来源与推导状态 |
 | diagnose | spec、sha256。按配置执行只读的环境、Lua、GIL 和素材检查 |
 | docs_search | version、query：检索固定版本资料 |
 | nodes_lookup | query、scope、limit 均可选。查询 Graph Code 调用、作用域、签名和端口。scope 为 all、client 或 server，limit 默认 20，范围 1 到 100 |
-| resources_lookup | version、query、mode、limit。查询目录中记录的模型及模板身份 |
+| graph_check | input 指向一张 Graph Code 源文件。可给 job 载入制作任务，或给 bindings 提供具名绑定。sha256、job_sha256、bindings_sha256 可选，工具返回直接输入和实际读取的项目依赖摘要 |
+| resources_lookup | version、query、mode、limit。查模型候选和原生样本中的模板 ID。可选 catalogue 和 catalogue_sha256，未给摘要时由服务计算 |
 | native_inspect / native_audit | input，可选 sha256。读取或审计指定原生文件 |
-| project_inspect | input、可选 sha256、selector、transitive。按 key、kind、name 或 id 选择唯一对象，查看依赖和引用者 |
+| project_inspect | input，可选 sha256、selector、transitive、scope、summary。`scope="scene"` 查询 3D 对象和挂载，`scope="gameplay"` 查询玩法资源和类型化引用 |
 | client_check | input，可选 sha256、mapping、contract、contract_sha256。编译 Lua 正文，可选择单个 GIL 映射或检查 API 合同 |
 | produce | spec、sha256、output：执行已有制作链 |
-| native_diff | input、other，可选 sha256、other_sha256、allowed_top_level_fields。返回差异和保护检查 |
+| native_diff | input、other，可选 sha256、other_sha256、allowed_top_level_fields。给出允许范围时，核对其余字段的原始字节 |
 | experiment_compare | input、sha256、other、other_sha256。直接返回成对观察比较 |
 | native_plan | input、sha256、output 加一个 patch 对象，或加 spec 和 spec_sha256 文件参数。输出可审阅的 plan.json 和文件摘要 |
-| simulate | spec、sha256、output：schema 2联合场景；在独立工作进程执行，零断言或必需覆盖不足不提交 |
+| simulate | spec、sha256、output。执行 schema 2 联合场景或已挂载的纯原生图路径。失败断言在 result.diagnostics 返回，通过时提交输出 |
 | experiment_run | spec、sha256、output：观察实验，开发／保留种子合同不变；失败不提交 |
 | logs_diagnose | spec、sha256：只读解析JSONL及关联产物 |
-| verify | input、sha256、rebuild、portable，可选trusted_inputs_sha256：input必须是交付manifest.json；两个开关为显式布尔，重建使用请求临时目录 |
+| verify | input 指向交付 manifest.json，sha256 必填。artifacts_only、portable、rebuild 默认为 false。仅产物校验独立运行。重建还需 portable=true 和 trusted_inputs_sha256 |
 | native_apply | input、sha256、plan、plan_sha256、output：执行已有摘要绑定原生计划 |
 
 input/spec/plan/contract相对工程根目录，或为工程/输出根内绝对路径。output相对输出根目录，必须是尚不存在的新目录，其父目录须存在。sha256均为对应输入文件原始字节摘要；plan_sha256参数是计划文件摘要，计划内部的语义摘要由原生核心继续核对。

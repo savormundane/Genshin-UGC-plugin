@@ -1,7 +1,7 @@
 """Isolated fixed-operation worker. stdout is never the MCP transport."""
 from pathlib import Path
 import contextlib,json,os,sys
-from authoring_io import PLUGIN,sha_file,read_json,write_json,resolve
+from authoring_io import DiagnosticError,PLUGIN,sha_file,read_json,write_json,resolve
 
 
 def main():
@@ -23,7 +23,10 @@ def main():
     tempfile.tempdir=str(scratch)
     sys.addaudithook(boundary)
     for path,digest in request['inputs'].items():
-        if sha_file(path)!=digest:raise ValueError('Worker input digest mismatch')
+        actual=sha_file(path)
+        if actual!=digest:
+            raise DiagnosticError('mcp.input_sha256_mismatch','Worker input digest mismatch',phase=op,
+                                  source=path,expected=digest,actual=actual)
     with contextlib.redirect_stdout(sys.stderr):
         if op in('doctor','capabilities'):
             import capabilities
@@ -44,17 +47,21 @@ def main():
         elif op=='nodes_lookup':
             from node_build import catalog
             result=catalog(**args)
+        elif op=='graph_check':
+            from graph_validation import check
+            result=check(args['input'],args.get('bindings'),args.get('job'))
         elif op in('native_inspect','native_audit','project_inspect'):
             path=Path(args['input'])
             if op=='project_inspect':
-                from project_index import build,consumers,inspect
-                if path.suffix.lower()=='.json':
-                    result=inspect(path)
+                from project_index import build,consumers,inspect,inspect_summary
+                if path.suffix.lower()=='.json' or 'scope'in args:
+                    result=inspect(path,scope=args.get('scope'))
                 else:
                     result=build(path.read_bytes())
                     result['inputs']={str(path):result['artifacts']['level']['sha256']}
                 if 'selector' in args:
                     result=consumers(result,args['selector'],args.get('transitive',False))
+                if args.get('summary'):result=inspect_summary(result)
             else:
                 import native_core
                 result=(native_core.inspect if op=='native_inspect'else native_core.audit)(path.read_bytes())
@@ -65,7 +72,7 @@ def main():
             from native_changes import difference
             result=difference(Path(args['input']).read_bytes(),Path(args['other']).read_bytes(),args.get('allowed_top_level_fields'))
         elif op=='native_plan':
-            from native_changes import plan
+            from native_changes import plan,plan_summary
             from authoring_io import output_directory,finish
             if 'patch' in args:
                 patch=args['patch']
@@ -83,6 +90,7 @@ def main():
                     inputs[item['source']]=item['sha256']
                 write_json(stage/'plan.json',result)
                 finish(stage,inputs,kind='native-plan')
+            if args.get('summary'):result=plan_summary(result)
         elif op=='simulate':
             from joint_simulator import evaluate
             from authoring_io import output_directory,finish
@@ -104,11 +112,13 @@ def main():
         elif op=='verify':
             from delivery_verify import verify
             if Path(args['input']).name!='manifest.json':raise ValueError('Verification input must be manifest.json')
-            result=verify(Path(args['input']).parent,args['rebuild'],args['portable'],args.get('trusted_inputs_sha256'))
+            result=verify(Path(args['input']).parent,args.get('rebuild',False),args.get('portable',False),
+                          args.get('trusted_inputs_sha256'),artifacts_only=args.get('artifacts_only',False))
         elif op=='produce':
-            from production_core import produce,ProductionError
+            from production_core import produce,produce_summary,ProductionError
             try:
                 result=produce(args['spec'],args['output'])
+                if args.get('summary'):result=produce_summary(result)
             except ProductionError as exc:
                 result={'status':'failed','error':str(exc),'evidence':exc.production_evidence,
                         'diagnostics':getattr(exc,'diagnostics',[])}
@@ -122,4 +132,8 @@ def main():
         else:raise ValueError('Unknown worker operation')
     write_json(result_path,result)
 
-if __name__=='__main__':main()
+if __name__=='__main__':
+    try:
+        main()
+    except DiagnosticError as exc:
+        write_json(sys.argv[2],{'status':'failed','error':str(exc),'diagnostics':exc.diagnostics})

@@ -91,11 +91,33 @@ def compile_grid(image, size, target, parameters):
                             parameters['columns'], parameters['max_bytes'], parameters['cell'], parameters['fit'])
 
 
-def generate(source, output, **options):
+def generate(source, output, *, from_preview=None, candidate=None, **options):
     from asset_core import harden
-    source=Path(source).resolve();output=Path(output).resolve()
+    output=Path(output).resolve()
     if output.exists():raise ValueError('Output exists; select a new directory')
+    selection=None
+    if (from_preview is None)!=(candidate is None):
+        raise ValueError('--from-preview and --candidate must be used together')
+    if from_preview is not None:
+        if options:raise ValueError('Candidate parameters cannot be combined with generation overrides')
+        from_preview=Path(from_preview).resolve()
+        report_raw=from_preview.read_bytes()
+        preview_report=json.loads(report_raw.decode('utf-8-sig'))
+        if preview_report.get('schema')!=1 or preview_report.get('kind')!='asset-preview':
+            raise ValueError('Expected an assets preview report')
+        matches=[row for row in preview_report['candidates'] if row['name']==candidate]
+        if len(matches)!=1:raise ValueError(f'Expected an exact preview candidate name: {candidate}')
+        row=matches[0]
+        if row['within_budget'] is False or row.get('within_quality') is False:
+            raise ValueError(f'Preview candidate {candidate} exceeds a declared constraint')
+        options=row['parameters']
+        source=source or preview_report.get('source')
+        selection={'candidate':candidate,'preview_sha256':hashlib.sha256(report_raw).hexdigest()}
+    if source is None:raise ValueError('Provide SOURCE or use a preview report that records its source')
+    source=Path(source).resolve()
     image, size, original, raw, target, parameters = prepare_source(source, **options)
+    if selection is not None and original!=preview_report['source_sha256']:
+        raise ValueError('Preview source digest differs; preview this input before generating')
     source_size = list(image.size)
     source_kind = 'shapes' if raw is not None else 'image'
     image = harden(image, parameters['alpha_min'])
@@ -110,6 +132,8 @@ def generate(source, output, **options):
     report={'schema':1,'generator':'genshin-ugc-assets','source_kind':source_kind,'source_sha256':original,'source_size':source_size,'grid_size':list(size),'target':target,'controls':count,'coordinate_space':coordinate,
             'parameters':parameters,
             'preview_kind':'quantized reference raster; not host rendering','external_process_started':False,'gil_written':False,'host_tested':False}
+    if selection is not None:
+        report['preview_selection']=selection
     asset={**report,'data':data}
     output.parent.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='ugc-assets-',dir=output.parent) as td:
@@ -127,7 +151,8 @@ def generate(source, output, **options):
     return report
 
 
-def preview(source, output, *, display=None, **options):
+def preview(source, output, *, display=None, min_grid=None, max_error=None, **options):
+    from fractions import Fraction
     from PIL import Image, ImageChops, ImageStat
     from asset_core import harden
 
@@ -142,6 +167,15 @@ def preview(source, output, *, display=None, **options):
         if math.prod(display)>MAX_SOURCE_PIXELS:
             raise ValueError(f'Display exceeds {MAX_SOURCE_PIXELS} pixels')
     image, size, digest, _, target, parameters = prepare_source(source, **options)
+    if min_grid is None:min_grid=(1,1)
+    if not isinstance(min_grid,(list,tuple)) or len(min_grid)!=2:
+        raise ValueError('Minimum grid requires width and height')
+    for requested,available in zip(min_grid,size):
+        positive(requested,'minimum grid dimension',available)
+    if max_error is not None and (type(max_error) not in (int,float) or not 0<=max_error<=1):
+        raise ValueError('Maximum error must be normalized RGBA MSE in [0,1]')
+    min_scale=max(Fraction(requested,available) for requested,available in zip(min_grid,size))
+    has_foreground=image.getchannel(3).getbbox() is not None
     display_size = tuple(display) if display is not None else size
     display_pixels = math.prod(display_size)
     source_display = image.convert('RGBa').resize(display_size, Image.Resampling.BOX)
@@ -151,11 +185,15 @@ def preview(source, output, *, display=None, **options):
     image = harden(image, parameters['alpha_min'])
     limit = parameters['max_controls']
     colors = parameters['colors']
-    reduced_size = tuple((dimension+1)//2 for dimension in size)
     candidates = [('original',size,colors)]
-    alternatives = [('fewer-colors',size,max(1,colors//2)),
-                    ('smaller-grid',reduced_size,colors),
-                    ('smaller-grid-fewer-colors',reduced_size,max(1,colors//2))]
+    alternatives = [('fewer-colors',size,max(1,colors//2))]
+    for name,scale in (('grid-75',Fraction(3,4)),('smaller-grid',Fraction(1,2)),
+                       ('grid-25',Fraction(1,4)),('grid-12.5',Fraction(1,8)),
+                       ('grid-6.25',Fraction(1,16)),('minimum-grid',min_scale)):
+        if scale<min_scale:
+            continue
+        grid=tuple(math.ceil(dimension*scale) for dimension in size)
+        alternatives.extend([(name,grid,colors),(name+'-fewer-colors',grid,max(1,colors//2))])
     rows = []
     seen = set()
     with output_directory(output) as stage:
@@ -183,10 +221,11 @@ def preview(source, output, *, display=None, **options):
             mask = displayed.getchannel(3).point([0]+[255]*255)
             gained = ImageChops.subtract(mask,source_mask).histogram()[255]
             lost = ImageChops.subtract(source_mask,mask).histogram()[255]
+            error=sum(ImageStat.Stat(delta).sum2)/(display_pixels*4*255**2)
             rows.append({
                 'name':name, 'parameters':settings, 'grid_size':list(grid), 'controls':controls,
-                'within_budget':within_budget,
-                'error':sum(ImageStat.Stat(delta).sum2)/(display_pixels*4*255**2),
+                'within_budget':within_budget,'within_quality':None if max_error is None else error<=max_error,
+                'error':error,
                 'alpha':{'changed_pixels':display_pixels-alpha.histogram()[0],
                          'became_visible':gained,'became_transparent':lost},
                 'preview':name+'/preview.png',
@@ -200,14 +239,27 @@ def preview(source, output, *, display=None, **options):
             diagnostics.append({'code':'asset_budget_unmet',
                                 'message':'None of the tested settings meets the control budget. Try a different grid, palette, or text chunk size.',
                                 'expected':limit,'actual':min(row['controls'] for row in rows)})
+        quality_status='not_checked' if max_error is None else 'passed' if any(row['within_quality'] for row in rows) else 'failed'
+        if quality_status=='failed':
+            diagnostics.append({'code':'asset_quality_unmet','message':'None of the tested settings meets the error limit.',
+                                'expected':max_error,'actual':min(row['error'] for row in rows)})
+        viable=[row for row in rows if row['within_budget'] is not False and row['within_quality'] is not False
+                and (row['controls'] or not has_foreground)]
+        viable.sort(key=lambda row:(row['error'],row['alpha']['became_transparent']+row['alpha']['became_visible'],row['controls'],row['name']))
+        if not viable:
+            diagnostics.append({'code':'asset_search_no_candidate',
+                                'message':'The tested grids and palettes produced no usable candidate that meets all declared limits.'})
         report = {
             'schema':1, 'kind':'asset-preview', 'status':'passed',
-            'source_sha256':digest, 'source_size':source_size, 'display_size':list(display_size),
+            'source':str(source), 'source_sha256':digest, 'source_size':source_size, 'display_size':list(display_size),
             'display_source':'source.png','target':target,
             'preview_kind':'quantized reference grid' if target=='text' else 'software rectangle reference',
             'error_metric':'normalized premultiplied RGBA MSE on the display grid',
-            'checks':{'budget':{'status':budget_status,'limit':limit,'feasible_candidates':feasible}},
-            'diagnostics':diagnostics,'candidates':rows,'host':'not_checked',
+            'checks':{'budget':{'status':budget_status,'limit':limit,'feasible_candidates':feasible},
+                      'quality':{'status':quality_status,'max_error':max_error,
+                                 'feasible_candidates':[row['name'] for row in rows if row['within_quality'] is True]},
+                      'search':{'status':'passed' if viable else 'failed','min_grid':list(min_grid),'tested':len(rows)}},
+            'diagnostics':diagnostics,'candidates':rows,'recommendations':[row['name'] for row in viable[:3]],'host':'not_checked',
         }
         write_json(stage/'report.json', report)
         finish(stage, {str(source):digest}, kind='asset-preview')
@@ -233,15 +285,19 @@ def main(argv=None):
     s=p.add_subparsers(dest='op',required=True)
     for name, description in (('generate','Write selected asset data'),('preview','Compare settings before generation')):
         c=s.add_parser(name,help=description)
-        c.add_argument('source')
+        c.add_argument('source',nargs='?' if name=='generate' else None)
         c.add_argument('--out',required=True)
-        c.add_argument('--target',choices=['auto','rectangles','text'],default='auto')
-        for key,default in [('width',None),('height',None),('step',1),('colors',96),('alpha-min',128),
-                            ('max-controls',None),('columns',64),('max-bytes',4096),('cell',16)]:
-            c.add_argument('--'+key,type=int,default=default)
-        c.add_argument('--fit',choices=['auto','fixed'],default='auto')
+        c.add_argument('--target',choices=['auto','rectangles','text'],default=argparse.SUPPRESS)
+        for key in ('width','height','step','colors','alpha-min','max-controls','columns','max-bytes','cell'):
+            c.add_argument('--'+key,type=int,default=argparse.SUPPRESS)
+        c.add_argument('--fit',choices=['auto','fixed'],default=argparse.SUPPRESS)
         if name=='preview':
             c.add_argument('--display',nargs=2,type=int,metavar=('WIDTH','HEIGHT'))
+            c.add_argument('--min-grid',nargs=2,type=int,metavar=('WIDTH','HEIGHT'))
+            c.add_argument('--max-error',type=float)
+        else:
+            c.add_argument('--from-preview',metavar='REPORT')
+            c.add_argument('--candidate',metavar='NAME')
     for name, description in (('fit','Fit primitives to an image or layer manifest'),
                               ('check','Inspect asset statistics'),('diff','Compare asset statistics'),
                               ('import-gia','Read calibrated native rectangle assets'),

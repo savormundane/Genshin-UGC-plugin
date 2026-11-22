@@ -2,7 +2,10 @@
 import math
 
 class TimerClock:
-    def __init__(self):self.time=0.;self.serial=0;self.entries={}
+    def __init__(self,index_base=1):
+        if type(index_base) is not int or index_base not in (0,1):
+            raise ValueError('Timer index base must be 0 or 1')
+        self.time=0.;self.serial=0;self.entries={};self.index_base=index_base
 
     def deadline(self):
         return min((entry['due']for entry in self.entries.values()if entry['paused']is None),default=None)
@@ -38,5 +41,5 @@ class TimerClock:
             if index+1<len(seq):entry['index']+=1;entry['due']+=seq[index+1]-seq[index]
             elif entry['loop']:entry['index']=0;entry['cycle']+=1;entry['due']+=seq[0]
             else:del self.entries[key]
-            emit(key[0],key[1],index+1,cycle)
+            emit(key[0],key[1],index+self.index_base,cycle)
         self.time=end

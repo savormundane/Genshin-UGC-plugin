@@ -1,7 +1,7 @@
 """Declaration identities, graph dependencies and composite interface references."""
 from collections import Counter
-from native_core import get,ref,slot,port_type,structure_id,descriptor_structure_id
-from native_ports import declared_ports,exists
+from native_core import get,ref,slot,node_records,definition_id,audited_port_type,structure_id,descriptor_structure_id
+from native_ports import declaration_type,declared_ports,exists,structure_update
 from level_inventory import fields,vals
 
 
@@ -9,14 +9,34 @@ def locator_key(raw):
     return tuple(get(raw,k,0,0)for k in(1,2,3,4,5))
 
 
-def audit_resources(model):
+def structure_mapping_port(n,definition,shell,kernel):
+    """Resolve a moved composite input using the adjacent write-switch UID."""
+    if not definition or not structure_update(definition) or shell!=(3,kernel[1]+1) or kernel[0]!=3:
+        return None
+    _,_,pins=node_records(n)
+    neighbor=pins.get((3,shell[1]+1),b'')
+    descriptor=get(neighbor,2,default=b'')
+    ports=declared_ports(definition)
+    value=ports.get(kernel,b'')
+    toggle=ports.get((3,kernel[1]+1),b'')
+    if (shell in pins or (get(descriptor,1,0),get(descriptor,2,0))!=(3,kernel[1]+1)
+            or get(neighbor,7,0) is None or get(neighbor,7,0)!=get(toggle,8,0)
+            or get(neighbor,4,0)!=4 or declaration_type(toggle)!=4):
+        return None
+    if (get(get(value,5,default=b''),1,0),get(get(toggle,5,default=b''),1,0))!=(15,14):
+        return None
+    return value
+
+
+def audit_resources(model,*,type_at=audited_port_type):
     issues=[];unknown=[];definitions=model['definitions']
-    from native_signals import audit_gia_signals
+    from native_signals import audit_gia_signals,legacy_client_senders
     signal_issues,signal_unknown,signal_declarations=audit_gia_signals(model)
     issues.extend(signal_issues);unknown.extend(signal_unknown)
     composites={g['id']:g for g in model['composite_graphs']};owners={}
     client_senders={ref(get(s,7,default=b''))for s in model['signals']}
     if model['format']=='gia':client_senders.update(i for i,r in signal_declarations.items()if r['role']==7)
+    else:client_senders.update(legacy_client_senders(model,signal_declarations))
     for ident,d in definitions.items():
         signature=get(d,4,default=b'');shell=get(signature,1);kernel=get(signature,2)
         where={'definition':ident};behavior=get(get(d,107,default=b''),1,0)
@@ -65,21 +85,24 @@ def audit_resources(model):
                 if n is None:issues.append({**context,'error':'composite internal node absent'});continue
                 if shell is None or kernel is None or shell[0]!=external[0]or kernel[0]!=external[0]:
                     issues.append({**context,'error':'composite interface direction mismatch'});continue
-                presence=exists(n,*shell,definitions)
+                moved=(structure_mapping_port(n,definitions.get(definition_id(n,definitions)),shell,kernel)
+                       if shell!=kernel else None)
+                presence=True if moved else exists(n,*shell,definitions)
                 if presence is False:issues.append({**context,'error':'composite internal port absent'});continue
                 if presence is None:unknown.append({**context,'error':'composite internal port unresolved'})
                 # The bundled backend uses ordinal indices when no calibrated
                 # NodeEditorPack override is available. Do not accept an arbitrary
                 # kernel index just because a stored instance repeats that value.
-                if kernel!=shell:unknown.append({**context,'error':'composite kernel mapping uncalibrated','shell':list(shell),'kernel':list(kernel)})
+                if kernel!=shell and not moved:unknown.append({**context,'error':'composite kernel mapping uncalibrated','shell':list(shell),'kernel':list(kernel)})
                 if external[0]in(3,4):
                     descriptor=get(ports[external],4,default=b'')
-                    expected=get(descriptor,3,0);actual=port_type(n,*shell,definitions)
+                    expected=declaration_type(ports[external])
+                    actual=declaration_type(moved) if moved else type_at(g,n,*shell,definitions)
                     if expected is None or actual is None:unknown.append({**context,'error':'composite interface type unresolved'})
                     elif expected!=actual:issues.append({**context,'error':'composite interface type mismatch','types':[expected,actual]})
                     elif expected in(25,26):
                         sid=descriptor_structure_id(descriptor)
-                        inner=structure_id(n,*shell,definitions)
+                        inner=descriptor_structure_id(get(moved,4,default=b'')) if moved else structure_id(n,*shell,definitions)
                         if sid is None or inner is None:unknown.append({**context,'error':'composite interface structure unresolved'})
                         elif sid!=inner:issues.append({**context,'error':'composite interface structure mismatch'})
             for key in ports:

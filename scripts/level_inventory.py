@@ -95,6 +95,41 @@ def graph_records(data):
     return records
 
 
+def graph_component_field(entity, section):
+    if section == 4 and any(unique(fields(c), 1, 0) == 3 for c in vals(fields(entity), 7)):
+        return 7
+    return 6
+
+
+def entity_graph_ids(entity, section=5):
+    """Read graph bindings from an entity's calibrated component slots."""
+    for component in vals(fields(entity), graph_component_field(entity, section)):
+        cf = fields(component)
+        if unique(cf, 1, 0) != 3:
+            continue
+        for group in vals(cf, 13):
+            for entry in vals(fields(group), 1):
+                locator = unique(fields(entry), 1, default=b'')
+                yield unique(fields(locator), 2, 0)
+
+
+def graph_library_ids(root):
+    """Read category 4 graph registrations from editor folders and uncategorized tabs."""
+    for library in vals(root, 6):
+        for entry in vals(fields(library), 1):
+            rows = fields(entry)
+            if unique(rows, 1, 0) != 4:
+                continue
+            folders = collections.deque(vals(rows, 2) + vals(rows, 3))
+            while folders:
+                folder = fields(folders.popleft())
+                folders.extend(vals(folder, 4))
+                for raw in vals(folder, 5):
+                    reference = fields(raw)
+                    if unique(reference, 1, 0) == 800:
+                        yield unique(reference, 2, 0)
+
+
 def inspect_file(path):
     path=Path(path);data=path.read_bytes();header,root=container(data)
     records=graph_records(data)
@@ -110,15 +145,7 @@ def inspect_file(path):
     for group in (vals(root,5) if path.suffix.lower()!='.gia' else []):
         for entity in vals(fields(group),1):
             ef=fields(entity);eid=unique(ef,1,0)
-            for component in vals(ef,6):
-                cf=fields(component)
-                if unique(cf,1,0)!=3:continue
-                for binding in vals(cf,13):
-                    for entry in vals(fields(binding),1):
-                        locator=unique(fields(entry),1)
-                        if locator:
-                            ref=unique(fields(locator),2,0)
-                            if ref is not None:mounts.append({'entity_id':eid,'graph_id':ref})
+            mounts.extend({'entity_id':eid,'graph_id':gid} for gid in entity_graph_ids(entity) if gid is not None)
     for script_group in vals(root,50):
         for entry in vals(fields(script_group),1):
             ef=fields(entry)

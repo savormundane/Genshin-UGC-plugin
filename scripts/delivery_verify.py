@@ -3,16 +3,25 @@ from pathlib import Path
 import argparse,json,tempfile,shutil
 from authoring_io import *
 
-def verify(root,rebuild=False,portable=False,trusted_inputs_sha256=None):
+def verify(root,rebuild=False,portable=False,trusted_inputs_sha256=None,*,artifacts_only=False):
     from portable_trust import listed_path, closure, trusted_execution
+    if artifacts_only and (portable or rebuild or trusted_inputs_sha256 is not None):
+        raise ValueError('Artifact-only verification cannot be combined with portable input verification or rebuild')
     root=Path(root).absolute();checked=set();report=read_json(listed_path(root,'manifest.json',checked));changed=[];missing=[]
     for name,digest in report['files'].items():
         if name=='manifest.json':continue
         p=listed_path(root,name,checked)
         if not p.is_file():missing.append(name)
-        elif sha(p.read_bytes())!=digest:changed.append(name)
-    source_changes=[]if portable else[p for p,digest in report['inputs'].items()if not Path(p).is_file()or sha(Path(p).read_bytes())!=digest]
-    result={'schema':2,'artifact_changes':changed,'missing':missing,'source_changes':source_changes,'passed':not(changed or missing or source_changes),'rebuild':'not_checked','editor':'not_checked','host':'not_checked'}
+        elif sha_file(p)!=digest:changed.append(name)
+    source_changes=[]
+    source_check='not_checked'
+    if not (portable or artifacts_only):
+        source_changes=[p for p,digest in report['inputs'].items()if not Path(p).is_file()or sha_file(p)!=digest]
+        source_check='failed' if source_changes else 'passed'
+    result={'schema':2,'scope':'artifacts_only' if artifacts_only else 'portable' if portable else 'sources_and_artifacts',
+            'artifact_check':'failed' if changed or missing else 'passed',
+            'artifact_changes':changed,'missing':missing,'source_check':source_check,'source_changes':source_changes,
+            'passed':not(changed or missing or source_changes),'rebuild':'not_checked','editor':'not_checked','host':'not_checked'}
     if portable:
         import os
         for directory,dirs,files in os.walk(root,followlinks=False):
@@ -51,7 +60,7 @@ def verify(root,rebuild=False,portable=False,trusted_inputs_sha256=None):
             result.update(rebuild='failed'if differences else'passed',rebuild_artifacts=count,rebuild_differences=differences,passed=not differences)
     return result
 def main(argv=None):
-    p=argparse.ArgumentParser();p.add_argument('output');p.add_argument('--rebuild',action='store_true');p.add_argument('--portable',action='store_true');p.add_argument('--trusted-inputs-sha256');p.add_argument('--out');a=p.parse_args(argv);r=verify(a.output,a.rebuild,a.portable,a.trusted_inputs_sha256)
+    p=argparse.ArgumentParser();p.add_argument('output');p.add_argument('--rebuild',action='store_true');p.add_argument('--portable',action='store_true');p.add_argument('--artifacts-only',action='store_true');p.add_argument('--trusted-inputs-sha256');p.add_argument('--out');a=p.parse_args(argv);r=verify(a.output,a.rebuild,a.portable,a.trusted_inputs_sha256,artifacts_only=a.artifacts_only)
     if a.out:
         with Path(a.out).open('x',encoding='utf-8')as f:json.dump(r,f,ensure_ascii=False,indent=2)
     print(json.dumps(r,ensure_ascii=False));return 0 if r['passed']else 2

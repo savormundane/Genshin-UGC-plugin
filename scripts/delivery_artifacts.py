@@ -8,7 +8,7 @@ def roles(files):
               'dependency-graph.json','environment.json','simulation.json','experiment.json','external-simulation.json',
               'source-map.json','client-bindings.json','client-check.json','client-replies.json','storage-mount.json',
               'protocol-client-targets.json','platform-report.json','resource-report.json','client-resource-report.json','project-report.json','native-diff.json','native-plan.json'}
-    intermediate={'base.gil','legacy-job.json','graph-job.json','resource-job.json'}
+    intermediate={'base.gil','legacy-job.json','graph-job.json','graph-bindings.json','resource-job.json'}
     for name in files:
         path=PurePosixPath(name)
         # Generated native resource definitions are deliverables even when their

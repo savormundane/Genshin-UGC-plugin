@@ -3,8 +3,8 @@ from pathlib import Path
 from collections import Counter,defaultdict,deque
 from urllib.parse import quote
 import argparse,json
-from authoring_io import sha,read_json,schema,resolve
-from level_inventory import container,fields,vals,unique
+from authoring_io import DiagnosticError,sha,read_json,schema,resolve
+from level_inventory import container,fields,vals,unique,graph_records,entity_graph_ids,graph_library_ids
 from level_authoring import inspect_bindings,ui_records,stream
 from native_core import model,audit,get,ref,slot,definition_id,node_catalog
 
@@ -12,12 +12,8 @@ from native_core import model,audit,get,ref,slot,definition_id,node_catalog
 def key(*parts):return '/'.join(quote(str(p),safe='')for p in parts)
 
 
-def build(data,namespace='level',*,include_spatial=True):
-    m=model(data);validation=audit(data);header,root=container(data)
-    spatial={}
-    if include_spatial:
-        from native_entity_transform import spatial_objects
-        spatial=spatial_objects(header,root)
+def build(data,namespace='level',*,include_scene=True,include_gameplay=True,validation=None):
+    m=model(data);validation=audit(data) if validation is None else validation;header,root=container(data)
     objects=[];references=[];variable_accesses=[];issues=list(validation['issues']);unknown=list(validation['unresolved'])
     def obj(kind,ident,name='',scope=(),**details):
         ident_key=key(namespace,kind,*scope,ident)
@@ -28,10 +24,11 @@ def build(data,namespace='level',*,include_spatial=True):
         references.append({'source':source,'target':target,'relation':relation,'location':location})
     document=obj('document','root',m['format'],sha256=sha(data))
     definitions=m['definitions'];builtin,_=node_catalog();builtin_used=set()
-    from native_signals import declarations
-    from native_ports import resolve_dynamic
-    signal_records=declarations(m)if m['format']=='gia'else{}
-    roles={i:(r['name'],r['role'])for i,r in signal_records.items()}
+    from native_signals import declarations,legacy_client_senders
+    from native_ports import client_contract,declared_kernel_matches,resolve_dynamic
+    signal_records=declarations(m)
+    legacy_senders=legacy_client_senders(m,signal_records) if m['format']=='gil' else set()
+    roles={i:(r['name'],r['role'])for i,r in signal_records.items()} if m['format']=='gia' else {}
     for s in m['signals']:
         for role in(1,2,7,9):
             locator=get(s,role)
@@ -39,6 +36,18 @@ def build(data,namespace='level',*,include_spatial=True):
     resolved_graphs={};connections={}
     # Concrete builtin variants have their own IDs; they remain external definitions.
     builtin_ids=set(builtin)|{v['ConcreteId']for item in builtin.values()for v in item.get('TypeMappings',[])}
+    def client_builtin(source,node,descriptor,relation):
+        # Client kernel IDs are reused by unrelated shells, and zero can be
+        # represented by an omitted locator field. Use the complete identity.
+        shell=get(node,2,default=b'')
+        ident=get(descriptor,5,0,0)
+        scope=('client',get(shell,2,0),ref(shell),get(descriptor,2,0))
+        target=key(namespace,'builtin_node',*scope,ident)
+        if target not in builtin_used:
+            obj('builtin_node',ident,builtin.get(ref(shell),{}).get('Name',''),scope,
+                external=True,definition_source='native_client_port_contract')
+            builtin_used.add(target)
+        link(source,target,relation)
     def node_type(source,ident,relation):
         if ident in definitions:target=key(namespace,'definition',ident)
         elif ident in builtin_ids:
@@ -61,7 +70,12 @@ def build(data,namespace='level',*,include_spatial=True):
             if resolved!=n:node_type(source,definition_id(resolved,definitions),'resolved_node_type')
             for field,relation in((2,'generic_node_type'),(3,'concrete_node_type')):
                 descriptor=get(n,field)
-                if descriptor:node_type(source,ref(descriptor),relation)
+                if descriptor:
+                    if client_contract(n) is not None:client_builtin(source,n,descriptor,relation)
+                    elif (field==3 and ref(get(n,2,default=b'')) in legacy_senders and
+                          declared_kernel_matches(n,definitions[ref(get(n,2,default=b''))])):
+                        client_builtin(source,n,descriptor,relation)
+                    else:node_type(source,ref(descriptor),relation)
             for p in vals(fields(n),4):
                 for c in vals(fields(p),5):
                     remote=get(c,2,default=b'');own_port=slot(p)
@@ -94,10 +108,11 @@ def build(data,namespace='level',*,include_spatial=True):
         if g['kind']=='composite':
             for mapping in vals(fields(g['raw']),4):
                 link(owner,key(namespace,'node',*scope,get(mapping,2,0)),'composite_interface',port=list(slot(mapping)))
-    from native_scene import ordinary_object
+    from native_scene import ordinary_object,spatial_objects
 
     placed = {}
-    if include_spatial and m['format'] == 'gil':
+    spatial = spatial_objects(header, root) if include_scene else {}
+    if include_scene and m['format'] == 'gil':
         for section in vals(root, 5):
             for raw in vals(fields(section), 1):
                 try:
@@ -108,15 +123,11 @@ def build(data,namespace='level',*,include_spatial=True):
                 if scene is not None:
                     placed[scene['record_id']] = scene
     for entity in m['entities']:
-        kind='template'if entity['section']==4 else'entity'
-        ident=entity['entity_id']
-        detail=spatial.get((kind,ident))
-        scene = placed.get(ident) if kind == 'entity' else None
-        props = {'name':detail['name'],'spatial':detail} if detail else {}
-        if scene:
-            props.setdefault('name',scene['name'])
-            props['scene']=scene
-        obj(kind,ident,**props)
+        kind = 'template' if entity['section'] == 4 else 'entity'
+        scene = placed.get(entity['entity_id']) if kind == 'entity' else None
+        details = spatial.get((kind, entity['entity_id']))
+        obj(kind, entity['entity_id'], name=(details or scene or {}).get('name',''),
+            **({'scene': scene} if scene else {}), **({'spatial': details} if details else {}))
     from native_variables import summary,audit as audit_variables
     variables=defaultdict(dict)
     for record in m['custom_variables']['records']:
@@ -173,6 +184,11 @@ def build(data,namespace='level',*,include_spatial=True):
             raw=get(s,role)
             if raw:
                 target=key(namespace,'definition',ref(raw));link(source,target,'signal_role',role=role);link(target,source,'signal_contract',role=role)
+    for ident in sorted(legacy_senders):
+        signal=signal_records[ident];source=key(namespace,'definition',ident)
+        link(source,key(namespace,'signal',signal['name']),'signal_contract',role=7)
+        for field,peer in signal['peers'].items():
+            link(source,key(namespace,'definition',ref(peer)),'signal_peer',field=field)
     if m['format']=='gia':
         names=set()
         for ident,s in signal_records.items():
@@ -262,6 +278,12 @@ def build(data,namespace='level',*,include_spatial=True):
     for r in references:
         count=counts[r['target']];r['resolution']='resolved'if count==1 else'ambiguous'if count else'missing'
         if count!=1:issues.append({'error':'ambiguous reference'if count else'dangling reference',**r})
+    if include_gameplay and m['format']=='gil':
+        from native_gameplay_index import build_gameplay
+        gameplay=build_gameplay(data,namespace)
+        objects.extend(o for o in gameplay['objects'] if o['key'] not in counts)
+        references.extend(gameplay['references'])
+        issues.extend(gameplay['issues'])
     script_mappings = [
         {'mapping':o['name'],'id':o['id'],'key':o['key'],'artifact':o['artifact'],'sha256':o['sha256']}
         for o in objects if o['kind']=='script'
@@ -272,10 +294,113 @@ def build(data,namespace='level',*,include_spatial=True):
             'editor':'not_checked','host':'not_checked'}
 
 
-def inspect(path,level=None):
+def build_scene(data, namespace='level'):
+    """Index the scene and serialized mounts without interpreting graph ports."""
+    from native_scene import GIL_HEADER, STATIC_GIA_HEADER, identified_records, spatial_objects, typed_record
+
+    header, root = container(data)
+    if header[1:4] not in (GIL_HEADER, STATIC_GIA_HEADER):
+        raise ValueError('Scene scope requires calibrated GIL or GIA framing')
+    fmt = 'gil' if header[1:4] == GIL_HEADER else 'gia'
+    unresolved = []
+    spatial = spatial_objects(header, root, unresolved)
+    objects, references, issues = [], [], []
+    seen = set()
+
+    def obj(kind, ident, name='', scope=(), **detail):
+        target = key(namespace, kind, *scope, ident)
+        if target in seen:
+            issues.append({'error': 'duplicate scene identity', 'key': target})
+        seen.add(target)
+        objects.append({'key': target, 'artifact': namespace, 'kind': kind, 'id': ident,
+                        'name': name, 'scope': list(scope), **detail})
+        return target
+
+    def link(source, target, relation, **location):
+        references.append({'source': source, 'target': target, 'relation': relation, 'location': location})
+
+    digest = sha(data)
+    document = obj('document', 'root', fmt, sha256=digest)
+    if fmt == 'gia':
+        for (_, ident), detail in spatial.items():
+            obj('gia_resource', ident, detail['name'], scope=(1,), spatial=detail)
+    else:
+        try:
+            for graph_kind, raw in graph_records(data):
+                locator = get(raw, 1, default=b'')
+                identity = ref(locator)
+                obj('graph', identity, get(raw, 2, default=b'').decode('utf-8'), (graph_kind,),
+                    native_category=get(locator, 2, 0))
+            for gid in graph_library_ids(root):
+                link(document, key(namespace, 'graph', 'ordinary', gid), 'graph_library')
+        except ValueError as exc:
+            unresolved.append({'section': 10, 'error': str(exc)})
+        for section, kind in ((4, 'template'), (5, 'entity')):
+            records = (raw for group in vals(root, section) for raw in vals(fields(group), 1))
+            for ident, raw, error in identified_records(records):
+                if error:
+                    issues.append({'section': section, 'id': ident, 'error': error})
+                    continue
+                detail = spatial.get((kind, ident))
+                name = detail['name'] if detail else ''
+                if not detail:
+                    try:
+                        label = typed_record(raw, 6 if section == 4 else 5, 1)
+                        name = get(get(label or b'', 11, default=b''), 1, default=b'').decode('utf-8')
+                    except ValueError as exc:
+                        unresolved.append({'section': section, 'id': ident, 'error': str(exc)})
+                source = obj(kind, ident, name, section=section, spatial=detail)
+                for part in (detail or {}).get('decorations', []):
+                    target = obj('decoration', part['id'], part['name'], (kind, ident),
+                                 section=27, owner_section=section, owner_id=ident, spatial=part)
+                    link(target, source, 'decoration_owner')
+                if section == 5:
+                    try:
+                        for locator in vals(fields(raw), 2):
+                            target_id, category = get(locator, 1, 0), get(locator, 2, 0, 0)
+                            if not target_id or category not in (0, 1):
+                                unresolved.append({'key': source, 'error': 'uncalibrated template locator', 'category': category})
+                                continue
+                            if category == 0:
+                                link(source, key(namespace, 'template', target_id), 'entity_template')
+                            else:
+                                target = key(namespace, 'platform_template', target_id)
+                                if target not in seen:
+                                    obj('platform_template', target_id, external=True, resource_verified=False)
+                                link(source, target, 'platform_template')
+                    except ValueError as exc:
+                        unresolved.append({'key': source, 'error': str(exc)})
+                try:
+                    for gid in entity_graph_ids(raw):
+                        link(source, key(namespace, 'graph', 'ordinary', gid), 'graph_mount')
+                except ValueError as exc:
+                    unresolved.append({'key': source, 'error': str(exc)})
+        for edge in references:
+            if edge['target'] not in seen:
+                unresolved.append({'error': 'scene reference target absent', **edge})
+    return {'schema': 2, 'scope': 'scene', 'status': 'failed' if issues else 'passed',
+            'artifacts': {namespace: {'format': fmt, 'sha256': digest}}, 'objects': objects,
+            'script_mappings': [], 'references': references, 'issues': issues, 'unresolved': unresolved,
+            'checks': {'scene_index': {'status': 'failed' if issues else 'passed'},
+                       'spatial_coverage': {'status': 'not_checked' if unresolved else 'passed',
+                                            'unresolved': len(unresolved)},
+                       'graph_audit': {'status': 'not_checked'}},
+            'complete_reference_index': False, 'unindexed': ['graph_ports', 'client_bindings', 'arbitrary_component_payloads'],
+            'editor': 'not_checked', 'host': 'not_checked'}
+
+
+def inspect(path,level=None,*,scope=None):
     path=Path(path).resolve()
+    if scope not in (None, 'scene', 'gameplay'):
+        raise ValueError('Unknown project inspection scope')
     if path.suffix.lower()in('.gil','.gia'):
-        report=build(path.read_bytes());report['inputs']={str(path):report['artifacts']['level']['sha256']};return report
+        reader = build_scene if scope == 'scene' else build
+        if scope == 'gameplay':
+            from native_gameplay_index import build_gameplay
+            reader = build_gameplay
+        report=reader(path.read_bytes());report['inputs']={str(path):report['artifacts']['level']['sha256']};return report
+    if scope:
+        raise ValueError(f'{scope} scope requires a native file')
     spec=read_json(path);schema(spec,('schema','artifacts','required_references'),('schema','artifacts'))
     if not isinstance(spec['artifacts'],list)or not spec['artifacts']:raise ValueError('Explicit nonempty project artifacts required')
     reports=[];seen=set();inputs={str(path):sha(path.read_bytes())}
@@ -313,7 +438,11 @@ def select(report,selector):
     if any(not isinstance(v,str)or not v for k,v in selector.items()if k!='id')or 'id'in selector and type(selector['id'])not in(int,str):
         raise ValueError('Object selector requires nonempty strings and integer/string ID')
     matches=[o for o in report['objects']if all(o.get(k)==v for k,v in selector.items())]
-    if len(matches)!=1:raise ValueError('Object selector must be unique: '+json.dumps({'selector':selector,'matches':[o['key']for o in matches]},ensure_ascii=False))
+    if len(matches)!=1:
+        candidates=[o['key'] for o in matches]
+        raise DiagnosticError('project.selector_ambiguous' if candidates else 'project.selector_missing',
+                              'Object selector must be unique: '+json.dumps({'selector':selector,'matches':candidates},ensure_ascii=False),
+                              phase='project_inspect', expected=1, actual=len(candidates), selector=selector, candidates=candidates)
     return matches[0]
 
 
@@ -326,25 +455,55 @@ def consumers(report,selector,transitive=False):
             edges.append(edge);source=edge['source']
             if source!=target['key']:keys.add(source)
             if transitive and source not in seen:seen.add(source);pending.append(source)
-    dependencies=[edge for edge in report['references']if edge['source']==target['key']]
-    dependency_keys={edge['target'] for edge in dependencies}
+    dependencies = [edge for edge in report['references'] if edge['source']==target['key']]
+    dependency_keys = {edge['target'] for edge in dependencies}
+    detail = {}
+    if report.get('scope') in ('scene','gameplay'):
+        related = [item for item in report['unresolved'] if item.get('key',item.get('source'))==target['key'] or
+                   (target.get('section') is not None and item.get('section')==target['section'] and item.get('id')==target['id'])]
+        detail = {'scope':report['scope'],'checks':report['checks'],'unresolved':related}
+        if report['scope']=='gameplay':
+            detail['diagnostics']=[issue for issue in report['issues']
+                                   if target['key'] in (issue.get('object'),issue.get('target'))]
     return {'schema':2,'status':report['status'],'target':target,'transitive':transitive,'consumers':[o for o in report['objects']if o['key']in keys],
-            'references':edges,'dependencies':[o for o in report['objects']if o['key']in dependency_keys],
-            'dependency_references':dependencies,'issue_count':len(report['issues']),'unresolved_count':len(report['unresolved']),
-            'complete_reference_index':report['complete_reference_index'],'unindexed':report['unindexed'],
-            'artifacts':report['artifacts'],'inputs':report.get('inputs',{}),'script_mappings':report['script_mappings'],'editor':'not_checked','host':'not_checked'}
+            'dependencies':[o for o in report['objects']if o['key']in dependency_keys],'dependency_references':dependencies,
+            'references':edges,'complete_reference_index':report['complete_reference_index'],'unindexed':report['unindexed'],
+            'artifacts':report['artifacts'],'inputs':report.get('inputs',{}),'script_mappings':report['script_mappings'],
+            'editor':'not_checked','host':'not_checked',**detail}
+
+
+def inspect_summary(report):
+    if 'target' in report:
+        return report
+    counts = Counter(row['kind'] for row in report['objects'])
+    return {k: report[k] for k in ('schema','status','scope','artifacts','inputs','script_mappings','editor','host') if k in report} | {
+        'object_counts': dict(counts), 'reference_count': len(report['references']),
+        'checks': report.get('checks', {'project_references': report['status']}),
+        'diagnostics': report['issues'] + report['unresolved'], 'complete_reference_index': False}
 
 
 def main(argv=None):
     parser=argparse.ArgumentParser();commands=parser.add_subparsers(dest='operation',required=True)
     for name in('inspect','check','consumers'):
         command=commands.add_parser(name);command.add_argument('input')
-        if name=='consumers':
-            choice=command.add_mutually_exclusive_group(required=True)
+        if name in ('inspect','consumers'):
+            command.add_argument('--scope',choices=['scene','gameplay'])
+            command.add_argument('--summary',action='store_true')
+            command.add_argument('--out')
+            choice=command.add_mutually_exclusive_group(required=name=='consumers')
             choice.add_argument('--key');choice.add_argument('--name');choice.add_argument('--id',type=int)
             command.add_argument('--kind');command.add_argument('--transitive',action='store_true')
-    args=parser.parse_args(argv);result=inspect(args.input)
-    if args.operation=='consumers':result=consumers(result,{k:getattr(args,k)for k in('key','kind','name','id')if getattr(args,k)is not None},args.transitive)
+    args=parser.parse_args(argv);result=inspect(args.input,scope=getattr(args,'scope',None))
+    selector = {k:getattr(args,k) for k in ('key','kind','name','id') if getattr(args,k,None) is not None}
+    if selector:
+        result=consumers(result,selector,args.transitive)
+    elif getattr(args,'transitive',False):
+        parser.error('--transitive requires a selector')
+    if output := getattr(args,'out',None):
+        with Path(output).open('x',encoding='utf-8') as stream:
+            json.dump(result,stream,ensure_ascii=False,indent=2)
+    if getattr(args,'summary',False):
+        result=inspect_summary(result)
     print(json.dumps(result,ensure_ascii=False,indent=2))
     return 0 if result['status']=='passed'else 2
 

@@ -6,8 +6,8 @@ Template entry7 is component data, not the same variable-group representation.
 from collections import Counter
 import math,struct
 from authoring_io import sha,schema
-from level_authoring import flt,integer,msg,set_section
-from level_inventory import container,fields,vals
+from level_authoring import flt,integer,msg,set_section,text
+from level_inventory import container,fields,unique,vals
 from native_core import get,replace_message
 
 TYPES={1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,20,21,22,23,24,25,26,27}
@@ -62,6 +62,70 @@ def scalar_default(payload,typ):
     return (value or b'').decode('utf-8')
 
 
+def scalar_field(value, typ):
+    if typ==3 and type(value)is int and -(1<<63)<=value<(1<<63):
+        return integer(1,value%(1<<64)) if value else b''
+    if typ==4 and type(value)is bool:
+        return integer(1,1) if value else b''
+    if typ==5 and type(value) in (float,int) and abs(value)<=3.4028234663852886e38:
+        return flt(1,value) if value else b''
+    if typ==6 and isinstance(value,str):
+        return text(1,value)
+    raise ValueError('Invalid value for existing scalar type '+str(typ))
+
+
+def add_native_variables(data, op):
+    from native_scene import typed_record
+    from native_scene_edits import select_record
+    schema(op, ('op','template_id','variables'), ('template_id','variables'))
+    items = op['variables']
+    if not isinstance(items,list) or not items:
+        raise ValueError('Provide one or more native scalar defaults')
+    _, root = container(data)
+    section = unique(root,4,default=b'')
+    target = select_record(section,1,op['template_id'],'Variable template')
+    carrier = typed_record(target,8,1,strict=True)
+    if carrier is not None and (get(carrier,2,0)!=1 or get(carrier,11) is None):
+        raise ValueError('Existing variable group is outside the calibrated format')
+    previous = get(carrier or b'',11,default=b'')
+    names = {get(r,2,default=b'').decode('utf-8') for r in vals(fields(previous),1)}
+    additions = []
+    written = []
+    types = {'integer':3,'boolean':4,'float':5,'string':6}
+    for item in items:
+        schema(item, ('name','type','default'), ('name','type','default'))
+        name, kind = item['name'], item['type']
+        if not isinstance(name,str) or not 1<=len(name)<=20 or not name.strip() or '\0' in name or name in names:
+            raise ValueError('Native variable names must be unique and have 1–20 characters')
+        if kind not in types:
+            raise ValueError('Choose integer, boolean, float, or string')
+        typ = types[kind]
+        descriptor = integer(1,typ)+msg(2)
+        payload = scalar_field(item['default'],typ)
+        value = integer(1,typ)+msg(2,descriptor)+msg(10+typ,payload)
+        additions.append(msg(1,text(2,name)+integer(3,typ)+msg(4,value)+integer(5,1)+msg(6,descriptor)))
+        names.add(name)
+        written.append({'name':name,'type':kind,'default':scalar_default(payload,typ)})
+    updated = previous+b''.join(additions)
+    if carrier is None:
+        new_target = target+msg(8,integer(1,1)+integer(2,1)+msg(11,updated))
+    else:
+        new_target = replace_message(target,8,carrier,replace_message(carrier,11,previous,updated))
+    return set_section(data,4,replace_message(section,1,target,new_target)), {'template_id':op['template_id'],'variables':written}
+
+
+def scalar_payload(record):
+    """Locate a typed default only when its native descriptors agree."""
+    typ=record['type_id'];default=record['value']
+    if typ not in (3,4,5,6) or default is None or record['descriptor'] is None:
+        raise ValueError('Only existing calibrated scalar defaults are writable')
+    payload=get(default,typ+10)
+    if (payload is None or get(default,1,0)!=typ or get(get(default,2,default=b''),1,0)!=typ
+            or get(record['descriptor'],1,0)!=typ):
+        raise ValueError('Custom variable default type mismatch')
+    return payload
+
+
 def set_default(data,model,op):
     keys=('op','section','entity_id','name','value')
     schema(op,keys,keys)
@@ -73,23 +137,9 @@ def set_default(data,model,op):
              if (r['section'],r['entity_id'],r['name'])==(section,ident,name)]
     if len(records)!=1:raise ValueError('Expected one existing custom variable in the selected scope')
     record=records[0];typ=record['type_id'];default=record['value']
-    if typ not in (3,4,5,6) or default is None or record['descriptor'] is None:
-        raise ValueError('Only existing calibrated scalar defaults are writable')
-    carrier=typ+10;payload=get(default,carrier)
-    if (payload is None or get(default,1,0)!=typ or get(get(default,2,default=b''),1,0)!=typ
-            or get(record['descriptor'],1,0)!=typ):
-        raise ValueError('Custom variable default type mismatch')
+    carrier=typ+10;payload=scalar_payload(record)
     before=scalar_default(payload,typ)
-    if typ==3 and type(value)is int and -(1<<63)<=value<(1<<63):
-        field=integer(1,value%(1<<64)) if value else b''
-    elif typ==4 and type(value)is bool:
-        field=integer(1,1) if value else b''
-    elif typ==5 and type(value) in (float,int) and abs(value)<=3.4028234663852886e38:
-        field=flt(1,value) if value else b''
-    elif typ==6 and isinstance(value,str):
-        field=msg(1,value.encode('utf-8'))
-    else:
-        raise ValueError('Invalid value for existing scalar type '+str(typ))
+    field=scalar_field(value,typ)
     new_payload=b''.join(field if n==1 else raw for n,_,_,raw in fields(payload))
     if all(n!=1 for n,_,_,_ in fields(payload)):new_payload+=field
     after=scalar_default(new_payload,typ)

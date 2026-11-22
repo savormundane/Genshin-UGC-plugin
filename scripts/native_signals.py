@@ -57,14 +57,14 @@ def declarations(model):
     return result
 
 
-def descriptor_problem(raw,typ,client=False):
+def descriptor_problem(raw,typ,client=False,*,editor_gil=False):
     """Validate calibrated scalar/list descriptors, not arbitrary type numbers.
 
     Mapping is specific to signal_writeback/gia_export.py, whose GUID encoding
     differs from helpers.py's GIL writer. Only the 18 public signal types are
     admitted; this does not certify their behavior in the host.
     """
-    scalar={1:1,2:2,3:3,4:5,5:7,6:9,12:12,20:20,21:21}
+    scalar={1:1,2:2,3:3,4:5,5:7,6:9,12:11 if editor_gil else 12,20:20,21:21}
     lists={7:2,8:3,9:4,10:5,11:6,13:1,15:12,22:20,23:21}
     if typ not in scalar and typ not in lists:return 'unresolved'
     mapped=scalar[typ]if typ in scalar else scalar[lists[typ]]+1
@@ -74,11 +74,55 @@ def descriptor_problem(raw,typ,client=False):
         if get(raw,1,0)!=10002:return 'list descriptor mismatch'
         child=get(get(raw,102,default=b''),1)
         if child is None:return 'list element absent'
-        return descriptor_problem(child,lists[typ],client)
+        return descriptor_problem(child,lists[typ],client,editor_gil=editor_gil)
     if get(raw,102)is not None:return 'unexpected list descriptor'
     if get(raw,1,0,0)!={1:0,2:1,3:2,4:6,5:4,6:5,12:7,20:1,21:1}[typ]:return 'scalar descriptor mismatch'
-    if typ==4 and get(get(raw,101,default=b''),1,0)!=(200001 if client else 1):return 'boolean descriptor mismatch'
+    if typ==4 and get(get(raw,101,default=b''),1,0)!=(200001 if client and not editor_gil else 1):return 'boolean descriptor mismatch'
     return None
+
+
+def legacy_client_senders(model,records):
+    """Older GIL registrations store the peer locators only in the client sender."""
+    from native_resources import locator_key
+    definitions=model['definitions']
+    registry={get(s,3,default=b'').decode('utf-8'):s for s in model['signals']}
+    found={}
+    for ident,item in records.items():
+        if item['role']!=7 or not item['name'] or item['name'] not in registry:continue
+        row=registry[item['name']]
+        if get(row,7)is not None:continue
+        listener,sender=(get(row,k,default=b'')for k in (2,1))
+        peers=(listener,sender)
+        if any(not locator or locator_key(locator)!=locator_key(item['peers'][field])
+               for field,locator in zip((2,3),peers)):continue
+        ids=(ident,ref(listener),ref(sender))
+        if any(i not in definitions for i in ids):continue
+        if any(records.get(i,{}).get('name')!=item['name'] or records[i]['role']!=role
+               for i,role in zip(ids,(7,2,1))):continue
+        if any(locator_key(locator)!=locator_key(get(get(definitions[i],4,default=b''),1,default=b''))
+               for i,locator in zip(ids[1:],peers)):continue
+        versions={get(get(definitions[i],4,default=b''),5,0,0)for i in ids}
+        if len(versions)!=1:continue
+        ports=[declared_ports(definitions[i])for i in ids]
+        if any({k for k in ps if k[0]in(1,2)}!=flows or {k for k in ps if k[0]in(5,6)}!=meta
+               for ps,flows,meta in zip(ports,({(1,0),(2,0)},{(2,0)},{(1,0),(2,0)}),
+                                        ({(5,0),(5,1)},{(5,0)},{(5,0)}))):continue
+        if any(descriptor_problem(get(ports[1].get((4,i),b''),4,default=b''),typ)
+               for i,typ in enumerate((1,2,1))):continue
+        client,listen,send=[
+            {index-offset:p for (direction,index),p in ps.items()if direction==kind and index>=offset}
+            for ps,kind,offset in zip(ports,(3,4,3),(0,3,0))
+        ]
+        if set(client)!=set(listen) or set(client)!=set(send):continue
+        for index,p in send.items():
+            raw=get(p,4,default=b'')
+            typ=get(raw,3,0)
+            if any(get(other,1)!=get(p,1) or descriptor_problem(get(other,4,default=b''),typ,is_client,editor_gil=True)
+                   for other,is_client in ((p,False),(listen[index],False),(client[index],True))):
+                break
+        else:
+            found.setdefault(item['name'],[]).append(ident)
+    return {ids[0] for ids in found.values()if len(ids)==1}
 
 
 def audit_gia_signals(model):

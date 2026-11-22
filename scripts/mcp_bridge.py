@@ -1,26 +1,27 @@
 """Fixed operations shared by local MCP and CLI; no arbitrary command tool."""
 from pathlib import Path
 import argparse,asyncio,json,os,re,sys,tempfile,math
-from authoring_io import PLUGIN,sha_file,schema,read_json,write_json
+from authoring_io import DiagnosticError,PLUGIN,sha_file,schema,read_json,write_json
 
 OPERATIONS={'doctor':(), 'capabilities':(), 'docs_search':('version','query'),'api_lookup':('symbol',),'nodes_lookup':(),'resources_lookup':('version',),'diagnose':('spec','sha256'),
             'native_inspect':('input',),'native_audit':('input',),
-            'project_inspect':('input',),'client_check':('input',),
+            'project_inspect':('input',),'client_check':('input',),'graph_check':('input',),
             'native_diff':('input','other'),
             'native_plan':('input','sha256','output'),
             'simulate':('spec','sha256','output'),'experiment_run':('spec','sha256','output'),
             'experiment_compare':('input','sha256','other','other_sha256'),
-            'logs_diagnose':('spec','sha256'),'verify':('input','sha256','rebuild','portable'),
+            'logs_diagnose':('spec','sha256'),'verify':('input','sha256'),
             'produce':('spec','sha256','output'),'native_apply':('input','sha256','plan','plan_sha256','output')}
 
 READ_FILE_OPERATIONS={
-    'native_inspect':('sha256',),'native_audit':('sha256',),'project_inspect':('sha256','selector','transitive'),
+    'native_inspect':('sha256',),'native_audit':('sha256',),'project_inspect':('sha256','selector','transitive','scope','summary'),
     'native_diff':('sha256','other_sha256','allowed_top_level_fields'),
     'client_check':('sha256','contract','contract_sha256','mapping'),
+    'graph_check':('sha256','job','job_sha256','bindings','bindings_sha256'),
     'resources_lookup':('query','mode','limit','catalogue','catalogue_sha256'),
 }
-OPTIONAL_FIELDS={**READ_FILE_OPERATIONS,'native_plan':('patch','spec','spec_sha256'),
-                 'nodes_lookup':('query','scope','limit'),'verify':('trusted_inputs_sha256',)}
+OPTIONAL_FIELDS={**READ_FILE_OPERATIONS,'native_plan':('patch','spec','spec_sha256','summary'),'produce':('summary',),
+                 'nodes_lookup':('query','scope','limit'),'verify':('rebuild','portable','trusted_inputs_sha256','artifacts_only')}
 
 async def finish_worker(process):
     """Finish cleanup before releasing the request directory."""
@@ -106,6 +107,7 @@ class Bridge:
         schema(arguments,required+OPTIONAL_FIELDS.get(operation,()),required)
         args=dict(arguments);bound={};input_hashes={}
         automatic=operation in READ_FILE_OPERATIONS
+        if 'summary' in args and type(args['summary']) is not bool:raise ValueError('summary must be a boolean')
         if operation=='native_plan':
             supplied=set(args)&{'patch','spec','spec_sha256'}
             if supplied not in ({'patch'}, {'spec','spec_sha256'}):
@@ -123,16 +125,23 @@ class Bridge:
             limit=args.get('limit',20)
             if type(limit) is not int or not 1<=limit<=100:
                 raise ValueError('Resource lookup limit must be from 1 to 100')
-        for field,digest_field in(('catalogue','catalogue_sha256'),('input','sha256'),('spec','spec_sha256'if operation=='native_plan'else'sha256'),('other','other_sha256'),('plan','plan_sha256'),('contract','contract_sha256')):
-            if field not in args:continue
+        digest_fields=(('catalogue','catalogue_sha256'),('input','sha256'),
+                       ('spec','spec_sha256' if operation=='native_plan' else 'sha256'),('other','other_sha256'),
+                       ('plan','plan_sha256'),('contract','contract_sha256'),('job','job_sha256'),('bindings','bindings_sha256'))
+        for field,digest_field in digest_fields:
+            if field not in args:
+                if field in ('job','bindings') and digest_field in args:raise ValueError(field+' path required')
+                continue
             path=self.path(args[field]);actual=sha_file(path)
             if not automatic or digest_field in args:
                 digest=args[digest_field]
                 if not isinstance(digest,str)or not re.fullmatch('[0-9a-f]{64}',digest)or actual!=digest:
-                    raise ValueError('Input digest mismatch: '+field)
+                    raise DiagnosticError('mcp.input_sha256_mismatch','Input digest mismatch: '+field,phase=operation,
+                                          source=str(path),field=field,expected=digest,actual=actual)
             if str(path) in bound and bound[str(path)]!=actual:raise ValueError('Input changed during binding')
             args[field]=str(path);bound[str(path)]=actual;input_hashes[field]=actual
-        if operation=='verify'and any(type(args[k])is not bool for k in ('rebuild','portable')):raise ValueError('Verification flags must be boolean')
+        if operation=='verify' and any(type(args.get(k,False)) is not bool for k in ('rebuild','portable','artifacts_only')):
+            raise ValueError('Verification flags must be boolean')
         destination=self.path(args['output'],True)if 'output'in args else None
         if progress:await progress(0,3,'Inputs bound')
         # Only this request's private directory is removed on failure/cancellation.
@@ -164,13 +173,17 @@ class Bridge:
                 return {'schema':2,'operation':operation,'status':'failed','error':detail,'output':None}
             result=read_json(result_path)
             for path,digest in bound.items():
-                if sha_file(path)!=digest:raise ValueError('Input changed during operation')
+                actual=sha_file(path)
+                if actual!=digest:
+                    raise DiagnosticError('mcp.input_changed','Input changed during operation',phase=operation,
+                                          source=path,expected=digest,actual=actual)
             if progress:await progress(2,3,'Core result checked; ready to commit')
             await asyncio.sleep(0)
             status=result.get('status', 'failed'if result.get('passed')is False else'passed')
             if destination and status!='passed':
                 response={'schema':2,'operation':operation,'status':status,'result':result,'output':None}
                 if 'error' in result:response['error']=result['error']
+                if 'diagnostics' in result:response['diagnostics']=result['diagnostics']
                 return response
             output_hashes=None
             if destination:
@@ -180,6 +193,7 @@ class Bridge:
                     output_hashes={**read_json(manifest)['files'],'manifest.json':sha_file(manifest)}
                 self.path(str(destination),True)
                 os.rename(delivery,destination)
+                if operation=='produce' and 'output_directory' in result:result['output_directory']=str(destination)
             response={'schema':2,'operation':operation,'status':status,
                       'result':result,'output':str(destination)if destination else None}
             if automatic:response['inputs_sha256']=input_hashes

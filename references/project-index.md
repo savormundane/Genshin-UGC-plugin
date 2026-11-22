@@ -4,6 +4,10 @@
 
 ```text
 python scripts/qianxing.py project inspect LEVEL.gil
+python scripts/qianxing.py project inspect LEVEL.gil --scope scene
+python scripts/qianxing.py project inspect LEVEL.gil --scope scene --key level/entity/1077936389
+python scripts/qianxing.py project inspect LEVEL.gil --scope gameplay --summary --out gameplay.json
+python scripts/qianxing.py project inspect LEVEL.gil --scope gameplay --kind currency --id 1115684865
 python scripts/qianxing.py project check PROJECT.json
 python scripts/qianxing.py project consumers LEVEL.gil --kind script --name main.lua
 python scripts/qianxing.py project consumers LEVEL.gil --key level/graph/ordinary/1073741900 --transitive
@@ -11,19 +15,27 @@ python scripts/qianxing.py project consumers LEVEL.gil --key level/graph/ordinar
 
 inspect和check输出同一结构化报告，包含objects、references、issues、unresolved及每个输入产物的sha256。passed返回0；failed或not_checked返回2。报告不写回输入，也不证明编辑器导入或宿主运行。
 
+## 场景范围
+
+`--scope scene` 读取单个 GIL 或 GIA 的对象、变换与可识别的挂载。MCP `project_inspect` 对应参数为 `scope="scene"`。可用实际返回的 `key` 查询实体、元件模板或装饰物的已知依赖和引用者。索引保留名称、身份和未解析原因，`spatial` 有内容时区分摆放实例 `world`、模板默认 `template_default` 和装饰物 `owner_local`。模型定位器的可用性需结合资源目录核对。
+
+`checks.scene_index` 表示本次读取结果，`checks.spatial_coverage` 记录未解析项，`checks.graph_audit` 为 `not_checked`。写入资格由严格原生审计和完整工程引用检查决定。精确变换、单位和写入用法见[原生场景](native-scene.md)。
+
+## 玩法引用
+
+`--scope gameplay` 定位职业、技能、道具、货币、背包、商店、环境、光源、拾取模板和计时器。可由货币反查商店价格，由技能定位正确类别的图，也可从实体查看背包、商店和掉落的已知引用。报告的引用依据来自已校准的原生字段。已确认的悬空目标或类型冲突会进入完整项目检查和制作门槛。平台默认项和动态计算的图常量属于覆盖范围之外。
+
+`--summary` 返回对象数、关系数和诊断。加 `--out` 可同时写出完整报告。带选择器时返回目标、已知引用者和依赖。
+
 ## 对象身份和查询
 
 对象key由文件命名空间、kind、作用域和id组成，每段使用URL百分号编码。例如level/graph/ordinary/1073741900与level/graph/composite/1073741900不同；level/template/1086324737与level/entity/1086324737也不同。脚本、控件、声明、结构体、存档模板/槽位、信号及GIA资源均保留自身命名空间。以inspect返回的完整key作为后续选择器，不按名称或数字猜选对象。
 
-`consumers` 返回目标的直接依赖和引用者。`references` 为引用者侧关系，`dependency_references` 为目标指向依赖的关系。`--transitive` 沿反向引用继续追踪。状态和问题数量对应整份输入。MCP `project_inspect` 可用 `selector` 执行同一查询。--name、--id可以搭配--kind，但最终必须唯一；多个文件中的同名脚本、同号普通/复合图均报告歧义。node_connection统一从使用者指向提供者，输入端、输出端或两端记录得到同一依赖关系；location保留input_port、output_port和serialized_at原始记录位置。双端记录合并，同一端的重复记录报错。流程连接表示下游对上游的依赖，不代替运行时执行顺序。
+consumers默认返回直接引用者，--transitive沿反向引用继续追踪图、挂载实体等；循环引用不会无限遍历。--name、--id可以搭配--kind，但最终必须唯一；多个文件中的同名脚本、同号普通/复合图均报告歧义。node_connection统一从使用者指向提供者，输入端、输出端或两端记录得到同一依赖关系；location保留input_port、output_port和serialized_at原始记录位置。双端记录合并，同一端的重复记录报错。流程连接表示下游对上游的依赖，不代替运行时执行顺序。
 
 已读取的关系包括节点声明/具体类型、通用信号的实际声明、图连接与复合接口、结构体描述/默认值、存档槽位、信号角色、图库和图挂载、GIA依赖及资源正文、已校准实体模板引用、控件父子/模板/根控件、UI登记与脚本挂载。检查重复身份、悬空和歧义引用、父子不一致与父级循环、模板双向关联及根控件绑定。没有序列化子列表的对象不被假定具有空列表。
 
 平台内置模板仅记录外部身份并标记resource_verified=false；文件内声明以实际文件为准。[原生自定义变量](native-variables.md)区分模板默认值、实例覆盖及结构体引用，支持继承/覆盖消费者查询。任意组件内容、变量访问及标识值目标、无类型数字常量、动态Lua标识及平台资源目录尚未全部索引，complete_reference_index固定为false，unindexed明确列出范围。因此消费者查询不能作为任意ID迁移的完整安全证明。
-
-## 三维物件
-
-已校准物件返回 `spatial`。用 `kind: "entity"` 选取场景实例，用 `kind: "template"` 查看元件记录。独立物件 GIA 由 `gia_resource` 标识。[三维身份和坐标](native-entity-transform.md)
 
 ## 多文件清单与必需关系
 

@@ -55,8 +55,12 @@ def graph_methods(s,wire):
                 if action=='open':
                     rows += [indent+'if session == '+state['qx_session']+' + 1 and revision == '+state['qx_revision']+' and session > 0 and session < '+str(limit)+' and revision < '+str(limit)+':']
                     updated={**state,'qx_session':'session','qx_revision':'revision + 1','qx_request':'0'}
+                    if 'compatible_record_version'in s:updated['qx_record_version']=str(s['record_version'])
                     rows+=commit(indent+'    ',updated)
-                    rows += [indent+'elif session == '+state['qx_session']+' and '+state['qx_revision']+' == revision + 1 and '+state['qx_request']+' == 0 and session > 0:']
+                    current_version=state['qx_record_version']+' == '+str(s.get('record_version',1))
+                    # A retry can acknowledge a completed upgrade, never an older wire record.
+                    version_guard=' and '+current_version if 'compatible_record_version'in s else ''
+                    rows += [indent+'elif session == '+state['qx_session']+' and '+state['qx_revision']+' == revision + 1 and '+state['qx_request']+' == 0 and session > 0'+version_guard+':']
                     rows+=respond(indent+'    ','True',state)+[indent+'else:']+respond(indent+'    ','False',state)
                     return rows
                 if empty:return respond(indent,'False',state)
@@ -86,7 +90,10 @@ def graph_methods(s,wire):
                   '        count: "整数" = 获取列表长度(self.game, 列表=records)','        if count == 1:',
                   '            record: "结构体" = 获取列表对应值(self.game, 列表=records, 序号=0)']
             parts,current=split('            ','record','current');body+=parts
-            compatible=[current['qx_protocol']+' == 3',current['qx_record_version']+' == '+str(s.get('record_version',1))]
+            record_version=current['qx_record_version']+' == '+str(s.get('record_version',1))
+            if action in ('read','open') and 'compatible_record_version'in s:
+                record_version='('+record_version+' or '+current['qx_record_version']+' == '+str(s['compatible_record_version'])+')'
+            compatible=[current['qx_protocol']+' == 3',record_version]
             compatible += [current[key]+' >= 0'for key in ('qx_session','qx_revision','qx_request')]
             stored_size=str(40+sum(8 if f['type']=='integer'else 1 if f['type']=='boolean'else 0 for f in fs))+''.join(' + 获取列表长度(self.game, 列表='+current[f['name']]+') * 8'for f in fs if f['type']=='integer_list')
             compatible += ['('+stored_size+') <= '+str(s['capacity_bytes'])]+['获取列表长度(self.game, 列表='+current[f['name']]+') <= '+str(f.get('max_items',s['capacity_bytes']//8))for f in fs if f['type']=='integer_list']

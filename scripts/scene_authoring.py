@@ -149,6 +149,7 @@ def inspect(path, terrain_id=None):
     from native_scene import ordinary_object, typed_record
     from native_scene_edits import describe_decoration
     from native_scene_settings import inspect_settings
+    from project_index import build_scene
 
     data = Path(path).read_bytes()
     header, root = container(data)
@@ -156,7 +157,10 @@ def inspect(path, terrain_id=None):
     if header[3] == 3:
         if terrain_id is not None:
             raise ValueError('Terrain inspection requires a GIL')
-        return {**result, 'format': 'gia', 'objects': read_gia(data)}
+        scene = build_scene(data)
+        return {**result, 'format': 'gia', 'objects': read_gia(data),
+                'spatial_objects': [row for row in scene['objects'] if row['kind'] == 'gia_resource'],
+                'spatial_unresolved': scene['unresolved']}
     if header[1:4] != (1, 806, 2):
         raise ValueError('Scene inspection requires a calibrated GIL or GIA')
     records = vals(fields(unique(root, 5, default=b'')), 1)
@@ -187,8 +191,10 @@ def inspect(path, terrain_id=None):
     else:
         for item in settings['terrains']:
             item['cell_count'] = len(item.pop('cells'))
+    scene = build_scene(data)
     return {**result, 'format': 'gil', 'objects': objects, 'collision_triggers': interactive,
-            'decorations': decorations, **settings}
+            'decorations': decorations, 'spatial_objects': [row for row in scene['objects']
+            if row['kind'] in ('entity', 'template', 'decoration')], 'spatial_unresolved': scene['unresolved'], **settings}
 
 
 def preview(path, template_id, out):
@@ -229,6 +235,60 @@ def preview(path, template_id, out):
                       editor='not_checked', host='not_checked')
 
 
+def export_whitebox(path, template_id, out):
+    """Export the shape dependencies of an empty-model GIL template."""
+    from level_inventory import container, fields, unique, vals
+    from native_assets import primitive_group_gia
+    from native_core import get
+    from native_scene import GIL_HEADER, read_templates, typed_record
+    from native_scene_edits import WHITEBOX, decoration_links, describe_decoration, select_record
+
+    source=Path(path).resolve()
+    raw=source.read_bytes()
+    header,root=container(raw)
+    if header[1:4]!=GIL_HEADER:raise ValueError('Whitebox export requires a calibrated GIL')
+    template=select_record(unique(root,4,default=b''),1,template_id,'Whitebox template')
+    template_info=read_templates(root).get(template_id)
+    if template_info is None or get(template,2,0)!=10005018:
+        raise ValueError('Select a whitebox composition with the empty-model base')
+    transform=template_info['transform']
+    if transform['scale']!=[1,1,1] or any(transform['position_m']+transform['rotation_deg']):
+        raise ValueError('Whitebox export requires an identity transform on the empty-model base')
+    _,ids=decoration_links(template,4)
+    section=unique(root,27,default=b'')
+    parts,dependencies=[],[]
+    for ident in ids:
+        part=select_record(section,1,ident,'Whitebox decoration')
+        detail=describe_decoration(part)
+        if detail['model_id'] not in WHITEBOX or detail['owner_id']!=template_id:
+            raise ValueError('Whitebox export requires all parts to be calibrated native shapes attached to this template')
+        geometry=get(typed_record(part,5,1),11)
+        colour=get(typed_record(part,5,22) or b'',32)
+        if colour is None or get(colour,3,0) is None or min(detail['scale'])<=0:
+            raise ValueError('Whitebox part requires a native ARGB colour and positive scale')
+        parts.append((detail['model_id'],geometry,colour))
+        dependencies.append({'resource_id':9+len(parts),**detail})
+    if not parts:raise ValueError('Select a template with at least one whitebox part')
+    name=template_info['name']
+    artifact=primitive_group_gia(name,parts)
+    _,units=container(artifact)
+    group=unique(units,1);related=vals(units,2)
+    loc=lambda record:get(record,4,0)
+    links=[loc(link) for link in vals(fields(group),2)]
+    actual={loc(get(unit,1)):get(get(unit,21),1) for unit in related}
+    if links!=list(actual) or len(links)!=len(parts) or get(group,3)!=name.encode('utf-8'):
+        raise ValueError('Generated whitebox GIA dependency closure differs')
+    for link,(model,pose,colour) in zip(links,parts):
+        body=actual[link]
+        if (get(body,2,0),get(typed_record(body,5,1),11),get(typed_record(body,5,22),32))!=(model,pose,colour):
+            raise ValueError('Generated whitebox part readback differs')
+    with output_directory(out) as stage:
+        (stage/'whitebox.gia').write_bytes(artifact)
+        write_json(stage/'whitebox-resources.json',{'template_id':template_id,'parts':dependencies})
+        return finish(stage,{str(source):sha(raw)},kind='whitebox-geometry-gia',template_id=template_id,
+                      part_count=len(parts),editor='not_checked',host='not_checked')
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='operation', required=True)
@@ -247,6 +307,10 @@ def main(argv=None):
     preview_command.add_argument('input')
     preview_command.add_argument('--template-id', required=True, type=int)
     preview_command.add_argument('--out', required=True)
+    prefab_command = commands.add_parser('export-whitebox')
+    prefab_command.add_argument('input')
+    prefab_command.add_argument('--template-id', required=True,type=int)
+    prefab_command.add_argument('--out',required=True)
     args = parser.parse_args(argv)
     if args.operation == 'build':
         result = build(args.spec, args.out)
@@ -254,7 +318,9 @@ def main(argv=None):
         result = capture_catalogue(args.sample, args.out, args.version, args.mode)
     elif args.operation == 'inspect':
         result = inspect(args.input, args.terrain_id)
-    else:
+    elif args.operation=='preview':
         result = preview(args.input, args.template_id, args.out)
+    else:
+        result = export_whitebox(args.input,args.template_id,args.out)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0

@@ -26,7 +26,7 @@ DELEGATED = {
     'beyond': ('beyond_backend', 'Run a Beyond software scenario'),
     'knowledge': ('knowledge', 'Query pinned API and documentation sources'),
     'diagnose': ('project_diagnosis', 'Run explicit read-only checks'),
-    'scene': ('scene_authoring', 'Build or preview a native static scene'),
+    'scene': ('scene_authoring', 'Build static scenes and export native whitebox geometry'),
 }
 
 def main(argv=None):
@@ -43,10 +43,11 @@ def main(argv=None):
     production=sub.add_parser('produce');production.add_argument('spec');production.add_argument('--out',required=True)
     search=sub.add_parser('api');search.add_argument('query');search.add_argument('--limit',type=int,default=20)
     production.add_argument('--next',action='store_true',dest='next_output')
+    production.add_argument('--summary',action='store_true')
     view.add_argument('--collection',action='store_true')
     for name, (_, description) in DELEGATED.items():
         sub.add_parser(name, help=description)
-    sub.add_parser('doctor')
+    doctor_parser=sub.add_parser('doctor');doctor_parser.add_argument('--compare',metavar='PLUGIN_ROOT')
     capability=sub.add_parser('capabilities');capability.add_argument('--evidence')
     capability.add_argument('--platform');capability.add_argument('--mode',choices=['classic','beyond'])
     try:
@@ -60,10 +61,11 @@ def main(argv=None):
         a=p.parse_args(argv)
         if a.command in ('doctor','capabilities'):
             from capabilities import doctor,capabilities
-            value=doctor()if a.command=='doctor'else capabilities(a.evidence,platform=a.platform,mode=a.mode)
+            value=doctor(a.compare)if a.command=='doctor'else capabilities(a.evidence,platform=a.platform,mode=a.mode)
         elif a.command=='produce':
-            from production_core import produce
+            from production_core import produce,produce_summary
             value=produce(a.spec,a.out,a.next_output)
+            if a.summary:value=produce_summary(value)
         elif a.command=='api':
             from production_core import api
             value=api(a.query,a.limit)

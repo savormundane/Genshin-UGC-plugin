@@ -4,6 +4,66 @@ from level_inventory import fields,vals,container
 from level_authoring import msg,integer,pack
 
 
+def bind_skill_notifications(data, graph_names):
+    """Lower the legacy compiler's Notify Server node to the editor Skill kernel."""
+    header,rows=container(data)
+    changes=[]
+    def descriptor(typ):
+        return msg(4,integer(1,2)+msg(101,integer(2,typ)))
+    def graph(raw):
+        name=get(raw,2,default=b'').decode('utf-8')
+        if name not in graph_names or get(get(raw,1,default=b''),2,0)!=20002:
+            return raw
+        def node(n):
+            generic=get(n,2,default=b'')
+            if tuple(get(generic,i,0,0) for i in (1,2,3,4,5))!=(10001,20002,22000,0,200039):
+                return n
+            kernel=get(n,3,default=b'')
+            if (get(kernel,1,0),get(kernel,2,0),get(kernel,3,0),get(kernel,4,0,0),ref(kernel))==(10001,20002,22000,0,2000):
+                return n
+            if (get(kernel,1,0),get(kernel,3,0),get(kernel,4,0,0),ref(kernel))!=(10001,22000,0,200039) or get(kernel,2,0) not in (20000,20002):
+                raise ValueError('Generated Notify Server node has an unsupported locator')
+            found=set()
+            def pin(p):
+                kind,index=slot(p)
+                if kind!=3 or index not in (0,1,2):
+                    return p
+                if index in found or get(p,4,0)!=6:
+                    raise ValueError('Generated Notify Server input has an unsupported type')
+                found.add(index)
+                value=get(p,3)
+                if value is not None:
+                    legacy=get(value,4,default=b'')
+                    content=get(value,105,default=b'')
+                    literal=get(content,1,default=b'')
+                    if get(value,1,0)!=5 or get(legacy,1,0)!=1 or get(get(legacy,100,default=b''),1,0)!=6:
+                        raise ValueError('Generated Notify Server input is outside the string literal contract')
+                    # Client literals use ClientType.String=9. Preserve the
+                    # UTF-8 bytes and encode the empty-string default natively.
+                    value=integer(1,5)+(integer(2,1) if literal else b'')+descriptor(9)
+                    value+=msg(105,msg(1,literal) if literal else b'')
+                    p=put(p,3,value)
+                return put(p,4,9,0)
+            updated=rewrite(n,4,pin)
+            if found!={0,1,2}:raise ValueError('Generated Notify Server node is missing string inputs')
+            if not any(slot(p)==(5,0) for p in vals(fields(updated),4)):
+                virtual=msg(1,integer(1,5))+msg(2,integer(1,5))
+                virtual+=msg(3,integer(1,2)+descriptor(3)+msg(102))+integer(4,3)
+                virtual+=msg(6,integer(1,5)+integer(2,1)+msg(100,integer(1,200039)))
+                updated+=msg(4,virtual)
+            changes.append({'graph':name,'node':get(n,1,0),'concrete':2000})
+            return put(updated,3,put(put(kernel,2,20002,0),5,2000,0))
+        return rewrite(raw,3,node)
+    def unit(raw):
+        return rewrite(raw,13,lambda wrapper:rewrite(wrapper,1,lambda inner:rewrite(inner,1,graph)))
+    body=b''.join(r for _,_,_,r in rows)
+    if header[3]==3:
+        for key in (1,2):body=rewrite(body,key,unit)
+    else:
+        body=rewrite(body,10,lambda section:rewrite(section,1,lambda row:rewrite(row,1,graph)))
+    return (pack(body,header[1:4]) if changes else data),changes
+
+
 def bind_generated_variable_types(data):
     """Bind omitted Get_Custom_Variable specialisations in new compiler output."""
     if model(data)['format']!='gia':raise ValueError('Variable type binding requires generated GIA')

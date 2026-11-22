@@ -20,6 +20,8 @@ node_connection按使用者→提供者比较，忽略仅改变连线存储端�
 
 完整原始字节变化不会被“对象语义相同”隐藏。complete_semantic_diff仍为false，unindexed列出任意组件、自定义变量、动态Lua标识等当前未完整解析范围；不把这些变化判为无影响。结构无法读取时直接失败。最终原生/工程引用检查不通过也不能获得成功差异状态；editor与host保持not_checked。
 
+涉及原生玩法的补丁还可在 `gameplay_records` 中比较职业、技能、道具、商店、环境资源、全局计时器、玩家组和复苏点的身份与记录摘要。`gameplay_references` 列出已校准引用的增删。`native plan --summary` 在终端显示摘要和保护范围，完整计划保存在 `--out` 指定的文件。由 `native apply` 的报告读取具名对象实际分配的 ID。 [原生玩法制作](native-gameplay.md)
+
 ## 内容绑定的计划
 
 PATCH使用现有schema 2、base_sha256、allowed_top_level_fields及operations合同。replace_graph仍保留目标图ID/名称及既有引用；section_from只在显式指定整段替换时使用，不扩大为任意安全字段迁移。计划要求strict_audit=true或省略该字段。
@@ -46,8 +48,6 @@ apply --plan先核对计划和所有来源内容，再执行现有补丁，核�
 | --- | --- | --- |
 | `set_custom_variable_default` | 模板 `[4]`，实例 `[5]` | `{"op":"set_custom_variable_default","section":4,"entity_id":42,"name":"Count","value":8}`。精确选定已有变量，保留名称与类型描述符。接受对应的 JSON 整数、布尔、有限浮点或字符串。实例需已有该变量的覆盖条目。应用报告列出修改前后的值。 |
 | `set_timer_sequence` | `[10]` | `{"op":"set_timer_sequence","source":"platform.json","timer_id":"timer-a"}`。配置与 `platform check` 共用，须有对应 `native_bindings`，并匹配既有普通图、节点、实体及计时器名。序列写入使用 float32，编码后也须满足间隔并以正时间点结束。连线入参、歧义目标和无法保留的序列项拒绝写入。应用后可执行 `platform check platform.json --gil NEW.gil` 核对。 |
-
-源码版支持 `set_entity_transform`。以 `section: 5` 和 `entity_id` 选中放置物件，指定 `position_m`、`rotation_deg` 或 `scale`。允许字段为 `[5]`，计划和差异通过 `spatial_objects` 记录前后值。[三维变换](native-entity-transform.md)
 
 模板默认值用于继承该值的实例，已有覆盖继续生效。计时器编辑保留循环项、连线及挂载。新建计时器逻辑沿用 Graph Code 编译。两项写入均保留目标以外的内容，编辑器和游戏运行结果按实际验证记录。
 

@@ -6,7 +6,7 @@ import sys
 import tempfile
 import unittest
 
-from authoring_io import PLUGIN, sha
+from authoring_io import DiagnosticError, PLUGIN, sha
 from level_authoring import flt, initial_level, integer, msg, pack, set_section, text, vi
 from level_inventory import container, fields, unique, vals
 from native_changes import apply_plan, difference, fingerprint, plan
@@ -132,8 +132,9 @@ class EntityTransformTests(unittest.TestCase):
                     plan(data, bad, root, root)
             original, = [r for r in vals(fields(unique(container(data)[1], 5)), 1) if get(r, 1, 0) == STATIC]
             duplicated = set_section(data, 5, msg(1, original) + msg(1, original))
-            with self.assertRaisesRegex(ValueError, 'exactly once'):
+            with self.assertRaises(DiagnosticError) as error:
                 plan(duplicated, patch(duplicated, STATIC, **vectors), root, root)
+            self.assertEqual(error.exception.diagnostics[0]['code'], 'native.reference_ambiguous')
 
     def test_legacy_difference_contract(self):
         data, _ = fixture()

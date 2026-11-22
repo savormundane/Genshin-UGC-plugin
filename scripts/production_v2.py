@@ -3,21 +3,37 @@ from pathlib import Path
 import json,re,shutil
 from authoring_io import *
 
-def produce(path,out,evidence=None):
+def produce(path,out,evidence=None,*,job=None,job_digest=None):
     from production_core import _produce as legacy_produce
-    job=read_json(path);base=Path(path).parent
+    from native_bindings import Bindings, bindings_for_gil, read_bindings
+    path=Path(path).resolve();base=path.parent
+    if job is None:
+        job_bytes=path.read_bytes()
+        job=json.loads(job_bytes.decode('utf-8-sig'));job_digest=sha(job_bytes)
     if 'portable'in job:
         from portable_delivery import produce as produce_portable
-        return produce_portable(path,out,{}if evidence is None else evidence)
+        return produce_portable(path,out,{}if evidence is None else evidence,job=job,job_digest=job_digest)
     schema(job,('schema','client','client_check','level','storage','native','assets','protocol','protocol_native','animation','graphs','gil','simulation','experiment','platform','project','ui','resources','beyond','scene'),('schema',))
     if len(job)==1:raise ValueError('No production stages')
     evidence={}if evidence is None else evidence
-    inputs={str(path):sha(Path(path).read_bytes())};stages=[];executions=[]
+    inputs=ProductionInputs({str(path):job_digest});stages=[];executions=[]
+    previous_outputs={};previous_inputs=set();inventory_cache={}
     def track(p):
-        p=Path(p).resolve();inputs[str(p)]=sha(p.read_bytes());return p
+        return inputs.track(p,'production')
+    def read_input(p,phase):
+        data=p.read_bytes()
+        inputs.bind(p,sha(data),phase)
+        return data
     def state(name):
+        nonlocal previous_outputs
         ident=str(len(stages))+':'+name
-        executions.append({'id':ident,'name':name,'depends_on':[executions[-1]['id']]if executions else[],'inputs':dict(inputs),'outputs':inventory(stage),'status':'passed'})
+        current=inventory(stage,cache=inventory_cache)
+        outputs={file:digest for file,digest in current.items() if previous_outputs.get(file)!=digest}
+        executions.append({'id':ident,'name':name,'depends_on':[executions[-1]['id']]if executions else[],
+                           'inputs_added':sorted(inputs.keys()-previous_inputs),'outputs':outputs,'outputs_scope':'changed',
+                           'removed_outputs':sorted(previous_outputs.keys()-current.keys()),'status':'passed'})
+        previous_inputs.update(inputs)
+        previous_outputs=current
         stages.append(name);evidence[name]={'status':'passed','layer':'static'}
     # Resolve external inputs and required executors before generating anything.
     from capabilities import doctor
@@ -25,21 +41,30 @@ def produce(path,out,evidence=None):
     if any(k in job for k in('level','native','graphs','gil','storage'))and not environment['node']:raise ValueError('Node is required for native production')
     if 'graphs'in job or 'storage'in job:
         if not environment['python_supported']or not environment['ayaya']:raise ValueError('Bundled backend requires supported Python and Ayaya sources')
-    if any(k in job for k in('simulation','experiment'))and not environment['lua53']:raise ValueError('lupa.lua53 is required for declared offline models')
+    if 'experiment'in job and not environment['lua53']:raise ValueError('lupa.lua53 is required for the declared experiment')
     if job.get('assets')and not environment['pillow']:raise ValueError('Pillow is required for asset generation')
     platform_report=None;platform_configuration=None
     client_contract=None
     ui_spec=None
     scene_path = None
+    whitebox = None
+    final_patch=None
+    storage_server=False
     if 'scene' in job:
-        schema(job['scene'], ('spec',), ('spec',))
-        scene_path = track(resolve(base, job['scene']['spec']))
+        scene_job=job['scene']
+        schema(scene_job, ('spec','whitebox'))
+        if not scene_job:raise ValueError('Scene stage requires a layout or whitebox export')
+        if 'spec'in scene_job:scene_path = track(resolve(base,scene_job['spec']))
+        if 'whitebox'in scene_job:
+            whitebox=scene_job['whitebox']
+            schema(whitebox,('source','template_id'),('source','template_id'))
+            if whitebox['source']!='@level':track(resolve(base,whitebox['source']))
     resource_check=None
     if 'resources'in job:
         from resource_catalogue import check as check_resources
         from platform_profiles import CATALOGUE
         schema(job['resources'],('spec',),('spec',));resource_check=check_resources(track(resolve(base,job['resources']['spec'])))
-        track(CATALOGUE);inputs.update(resource_check['inputs'])
+        track(CATALOGUE);inputs.merge(resource_check['inputs'],'resources')
         if resource_check['status']!='passed':raise ValueError('Resource contract incomplete: '+canonical(resource_check['errors']+resource_check['unresolved']))
     if 'ui'in job:
         schema(job['ui'],('spec',),('spec',));ui_spec=read_json(track(resolve(base,job['ui']['spec'])))
@@ -69,14 +94,14 @@ def produce(path,out,evidence=None):
         c=job['client']
         if 'assembly'in c:
             from client_assembly import assemble
-            cp=track(resolve(base,c['assembly']));_,mapping=assemble(read_json(cp),cp.parent);inputs.update(mapping['inputs'])
+            cp=track(resolve(base,c['assembly']));_,mapping=assemble(read_json(cp),cp.parent);inputs.merge(mapping['inputs'],'client_assembly')
         elif 'source'in c:track(resolve(base,c['source']))
     if 'level'in job:
         lp=track(resolve(base,job['level']['spec']));level=read_json(lp)
         for item in level['scripts']:
             if 'source'in item:track(resolve(lp.parent,item['source']))
     if 'native'in job:
-        native=job['native'];schema(native,('base','spec','plan'),('base',))
+        native=job['native'];schema(native,('base','spec','plan','after_graphs'),('base',))
         if ('spec'in native)==('plan'in native):raise ValueError('Choose native spec or plan')
         track(resolve(base,native['base']));np=track(resolve(base,native.get('spec',native.get('plan'))));patch=read_json(np)
         if patch.get('schema')!=2:raise ValueError('Native patch/plan requires schema 2')
@@ -84,11 +109,29 @@ def produce(path,out,evidence=None):
             for item in patch['inputs'].values():track(resolve(np.parent,item['source']))
         else:
             for op in patch['operations']:
-                if 'source'in op:track(resolve(np.parent,op['source']))
+                if op.get('source')=='@scene':
+                    if scene_path is None or op['op']!='place_static_scene':
+                        raise ValueError('@scene requires a scene stage and place_static_scene')
+                elif 'source'in op:track(resolve(np.parent,op['source']))
+        if 'after_graphs'in native:
+            if 'graphs'not in job and 'storage'not in job:raise ValueError('native.after_graphs requires compiled graphs')
+            fp=track(resolve(base,native['after_graphs']));final_patch=(fp,read_json(fp))
+            if final_patch[1].get('base_sha256')!='@level':
+                raise ValueError('native.after_graphs must bind its baseline to @level')
+            for op in final_patch[1]['operations']:
+                if 'source'in op:track(resolve(fp.parent,op['source']))
     if 'storage'in job:
         from storage_authoring import validate
-        sp=track(resolve(base,job['storage']['spec']));validate(read_json(sp))
-        if job['storage'].get('base'):track(resolve(base,job['storage']['base']))
+        storage=job['storage'];schema(storage,('spec','base','transport','host_section'),('spec',))
+        mode=storage.get('transport','client')
+        if mode not in ('client','server'):raise ValueError('Storage transport must be client or server')
+        storage_server=mode=='server'
+        if type(storage.get('host_section',5)) is not int or storage.get('host_section',5) not in (4,5):
+            raise ValueError('Storage host section must be template 4 or instance 5')
+        if storage_server and storage.get('host_section')!=4:
+            raise ValueError('Server storage mounts one copy per player. Use host_section: 4 and a player template ID')
+        sp=track(resolve(base,storage['spec']));validate(read_json(sp))
+        if storage.get('base'):track(resolve(base,storage['base']))
     for item in job.get('assets',[]):
         track(resolve(base,item['source']))
         if 'spec'in item:track(resolve(base,item['spec']))
@@ -100,10 +143,13 @@ def produce(path,out,evidence=None):
                 raise ValueError('Client protocol contract differs from production protocol')
             client_contract={**client_contract,'protocol':job['protocol']}
     if 'graphs'in job:
+        schema(job['graphs'],('spec','include_sources'),('spec',))
+        if type(job['graphs'].get('include_sources',False)) is not bool:raise ValueError('include_sources must be boolean')
         gp=track(resolve(base,job['graphs']['spec']));graph=read_json(gp)
         if graph.get('schema')not in(1,2):raise ValueError('Unknown graph schema')
         for item in graph['graphs']:track(resolve(gp.parent,item['source']))
         if graph.get('base_gil'):track(resolve(gp.parent,graph['base_gil']))
+        if graph.get('bindings'):track(resolve(gp.parent,graph['bindings']))
         if graph.get('project_resources'):
             for p in resolve(gp.parent,graph['project_resources']).rglob('*'):
                 if p.is_file():track(p)
@@ -114,6 +160,7 @@ def produce(path,out,evidence=None):
     if 'simulation'in job:
         sp=track(resolve(base,job['simulation']['spec']));scene=read_json(sp)
         if scene.get('schema')!=2:raise ValueError('Joint production simulation requires schema 2')
+        if scene['clients'] and not environment['lua53']:raise ValueError('lupa.lua53 is required for declared Lua simulations')
         for item in scene['clients']+([scene['server']]if scene.get('server')else[]):
             if item['source']!='@level':track(resolve(sp.parent,item['source']))
     if 'experiment'in job:
@@ -123,8 +170,13 @@ def produce(path,out,evidence=None):
     if not environment['lua53']:
         from level_authoring import script_records
         lua_inputs=any(Path(p).suffix.lower()=='.lua'or Path(p).suffix.lower()=='.gil'and script_records(Path(p).read_bytes())for p in inputs)
-        if lua_inputs or any(k in job for k in ('client','storage','assets','animation','protocol')):
+        if lua_inputs or ('storage'in job and not storage_server) or any(k in job for k in ('client','assets','animation','protocol')):
             raise ValueError('lupa.lua53 is required for final Lua compilation')
+    for p in (PLUGIN/'scripts').glob('*'):
+        if p.is_file():track(p)
+    if 'graphs' in job or 'storage' in job:
+        for p in (PLUGIN/'vendor/ayaya').rglob('*'):
+            if p.is_file() and '__pycache__' not in p.parts and p.suffix not in ('.pyc','.pyo'):track(p)
     with output_directory(out)as stage:
         if resource_check is not None:
             write_json(stage/'resource-report.json',resource_check)
@@ -138,9 +190,7 @@ def produce(path,out,evidence=None):
             from scene_authoring import build as build_scene
 
             result = build_scene(scene_path, stage/'scene')
-            for source, digest in result['inputs'].items():
-                if inputs.setdefault(source, digest) != digest:
-                    raise ValueError('Scene input changed: ' + source)
+            inputs.merge(result['inputs'],'scene')
             state('native_static_scene')
             evidence['native_static_scene'].update(report='scene/manifest.json', objects=result['object_count'])
         if platform_report is not None:
@@ -148,19 +198,22 @@ def produce(path,out,evidence=None):
             write_json(stage/'platform-report.json',platform_report);state('platform_configuration')
             evidence['platform_configuration'].update(scope='declared_configuration',artifact_verified=False,report='platform-report.json')
         legacy={k:v for k,v in job.items()if k in('protocol','protocol_native','animation')};legacy['schema']=1
-        raw=None;storage_spec=None;binding=None;storage_host=None
+        raw=None;active_stage=None;storage_spec=None;binding=None;storage_host=None
+        bindings=Bindings()
         if 'client'in job:
             c=job['client']
             if set(c)=={'assembly'}:
                 from client_assembly import assemble
-                ap=track(resolve(base,c['assembly']));code,mapping=assemble(read_json(ap),ap.parent);inputs.update(mapping['inputs'])
+                ap=track(resolve(base,c['assembly']));code,mapping=assemble(read_json(ap),ap.parent);inputs.merge(mapping['inputs'],'client_assembly')
                 (stage/'assembled.lua').write_text(code,encoding='utf-8',newline='\n');write_json(stage/'source-map.json',mapping)
                 legacy['client']={'source':str(stage/'assembled.lua')};state('client_assembly')
             elif set(c)=={'source'}:legacy['client']={'source':str(track(resolve(base,c['source'])))}
             else:raise ValueError('client selects source or assembly')
         if 'storage'in job:
             from storage_authoring import build,attach
-            sp=track(resolve(base,job['storage']['spec']));storage_spec=read_json(sp);build(sp,stage/'storage')
+            sp=track(resolve(base,job['storage']['spec']));storage_spec=read_json(sp)
+            storage_report=build(sp,stage/'storage',server_only=storage_server)
+            inputs.merge(storage_report['inputs'],'storage')
             state('storage_generation')
         fitted_assets={}
         if 'assets'in job:
@@ -169,14 +222,25 @@ def produce(path,out,evidence=None):
                 if not isinstance(item.get('name'),str)or not re.fullmatch(r'[A-Za-z0-9_-]+',item['name'])or item['name']in asset_names:raise ValueError('Unique safe asset names required')
                 asset_names.add(item['name'])
                 if item.get('kind')=='fit':
-                    schema(item,('name','kind','source','spec'),('name','kind','source','spec'))
+                    schema(item,('name','kind','source','spec','require_target'),('name','kind','source','spec'))
+                    require_target=item.get('require_target',False)
+                    if type(require_target) is not bool:raise ValueError('require_target must be boolean')
                     from asset_fit import build
                     result=build(track(resolve(base,item['source'])),track(resolve(base,item['spec'])),stage/'fitted-assets'/item['name'])
-                    inputs.update(result['inputs']);state('asset_fit')
-                    fitted_assets[item['name']]={'report':f"fitted-assets/{item['name']}/catalog.json",**result['quality']}
+                    inputs.merge(result['inputs'],'asset_fit')
+                    quality=result['quality']
+                    fitted_assets[item['name']]={'report':f"fitted-assets/{item['name']}/catalog.json",**quality}
+                    if require_target and not quality['target_reached']:
+                        layers=[{key:row[key] for key in ('name','error','stop_reason')} for row in result['layers'] if not row['target_reached']]
+                        evidence['asset_fit_quality']={'status':'failed','layer':'software_preview','assets':fitted_assets}
+                        raise DiagnosticError('asset.fit_target_unmet',f"Fitted asset {item['name']} exceeds the declared error target",
+                                              phase='asset_fit',object=item['name'],expected=quality['target_error'],actual=layers)
+                    state('asset_fit')
                 elif item.get('kind')=='gia':
                     from native_assets import build
-                    source=track(resolve(base,item['source']));sp=track(resolve(base,item['spec']));build(source,sp,stage/'native-assets'/item['name']);state('native_assets')
+                    source=track(resolve(base,item['source']));sp=track(resolve(base,item['spec']))
+                    result=build(source,sp,stage/'native-assets'/item['name'])
+                    inputs.merge(result['inputs'],'native_assets');state('native_assets')
                 else:legacy['assets'].append({**item,'source':str(track(resolve(base,item['source'])))})
             if not legacy['assets']:legacy.pop('assets')
         if 'animation'in legacy:
@@ -186,11 +250,12 @@ def produce(path,out,evidence=None):
         if resource_job:
             resource_job['schema']=1;write_json(stage/'resource-job.json',resource_job)
             resource_report=legacy_produce(stage/'resource-job.json',stage/'resources',{})
+            inputs.merge({p:h for p,h in resource_report['source_sha256'].items() if not Path(p).is_relative_to(stage)},'resources')
             evidence.update(resource_report['evidence']);state('resource_generation')
         if 'level'in job:
             from level_authoring import compile_spec
-            lp=track(resolve(base,job['level']['spec']));raw,binding=compile_spec(read_json(lp),lp.parent);inputs.update(binding['source_sha256']);write_json(stage/'client-bindings.json',binding)
-            state('level_generation')
+            lp=track(resolve(base,job['level']['spec']));raw,binding=compile_spec(read_json(lp),lp.parent);inputs.merge(binding['source_sha256'],'level');write_json(stage/'client-bindings.json',binding)
+            state('level_generation');active_stage='level_generation'
         if 'native'in job:
             if raw is not None:raise ValueError('Choose level generation or explicit native baseline')
             from native_core import apply
@@ -198,27 +263,41 @@ def produce(path,out,evidence=None):
             if 'plan'in job['native']:
                 from native_changes import apply_plan
                 sp=track(resolve(base,job['native']['plan']));record=read_json(sp)
-                raw,r=apply_plan(p.read_bytes(),record,sp.parent);inputs.update(r['inputs'])
+                raw,r=apply_plan(read_input(p,'native'),record,sp.parent);inputs.merge(r['inputs'],'native')
                 write_json(stage/'native-diff.json',r['difference']);write_json(stage/'native-plan.json',record)
             else:
                 sp=track(resolve(base,job['native']['spec']));spec=read_json(sp)
                 for op in spec['operations']:
-                    if 'source'in op:track(resolve(sp.parent,op['source']))
-                raw,r=apply(p.read_bytes(),spec,sp.parent)
+                    if op.get('source')=='@scene':
+                        if scene_path is None or op['op']!='place_static_scene':
+                            raise ValueError('@scene requires a scene stage and place_static_scene')
+                        op['source']=str((stage/'scene/scene.gia').resolve())
+                    elif 'source'in op:track(resolve(sp.parent,op['source']))
+                raw,r=apply(read_input(p,'native'),spec,sp.parent)
+            bindings.merge(r.get('bindings',{}).get('bindings',{}))
             for operation in r['operations']:
                 for relative,digest in operation.get('platform_sources',{}).items():
-                    source=track(PLUGIN/relative)
-                    if inputs[str(source)]!=digest:raise ValueError('Native edit platform source changed: '+relative)
-            write_json(stage/'native-report.json',r);state('native_apply')
+                    inputs.bind(PLUGIN/relative,digest,'native')
+            write_json(stage/'native-report.json',r);state('native_apply');active_stage='native_apply'
         if ui_spec is not None:
             from native_ui import layout
             if raw is None:raise ValueError('UI stage requires generated level or native baseline')
             bound={**ui_spec,'base_sha256':sha(raw)}if ui_spec.get('base_sha256')=='@level'else ui_spec
-            raw,ui_report=layout(raw,bound);write_json(stage/'ui-report.json',ui_report);state('native_ui')
+            raw,ui_report=layout(raw,bound);write_json(stage/'ui-report.json',ui_report);state('native_ui');active_stage='native_ui'
         if storage_spec is not None:
-            if raw is None and job['storage'].get('base'):raw=track(resolve(base,job['storage']['base'])).read_bytes()
-            if raw is not None:raw=attach(raw,storage_spec)
+            if job['storage'].get('base'):
+                p=resolve(base,job['storage']['base']);requested=read_input(p,'storage')
+                require_active_baseline(requested,raw,'storage.base',p,active_stage)
+                if raw is None:raw=requested
+            if raw is None and storage_server:raise ValueError('Server storage requires a native baseline')
             storage_host=storage_spec.get('host_entity_id')
+            if storage_server:
+                from native_core import get
+                from native_scene_edits import select_record
+                player=select_record(get(raw[20:-4],4,default=b''),1,storage_host,'Server storage player template')
+                if get(player,2,0)!=1000000:raise ValueError('Server storage host must be a player template')
+            if raw is not None:
+                raw=attach(raw,storage_spec);active_stage='storage'
             if storage_host is None and 'level'in job:
                 from native_core import get
                 from level_inventory import fields,vals
@@ -230,24 +309,43 @@ def produce(path,out,evidence=None):
                 storage_host=candidates[0]
             if raw is not None and storage_host is None:raise ValueError('Existing storage baseline requires host_entity_id')
         if raw is not None:(stage/'base.gil').write_bytes(raw)
-        graph_spec=None
+        graph_spec=None;graph_baseline=raw
         if 'graphs'in job:
             gp=track(resolve(base,job['graphs']['spec']));graph_spec=read_json(gp)
-            for item in graph_spec['graphs']:item['source']=str(track(resolve(gp.parent,item['source'])))
-            if graph_spec.get('base_gil'):graph_spec['base_gil']=str(track(resolve(gp.parent,graph_spec['base_gil'])))
+            for i,item in enumerate(graph_spec['graphs'],1):
+                source=track(resolve(gp.parent,item['source']));item['source']=str(source)
+                if job['graphs'].get('include_sources'):
+                    target=stage/'graph-source'/str(i)/source.name
+                    target.parent.mkdir(parents=True,exist_ok=True)
+                    shutil.copyfile(source,target)
+            if graph_spec.get('base_gil'):
+                p=resolve(gp.parent,graph_spec['base_gil'])
+                graph_baseline=read_input(p,'graphs')
+                require_active_baseline(graph_baseline,raw,'graphs.base_gil',p,active_stage)
+                graph_spec['base_gil']=str(p)
             elif raw is not None:graph_spec['base_gil']=str(stage/'base.gil')
+            if graph_spec.get('bindings'):
+                source=resolve(gp.parent,graph_spec['bindings'])
+                external,digest=read_bindings(source,graph_baseline)
+                inputs.bind(source,digest,'graph_bindings')
+                bindings.merge(external.ids)
+                evidence['graph_binding_identity']={'status':'passed' if graph_baseline is not None else 'not_checked',
+                                                    'layer':'static','scope':'external_gil_binding'}
+            for mount in graph_spec.get('mounts',[]):
+                if 'entity_key' in mount:
+                    if 'entity_id' in mount or mount.get('section')!=5 or raw is None:
+                        raise ValueError('Graph mount entity_key requires the generated placed-object baseline')
+                    mount['entity_id']={'ref':'entity:'+mount.pop('entity_key')}
+                expected=('template',) if mount.get('section')==4 else ('entity',)
+                if 'entity_id' in mount:
+                    mount['entity_id']=bindings.reference(mount['entity_id'],expected,phase='graph_mount',field='entity_id')
             if graph_spec.get('project_resources'):
-                folder=resolve(gp.parent,graph_spec['project_resources'])
-                for f in folder.rglob('*'):
-                    if f.is_file():track(f)
-                graph_spec['project_resources']=str(folder)
+                graph_spec['project_resources']=str(resolve(gp.parent,graph_spec['project_resources']))
+        generated_roots=[]
         if storage_spec is not None and raw is not None:
             if graph_spec is None:graph_spec={'schema':2,'graphs':[],'base_gil':str(stage/'base.gil'),'formats':['gia','gil'],'allowed_top_level_fields':[10,6,11,35]}
-            resources=stage/'merged-resources'
-            if graph_spec.get('project_resources'):shutil.copytree(graph_spec['project_resources'],resources)
-            else:resources.mkdir()
-            shutil.copytree(stage/'storage/resources',resources,dirs_exist_ok=True)
-            graph_spec['project_resources']=str(resources);graph_spec['graphs'].append({'source':str(stage/'storage/storage.py'),'scope':'server'})
+            generated_roots.append(stage/'storage/resources')
+            graph_spec['graphs'].append({'source':str(stage/'storage/storage.py'),'scope':'server'})
             # Native structures/helper declarations were already authored into
             # this baseline. Resources supply Graph Code type information;
             # avoid a second importer rewriting those authoritative declarations.
@@ -255,18 +353,27 @@ def produce(path,out,evidence=None):
             graph_spec.setdefault('struct_bindings',[]).append({'graph_name':storage_spec['name'],'struct_id':storage_spec['struct_id']})
             graph_spec.setdefault('graph_ids',{})[storage_spec['name']]=storage_spec['graph_id']
         if graph_spec and job.get('protocol_native'):
-            resources=stage/'protocol-graph-resources'
-            if graph_spec.get('project_resources'):shutil.copytree(graph_spec['project_resources'],resources)
-            else:resources.mkdir()
-            shutil.copytree(stage/'resources/protocol-native/resources',resources,dirs_exist_ok=True)
-            graph_spec['project_resources']=str(resources);graph_spec['include_sections']=list(dict.fromkeys(graph_spec.get('include_sections',['graphs'])+['signals']))
+            generated_roots.append(stage/'resources/protocol-native/resources')
+            graph_spec['include_sections']=list(dict.fromkeys(graph_spec.get('include_sections',['graphs'])+['signals']))
+        if graph_spec and generated_roots:
+            from graph_resources import merge_resources
+            resources=stage/('protocol-graph-resources' if job.get('protocol_native') else 'merged-resources')
+            roots=[graph_spec['project_resources']] if graph_spec.get('project_resources') else []
+            receipt=merge_resources([*roots,*generated_roots],resources)
+            inputs.merge({path:digest for path,digest in receipt.items() if not Path(path).is_relative_to(stage)},'graph_resources')
+            graph_spec['project_resources']=str(resources)
         if graph_spec:
+            if bindings.ids:
+                graph_bindings=stage/'graph-bindings.json'
+                write_json(graph_bindings,bindings_for_gil(graph_baseline,bindings) if graph_baseline is not None else bindings.payload())
+                graph_spec['bindings']=str(graph_bindings)
+            else:
+                graph_spec.pop('bindings',None)
             write_json(stage/'graph-job.json',graph_spec);legacy['graphs']={'spec':str(stage/'graph-job.json')}
         if 'gil'in job:
             g={**job['gil']}
             if 'base'in g:g['base']=str(track(resolve(base,g['base'])))
-            elif graph_spec:g['use_graph_output']=True
-            elif raw is not None:g['base']=str(stage/'base.gil')
+
             if 'source'in g:g['source']=str(track(resolve(base,g['source'])))
             if binding and g['mapping']in binding.get('template_aliases',{}):
                 from level_authoring import with_template_alias
@@ -278,11 +385,13 @@ def produce(path,out,evidence=None):
                     for segment in mapping['segments']:segment['start']+=offset;segment['end']+=offset
                     mapping['generated_prefix_lines']=offset;write_json(stage/'source-map.json',mapping)
             legacy['gil']=g
-        if raw is not None and 'gil'not in legacy and graph_spec is None:(stage/'level.gil').write_bytes(raw)
+        if raw is not None and 'gil'not in legacy:(stage/'level.gil').write_bytes(raw)
         if len(legacy)>1:
-            write_json(stage/'legacy-job.json',legacy);r=legacy_produce(stage/'legacy-job.json',stage/'build',{})
-            for p,digest in r['source_sha256'].items():
-                if not Path(p).is_relative_to(stage):inputs[p]=digest
+            write_json(stage/'legacy-job.json',legacy)
+            r=legacy_produce(stage/'legacy-job.json',stage/'build',{},
+                             include_runtime=set(legacy)!={'schema','graphs'},
+                             fallback_gil=stage/'base.gil' if raw is not None else None)
+            inputs.merge({p:h for p,h in r['source_sha256'].items() if not Path(p).is_relative_to(stage)},'production')
             for k,v in r['evidence'].items():evidence[k]=v
             final=stage/'build/level.gil'
             if not final.exists():final=stage/'build/graphs/level.gil'
@@ -300,18 +409,38 @@ def produce(path,out,evidence=None):
                 from protocol_codegen import check_gil
                 evidence['protocol_native']=check_gil(stage/'level.gil',read_json(stage/'resources/protocol-native/wire.json'))
             if storage_spec is not None:
-                from client_signal_binding import bind_replies
                 s=storage_spec
-                prefix=s['name']+('_v3_'if s['schema']==3 else'_')
-                replies=[prefix+kind+'_'+str(i)+'_reply'for i in range(1,s['slots']+1)for kind in(('read','open','write')if s['schema']==3 else('read','write'))]
-                replies += [s['name']+'_achievement_'+str(a['id'])+'_reply'for a in s.get('achievements',[])]
-                raw,bound=bind_replies((stage/'level.gil').read_bytes(),replies);(stage/'level.gil').write_bytes(raw);write_json(stage/'client-replies.json',bound)
+                raw=(stage/'level.gil').read_bytes()
+                if not storage_server:
+                    from client_signal_binding import bind_replies
+                    prefix=s['name']+('_v3_'if s['schema']==3 else'_')
+                    replies=[prefix+kind+'_'+str(i)+'_reply'for i in range(1,s['slots']+1)for kind in(('read','open','write')if s['schema']==3 else('read','write'))]
+                    replies += [s['name']+'_achievement_'+str(a['id'])+'_reply'for a in s.get('achievements',[])]
+                    raw,bound=bind_replies(raw,replies);write_json(stage/'client-replies.json',bound)
                 from native_core import apply,model
                 graphs=[g for g in model(raw)['graphs']if g['name']==s['name']]
                 if len(graphs)!=1:raise ValueError('Generated storage graph missing')
-                patch={'schema':2,'base_sha256':sha(raw),'allowed_top_level_fields':[5,6],'operations':[{'op':'mount','entity_id':storage_host,'graph_id':graphs[0]['id']}]}
+                section=job['storage'].get('host_section',5)
+                patch={'schema':2,'base_sha256':sha(raw),'allowed_top_level_fields':[section,6],
+                       'operations':[{'op':'mount','section':section,'entity_id':storage_host,'graph_id':graphs[0]['id']}]}
                 raw,mounted=apply(raw,patch,stage);(stage/'level.gil').write_bytes(raw);write_json(stage/'storage-mount.json',mounted)
-                evidence['mounts']={'status':'passed','report':'storage-mount.json','verified_generated_graphs':1}
+                evidence['mounts']={'status':'passed','report':'storage-mount.json','verified_generated_graphs':1,
+                                    'transport':'server' if storage_server else 'client'}
+            if final_patch is not None:
+                from native_changes import difference
+                from native_core import apply
+                fp,patch=final_patch
+                baseline=(stage/'level.gil').read_bytes()
+                bound={**patch,'base_sha256':sha(baseline)}
+                raw,report=apply(baseline,bound,fp.parent,bindings=bindings)
+                bindings.merge(report.get('bindings',{}).get('bindings',{}))
+                for operation in report['operations']:
+                    for relative,digest in operation.get('platform_sources',{}).items():
+                        inputs.bind(PLUGIN/relative,digest,'native_after_graphs')
+                (stage/'level.gil').write_bytes(raw)
+                write_json(stage/'native-final-report.json',report)
+                write_json(stage/'native-final-diff.json',difference(baseline,raw,bound['allowed_top_level_fields']))
+                state('native_after_graphs')
             from native_core import audit
             result=audit((stage/'level.gil').read_bytes());write_json(stage/'native-audit.json',result)
             if result['status']!='passed':raise ValueError('Final native audit failed: '+canonical(result))
@@ -348,10 +477,23 @@ def produce(path,out,evidence=None):
                 if sum(a.get('source')=='@level'for a in project_spec.get('artifacts',[]))!=1:
                     raise ValueError('Project checks require exactly one @level final artifact')
             project_report=inspect_project(resolve(base,job['project']['spec']),final)if 'project'in job else index_native(final)
-            inputs.update(project_report.get('inputs',{}))
+            inputs.merge(project_report.get('inputs',{}),'project_references')
             write_json(stage/'project-report.json',project_report)
-            if project_report['status']!='passed':raise ValueError('Final project reference check failed: '+canonical(project_report['issues']+project_report['unresolved']))
+            if project_report['status']!='passed':
+                from native_gameplay_index import require_gameplay
+                require_gameplay(project_report,'project_references')
+                raise ValueError('Final project reference check failed: '+canonical(project_report['issues']+project_report['unresolved']))
             state('project_references');evidence['project_references'].update(scope=project_report['scope'],complete_reference_index=False,report='project-report.json')
+        if whitebox is not None:
+            from scene_authoring import export_whitebox
+            whitebox_source=stage/'level.gil' if whitebox['source']=='@level' else track(resolve(base,whitebox['source']))
+            if not whitebox_source.is_file():raise ValueError('Whitebox export requires a final GIL at @level or a source file')
+            if isinstance(whitebox['template_id'],dict) and whitebox['source']!='@level':
+                raise ValueError('A whitebox template binding requires source @level')
+            template_id=bindings.reference(whitebox['template_id'],('template',),phase='whitebox',field='template_id')
+            result=export_whitebox(whitebox_source,template_id,stage/'whitebox')
+            if whitebox['source']!='@level':inputs.merge(result['inputs'],'whitebox')
+            state('whitebox_geometry');evidence['whitebox_geometry'].update(report='whitebox/manifest.json',parts=result['part_count'])
         # Inspect the final container after every native mutation and Lua writeback,
         # including mappings that were never materialized as loose .lua files.
         from client_check import inspect as inspect_client
@@ -391,16 +533,18 @@ def produce(path,out,evidence=None):
             for item in scene['clients']:
                 item['source']=str(stage/'level.gil')if item['source']=='@level'else str(track(resolve(sp.parent,item['source'])))
             if scene.get('server'):scene['server']['source']=str(stage/'level.gil')if scene['server']['source']=='@level'else str(track(resolve(sp.parent,scene['server']['source'])))
-            result=run(scene,sp.parent,job['simulation'].get('timeout',30));write_json(stage/'simulation.json',result)
+            result=run(scene,sp.parent,job['simulation'].get('timeout',30))
+            inputs.merge({p:h for p,h in result['inputs'].items() if not Path(p).is_relative_to(stage)},'simulation')
+            write_json(stage/'simulation.json',result)
             if result['acceptance']['status']!='passed':
                 evidence['simulation']={'status':'failed','coverage':result['acceptance']}
                 raise ValueError('Required simulation acceptance incomplete: '+str(result['acceptance']['gaps']))
-            state('simulation');evidence['simulation']['layer']='lua_model'
-            evidence['lua_model']={'status':'passed','report':'simulation.json'}
+            state('simulation');evidence['simulation']['layer']='lua_model' if scene['clients'] else 'native_graph_model'
+            evidence['lua_model']={'status':result['evidence']['lua_model'],'report':'simulation.json' if scene['clients'] else None}
             evidence['native_graph_model']={'status':result['evidence']['native_graph_model'],'report':'simulation.json'if scene.get('server')else None}
         if 'experiment'in job:
             from experiments import execute
-            ep=track(resolve(base,job['experiment']['spec']));r=execute(read_json(ep),ep.parent);inputs.update(r['inputs']);write_json(stage/'experiment.json',r)
+            ep=track(resolve(base,job['experiment']['spec']));r=execute(read_json(ep),ep.parent);inputs.merge(r['inputs'],'experiment');write_json(stage/'experiment.json',r)
             if not r['passed']:
                 evidence['experiment']={'status':'failed','observations':r};raise ValueError('Experiment contains failures; see production evidence')
             state('experiment');evidence['experiment']['layer']='simulation'
@@ -409,18 +553,10 @@ def produce(path,out,evidence=None):
             schema(job['beyond'],('spec','backend'),('spec',))
             external=track(resolve(base,job['beyond']['spec']))
             outcome=run_beyond(external,resolve(base,job['beyond']['backend']) if 'backend'in job['beyond'] else None,stage/'beyond',final_gil=stage/'level.gil')
-            inputs.update({p:h for p,h in outcome['inputs'].items() if not Path(p).is_relative_to(stage)})
+            inputs.merge({p:h for p,h in outcome['inputs'].items() if not Path(p).is_relative_to(stage)},'beyond')
             state('external_simulation');evidence['external_simulation'].update(layer='external_lua_model',report='beyond/external-simulation.json')
             preview=read_json(stage/'beyond/external-simulation.json')
             evidence['external_software_preview']={'status':preview['rendering'],'layer':'software_preview','report':'beyond/render.json' if preview['preview_generated'] else None}
-        # Record executable sources and the bundled backend actually used.
-        for p in (PLUGIN/'scripts').glob('*'):
-            if p.is_file():track(p)
-        if graph_spec:
-            for p in (PLUGIN/'vendor/ayaya').rglob('*'):
-                if p.is_file()and '__pycache__'not in p.parts and p.suffix not in('.pyc','.pyo'):track(p)
-        state('source_integrity')
-        write_json(stage/'dependency-graph.json',{'schema':2,'executions':executions,'external_and_tool_inputs':inputs,'final_artifacts':inventory(stage)})
         for name in('lua_model','native_graph_model','compilation_readback','software_preview'):
             evidence.setdefault(name,{'status':'not_applicable'})
         if graph_spec:evidence['compilation_readback']={'status':'passed','report':'build/graphs/replacement-report.json'if graph_spec.get('schema')==2 else'build/graphs/build-report.json'}
@@ -432,12 +568,19 @@ def produce(path,out,evidence=None):
         evidence['editor']={'status':'not_checked'};evidence['host']={'status':'not_checked'};evidence['real_storage_reentry']={'status':'not_checked'}
         evidence['v3_pipeline']={'status':'passed'}
         # Copy only stable reviewable artifacts; internal jobs contain temporary paths.
-        for file in ('legacy-job.json','graph-job.json','resource-job.json'):
+        if graph_baseline is not None and bindings.ids and (stage/'level.gil').is_file():
+            write_json(stage/'bindings.json',bindings_for_gil((stage/'level.gil').read_bytes(),bindings))
+        for file in ('legacy-job.json','graph-job.json','graph-bindings.json','resource-job.json'):
             if(stage/file).exists():(stage/file).unlink()
-        report=finish(stage,inputs,kind='production',specification=str(Path(path).resolve()),stages=stages,evidence=evidence)
+        state('source_integrity')
+        final_files=inventory(stage)
+        graph_file=stage/'dependency-graph.json'
+        write_json(graph_file,{'schema':3,'executions':executions,'external_and_tool_inputs':inputs,'final_artifacts':final_files.copy()})
+        final_files[graph_file.name]=sha_file(graph_file)
+        report=finish(stage,inputs,files=final_files,kind='production',specification=str(path),stages=stages,evidence=evidence)
         write_json(stage/'production-report.json',report)
         from delivery_artifacts import roles
-        report['files']={name:digest for name,digest in inventory(stage).items()if name!='manifest.json'}
+        report['files']={**final_files,'production-report.json':sha_file(stage/'production-report.json')}
         report['artifacts']=roles(report['files'])
         write_json(stage/'manifest.json',report)
     return report

@@ -1,6 +1,6 @@
 """Check calibrated structure references even when no graph edge consumes them."""
-from native_core import get,slot,definition_id,port_type,structure_ids,descriptor_structure_ids
-from native_ports import declared_ports
+from native_core import get,slot,definition_id,audited_port_type,structure_ids,descriptor_structure_ids
+from native_ports import client_node,declared_ports
 from level_inventory import fields,vals
 
 
@@ -104,7 +104,7 @@ def audit_value(value,context,known,issues,unknown,expected=None,declared=None,r
         audit_value(child,where,known,issues,unknown,target if typ==26 else None,references=references)
 
 
-def audit_references(model,references=None):
+def audit_references(model,references=None,*,type_at=audited_port_type):
     known={get(get(s,1,default=b''),1,0)for s in model['structs']}
     issues=[];unknown=[]
     if None in known:issues.append({'error':'structure ID absent'})
@@ -175,7 +175,7 @@ def audit_references(model,references=None):
             if definition is not None:keys.update(declared_ports(definition))
             for kind,index in sorted(keys):
                 if kind not in(3,4):continue
-                if port_type(n,kind,index,model['definitions'])not in(25,26):continue
+                if type_at(g,n,kind,index,model['definitions'])not in((22,23) if client_node(n) else (25,26)):continue
                 ids=structure_ids(n,kind,index,model['definitions']);where={**context,'port':[kind,index]}
                 for sid in sorted(ids):record_reference(references,where,sid,'node_port_type')
                 if not ids:unknown.append({**where,'error':'struct identity unresolved'})
