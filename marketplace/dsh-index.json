@@ -7,18 +7,16 @@
       "title": "Genshin-UGC",
       "description": "千星奇域 工程检查、Graph Code、Client Lua、GIL 与 Assets 开发工具",
       "repository": {
-        "url": "https://github.com/savormundane/Genshin-UGC-plugin",
-        "directory": "marketplace/genshin-ugc"
+        "url": "https://github.com/savormundane/Genshin-UGC-plugin"
       },
       "versions": [
         {
           "version": "4.1.2",
-          "publishTimestamp": 1795370599,
+          "publishTimestamp": 1795373591,
           "source": {
             "type": "git",
             "url": "https://github.com/savormundane/Genshin-UGC-plugin",
-            "commit": "10a2c1e15e06b0f87b64cdf2dfb033592fd3637d",
-            "path": "marketplace/genshin-ugc"
+            "commit": "bf144675e10639ef7fee7322fec65a9e4f446829"
           },
           "engines": {
             "dsh": "0.2.2-rc.5"
