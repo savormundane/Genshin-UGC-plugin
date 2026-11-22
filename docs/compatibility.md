@@ -19,7 +19,7 @@
 | --- | --- | --- |
 | Codex | 市场安装或由 PowerShell 登记插件。 | 已验证 Codex CLI 从本地市场发现并安装条目。 |
 | Claude | 同一个插件市场可从界面或命令行添加。 | 已验证 Claude Code 本地市场安装与 MCP 连通。工具调用需要可启动本地 stdio MCP 的会话。 |
-| DeepSeek Harness | 通过市场索引安装 Cordis Bundle，也可从目录导入。 | 已在 `0.2.2-rc.5` 验证索引解析、Bundle 加载和节点查询。 |
+| DeepSeek Harness | 可直接从 GitHub 安装 Cordis Bundle，也可通过市场索引安装或从本地目录导入。 | 已在 `0.2.2-rc.5` 验证 GitHub 直装、索引解析、Bundle 加载和节点查询。 |
 | Agent Plugins | 提供通用插件清单、Skills 和本地 stdio MCP 配置。 | 导入方式和本地工具可用性取决于客户端的实现。 |
 | 独立 CLI | 使用专用 Python 运行 `scripts/qianxing.py`。 | 不依赖 AI 客户端；具体命令仍需相应运行依赖和有效输入。 |
 

@@ -26,15 +26,17 @@ claude plugin install genshin-ugc-public@genshin-ugc
 
 ### DeepSeek Harness
 
-在 **Discover → Add index source** 添加下方地址，然后安装 **Genshin-UGC**。[DSH 市场步骤](docs/installation.md#deepseek-harness)
+在 **插件 → 添加插件** 粘贴下方地址，直接安装 **Genshin-UGC**。
 
 ```text
-https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/main/marketplace/dsh-index.json
+git+https://github.com/savormundane/Genshin-UGC-plugin.git#main&path:/marketplace/genshin-ugc
 ```
+
+[DSH 市场安装](docs/installation.md#从市场安装)
 
 其他兼容客户端可参考 [Agent Plugins 通用导入](docs/installation.md#agent-plugins)。
 
-市场安装后，按指南[一次性准备本地工具](docs/installation.md#一次性准备本地工具)。各客户端可共用同版本的运行环境。准备完成后在新会话查询服务端「启动定时器」，确认工具连通。[首次使用与预期结果](docs/getting-started.md)
+安装插件后，按指南[一次性准备本地工具](docs/installation.md#一次性准备本地工具)。各客户端可共用同版本的运行环境。准备完成后在新会话查询服务端「启动定时器」，确认工具连通。[首次使用与预期结果](docs/getting-started.md)
 
 [PowerShell 安装](docs/installation.md#powershell-安装) · [完整 ZIP 安装](docs/installation.md#手动接入) · [独立使用 CLI](docs/runtime-environment.md)
 

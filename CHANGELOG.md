@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- DeepSeek Harness 可在「添加插件」中粘贴 GitHub 地址直接安装。
 - 首页按客户端提供安装入口，并增加五项 Skill 速查。安装指南合并了本地环境准备、备用安装和排障步骤。
 - 公开仓库提供 Claude、DeepSeek Harness、Codex 和 VS Code 的市场入口，共用一次本地环境准备。
 - 精简公开仓库的检查与贡献入口，开发路线集中在 Issues。后续安装包排除 GitHub 仓库配置。

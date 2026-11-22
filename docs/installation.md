@@ -1,6 +1,6 @@
 # 安装、更新与卸载
 
-选择客户端的市场入口。也可以使用 [PowerShell 安装](#powershell-安装)、[完整 Windows ZIP](#手动接入)或[独立命令行](runtime-environment.md)。
+选择对应客户端的安装入口。也可以使用 [PowerShell 安装](#powershell-安装)、[完整 Windows ZIP](#手动接入)或[独立命令行](runtime-environment.md)。
 
 安装前核对 [Windows x64、Python 和 Node.js 要求](compatibility.md#运行要求)。首次准备环境需要联网获取锁定的 Python 依赖。
 
@@ -8,7 +8,7 @@
 
 ## Marketplace
 
-添加市场并安装插件后，按[一次性准备本地工具](#一次性准备本地工具)接通 MCP。
+安装插件后，按[一次性准备本地工具](#一次性准备本地工具)接通 MCP。
 
 ### Codex
 
@@ -34,9 +34,23 @@ claude plugin install genshin-ugc-public@genshin-ugc
 
 ### DeepSeek Harness
 
+当前入口面向 `0.2.2-rc.5`。
+
+#### 直接安装
+
+在 **插件 → 添加插件**（**Plugins → Add plugin**）粘贴下面的完整地址并确认，安装完成后启用 **Genshin-UGC**。
+
+```text
+git+https://github.com/savormundane/Genshin-UGC-plugin.git#main&path:/marketplace/genshin-ugc
+```
+
+地址中的 `path:/marketplace/genshin-ugc` 用于定位仓库内的 Bundle。安装后可复用同版本的[本地运行环境](#一次性准备本地工具)。
+
+#### 从市场安装
+
 1. 在 **Plugins → Experimental plugins** 启用 **Custom plugin indexes**。
 2. 在 **Discover → Add index source** 添加下方地址。
-3. 选择 **Genshin-UGC** 安装。当前入口面向 `0.2.2-rc.5`。
+3. 选择 **Genshin-UGC** 安装。
 
 ```text
 https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/main/marketplace/dsh-index.json
