@@ -2,7 +2,7 @@
 
 CLI 和插件 MCP 使用同一套本地工具。已经通过安装器安装的用户可以直接复用专用 Python；只使用命令行的用户再按下方步骤创建环境。
 
-[安装指南](installation.md) · [第一次使用](getting-started.md) · [运行要求与支持范围](compatibility.md)
+[安装指南](installation.md) · [运行要求与支持范围](compatibility.md)
 
 ## 已安装插件：直接复用环境
 
@@ -15,14 +15,14 @@ CLI 和插件 MCP 使用同一套本地工具。已经通过安装器安装的�
 | `runtime.json` | 记录 Python、项目目录和输出目录的绑定。 |
 | `cordis-bundle\` | DeepSeek Harness 的导入入口，其他接入方式没有此项。 |
 
-Codex 用户可以用下面的 PowerShell 命令读取当前安装记录，并查询一个节点。Claude Code 将 `codex.json` 改为 `claude-code.json`；如果自选了 `-Root`，同时调整 `$ugcInstallRoot`。
+下面的命令从 Codex 的安装记录读取 Python 和 CLI 路径。Claude 将 `codex.json` 改为 `claude-code.json`。使用过 `-Root` 时，将 `$ugcInstallRoot` 改为实际安装根目录。
 
 ```powershell
 $ugcInstallRoot = Join-Path $env:LOCALAPPDATA 'Genshin-UGC-Public'
 $ugcState = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $ugcInstallRoot 'codex.json') | ConvertFrom-Json
 $ugcPython = $ugcState.current.python
 $ugcCli = Join-Path $ugcState.current.home 'Genshin-UGC\scripts\qianxing.py'
-& $ugcPython $ugcCli nodes '启动定时器' --scope server --limit 1
+& $ugcPython $ugcCli --help
 ```
 
 这段命令适用于当前仍有已登记安装的 Codex / Claude Code。DeepSeek Harness 或通用插件用户，使用准备命令输出的目录，在其所属版本目录找到上表中的 Python 与 CLI 即可。无需再次安装同一套依赖。
@@ -39,7 +39,7 @@ New-Item -ItemType Directory -Force 'C:\Qianxing\project' | Out-Null
 # 运行环境目录必须是尚不存在的新目录。
 & $ugcBasePython .\scripts\configure_runtime.py --python $ugcBasePython --runtime 'C:\Qianxing\runtime' --project 'C:\Qianxing\project' --outputs 'C:\Qianxing\outputs' --config 'C:\Qianxing\runtime.json'
 
-& 'C:\Qianxing\runtime\Scripts\python.exe' .\scripts\qianxing.py nodes '启动定时器' --scope server --limit 1
+& 'C:\Qianxing\runtime\Scripts\python.exe' .\scripts\qianxing.py --help
 ```
 
 配置命令按 `scripts/runtime-requirements.lock` 下载并安装锁定依赖，首次需要联网。项目目录需要提前存在，可以为空；输出目录由配置命令创建。项目与输出不能相同或互相包含。

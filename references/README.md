@@ -1,6 +1,6 @@
 # 技术参考索引
 
-供 Agent 和开发者按任务查阅。安装与首次使用见[使用文档](../docs/README.md)，源码入口见[工具导航](../scripts/README.md)。单点任务从对应领域进入，不需要预先读完全部参考资料。
+[安装指南](../docs/installation.md) · [工具导航](../scripts/README.md)
 
 ## 从任务进入
 

@@ -1,6 +1,6 @@
 # 运行要求与支持范围
 
-这里区分运行依赖、客户端接入方式与产物检查范围。新用户按[安装指南](installation.md)完成安装，再做[首次查询](getting-started.md)即可开始使用。
+[安装指南](installation.md)
 
 ## 运行要求
 
