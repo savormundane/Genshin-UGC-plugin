@@ -13,11 +13,11 @@
       "versions": [
         {
           "version": "4.1.2",
-          "publishTimestamp": 1795367556,
+          "publishTimestamp": 1795369352,
           "source": {
             "type": "git",
             "url": "https://github.com/savormundane/Genshin-UGC-plugin",
-            "commit": "2f38e0acc1f740cd65111faf73fe7caf47df211d",
+            "commit": "832784e57f21341209455287a4c3ce337b010d37",
             "path": "marketplace/genshin-ugc"
           },
           "engines": {
