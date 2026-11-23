@@ -13,7 +13,7 @@
 在终端添加市场并安装插件。
 
 ```text
-codex plugin marketplace add savormundane/Genshin-UGC-plugin
+codex plugin marketplace add savormundane/miliastra-wonderland-plugin
 codex plugin add genshin-ugc-public@genshin-ugc
 ```
 
@@ -21,10 +21,10 @@ codex plugin add genshin-ugc-public@genshin-ugc
 
 ### Claude
 
-在 **Customize → Plugins → Add → Add marketplace** 添加 `savormundane/Genshin-UGC-plugin`，再从市场安装 Miliastra Wonderland。也可在终端添加同一个条目。
+在 **Customize → Plugins → Add → Add marketplace** 添加 `savormundane/miliastra-wonderland-plugin`，再从市场安装 Miliastra Wonderland。也可在终端添加同一个条目。
 
 ```text
-claude plugin marketplace add savormundane/Genshin-UGC-plugin
+claude plugin marketplace add savormundane/miliastra-wonderland-plugin
 claude plugin install genshin-ugc-public@genshin-ugc
 ```
 
@@ -39,7 +39,7 @@ claude plugin install genshin-ugc-public@genshin-ugc
 在 **插件 → 添加插件**（**Plugins → Add plugin**）粘贴下面的完整地址并确认，安装完成后启用 **Miliastra Wonderland**。按包名显示的客户端可识别 `genshin-ugc-dsh`。
 
 ```text
-git+https://github.com/savormundane/Genshin-UGC-plugin.git#main
+git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
 ```
 
 #### 从市场安装
@@ -49,12 +49,12 @@ git+https://github.com/savormundane/Genshin-UGC-plugin.git#main
 3. 选择 **Miliastra Wonderland** 安装。
 
 ```text
-https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/main/marketplace/dsh-index.json
+https://raw.githubusercontent.com/savormundane/miliastra-wonderland-plugin/main/marketplace/dsh-index.json
 ```
 
 ### Agent Plugins
 
-其他支持 Agent Plugins 和本地 stdio MCP 的客户端，可通过其市场入口添加 `savormundane/Genshin-UGC-plugin`，再安装 `genshin-ugc-public`。如果客户端提供的是本地目录导入，按[从本地目录导入](#从本地目录导入)操作。
+其他支持 Agent Plugins 和本地 stdio MCP 的客户端，可通过其市场入口添加 `savormundane/miliastra-wonderland-plugin`，再安装 `genshin-ugc-public`。如果客户端提供的是本地目录导入，按[从本地目录导入](#从本地目录导入)操作。
 
 ## 运行依赖与工程目录
 
@@ -72,7 +72,7 @@ https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/main/marketpla
 
 ## 从本地目录导入
 
-解压 [v1.0.0 源码 Release](https://github.com/savormundane/Genshin-UGC-plugin/releases/tag/v1.0.0) 的源码归档，或检出同一标签。选择包含插件清单的源码根目录。
+解压 [v1.0.0 源码 Release](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/v1.0.0) 的源码归档，或检出同一标签。选择包含插件清单的源码根目录。
 
 | 客户端 | 导入入口 |
 | --- | --- |
@@ -120,4 +120,4 @@ python -B scripts/package_release.py --source . --out ../Miliastra-Wonderland-1.
 | 安装中断 | 保留失败目录，用相同参数加 `-Resume` 重跑。Claude 登记后若启用中断，按错误提示核对客户端中的条目。 |
 | CLI 正常，客户端无法调用工具 | 检查插件是否启用、MCP 配置是否指向预期的插件目录。 [连接 MCP](runtime-environment.md#连接-mcp-或切换工程) |
 
-仍无法解决时，通过 [Bug 反馈](https://github.com/savormundane/Genshin-UGC-plugin/issues/new?template=bug_report.yml)提供版本、客户端、执行命令和第一条错误信息。可先删去路径、日志和截图中无需公开的内容。
+仍无法解决时，通过 [Bug 反馈](https://github.com/savormundane/miliastra-wonderland-plugin/issues/new?template=bug_report.yml)提供版本、客户端、执行命令和第一条错误信息。可先删去路径、日志和截图中无需公开的内容。

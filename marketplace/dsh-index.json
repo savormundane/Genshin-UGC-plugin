@@ -7,7 +7,7 @@
       "title": "Miliastra Wonderland",
       "description": "Miliastra Wonderland 千星奇域社区创作工具。包含 Qianxing Editor、Qianxing Graph Code、Qianxing GIL 和 Qianxing Assets。",
       "repository": {
-        "url": "https://github.com/savormundane/Genshin-UGC-plugin"
+        "url": "https://github.com/savormundane/miliastra-wonderland-plugin"
       },
       "versions": [
         {
@@ -15,7 +15,7 @@
           "publishTimestamp": 1795429988,
           "source": {
             "type": "git",
-            "url": "https://github.com/savormundane/Genshin-UGC-plugin",
+            "url": "https://github.com/savormundane/miliastra-wonderland-plugin",
             "commit": "06e0404372758503af0c521cda5884d94aefc94b"
           },
           "engines": {

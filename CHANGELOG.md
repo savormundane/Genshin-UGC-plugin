@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- 安装入口和项目链接更新为更名后的 GitHub 仓库地址。
+
 ## 1.0.0
 
 - Genshin-UGC 更名为 Miliastra Wonderland。发行从 1.0.0 重新编号，沿用原市场、仓库和插件 ID。

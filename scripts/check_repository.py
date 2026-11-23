@@ -24,7 +24,7 @@ REQUIRED_FILES = (
     "references/README.md",
 )
 SEMVER = r"\d+\.\d+\.\d+"
-REPO = "savormundane/Genshin-UGC-plugin"
+REPO = "savormundane/miliastra-wonderland-plugin"
 INSTALL_TAG = rf"https://raw\.githubusercontent\.com/{REPO}/v({SEMVER})/install\.ps1\b"
 ZIP_VERSION = rf"\bGenshin-UGC-({SEMVER})-windows-x64\.zip\b"
 DOC_VERSIONS = {

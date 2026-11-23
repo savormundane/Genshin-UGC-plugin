@@ -22,7 +22,7 @@ Miliastra Wonderland 是面向原神「千星奇域」创作者的非官方 AI �
 ### Codex
 
 ```text
-codex plugin marketplace add savormundane/Genshin-UGC-plugin
+codex plugin marketplace add savormundane/miliastra-wonderland-plugin
 codex plugin add genshin-ugc-public@genshin-ugc
 ```
 
@@ -31,7 +31,7 @@ codex plugin add genshin-ugc-public@genshin-ugc
 有 `claude` 命令时可直接在终端安装，也可在 [Claude 插件界面](docs/installation.md#claude)添加同一个市场。
 
 ```text
-claude plugin marketplace add savormundane/Genshin-UGC-plugin
+claude plugin marketplace add savormundane/miliastra-wonderland-plugin
 claude plugin install genshin-ugc-public@genshin-ugc
 ```
 
@@ -40,7 +40,7 @@ claude plugin install genshin-ugc-public@genshin-ugc
 在 **插件 → 添加插件** 粘贴下方地址，直接安装 **Miliastra Wonderland**。
 
 ```text
-git+https://github.com/savormundane/Genshin-UGC-plugin.git#main
+git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
 ```
 
 ### 其他客户端
@@ -53,14 +53,14 @@ git+https://github.com/savormundane/Genshin-UGC-plugin.git#main
 
 **当前版本 `1.0.0`**
 
-[源码 Release](https://github.com/savormundane/Genshin-UGC-plugin/releases/tag/v1.0.0) · [自行打包 ZIP](docs/installation.md#自行打包-zip) · [版本记录](CHANGELOG.md)
+[源码 Release](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/v1.0.0) · [自行打包 ZIP](docs/installation.md#自行打包-zip) · [版本记录](CHANGELOG.md)
 
 ## 参与项目
 
 - **报告问题**。请说明所用客户端、插件版本、预期结果和实际报错。有可公开的最小复现时一并附上。\
-  [反馈问题](https://github.com/savormundane/Genshin-UGC-plugin/issues/new/choose) · [安全问题报告](SECURITY.md)
+  [反馈问题](https://github.com/savormundane/miliastra-wonderland-plugin/issues/new/choose) · [安全问题报告](SECURITY.md)
 - **交流与建议**。欢迎分享制作方法、交流插件用法，或讨论下一步值得补齐的能力。\
-  [GitHub Discussions](https://github.com/savormundane/Genshin-UGC-plugin/discussions)
+  [GitHub Discussions](https://github.com/savormundane/miliastra-wonderland-plugin/discussions)
 - **参与贡献**。欢迎修正文档、补充有版本依据的平台资料、提交可复现样本和修复代码。\
   [贡献指南](CONTRIBUTING.md)
 

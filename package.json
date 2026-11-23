@@ -5,7 +5,7 @@
   "license": "GPL-3.0-only",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/savormundane/Genshin-UGC-plugin.git"
+    "url": "git+https://github.com/savormundane/miliastra-wonderland-plugin.git"
   },
   "engines": {
     "dsh": "0.2.2-rc.5"

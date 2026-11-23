@@ -40,7 +40,7 @@ $ugcPython = (Resolve-Path .\.venv\Scripts\python.exe).Path
 
 ## Windows 长路径
 
-检出目录较深时，可用 `git -c core.longpaths=true clone https://github.com/savormundane/Genshin-UGC-plugin.git` 并选用较短的目标路径，例如 `C:\src\Genshin-UGC-plugin`。
+检出目录较深时，可用 `git -c core.longpaths=true clone https://github.com/savormundane/miliastra-wonderland-plugin.git` 并选用较短的目标路径，例如 `C:\src\miliastra-wonderland-plugin`。
 
 ## 客户端适配
 
