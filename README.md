@@ -99,7 +99,8 @@ https://raw.githubusercontent.com/savormundane/miliastra-wonderland-plugin/main/
 
 - Ayaya 为节点图工具链提供了基础，Beyond 提供离线模拟和界面预览。[Ayaya](https://github.com/AyayaXiaowang/Ayaya_Miliastra_Editor) · [Beyond](https://github.com/1475505/miliastra-beyond-simulator)
 - 感谢 Miliastra-knowledge 整理平台资料。[Miliastra-knowledge](https://github.com/1475505/Miliastra-knowledge)
-- 感谢 GEIMG 的图元处理资料，以及社区公开分享的千星奇域文件格式研究。[GEIMG Wiki](https://docs.lumkfs.cn/GEIMG-WIKI/README/) · [第三方声明](THIRD_PARTY_NOTICES.md)
+- 感谢 GEIMG 的图元处理资料。[GEIMG Wiki](https://docs.lumkfs.cn/GEIMG-WIKI/README/) 
+- 感谢所有社区公开分享的千星奇域文件格式研究。[第三方声明](THIRD_PARTY_NOTICES.md)
 
 ## 许可证
 
