@@ -85,30 +85,21 @@ https://raw.githubusercontent.com/savormundane/miliastra-wonderland-plugin/main/
 
 ## 参与项目
 
-- **报告问题**。请说明所用客户端、插件版本、预期结果和实际报错。有可公开的最小复现时一并附上。\
-  [反馈问题](https://github.com/savormundane/miliastra-wonderland-plugin/issues/new/choose) · [安全问题报告](SECURITY.md)
-- **交流与建议**。欢迎分享制作方法、交流插件用法，或讨论下一步值得补齐的能力。\
-  [GitHub Discussions](https://github.com/savormundane/miliastra-wonderland-plugin/discussions)
-- **参与贡献**。欢迎修正文档、补充有版本依据的平台资料、提交可复现样本和修复代码。\
-  [贡献指南](CONTRIBUTING.md)
+- **报告问题**。请附客户端、插件版本、预期结果和报错，可附公开的最小复现。[反馈问题](https://github.com/savormundane/miliastra-wonderland-plugin/issues/new/choose) · [安全问题报告](SECURITY.md)
+- **交流与建议**。欢迎分享制作方法、交流插件用法，或讨论下一步值得补齐的能力。[GitHub Discussions](https://github.com/savormundane/miliastra-wonderland-plugin/discussions)
+- **参与贡献**。欢迎修正文档、补充有版本依据的平台资料、提交可复现样本和修复代码。[贡献指南](CONTRIBUTING.md)
 
 ## 更多文档
 
-- **技术参考**。查阅平台版本规则、节点签名、Lua API、原生文件格式与制作流程。\
-  [技术参考索引](references/README.md) · [术语表](docs/glossary.md)
-- **终端工具**。在终端直接编译节点图、检查 GIL 或复现工具报错。\
-  [在终端运行工具](docs/runtime-environment.md#只用-cli)
-- **插件开发**。查看源码入口、按改动选择本地检查。\
-  [开发者文档](docs/contributing/README.md)
+- **技术参考**。查阅平台版本规则、节点签名、Lua API、原生文件格式与制作流程。[技术参考索引](references/README.md) · [术语表](docs/glossary.md)
+- **终端工具**。在终端直接编译节点图、检查 GIL 或复现工具报错。[在终端运行工具](docs/runtime-environment.md#只用-cli)
+- **插件开发**。查看源码入口、按改动选择本地检查。[开发者文档](docs/contributing/README.md)
 
 ## 致谢
 
-- Ayaya 为节点图工具链提供了基础，Beyond 提供离线模拟和界面预览。\
-  [Ayaya](https://github.com/AyayaXiaowang/Ayaya_Miliastra_Editor) · [Beyond](https://github.com/1475505/miliastra-beyond-simulator)
-- 感谢奇匠学院提供官方平台资料，也感谢 Miliastra-knowledge 对资料的整理。\
-  [奇匠学院文档索引](references/official-index.md) · [Miliastra-knowledge](https://github.com/1475505/Miliastra-knowledge)
-- 感谢 GEIMG 的图元处理资料，以及社区公开分享的千星奇域文件格式研究。\
-  [GEIMG Wiki](https://docs.lumkfs.cn/GEIMG-WIKI/README/) · [第三方声明](THIRD_PARTY_NOTICES.md)
+- Ayaya 为节点图工具链提供了基础，Beyond 提供离线模拟和界面预览。[Ayaya](https://github.com/AyayaXiaowang/Ayaya_Miliastra_Editor) · [Beyond](https://github.com/1475505/miliastra-beyond-simulator)
+- 感谢 Miliastra-knowledge 整理平台资料。[Miliastra-knowledge](https://github.com/1475505/Miliastra-knowledge)
+- 感谢 GEIMG 的图元处理资料，以及社区公开分享的千星奇域文件格式研究。[GEIMG Wiki](https://docs.lumkfs.cn/GEIMG-WIKI/README/) · [第三方声明](THIRD_PARTY_NOTICES.md)
 
 ## 许可证
 
