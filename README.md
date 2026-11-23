@@ -4,6 +4,15 @@ Genshin-UGC 是面向《原神》千星奇域创作者的非官方社区插件�
 
 有现成关卡时，可以读取 GIL，查找实体、模板和挂载关系，审阅并另存局部修改。从创作需求开始时，可以搭建静态场景、编译节点图、编写控件脚本或生成图元，交付可继续编辑的文件。
 
+## Skills
+
+| Skill | 适用任务 |
+| --- | --- |
+| [Qianxing Editor](skills/qianxing-editor/SKILL.md) | 查看和配置关卡对象与原生界面，查询 API、编写和检查 [Client Lua](skills/qianxing-editor/SKILL.md#client-lua)。 |
+| [Qianxing Graph Code](skills/qianxing-graph-code/SKILL.md) | 确认节点签名，编写并检查节点图。 |
+| [Qianxing GIL](skills/qianxing-gil/SKILL.md) | 审阅局部修改计划，另存 GIL 并核对差异。 |
+| [Qianxing Assets](skills/qianxing-assets/SKILL.md) | 将 PNG 转成图元，比较候选方案的效果和控件预算。 |
+
 ## 安装
 
 ### 运行要求
@@ -34,6 +43,14 @@ claude plugin install genshin-ugc-public@genshin-ugc
 git+https://github.com/savormundane/Genshin-UGC-plugin.git#main
 ```
 
+### PowerShell 安装
+
+下面的命令使用正式 ZIP 为 Codex 安装插件。安装到 Claude 时，将末尾改为 `-Agent claude-code`。 [PowerShell 安装说明](docs/installation.md#powershell-安装)
+
+```powershell
+& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.1.2/install.ps1'))) -Agent codex
+```
+
 ### 其他客户端
 
 支持 Agent Plugins 和本地 MCP 的客户端，可按客户端提供的方式添加仓库市场或导入完整插件目录。 [Agent Plugins 安装说明](docs/installation.md#agent-plugins)
@@ -42,26 +59,22 @@ git+https://github.com/savormundane/Genshin-UGC-plugin.git#main
 
 **当前版本 `4.1.2`**
 
-手动安装请下载完整 ZIP，再按指南接入。指南也包含 PowerShell 备用安装、更新和回退。 [下载完整 ZIP](https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v4.1.2/Genshin-UGC-4.1.2-windows-x64.zip) · [手动安装](docs/installation.md#手动接入) · [版本记录](CHANGELOG.md)
+手动安装请下载完整 ZIP，再按指南接入。指南还包含更新和回退步骤。 [下载完整 ZIP](https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v4.1.2/Genshin-UGC-4.1.2-windows-x64.zip) · [手动安装](docs/installation.md#手动接入) · [版本记录](CHANGELOG.md)
 
-## Skills
-
-| Skill | 适用任务 |
-| --- | --- |
-| [Qianxing Editor](skills/qianxing-editor/SKILL.md) | 查看和配置关卡对象与原生界面，查询 API、编写和检查 [Client Lua](skills/qianxing-editor/SKILL.md#client-lua)。 |
-| [Qianxing Graph Code](skills/qianxing-graph-code/SKILL.md) | 确认节点签名，编写并检查节点图。 |
-| [Qianxing GIL](skills/qianxing-gil/SKILL.md) | 审阅局部修改计划，另存 GIL 并核对差异。 |
-| [Qianxing Assets](skills/qianxing-assets/SKILL.md) | 将 PNG 转成图元，比较候选方案的效果和控件预算。 |
-
-## 技术参考
-
-平台版本规则、节点签名、Lua API、原生文件格式与制作流程可按主题查阅。需要在终端直接编译节点图、检查 GIL 或复现工具报错时，可以运行插件自带的命令行工具。 [技术参考索引](references/README.md) · [在终端运行工具](docs/runtime-environment.md#只用-cli)
+> [!IMPORTANT]
+> 使用本地文件工具时，需要指定两个已存在且互不包含的目录，分别用于读取工程和保存产物。 [工程目录配置](docs/installation.md#运行依赖与工程目录)
 
 ## 参与项目
 
 - **报告问题**。请说明所用客户端、插件版本、预期结果和实际报错。有可公开的最小复现时一并附上。 [反馈问题](https://github.com/savormundane/Genshin-UGC-plugin/issues/new/choose) · [安全问题报告](SECURITY.md)
 - **交流与建议**。欢迎分享制作方法、交流插件用法，或讨论下一步值得补齐的能力。 [GitHub Discussions](https://github.com/savormundane/Genshin-UGC-plugin/discussions)
 - **参与贡献**。欢迎修正文档、补充有版本依据的平台资料、提交可复现样本和修复代码。 [贡献指南](CONTRIBUTING.md)
+
+## 更多文档
+
+- **技术参考**。查阅平台版本规则、节点签名、Lua API、原生文件格式与制作流程。 [技术参考索引](references/README.md)
+- **终端工具**。在终端直接编译节点图、检查 GIL 或复现工具报错。 [在终端运行工具](docs/runtime-environment.md#只用-cli)
+- **插件开发**。查看源码入口、按改动选择本地检查。 [开发者文档](docs/contributing/README.md)
 
 ## 致谢
 
