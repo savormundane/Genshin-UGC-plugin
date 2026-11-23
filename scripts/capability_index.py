@@ -1,13 +1,13 @@
 """Stable technical ownership; workflows and persisted owners are not Skill discovery."""
 DOMAINS={
-    'editor':'qianxing-editor','graph':'qianxing-graph-code','client':'client-controls-lua',
+    'editor':'qianxing-editor','graph':'qianxing-graph-code','client':'qianxing-editor',
     'gil':'qianxing-gil','assets':'qianxing-assets'}
 DOMAIN_TOOLS={
     'editor':['docs','platform','project','resources','ids','ui','scene'],
     'graph':['nodes','graph','build'],'client':['client','simulate'],
     'gil':['native','level','inspect','verify'],'assets':['assets']}
 # Capability IDs remain those published by capabilities.py. Empty ownership means
-# a shared tool, not an invented sixth platform domain.
+# a shared tool. The client domain shares the Editor Skill.
 OWNERS={
     'knowledge':('editor','client'),'diagnosis':(), 'asset_fit':('assets',),'asset_inspection':('assets',),
     'mcp':(), 'native':('gil',),'storage':('editor','graph','client','gil'),
@@ -27,11 +27,12 @@ LEGACY_OWNERS={
     'qianxing-release-integrity-triage':'diagnosis'}
 
 def resolve_owner(owner):
+    if owner=='client-controls-lua':return {'kind':'domain','id':'client','skills':[DOMAINS['client']]}
     if owner in DOMAINS.values():return {'kind':'domain','id':next(k for k,v in DOMAINS.items()if v==owner),'skills':[owner]}
     workflow=LEGACY_OWNERS.get(owner,owner)
     if workflow in WORKFLOWS:
-        return {'kind':'workflow','id':workflow,'skills':[DOMAINS[d]for d in WORKFLOWS[workflow]['domains']]}
-    if owner in OWNERS:return {'kind':'capability','id':owner,'skills':[DOMAINS[d]for d in OWNERS[owner]]}
+        return {'kind':'workflow','id':workflow,'skills':list(dict.fromkeys(DOMAINS[d] for d in WORKFLOWS[workflow]['domains']))}
+    if owner in OWNERS:return {'kind':'capability','id':owner,'skills':list(dict.fromkeys(DOMAINS[d] for d in OWNERS[owner]))}
     raise ValueError('Unknown workflow owner: '+str(owner))
 
 def describe():

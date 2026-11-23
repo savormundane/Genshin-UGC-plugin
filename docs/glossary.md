@@ -4,10 +4,9 @@
 | --- | --- |
 | AI 助手客户端 | 你打开对话、加载插件和调用本地工具的应用，例如 Codex。 |
 | Skill | 给助手使用的一份任务指南，包含能力入口、操作顺序和参考资料。 |
-| 领域 | 一类制作任务。五个领域分别是工程检查、Graph Code、Client Lua、GIL 和素材。 |
-| 工程检查 | 查看实体、模板、组件、资源引用和平台约束的领域，Skill ID 为 `qianxing-editor`。 |
+| Qianxing Editor | 负责实体、模板、组件、资源引用、平台规则、原生界面和客户端 Lua。 |
 | Graph Code | 描述节点图的领域专用语言，由工具链编译为千星奇域可导入的图。 |
-| Client Lua | 在千星奇域客户端控件上运行的 Lua 5.3 脚本。 |
+| Client Lua | 在千星奇域客户端控件上运行的 Lua 5.3 脚本。见 [Qianxing Editor](../skills/qianxing-editor/SKILL.md#client-lua)。 |
 | GIL / GIA | 千星奇域的文件容器。常见的 GIL 保存关卡，GIA 用于导入导出图和其他资产。 |
 | MCP | 助手调用本地查询、检查和制作工具的协议。 |
 | 千星奇域编辑器 / 游戏宿主 | 编辑器用于导入和编辑工程，游戏宿主指实际运行关卡的环境。 |

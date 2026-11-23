@@ -1,4 +1,4 @@
 interface:
-  display_name: "qianxing-assets"
+  display_name: "Qianxing Assets"
   short_description: "内置生成与转换矩形、富文本素材，统一处理透明边缘、预算及Lua数据"
   default_prompt: "使用 $qianxing-assets 生成并转换当前素材，按目标选择输出，交付数据和参考预览。"

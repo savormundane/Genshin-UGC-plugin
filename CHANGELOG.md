@@ -4,9 +4,10 @@
 
 ## Unreleased
 
+- 统一四个 Skill 的显示名。Client Lua 并入 Qianxing Editor，保留现有工具和旧工作流 owner 的读取兼容。
 - Codex、Claude、DeepSeek Harness 与通用插件入口共用一个插件目录和一套 Skills。DSH 直装地址改为仓库根目录，旧地址迁移和市场入口见安装指南。
 - Python 支持扩展至 3.11–3.14，优先复用已有环境，缺依赖时由 uv 按锁文件准备。市场与直装无需先运行 PowerShell 安装器。
-- 首页按客户端提供安装入口及五项 Skill 速查，使用指南集中说明环境、迁移和排障。
+- 首页按客户端提供安装入口及 Skill 速查，使用指南集中说明环境、迁移和排障。
 - 精简公开仓库的检查与贡献入口，开发路线集中在 Issues。后续安装包排除 GitHub 仓库配置。
 
 ## 4.1.2

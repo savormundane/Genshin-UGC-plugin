@@ -10,7 +10,7 @@
 
 | 任务 | 工作流 |
 | --- | --- |
-| 职责与阶段交接 | [五领域与共享能力](skill-map.md)、[能力合同](capability-contract.md) |
+| 职责与阶段交接 | [Skills 与共享能力](skill-map.md)、[能力合同](capability-contract.md) |
 | 一句话或完整关卡 | [完整关卡编排](one-sentence-workflow.md)、[主动实现](implementation-policy.md) |
 | 事件、节点与严格编译 | [图设计](graph-authoring.md)、[节点图构建](node-graph-workflow.md) |
 | 新基底、UI模板和Lua映射/挂载 | [参数化生成](native-authoring.md) |

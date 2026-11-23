@@ -2,7 +2,7 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "genshin-ugc-public",
   "version": "4.1.2",
-  "description": "以平台资料与客户端API为依据，提供工程检查、Graph Code、Client Lua、GIL、Assets五个千星奇域技术领域，以及共享协议、存储、动画、诊断与制作工具。",
+  "description": "以平台资料与客户端API为依据，提供 Qianxing Editor、Qianxing Graph Code、Qianxing GIL 和 Qianxing Assets，覆盖原生工程、客户端 Lua、节点图、容器和素材，以及共享协议、存储、动画、诊断与制作工具。",
   "author": {
     "name": "Genshin-UGC contributors"
   },

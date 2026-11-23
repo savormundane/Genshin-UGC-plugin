@@ -52,7 +52,13 @@ class ProtocolTests(unittest.TestCase):
                     'args': [anchor + '/scripts/mcp_launcher.cjs'],
                     'env': {'UGC_PLUGIN_DATA': data},
                 }})
-        self.assertEqual(len(list((ROOT / 'skills').glob('*/SKILL.md'))), 5)
+        names = {'qianxing-editor': 'Qianxing Editor', 'qianxing-graph-code': 'Qianxing Graph Code',
+                 'qianxing-gil': 'Qianxing GIL', 'qianxing-assets': 'Qianxing Assets'}
+        self.assertEqual({path.parent.name for path in (ROOT / 'skills').glob('*/SKILL.md')}, names.keys())
+        for identity, title in names.items():
+            skill = ROOT / 'skills' / identity
+            self.assertIn(f'name: {identity}\n', (skill / 'SKILL.md').read_text(encoding='utf-8'))
+            self.assertIn(f'display_name: "{title}"', (skill / 'agents/openai.yaml').read_text(encoding='utf-8'))
         self.assertTrue((ROOT / 'scripts/mcp_launcher.cjs').is_file())
         self.assertTrue((ROOT / 'references/README.md').is_file())
 

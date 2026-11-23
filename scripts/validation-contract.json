@@ -76,7 +76,7 @@
   },
   "runtime_rules": [
     "references/platform/**/*.md",
-    "skills/client-controls-lua/references/client-controls-api.md",
+    "skills/qianxing-editor/references/client-controls-api.md",
     "references/official/**/*.md"
   ],
   "development_inputs": [

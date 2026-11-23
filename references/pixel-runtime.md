@@ -1,6 +1,6 @@
 # 点阵帧动画接入
 
-核心流程见 [点阵像素指南](pixel-import-guide.md)，接口见 [客户端API](../skills/client-controls-lua/references/client-controls-api.md)。这里接收已经生成的调色板与矩形数据，不负责拟合或重编原图。
+核心流程见 [点阵像素指南](pixel-import-guide.md)，接口见 [客户端API](../skills/qianxing-editor/references/client-controls-api.md)。这里接收已经生成的调色板与矩形数据，不负责拟合或重编原图。
 
 按最大帧矩形数建一套池，分帧初始化；切帧只更新已有块并隐藏多余尾部，移动角色只移父容器。不能每次切帧销毁重建控件。
 

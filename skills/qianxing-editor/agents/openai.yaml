@@ -1,0 +1,3 @@
+interface:
+  display_name: "Qianxing Editor"
+  short_description: "工程配置、原生 3D 场景和客户端 Lua"

@@ -1,9 +1,13 @@
 ---
 name: qianxing-editor
-description: 设计和检查千星奇域原生3D场景、工程对象、实体、模板、组件配置及资源关联，查询平台版本规则；节点程序、客户端Lua和GIL文件处理分别交给对应领域。
+description: 设计和检查千星奇域原生 3D 场景、实体、模板、组件、资源关联及原生界面；编写、解释和修复客户端 Lua，查询控件 API，处理输入、事件、生命周期、动画和脚本装配。
 ---
 
-# Editor
+# Qianxing Editor
+
+按任务选择[原生工程](#原生工程)或 [Client Lua](#client-lua)。
+
+## 原生工程
 
 负责平台工程与配置语义。先读取实际工程和目标平台版本／模式，通过 `qianxing.py project inspect`、`docs search/show`、`platform profile/check` 核对对象和规则。声明配置检查不等于最终GIL已落地，已校准原生绑定需最终回读。
 
@@ -19,8 +23,26 @@ description: 设计和检查千星奇域原生3D场景、工程对象、实体�
 | 存储、成就、迁移 | [存储生成](../../references/storage-authoring.md)、[显式迁移](../../references/storage-migration.md) |
 | 完整工程跨域接入 | [能力路由](../../references/skill-map.md)、[制作链](../../references/production-v2.md)；只执行配置声明的阶段 |
 
-节点逻辑由Graph Code处理，控件运行由Client Lua处理，容器修改由GIL处理。按原生对象身份选择经过校准的变换、组合和组件范围。无编辑器GUI控制能力；人工导入和实机证据按[验证边界](../../references/validation.md)记录。
+节点逻辑交给 [Qianxing Graph Code](../qianxing-graph-code/SKILL.md)，容器读写交给 [Qianxing GIL](../qianxing-gil/SKILL.md)。按原生对象身份选择经过校准的变换、组合和组件范围。无编辑器GUI控制能力；人工导入和实机证据按[验证边界](../../references/validation.md)记录。
 
-使用 MCP `project_inspect` 的 `scope="scene"` 查询关卡实体、元件、初始变换和图挂载，并取得基底摘要。已识别实例通过 `set_entity_transform` 另存初始变换，基底与结果均须通过全局审计。控件脚本运行时签名查 [Client Lua](../client-controls-lua/SKILL.md)，节点签名查 [Graph Code](../qianxing-graph-code/SKILL.md)。
+使用 MCP `project_inspect` 的 `scope="scene"` 查询关卡实体、元件、初始变换和图挂载，并取得基底摘要。已识别实例通过 `set_entity_transform` 另存初始变换，基底与结果均须通过全局审计。
 
 已摆放物件也可按 [三维实体变换](../../references/native-entity-transform.md) 核对模型、坐标和保护范围。
+
+## Client Lua
+
+先确认 Lua 5.3 脚本、绑定与调用环境。通过 MCP `api_lookup` 或 `qianxing.py knowledge api SYMBOL` 查签名、原文行和推导项。编写后用 `client_check` 或 `client check` 检查源码，或通过 `mapping` 选定现有 GIL 中的单个脚本。提供 API 合同可同时核对调用和已声明引用。
+
+用 `simulate check INPUT` 检查启动日志和第一条异常。看界面或验收联合场景时，选择[软件预览或场景检查](../../references/client-simulation.md)。
+
+| 任务 | 资料及工具 |
+| --- | --- |
+| API、生命周期、控件、输入、普通Tween | [运行规则](references/runtime-rules.md)、[API正文](references/client-controls-api.md)；`client check` |
+| 多文件源码与宿主错误行定位 | [有序装配](../../references/client-assembly.md)；`client assemble` |
+| 控件池、预算、拖动、暂停与清理 | [UI运行模块](../../references/runtime-ui.md) |
+| 点阵帧和分层动作 | [动画接入](../../references/workflows/qianxing-animation/README.md)；素材转换归 [Qianxing Assets](../qianxing-assets/SKILL.md) |
+| 信号、多人或存储 | [协议](../../references/protocol-v2.md)、[多人流程](../../references/workflows/qianxing-multiplayer/README.md)、[存储](../../references/storage-authoring.md)；只选涉及项 |
+| 生成Lua目录补字段 | [目录合并](../../references/workflows/generated-lua-catalog-merge/README.md) |
+| 失败或交付失配 | [只读诊断](../../references/project-diagnosis.md)、[交付排障](../../references/workflows/qianxing-release-integrity-triage/README.md) |
+
+运行模块局部内联，不要求宿主文件系统或require。最终交付检查内嵌正文；只修改源码时无需运行完整制作链。来源冲突和证据规则见[知识可信度](../../references/knowledge-reliability.md)与[验证边界](../../references/validation.md)。

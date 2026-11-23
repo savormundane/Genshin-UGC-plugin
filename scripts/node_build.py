@@ -33,8 +33,6 @@ def route(kind='game',interface='lua',multiplayer=False,output='gil',task_mode=N
     if multiplayer and 'multiplayer' not in selected_workflows:selected_workflows.append('multiplayer')
     for selected in selected_workflows:helpers.extend(DOMAINS[d]for d in WORKFLOWS[selected]['domains'])
     if kind=='game':helpers.append(DOMAINS['graph'])
-    if kind=='game' and interface=='lua':helpers.append('client-controls-lua')
-    if kind=='game' and interface=='html':helpers.append('qianxing-editor')
     if kind in ['game','nodes','gil'] and output in ['gia','gil','both']:helpers.append('qianxing-gil')
     from qianxing_workflow import guide
     workflow=guide(task_mode or {'gil':'delivery','assets':'assets','lua':'ui','diagnosis':'fix'}.get(kind,'feature'))

@@ -163,8 +163,7 @@ PLUGIN_PYTHON -X utf8 -B private_extensions/run_ugc_file_tools.py tool inspect_g
 
 - **qianxing-graph-code**：Graph Code 编写、Ayaya 验证、导出 GraphModel JSON。本流程从 JSON/源码产物开始。
 - **qianxing-gil**：GIL 基础读写原语（inspect、replace-lua、模板生成、结构诊断）。本流程编排这些原语完成端到端组装。
-- **qianxing-editor**：编辑器内的脚本映射、挂载和 UI 配置。本流程不涉及编辑器交互。
+- **Qianxing Editor**：编辑器内的脚本映射、挂载、UI 配置及 Lua 5.3 客户端控件代码编写。
 - **共享多人流程（Graph Code / Client Lua）**：协议、信号合同与状态机设计。本流程只负责把已定义的信号与图写入 GIL。
-- **client-controls-lua**：Lua 5.3 客户端控件代码编写。本流程只负责将已写好的 Lua 注入 GIL。
 
 schema 2可在同一 [制作链](../../../production-v2.md) 调度 [原生图替换与挂载](../../../native-maintenance.md)、[保存／成就](../../../storage-authoring.md) 及 [源码装配](../../../client-assembly.md)。严格编译之后仍审计最终GIL，指定模型读取实际产物；必需阶段失败不提交正式输出。

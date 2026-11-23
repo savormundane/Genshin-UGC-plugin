@@ -6,7 +6,7 @@
 
 | 当前任务 | 首先阅读 |
 | --- | --- |
-| 判断任务由谁处理 | [五领域与共享能力](skill-map.md) |
+| 判断任务由谁处理 | [Skills 与共享能力](skill-map.md) |
 | 查已有工程、组件或平台版本 | 下方“工程 / Editor” |
 | 写节点、Lua、改文件或做素材 | 下方对应领域 |
 | 制作或整合多个产物 | [制作总流程](production-workflow.md)，再按需读取当前 [produce 配置](production-v2.md) |
@@ -38,14 +38,14 @@
 
 ## Client Lua / 客户端脚本
 
-- [完整客户端 API](../skills/client-controls-lua/references/client-controls-api.md)
+- [完整客户端 API](../skills/qianxing-editor/references/client-controls-api.md)
 - [知识可信度与 API 查询](knowledge-reliability.md)
 - [Lua 源码装配](client-assembly.md)
 - [最终 Lua 检查](client-check.md)
 - [客户端 API 检查](client-api-check.md)
 - [UI 运行支持](runtime-ui.md)
 - [离线 Lua 模型、自检与日志](client-simulation.md)
-- [客户端综合指南](../skills/client-controls-lua/references/integrated-guide.md)
+- [客户端综合指南](../skills/qianxing-editor/references/integrated-guide.md)
 
 ## GIL / 原生文件
 
@@ -71,7 +71,7 @@
 - [单张图片到图元](../skills/qianxing-assets/references/workflow.md)
 - [分层素材接入](../skills/qianxing-assets/references/l2d-workflow.md)
 
-动画的素材制作归 Assets，播放、输入与生命周期归 Client Lua；组合方法见[动画工作流](workflows/qianxing-animation/README.md)。
+动画素材由 Qianxing Assets 制作，播放、输入与生命周期由 Qianxing Editor 的 Client Lua 处理；组合方法见[动画工作流](workflows/qianxing-animation/README.md)。
 
 ## 共享能力：协议、存档与运行模型
 

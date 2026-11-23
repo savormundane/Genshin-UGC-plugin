@@ -1,6 +1,6 @@
 # 平台更新、兼容与恢复
 
-核心领域为Editor、Graph Code、Client Lua、GIL、Assets。入口只维护触发与领域约束；共享事实由原始资料和对应指南单点维护。原始API、官方镜像、校准、许可证和第三方目录保留。历史经验只有经核对的通用结论进入当前规则；完整游戏和专属协议不进入能力登记。
+四个 Skill 入口为 Qianxing Editor、Qianxing Graph Code、Qianxing GIL 和 Qianxing Assets。Client Lua 由 Qianxing Editor 提供。入口只维护触发与领域约束；共享事实由原始资料和对应指南单点维护。原始API、官方镜像、校准、许可证和第三方目录保留。历史经验只有经核对的通用结论进入当前规则；完整游戏和专属协议不进入能力登记。
 
 ## 来源更新
 
@@ -17,7 +17,7 @@
 
 CLI与MCP使用同一实现。已有schema 1/2及旧线上协议语义保留，未知版本拒绝，不静默改默认值。新增字段兼容读取；改变含义或必填字段需新schema／显式平台选择。旧日志、旧工作流owner保持可读，迁移结果输出新文件及差异。
 
-plan保持旧输入参数，routing_schema=2标明主入口已归五领域；support是候选而非必经阶段。旧十个工作流owner通过稳定登记解析，不依赖Skill目录扫描；原配置及历史证据不改写。旧Skill显式调用需使用[迁移映射](skill-map.md)。
+plan保持旧输入参数，routing_schema=2 标明主入口；support是候选而非必经阶段。旧十个工作流owner通过稳定登记解析，不依赖Skill目录扫描；原配置及历史证据不改写。旧Skill显式调用需使用[迁移映射](skill-map.md)。
 
 GIL与存档只有明确校准和字段合同才能迁移；旧档、未知版本及异常记录不覆盖。工具回退不能自动逆转已提交的游戏数据。
 

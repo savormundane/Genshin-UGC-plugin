@@ -3,7 +3,7 @@ name: qianxing-gil
 description: 检查、比较和安全修改千星奇域GIL/GIA容器，处理脚本嵌入、图与资源挂载、保护字段、组装及最终回读；不代替节点程序或编辑器配置设计。
 ---
 
-# GIL
+# Qianxing GIL
 
 负责已识别容器、对象身份、引用和字节保留。先用 `qianxing.py native inspect` 或 [GIL工具](../../references/gil-tooling.md)读取实际输入；修改绑定基底摘要、唯一目标及允许范围，输出新文件。未知字段保留，不猜测改写。
 

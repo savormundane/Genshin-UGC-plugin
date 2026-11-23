@@ -1,6 +1,6 @@
 # 动画接入
 
-以 [客户端API](../../../skills/client-controls-lua/references/client-controls-api.md) 和 [核心来源](../../sources-and-conflicts.md) 为依据。输入应为已生成的数据、其坐标空间及尺寸；缺少数据时先用 qianxing-assets 转换。普通按钮/窗口Tween使用client-controls-lua，不需要此技能。
+以 [客户端API](../../../skills/qianxing-editor/references/client-controls-api.md) 和 [核心来源](../../sources-and-conflicts.md) 为依据。输入应为已生成的数据、其坐标空间及尺寸；缺少数据时先用 qianxing-assets 转换。普通按钮和窗口的 Tween 见 [Qianxing Editor 的 Client Lua 入口](../../../skills/qianxing-editor/SKILL.md#client-lua)。
 
 ## 点阵帧
 

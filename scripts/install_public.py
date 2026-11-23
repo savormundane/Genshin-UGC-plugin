@@ -89,8 +89,10 @@ def extract(archive, expected, destination, version):
         meta = read_json(bundle / name)
         if meta['name'] != 'genshin-ugc-public' or meta['version'] != version:
             raise ValueError('Wrong plugin identity or version')
-    if len(list((bundle / 'skills').glob('*/SKILL.md'))) != 5:
-        raise ValueError('Expected five full-bundle Skills')
+    required_skills = {'qianxing-editor', 'qianxing-graph-code', 'qianxing-gil', 'qianxing-assets'}
+    skills = {path.parent.name for path in (bundle / 'skills').glob('*/SKILL.md')}
+    if skills != required_skills and skills != required_skills | {'client-controls-lua'}:
+        raise ValueError('Unexpected full-bundle Skills')
     for p in ('LICENSE', 'scripts/runtime-requirements.lock', 'scripts/mcp_launcher.cjs', 'vendor/beyond/bundle.json'):
         if not (bundle / p).is_file():
             raise ValueError('Incomplete bundle: ' + p)
@@ -450,7 +452,7 @@ def operate(args):
         save(state_path, state)
     journal.unlink()
     return {'installed': args.version, 'agent': args.agent, 'runtime_smoke': 'passed',
-            'agent_host_load': 'not_checked', 'next': 'Restart the Agent and verify five Skills and MCP tools'}
+            'agent_host_load': 'not_checked', 'next': 'Restart the Agent and verify Skills and MCP tools'}
 
 
 if __name__ == '__main__':

@@ -30,7 +30,7 @@
 | --- | --- |
 | 完整需求和制作顺序 | qianxing-editor |
 | Graph Code语法、类型和连接 | qianxing-graph-code |
-| 控件与生命周期 | client-controls-lua |
+| 控件与生命周期 | [Qianxing Editor · Client Lua](../skills/qianxing-editor/SKILL.md#client-lua) |
 | 权威状态、信号与恢复 | Graph Code与Client Lua的多人流程 |
 | 原生写回与字段保护 | qianxing-gil |
 | 信号→图→Lua组装 | GIL组装流程 |

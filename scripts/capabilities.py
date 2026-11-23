@@ -65,7 +65,7 @@ CAPABILITY_GROUPS = {
         'scripts/knowledge-sources.json', 'scripts/knowledge.py', 'scripts/client_api_catalogue.py',
         'scripts/client_api.py', 'scripts/client_ast.cjs', 'scripts/client_check.py', 'scripts/client_references.py',
         'scripts/client_assembly.py', 'scripts/client_variables.py', 'scripts/client_signal_binding.py',
-        'skills/client-controls-lua/references/client-controls-api.md', 'scripts/client_simulator.py',
+        'skills/qianxing-editor/references/client-controls-api.md', 'scripts/client_simulator.py',
         'scripts/client_simulator.lua', 'scripts/joint_simulator.py', 'scripts/beyond_backend.py',
         'scripts/beyond_gil.py', 'scripts/beyond_worker.mjs', 'vendor/beyond/bundle.json',
     ),

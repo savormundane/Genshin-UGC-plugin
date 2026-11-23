@@ -7,7 +7,7 @@
     {
       "name": "genshin-ugc-public",
       "source": "./",
-      "description": "千星奇域 工程检查、Graph Code、Client Lua、GIL 与 Assets 开发工具"
+      "description": "千星奇域开发工具。包含 Qianxing Editor、Qianxing Graph Code、Qianxing GIL 和 Qianxing Assets。"
     }
   ]
 }

@@ -117,7 +117,7 @@ class 功能名:
 ## 与其他技能的边界
 
 - **本流程**：Python Graph Code 编写与验证
-- **client-controls-lua**：Lua 5.3 客户端控件代码
+- **Qianxing Editor · Client Lua**：Lua 5.3 客户端控件代码
 - **qianxing-editor**：编辑器内的脚本映射、挂载和 UI 配置
 - **qianxing-gil**：GIL/GIA 存档读写和 Lua 替换
 - **qianxing-gil-assembly-pipeline**：把验证后的源码编译产物、信号和 Lua 组装为完整 GIL
