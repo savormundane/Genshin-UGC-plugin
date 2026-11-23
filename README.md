@@ -51,7 +51,7 @@ git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
 
 **当前版本 `1.0.0`**
 
-[下载源码](https://github.com/savormundane/miliastra-wonderland-plugin/archive/refs/heads/main.zip) · [自行打包 ZIP](docs/installation.md#自行打包-zip) · [版本记录](CHANGELOG.md)
+[下载源码](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/v1.0.0) · [自行打包 ZIP](docs/installation.md#自行打包-zip) · [版本记录](CHANGELOG.md)
 
 ## 参与项目
 
