@@ -43,14 +43,6 @@ claude plugin install genshin-ugc-public@genshin-ugc
 git+https://github.com/savormundane/Genshin-UGC-plugin.git#main
 ```
 
-### PowerShell 安装
-
-下面的命令使用 `v4.1.2` 正式 ZIP，要求 **Python 3.11 或 3.12**。默认安装到 Codex，安装到 Claude 时将末尾改为 `-Agent claude-code`。 [PowerShell 安装说明](docs/installation.md#powershell-安装)
-
-```powershell
-& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.1.2/install.ps1'))) -Agent codex
-```
-
 ### 其他客户端
 
 支持 Agent Plugins 和本地 MCP 的客户端，可按客户端提供的方式添加仓库市场或导入完整插件目录。 [Agent Plugins 安装说明](docs/installation.md#agent-plugins)
