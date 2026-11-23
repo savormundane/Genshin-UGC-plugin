@@ -127,6 +127,61 @@ def read_bindings(path, baseline=None):
     return bindings, sha(data)
 
 
+def rebase_bindings(old_gil, binding_path, new_gil, overrides=None):
+    """Keep names only when the exact native record survives the export or is explicitly selected."""
+    from collections import defaultdict
+    from native_gameplay_index import build_gameplay
+
+    bound, binding_digest = read_bindings(binding_path, old_gil)
+    if not bound.ids:
+        raise ValueError('The old binding table is empty')
+    if overrides is None:
+        overrides = {}
+    if not isinstance(overrides, dict) or overrides.keys() - bound.ids.keys():
+        raise ValueError('Rebase selectors must map existing binding names to new object keys')
+    explicit = bind_selectors(new_gil, overrides)['bindings'] if overrides else {}
+
+    witnesses = []
+    for data in (old_gil, new_gil):
+        hashes, by_identity, by_name, by_number = {}, defaultdict(list), defaultdict(list), defaultdict(list)
+        for row in build_gameplay(data, record_hashes=hashes)['objects']:
+            kind = 'control_group' if row.get('group') else row['kind']
+            if kind in KINDS:
+                entry = {'object_key': row['key'], 'kind': kind, 'id': row['id'], 'name': row['name']}
+                by_identity[kind, row['id']].append(entry)
+                by_name[kind, row['name']].append(entry)
+                by_number[row['id']].append(entry)
+        witnesses.append((hashes, by_identity, by_name, by_number))
+    (old_hashes, old_ids, _, _), (new_hashes, new_ids, new_names, new_numbers) = witnesses
+
+    result, rows = {}, []
+    for name, ident in sorted(bound.ids.items()):
+        kind = name.partition(':')[0]
+        old, = old_ids[kind, ident]
+        current = new_ids[kind, ident]
+        if name in explicit:
+            result[name] = explicit[name]
+            rows.append({'binding': name, 'status': 'selected', 'before': old, 'after': explicit[name]})
+        elif (len(current) == 1 and old['object_key'] == current[0]['object_key']
+              and old_hashes.get(old['object_key']) and old_hashes[old['object_key']] == new_hashes.get(old['object_key'])):
+            result[name] = {'object_key': old['object_key'], 'id': ident}
+            rows.append({'binding': name, 'status': 'retained', 'before': old, 'after': current[0]})
+        else:
+            candidates = current + (new_names[kind, old['name']] if old['name'] else [])
+            candidates = {row['object_key']: row for row in candidates}
+            other_kinds = [row for row in new_numbers[ident] if row['kind'] != kind]
+            reason = ('identity_ambiguous' if len(current) > 1 else 'record_changed' if current else
+                      'kind_changed' if other_kinds else 'identity_absent')
+            rows.append({'binding': name, 'status': 'needs_selection', 'before': old,
+                         'reason': reason, 'same_id_other_kinds': other_kinds,
+                         'candidates': [candidates[key] for key in sorted(candidates)]})
+    complete = len(result) == len(bound.ids)
+    report = {'schema': 1, 'status': 'passed' if complete else 'not_checked', 'kind': 'native-binding-rebase',
+              'old_gil_sha256': sha(old_gil), 'gil_sha256': sha(new_gil), 'old_bindings_sha256': binding_digest,
+              'entries': rows}
+    return report, {'schema': 2, 'gil_sha256': report['gil_sha256'], 'bindings': result} if complete else None
+
+
 def bind_operation(op, bindings):
     kind = op['op']
 

@@ -8,6 +8,10 @@ schema 2支持client、level、storage、native、assets、protocol、protocol_n
 
 原生创作可在 `native.spec` 使用 `place_static_scene` 和 `"source":"@scene"` 把本次布局写到 GIL。用 `graphs.include_sources:true` 保留可编辑图源码。挂载使用图名、`section` 和 `entity_id`。实例也可用 `entity_key` 定位，或用 `"entity_id":{"ref":"entity:gate"}` 引用本轮布设的对象。
 
+对于需要多次调整的布局，`native.spec` 或 `native.plan` 可使用 [`arrange_instances`](native-scene.md#重复布设)。后续图挂载沿用布局的 `entity:` 键。交付中的 `layout-bindings.json` 只包含布局实例，绑定完成挂图和后续编辑的最终 `level.gil`。下一轮将这两个文件作为基底和上一轮映射。布局与旧映射都进入交付输入记录和可迁移闭包。
+
+`assets` 中的 `kind:"batch"` 从[预算试算报告](asset-generation.md#多素材共用控件预算)生成 `asset-batches/<name>/`。要将已生成的批量数据写进已有 GIL，用 [`append_client_ui`](native-authoring.md#追加客户端界面模块) 的 `asset_data` 引用该目录中的 `data.json`。
+
 ### 按名称连接制作阶段
 
 给原生实体、模板、经济配置、拾取模板及 HUD 控件指定 `key`。控件组使用 `group_key`。制作链把具名键、工程对象键和实际 ID 写入交付根目录的 schema 2 `bindings.json`，同时登记交付 GIL 的 `gil_sha256`。同一具名键只能绑定一个对象。声明应出现在引用之前。

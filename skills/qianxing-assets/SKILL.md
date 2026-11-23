@@ -5,7 +5,7 @@ description: 查找千星奇域原生3D模型、选择白盒形状，生成、�
 
 # Qianxing Assets
 
-先确定输入、坐标空间、输出表示和项目预算。用 [素材试算](../../references/asset-generation.md) 的 `assets preview` 对照目标尺寸、控件数和透明边缘，选定候选后用 `assets generate --from-preview REPORT --candidate NAME --out DIR` 交付。需要分层配额、误差目标或续算时用 `assets fit`，查看顶层 `quality` 和各层停止原因。按需执行 `assets check/diff`，将生成的 `data.lua` 接入工程已有控件模板。
+先确定输入、坐标空间、输出表示和项目预算。用[素材试算](../../references/asset-generation.md)的 `assets preview` 对照目标尺寸、控件数和透明边缘，再用 `assets generate --from-preview REPORT --candidate NAME --out DIR` 交付。多项素材共用控件预算时用 `assets batch preview/generate`。需要分层拟合或续算时用 `assets fit`，查看顶层 `quality` 和停止原因。按需运行 `assets check/diff`，再将生成数据接入客户端界面。
 
 | 任务 | 资料 |
 | --- | --- |

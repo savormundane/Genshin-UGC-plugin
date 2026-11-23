@@ -101,6 +101,7 @@ def produce(path,out,evidence=None,*,job=None,job_digest=None):
         for item in level['scripts']:
             if 'source'in item:track(resolve(lp.parent,item['source']))
     if 'native'in job:
+        from native_changes import operation_sources
         native=job['native'];schema(native,('base','spec','plan','after_graphs'),('base',))
         if ('spec'in native)==('plan'in native):raise ValueError('Choose native spec or plan')
         track(resolve(base,native['base']));np=track(resolve(base,native.get('spec',native.get('plan'))));patch=read_json(np)
@@ -109,17 +110,18 @@ def produce(path,out,evidence=None,*,job=None,job_digest=None):
             for item in patch['inputs'].values():track(resolve(np.parent,item['source']))
         else:
             for op in patch['operations']:
-                if op.get('source')=='@scene':
-                    if scene_path is None or op['op']!='place_static_scene':
-                        raise ValueError('@scene requires a scene stage and place_static_scene')
-                elif 'source'in op:track(resolve(np.parent,op['source']))
+                for field in operation_sources(op):
+                    if field=='source' and op[field]=='@scene':
+                        if scene_path is None or op['op']!='place_static_scene':
+                            raise ValueError('@scene requires a scene stage and place_static_scene')
+                    else:track(resolve(np.parent,op[field]))
         if 'after_graphs'in native:
             if 'graphs'not in job and 'storage'not in job:raise ValueError('native.after_graphs requires compiled graphs')
             fp=track(resolve(base,native['after_graphs']));final_patch=(fp,read_json(fp))
             if final_patch[1].get('base_sha256')!='@level':
                 raise ValueError('native.after_graphs must bind its baseline to @level')
             for op in final_patch[1]['operations']:
-                if 'source'in op:track(resolve(fp.parent,op['source']))
+                for field in operation_sources(op):track(resolve(fp.parent,op[field]))
     if 'storage'in job:
         from storage_authoring import validate
         storage=job['storage'];schema(storage,('spec','base','transport','host_section'),('spec',))
@@ -200,6 +202,7 @@ def produce(path,out,evidence=None,*,job=None,job_digest=None):
         legacy={k:v for k,v in job.items()if k in('protocol','protocol_native','animation')};legacy['schema']=1
         raw=None;active_stage=None;storage_spec=None;binding=None;storage_host=None
         bindings=Bindings()
+        layout_keys=set()
         if 'client'in job:
             c=job['client']
             if set(c)=={'assembly'}:
@@ -241,6 +244,14 @@ def produce(path,out,evidence=None,*,job=None,job_digest=None):
                     source=track(resolve(base,item['source']));sp=track(resolve(base,item['spec']))
                     result=build(source,sp,stage/'native-assets'/item['name'])
                     inputs.merge(result['inputs'],'native_assets');state('native_assets')
+                elif item.get('kind')=='batch':
+                    from asset_batch import generate
+                    schema(item,('name','kind','source'),('name','kind','source'))
+                    relative=f"asset-batches/{item['name']}"
+                    result=generate(track(resolve(base,item['source'])),stage/relative)
+                    inputs.merge(result['inputs'],'asset_batch');state('asset_batch')
+                    evidence.setdefault('asset_batch_budget',{'status':'passed','layer':'software_preview','batches':{}})['batches'][item['name']]={
+                        'catalog':relative+'/'+result['catalog'],'controls':result['controls'],'max_controls':result['max_controls']}
                 else:legacy['assets'].append({**item,'source':str(track(resolve(base,item['source'])))})
             if not legacy['assets']:legacy.pop('assets')
         if 'animation'in legacy:
@@ -268,13 +279,15 @@ def produce(path,out,evidence=None,*,job=None,job_digest=None):
             else:
                 sp=track(resolve(base,job['native']['spec']));spec=read_json(sp)
                 for op in spec['operations']:
-                    if op.get('source')=='@scene':
-                        if scene_path is None or op['op']!='place_static_scene':
-                            raise ValueError('@scene requires a scene stage and place_static_scene')
-                        op['source']=str((stage/'scene/scene.gia').resolve())
-                    elif 'source'in op:track(resolve(sp.parent,op['source']))
+                    for field in operation_sources(op):
+                        if field=='source' and op[field]=='@scene':
+                            if scene_path is None or op['op']!='place_static_scene':
+                                raise ValueError('@scene requires a scene stage and place_static_scene')
+                            op[field]=str((stage/'scene/scene.gia').resolve())
+                        else:track(resolve(sp.parent,op[field]))
                 raw,r=apply(read_input(p,'native'),spec,sp.parent)
             bindings.merge(r.get('bindings',{}).get('bindings',{}))
+            layout_keys.update(r.get('layout_bindings',{}).get('bindings',{}))
             for operation in r['operations']:
                 for relative,digest in operation.get('platform_sources',{}).items():
                     inputs.bind(PLUGIN/relative,digest,'native')
@@ -434,6 +447,7 @@ def produce(path,out,evidence=None,*,job=None,job_digest=None):
                 bound={**patch,'base_sha256':sha(baseline)}
                 raw,report=apply(baseline,bound,fp.parent,bindings=bindings)
                 bindings.merge(report.get('bindings',{}).get('bindings',{}))
+                layout_keys.update(report.get('layout_bindings',{}).get('bindings',{}))
                 for operation in report['operations']:
                     for relative,digest in operation.get('platform_sources',{}).items():
                         inputs.bind(PLUGIN/relative,digest,'native_after_graphs')
@@ -569,7 +583,10 @@ def produce(path,out,evidence=None,*,job=None,job_digest=None):
         evidence['v3_pipeline']={'status':'passed'}
         # Copy only stable reviewable artifacts; internal jobs contain temporary paths.
         if graph_baseline is not None and bindings.ids and (stage/'level.gil').is_file():
-            write_json(stage/'bindings.json',bindings_for_gil((stage/'level.gil').read_bytes(),bindings))
+            sealed=bindings_for_gil((stage/'level.gil').read_bytes(),bindings)
+            write_json(stage/'bindings.json',sealed)
+            if layout_keys:
+                write_json(stage/'layout-bindings.json',{**sealed,'bindings':{name:sealed['bindings'][name] for name in sorted(layout_keys)}})
         for file in ('legacy-job.json','graph-job.json','graph-bindings.json','resource-job.json'):
             if(stage/file).exists():(stage/file).unlink()
         state('source_integrity')

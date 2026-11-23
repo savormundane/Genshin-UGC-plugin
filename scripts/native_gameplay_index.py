@@ -14,7 +14,7 @@ CONFIG_KINDS = {1: 'status', 4: 'class', 5: 'curve', 6: 'skill', 10: 'item', 26:
                 28: 'creature_skill', **{entry[0]: name for name, entry in RESOURCES.items()}}
 
 
-def build_gameplay(data, namespace='level'):
+def build_gameplay(data, namespace='level', *, record_hashes=None):
     from project_index import key
 
     header, root = container(data)
@@ -23,13 +23,15 @@ def build_gameplay(data, namespace='level'):
     objects, references, issues = [], [], []
     by_kind, by_id = defaultdict(list), defaultdict(set)
 
-    def object_row(kind, ident, name='', scope=(), **details):
+    def object_row(kind, ident, name='', scope=(), *, serialized=None, **details):
         identity = key(namespace, kind, *scope, ident)
         row = {'key': identity, 'kind': kind, 'id': ident, 'name': name, 'scope': list(scope),
                'artifact': namespace, **details}
         objects.append(row)
         by_kind[kind, ident].append(row)
         by_id[ident].add(identity)
+        if record_hashes is not None and serialized is not None:
+            record_hashes.setdefault(identity, []).append(sha(serialized))
         return identity
 
     def link(source, kind, ident, relation, field, *, match=None):
@@ -73,7 +75,7 @@ def build_gameplay(data, namespace='level'):
             continue
         local_ids.add(ident)
         if kind is not None:
-            source = object_row(kind, ident, config_name(row), native_kind=get(row, 2, 0))
+            source = object_row(kind, ident, config_name(row), serialized=row, native_kind=get(row, 2, 0))
             configs.append((source, kind, row))
     for kind, row in graph_records(data):
         if kind == 'ordinary':
@@ -87,7 +89,7 @@ def build_gameplay(data, namespace='level'):
         ident = get(row, 501, 0)
         if ident is not None:
             group = any((get(meta, 501, 0), get(meta, 502, 0)) == (6, 13) for meta in vals(fields(row), 502))
-            source = object_row('control', ident, control_name(row), layout=ident in layouts, group=group)
+            source = object_row('control', ident, control_name(row), serialized=row, layout=ident in layouts, group=group)
             controls.append((source, row))
     for row in vals(fields(unique(root, 12, default=b'')), 1):
         name = get(row, 1, default=b'').decode('utf-8')
@@ -106,9 +108,9 @@ def build_gameplay(data, namespace='level'):
             named = typed_record(row, 6 if section_id == 4 else 5, 1)
             name = get(get(named or b'', 11, default=b''), 1, default=b'').decode('utf-8')
             pickup = section_id == 4 and get(row, 9, 0) == 2 and typed_record(row, 8, 36) is not None
-            source = object_row(kind, ident, name, section=section_id, pickup=pickup)
+            source = object_row(kind, ident, name, serialized=row, section=section_id, pickup=pickup)
             if pickup:
-                source = object_row('pickup_template', ident, name, section=section_id)
+                source = object_row('pickup_template', ident, name, serialized=row, section=section_id)
             owners.append((source, section_id, row, pickup))
 
     def payload(row, carrier, kind, field):

@@ -109,6 +109,8 @@ def run(path,backend,out,*,final_gil=None,preview=False):
                                           'path':str(destination)})
             return {**report,'inputs':inputs,'output':None,'diagnostics_output':None}
         with output_directory(destination)as stage:
+            report['artifacts']={kind:name for kind,name in (('screenshot','preview.png'),('render','render.json'))
+                                 if (td/name).is_file()}
             for name in ('preview.png','render.json','converted-project.json'):
                 if (td/name).is_file():shutil.copy2(td/name,stage/name)
             write_json(stage/'external-simulation.json',report)

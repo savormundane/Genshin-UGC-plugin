@@ -60,6 +60,7 @@ python scripts/qianxing.py scene inspect scene-output/scene.gia
 | --- | --- | --- |
 | `place_static_scene` | 以 `source` 选择已生成的静态 GIA，按 `prototypes` 复用同模型实例，指定 `version:"7.2"`、`mode:"beyond"` 和可选整体 `offset_m`。 | 5、6 |
 | `duplicate_entities` | `copies` 逐项给 `key`、`name`、`source_entity_id` 和可选变换。保留原模板与已有图挂载。适用于已校准的普通实例。 | 5、6 |
+| `arrange_instances` | 以布局键创建和更新同一批实例。支持显式物件和等距直线阵列。见[重复布设](#重复布设)。 | 5、新建时加 6 |
 | `place_model_instances` | 从同版本模式的 `source` GIL 中选择普通原生平台模型实例。每个 `instances` 条目填写 `key`、`name`、`model_entity_id`、`position_m`。 | 5、6 |
 | `create_object_templates` | 从 `source` 绑定纯动态原生模型样本，给 `version`、`mode`。 `templates` 每项为 `key`、`name`、`model_entity_id`，可选 `scale` 和支持的白盒 `parts`。 | 4、6、27 |
 | `instantiate_object_templates` | `instances` 项逐个设置 `template_id` 或同一补丁前序的 `template_key`，再给 `key`、`name`、`position_m` 及可选变换。实例装饰物使用独立 ID 并保留模板来源。 | 5、6、27 |
@@ -80,6 +81,31 @@ python scripts/qianxing.py scene inspect scene-output/scene.gia
 | `add_point_light` | `environment_id`、`name`、`position_m` 创建点光源并登记到指定环境。可设 `radius_m`、`range_m`、`intensity`。 | 6、15 |
 
 `set_entity_transform` 使用场景查询返回的 `spatial.transform`。向量均按原生 XYZ 顺序，Y 向上。位置单位为米，旋转为原生角度，缩放各轴为正数。只改指定向量，保留目标的其余组件。用 `native diff --allow-fields 5` 检查输出，`spatial_objects` 给出已识别的空间差异。动态物件写入的是初始布设，运行中节点图仍可更新它。
+
+### 重复布设
+
+在已有 7.2 超限 GIL 中选择可复制的普通静态实例或机关作为原型。使用 `scene inspect` 或 `project inspect --scope scene` 取得 `source_entity_id`。在 schema 2 原生补丁中加入 `{"op":"arrange_instances","source":"layout.json"}`，并按需允许字段 5 和 6。路径相对补丁文件，MCP 内联补丁的路径相对工程根。
+
+```json
+{
+  "schema": 1,
+  "version": "7.2",
+  "mode": "beyond",
+  "offset_m": [2, 0, 0],
+  "objects": [
+    {"key": "gate", "source_entity_id": 1077936130, "name": "Gate", "position_m": [4, 0, 1]}
+  ],
+  "arrays": [
+    {"key_prefix": "posts", "source_entity_id": 1077936129, "start_m": [0, 0, 0], "step_m": [0, 0, 2], "count": 3}
+  ]
+}
+```
+
+`objects` 和 `arrays` 可以同时使用。阵列按步进向量生成 `posts/0001`、`posts/0002` 等键。`count: 0` 代表本轮阵列没有布设项。整体偏移叠加到显式位置和阵列位置。`rotation_deg`、`scale` 可按物件或阵列填写。新建时未指定的变换沿用原型，`name` 默认使用布局键。已有键只更新声明的变换，保留名称、模板、组件及图挂载。原型应与已有实例的模板、模型和静态类型一致。
+
+计划中的 `arrangements` 列出创建、变换更新、无变化和保留项，以及对应的实例 ID 和操作前后变换。应用后保留输出 GIL 和 `layout-bindings.json`。MCP 与 `produce` 将映射写入交付目录。CLI `native apply` 在 JSON 报告的 `layout_bindings` 中返回同格式映射，可将该对象另存为 JSON。
+
+下一轮使用上轮输出 GIL 作为基底，更新补丁的 `base_sha256`，并在操作中填入 `"previous_bindings":"layout-bindings.json"`。调整已有实例时保留其布局键，新增实例使用新键。布局中省略的旧键显示为 `retained`，实例及映射仍可供后续使用。每轮使用新的计划和输出路径。`produce` 的后续挂图可用 `{"ref":"entity:gate"}`，详见[制作链](production-v2.md#按名称连接制作阶段)。
 
 白盒形状 ID 支持长方体 `10009001`、球体 `10009002`、圆柱 `10009008` 和圆锥 `10009009`。颜色为 `#RRGGBB`。新增装饰写到元件，场景已有实例的装饰列表独立保留。`scene preview LEVEL.gil --template-id ID --out PREVIEW` 用 Pillow 绘制俯视和侧视中零件的轴对齐近似。
 

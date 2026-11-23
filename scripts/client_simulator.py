@@ -197,7 +197,7 @@ def check_startup(path, mapping=None, timeout=10):
 
 def main(argv=None):
  args=list(sys.argv[1:] if argv is None else argv)
- commands=('check','run','preview')
+ commands=('check','run','replay','preview')
  # Retain the positional-source form, including a file whose name is a command.
  if args and args[0] not in ('-h','--help') and (
      args[0] not in commands or any(a=='--scenario' or a.startswith('--scenario=') for a in args[1:])):
@@ -209,6 +209,8 @@ def main(argv=None):
  check.add_argument('input');check.add_argument('--mapping');check.add_argument('--timeout',type=float,default=10)
  joint=sub.add_parser('run',help='Validate a schema 2 client and native graph scenario')
  joint.add_argument('input');joint.add_argument('--out');joint.add_argument('--timeout',type=float,default=10)
+ replay=sub.add_parser('replay',help='Rerun the exact scene and inputs from a failure report')
+ replay.add_argument('input');replay.add_argument('--out');replay.add_argument('--timeout',type=float,default=10)
  preview=sub.add_parser('preview',help='Render a Beyond scene, optionally with assertions')
  preview.add_argument('input');preview.add_argument('--out',required=True);preview.add_argument('--backend')
  parsed=parser.parse_args(args)
@@ -220,11 +222,12 @@ def main(argv=None):
    from beyond_backend import run as run_beyond
    result=run_beyond(path,parsed.backend,parsed.out,preview=True)
   else:
-   from joint_simulator import run as run_joint, SimulationFailure
+   from joint_simulator import run as run_joint, load_scenario, SimulationFailure
    if parsed.out and Path(parsed.out).exists():
     raise ValueError('Output exists; use a new report path')
    try:
-    result=run_joint(read_json(path),path.parent,parsed.timeout)
+    spec,base,inputs=load_scenario(path,replay=parsed.operation=='replay')
+    result=run_joint(spec,base,parsed.timeout,expected_inputs=inputs)
    except SimulationFailure as exc:
     result=exc.detail
    if parsed.out:

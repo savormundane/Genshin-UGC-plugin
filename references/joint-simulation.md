@@ -12,6 +12,16 @@ python scripts/qianxing.py simulate run SCENE.json --timeout 30 --out NEW_REPORT
 
 produce场景中的@level引用本轮最终GIL。原生模型支持已实现的信号、条件、局部变量、自定义变量、列表、结构体和成就计数子集；遇到未实现节点或常量形状失败，不以成功桩放行。settle复制当前模型数据库到模型持久层，reenter从该层重建；它们不是平台保存和重进证据。
 
+## 复跑失败场景
+
+场景依赖已读入时，失败报告的 `replay` 保存声明、场景摘要、原路径及各 Lua／GIL 源摘要。`diagnostics` 给出首处失败，`trace` 保留当时的步骤、时间和已取得的观察值。
+
+```text
+python scripts/qianxing.py simulate replay NEW_REPORT.json --out REPLAY_REPORT.json
+```
+
+MCP `simulate` 的 `spec` 也接受包含 `replay` 的报告，或单独保存的 `replay` 对象。仍需提供报告文件 SHA-256。输入字节变化时会在执行前拒绝。Beyond 软件预览可渲染的失败会写入原有诊断目录，`artifacts.screenshot` 指向目录中的截图。
+
 ## 纯原生场景
 
 将 `clients` 设为 `[]`，给出 `server.source` 和从 GIL 查到的 `server.graph_ids`。只有已挂载的普通服务端图可执行。用 `project inspect LEVEL.gil --scope scene --key GRAPH_KEY` 查询挂载实例，可用 `server.instances` 指定其中一个或多个。下例的图和实例 ID 应替换为实际查询结果。

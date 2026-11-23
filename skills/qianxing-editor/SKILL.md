@@ -14,11 +14,11 @@ description: 设计和检查千星奇域原生 3D 场景、实体、模板、组
 | 任务 | 按需资料 |
 | --- | --- |
 | 机关、关卡经济、角色技能、拾取、原生 HUD 与多人进度 | 用 `project inspect --scope gameplay` 定位资源和引用者。按[原生玩法制作](../../references/native-gameplay.md)创建或配置资源，再编译和挂载行为图，用 `produce` 交付 GIL。 |
-| 原生3D静态场景、编辑布景与关卡配置 | [原生场景](../../references/native-scene.md)；先查模型证据，独立场景用 `scene build`，已有 GIL 用 `native plan/apply` |
+| 原生 3D 场景、布景与关卡配置 | 独立静态场景用 [`scene build`](../../references/native-scene.md)，已有 GIL 可用 [`arrange_instances`](../../references/native-scene.md#重复布设) 按布局键批量布设和更新。 |
 | 实体、模板、消费者与挂载关系 | [工程索引](../../references/project-index.md)、[结构生成](../../references/native-authoring.md) |
 | 版本、组件规则、经典／超限 | [平台规则](../../references/platform-profiles.md)、[官方索引](../../references/official-index.md) |
 | 资源身份和自定义编号 | [资源目录](../../references/resource-catalogue.md)、[ID登记](../../references/id-registry.md) |
-| 原生UI配置 | [校准的矩形布局](../../references/native-ui-layout.md) |
+| 原生 UI 配置 | 用[矩形布局](../../references/native-ui-layout.md)编辑已有控件，或[追加客户端界面模块](../../references/native-authoring.md#追加客户端界面模块)。 |
 | 模板／实例默认值、定时器序列 | [原生局部修改](../../references/native-changes.md#局部编辑) |
 | 存储、成就、迁移 | [存储生成](../../references/storage-authoring.md)、[显式迁移](../../references/storage-migration.md) |
 | 完整工程跨域接入 | [能力路由](../../references/skill-map.md)、[制作链](../../references/production-v2.md)；只执行配置声明的阶段 |

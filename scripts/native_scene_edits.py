@@ -1,9 +1,9 @@
 """Scoped GIL edits for 3D objects and their decorations."""
-from collections import Counter
+from collections import Counter, defaultdict
 import re
 import struct
 
-from authoring_io import resolve, schema
+from authoring_io import read_json, resolve, schema
 from level_inventory import container, entity_graph_ids, fields, unique, vals
 from level_authoring import flt, integer, msg, set_section, stream, text, vi
 from native_core import get, replace_message
@@ -194,6 +194,120 @@ def place_static_scene(data, op, base):
     return duplicate_entities(data, {'op': 'duplicate_entities', 'copies': copies})
 
 
+def arrangement_objects(spec):
+    from scene_authoring import MODE, VERSION
+
+    schema(spec, ('schema', 'version', 'mode', 'offset_m', 'objects', 'arrays'), ('version', 'mode'), version=1)
+    if (spec['version'], spec['mode']) != (VERSION, MODE):
+        raise ValueError('Instance arrangements support platform 7.2 in beyond mode')
+    objects, arrays = spec.get('objects', []), spec.get('arrays', [])
+    if not isinstance(objects, list) or not isinstance(arrays, list):
+        raise ValueError('Arrangement objects and arrays must be lists')
+    limit = OBJECT_ID_END - OBJECT_ID_START + 1
+    if len(objects) > limit:
+        raise ValueError('Arrangement exceeds the ordinary object ID range')
+    offset = vector(spec.get('offset_m', [0, 0, 0]), 'Arrangement offset')
+    rows = list(objects)
+    for array in arrays:
+        required = ('key_prefix', 'source_entity_id', 'start_m', 'step_m', 'count')
+        schema(array, (*required, 'rotation_deg', 'scale'), required)
+        prefix, count = array['key_prefix'], array['count']
+        if not isinstance(prefix, str) or not prefix.strip() or '\0' in prefix:
+            raise ValueError('Array key_prefix must be a nonempty string')
+        if type(count) is not int or not 0 <= count <= limit - len(rows):
+            raise ValueError('Array count must be nonnegative and fit the ordinary object ID range')
+        start = vector(array['start_m'], f'Array {prefix} start')
+        step = vector(array['step_m'], f'Array {prefix} step')
+        common = {name: array[name] for name in ('source_entity_id', 'rotation_deg', 'scale') if name in array}
+        for i in range(count):
+            rows.append({**common, 'key': f'{prefix}/{i + 1:04d}',
+                         'position_m': [origin + i * delta for origin, delta in zip(start, step)]})
+
+    layout = {}
+    for row in rows:
+        schema(row, ('key', 'source_entity_id', 'name', *TRS), ('key', 'source_entity_id'))
+        key, source = row['key'], row['source_entity_id']
+        if not isinstance(key, str) or not key.strip() or '\0' in key or key in layout:
+            raise ValueError('Arrangement keys must be unique nonempty strings: ' + repr(key))
+        if not is_object_id(source):
+            raise ValueError(f'Arrangement prototype for {key} must be an ordinary placed entity ID')
+        name = row.get('name', key)
+        if not isinstance(name, str) or not name.strip() or '\0' in name:
+            raise ValueError(f'Arrangement name for {key} must be nonempty')
+        desired = {field: vector(row[field], f'{field} for {key}', positive=field == 'scale')
+                   for field in TRS if field in row}
+        if 'position_m' in desired:
+            desired['position_m'] = vector([v + delta for v, delta in zip(desired['position_m'], offset)],
+                                           f'World position for {key}')
+        layout[key] = {'key': key, 'source_entity_id': source, 'name': name, **desired}
+    return layout
+
+
+def arrange_instances(data, op, base, *, baseline):
+    from native_bindings import read_bindings
+
+    schema(op, ('op', 'source', 'previous_bindings'), ('op', 'source'))
+    layout = arrangement_objects(read_json(resolve(base, op['source'])))
+    previous = {}
+    if 'previous_bindings' in op:
+        bindings, _ = read_bindings(resolve(base, op['previous_bindings']), baseline)
+        if (any(not name.startswith('entity:') for name in bindings.ids)
+                or len(set(bindings.ids.values())) != len(bindings.ids)):
+            raise ValueError('Previous arrangement bindings must map distinct entity keys to distinct placed instances')
+        previous = {name.removeprefix('entity:'): ident for name, ident in bindings.ids.items()}
+    if not layout and not previous:
+        raise ValueError('Provide an arrangement with objects, arrays, or previous bindings')
+
+    _, root = container(data)
+    section = singular(root, 5, default=b'')
+    templates = read_templates(root)
+    records = defaultdict(list)
+    for record in vals(fields(section), 1):
+        records[get(record, 1, 0)].append(record)
+    instances, updates = {}, {}
+    for key, ident in previous.items():
+        if not is_object_id(ident):
+            raise ValueError(f'Arrangement key {key} requires an ordinary placed entity ID')
+        target = one(records[ident], f'Placed entity for {key}')
+        before = placed_details(target, templates)
+        if not before['transform_editable']:
+            raise ValueError(f'Placed entity for {key} is outside the calibrated transform scope')
+        item = layout.get(key)
+        after = before['transform']
+        change = 'retained'
+        if item is not None:
+            prototype = placed_details(one(records[item['source_entity_id']], f'Arrangement prototype for {key}'), templates)
+            if any(before[field] != prototype[field] for field in ('template', 'model', 'static')):
+                raise ValueError(f'Arrangement prototype for {key} differs from the existing instance identity')
+            after = before['transform'] | {name: item[name] for name in TRS if name in item}
+            change = 'unchanged'
+            if after != before['transform']:
+                changes = {n: after[name] for n, name in enumerate(TRS, 1) if after[name] != before['transform'][name]}
+                newer = patch_entity_transform(target, changes)
+                if placed_details(newer, templates) != {**before, 'transform': after}:
+                    raise ValueError(f'Arrangement transform readback differs for {key}')
+                updates[target] = newer
+                change = 'moved'
+        instances[key] = {'key': key, 'entity_id': ident, 'change': change,
+                          'before': before['transform'], 'after': after}
+
+    new_keys = sorted(layout.keys() - previous.keys())
+    if new_keys:
+        data, copied = duplicate_entities(data, {'op': 'duplicate_entities', 'copies': [layout[key] for key in new_keys]})
+        for row in copied['copies']:
+            key = row['key']
+            instances[key] = {'key': key, 'entity_id': row['entity_id'], 'change': 'created',
+                              'before': None, 'after': row['transform']}
+    if updates:
+        section = singular(container(data)[1], 5)
+        placed = b''.join(msg(1, updates[value]) if (number, wire) == (1, 2) and value in updates else raw
+                          for number, wire, value, raw in fields(section))
+        data = set_section(data, 5, placed)
+    counts = Counter(row['change'] for row in instances.values())
+    return data, {'counts': {name: counts[name] for name in ('created', 'moved', 'unchanged', 'retained')},
+                  'instances': [instances[key] for key in sorted(instances)]}
+
+
 def set_object_transform(data, op):
     schema(op, ('op', 'section', 'entity_id', *TRS), ('op', 'section', 'entity_id'))
     if op['section'] != 5 or not any(key in op for key in TRS):
@@ -212,6 +326,13 @@ def set_object_transform(data, op):
     if {k: v for k, v in before.items() if k not in TRS} != {k: v for k, v in after.items() if k not in TRS}:
         raise ValueError('Static object identity changed')
     return set_section(data, 5, replace_message(section, 1, target, newer)), {'before': before, 'after': after}
+
+
+def patch_entity_transform(target, changes):
+    component = typed_record(target, 6, 1, strict=True)
+    body = singular(fields(component), 11)
+    changed = patch_vectors(body, changes, preserve_zero=True)
+    return replace_message(target, 6, component, replace_message(component, 11, body, changed))
 
 
 def set_entity_transform(data, op):
@@ -233,10 +354,7 @@ def set_entity_transform(data, op):
     before = placed_details(target, templates)
     if not before['transform_editable']:
         raise ValueError('Entity transform layout or scale is outside the calibrated write scope')
-    component = typed_record(target, 6, 1, strict=True)
-    body = singular(fields(component), 11)
-    changed = patch_vectors(body, changes, preserve_zero=True)
-    newer = replace_message(target, 6, component, replace_message(component, 11, body, changed))
+    newer = patch_entity_transform(target, changes)
     result = data if target == newer else set_section(data, 5, replace_message(section, 1, target, newer))
     _, observed_root = container(result)
     observed = select_record(singular(observed_root, 5), 1, ident, 'Written entity')

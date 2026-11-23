@@ -229,17 +229,29 @@ def main(argv=None):
     action.add_argument('--job',help='Read the declarations from a production job')
     bind=sub.add_parser('bind',help='Bind typed names to exact GIL object keys')
     bind.add_argument('baseline')
-    bind.add_argument('--spec',required=True,help='JSON map from typed names to project object keys')
+    bind.add_argument('--spec',help='JSON map from typed names to project object keys')
+    bind.add_argument('--from',dest='old_gil',help='Rebase names from this prior GIL')
+    bind.add_argument('--bindings',help='Schema 2 bindings for --from')
     bind.add_argument('--out',required=True)
     args = parser.parse_args(argv)
     if args.operation=='bind':
-        from native_bindings import bind_selectors
+        from native_bindings import bind_selectors, rebase_bindings
 
-        result=bind_selectors(Path(args.baseline).read_bytes(),read_json(args.spec))
+        if bool(args.old_gil)!=bool(args.bindings) or not (args.old_gil or args.spec):
+            bind.error('Provide --spec, or --from and --bindings with optional --spec selections')
+        baseline=Path(args.baseline).read_bytes()
+        selections=read_json(args.spec) if args.spec else None
+        if args.old_gil:
+            report,result=rebase_bindings(Path(args.old_gil).read_bytes(),args.bindings,baseline,selections)
+            if result is None:
+                print(json.dumps(report,ensure_ascii=False,indent=2))
+                return 2
+        else:
+            result=report=bind_selectors(baseline,selections)
         with Path(args.out).open('x',encoding='utf-8') as stream:
             json.dump(result,stream,ensure_ascii=False,indent=2)
             stream.write('\n')
-        print(json.dumps(result,ensure_ascii=False,indent=2))
+        print(json.dumps(report,ensure_ascii=False,indent=2))
         return 0
     report = check(args.source,args.bindings,args.job)
     print(json.dumps(report,ensure_ascii=False,indent=2))

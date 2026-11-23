@@ -3,7 +3,7 @@ from pathlib import Path
 from collections import Counter,defaultdict
 from copy import deepcopy
 import os
-from authoring_io import sha,canonical,schema,resolve
+from authoring_io import sha,sha_file,canonical,schema,resolve
 from level_inventory import container,fields,vals
 from native_core import model,get,slot,ref,apply
 from project_index import build,key
@@ -155,6 +155,19 @@ def fingerprint(plan):
     return sha(canonical(value).encode('utf-8'))
 
 
+def operation_sources(op):
+    if 'source' in op:
+        yield 'source'
+    if op['op']=='arrange_instances' and 'previous_bindings' in op:
+        yield 'previous_bindings'
+    if op['op']=='append_client_ui' and 'asset_data' in op:
+        yield 'asset_data'
+
+
+def arrangements(report):
+    return [operation for operation in report['operations'] if operation['op']=='arrange_instances']
+
+
 def plan(data,spec,base,destination):
     if container(data)[0][3]!=2:raise ValueError('Modification plans require a calibrated GIL baseline')
     operations=spec.get('operations') if isinstance(spec,dict) else None
@@ -163,38 +176,41 @@ def plan(data,spec,base,destination):
     spec=deepcopy(spec);inputs={};bound=deepcopy(spec)
     destination=Path(destination).resolve()
     for index,op in enumerate(spec['operations']):
-        if 'source'not in op:continue
-        source=resolve(base,op['source']);token='@input:'+str(index);digest=sha(source.read_bytes())
-        location=os.path.relpath(source,destination) if source.drive==destination.drive else str(source)
-        inputs[token]={'source':Path(location).as_posix(),'sha256':digest}
-        bound['operations'][index]['source']=token;op['source']=str(source)
+        for field in operation_sources(op):
+            source=resolve(base,op[field]);token=f'@input:{index}' if field=='source' else f'@input:{index}:{field}'
+            location=os.path.relpath(source,destination) if source.drive==destination.drive else str(source)
+            inputs[token]={'source':Path(location).as_posix(),'sha256':sha_file(source)}
+            bound['operations'][index][field]=token;op[field]=str(source)
     if spec.get('strict_audit',True)is not True:raise ValueError('Modification plans require strict audit')
     output,applied=apply(data,spec,base)
     diff=difference(data,output,spec['allowed_top_level_fields'])
     if diff['status']!='passed':raise ValueError('Modification plan final reference/protection check failed: '+canonical(diff))
     for item in inputs.values():
-        if sha(resolve(destination,item['source']).read_bytes())!=item['sha256']:raise ValueError('Plan input changed while reading')
+        if sha_file(resolve(destination,item['source']))!=item['sha256']:raise ValueError('Plan input changed while reading')
     result={'schema':2,'kind':'native-change-plan','patch':bound,'inputs':inputs,
             'result_sha256':sha(output),'difference':diff}
+    if changes:=arrangements(applied):result['arrangements']=changes
     result['plan_sha256']=fingerprint(result)
     return result
 
 
 def plan_summary(record, destination='plan.json'):
     diff=record['difference']
-    return {'schema':2,'kind':record['kind'],'status':diff['status'],'report':str(destination),
+    result={'schema':2,'kind':record['kind'],'status':diff['status'],'report':str(destination),
             'base_sha256':diff['before_sha256'],'result_sha256':record['result_sha256'],
             'plan_sha256':record['plan_sha256'],'inputs':record['inputs'],
             'checks':{'protected_bytes':diff['protected']['unchanged'],
                       'project_references':diff['validation']['after']['status']},
             'changed_top_level_fields':[int(change['key']) for change in diff['top_level_fields']],
             'diagnostics':diff['validation']['after']['issues']+diff['validation']['after']['unresolved']}
+    if 'arrangements' in record:result['arrangements']=record['arrangements']
+    return result
 
 
 def apply_plan(data,record,base):
     if container(data)[0][3]!=2:raise ValueError('Modification plans require a calibrated GIL baseline')
-    schema(record,('schema','kind','patch','inputs','result_sha256','difference','plan_sha256'),
-           ('schema','kind','patch','inputs','result_sha256','difference','plan_sha256'))
+    required=('schema','kind','patch','inputs','result_sha256','difference','plan_sha256')
+    schema(record,(*required,'arrangements'),required)
     if record['kind']!='native-change-plan':raise ValueError('Unknown native plan kind')
     if not isinstance(record['inputs'],dict):raise ValueError('Plan inputs must be a token map')
     for token,item in record['inputs'].items():
@@ -205,15 +221,16 @@ def apply_plan(data,record,base):
     spec=deepcopy(record['patch']);used=set();inputs={}
     if spec.get('strict_audit',True)is not True:raise ValueError('Modification plans require strict audit')
     for op in spec['operations']:
-        if 'source'not in op:continue
-        token=op['source']
-        if token not in record['inputs']:raise ValueError('Unbound native plan input')
-        item=record['inputs'][token];source=resolve(base,item['source']);raw=source.read_bytes()
-        if sha(raw)!=item['sha256']:raise ValueError('Native plan input digest changed: '+token)
-        used.add(token);inputs[str(source)]=item['sha256'];op['source']=str(source)
+        for field in operation_sources(op):
+            token=op[field]
+            if token not in record['inputs']:raise ValueError('Unbound native plan input')
+            item=record['inputs'][token];source=resolve(base,item['source'])
+            if sha_file(source)!=item['sha256']:raise ValueError('Native plan input digest changed: '+token)
+            used.add(token);inputs[str(source)]=item['sha256'];op[field]=str(source)
     if used!=set(record['inputs']):raise ValueError('Unused native plan input')
     output,report=apply(data,spec,base)
     if sha(output)!=record['result_sha256']:raise ValueError('Native plan result digest mismatch')
+    if arrangements(report)!=record.get('arrangements',[]):raise ValueError('Native plan arrangement preview changed')
     actual=difference(data,output,spec['allowed_top_level_fields'],
                       include_spatial='spatial_objects' in record['difference'],
                       include_points='scene_points' in record['difference'],
@@ -221,6 +238,6 @@ def apply_plan(data,record,base):
                       include_gameplay_references='gameplay_references' in record['difference'])
     if actual['status']!='passed'or actual!=record['difference']:raise ValueError('Native plan difference changed')
     for source,digest in inputs.items():
-        if sha(Path(source).read_bytes())!=digest:raise ValueError('Native plan input changed during apply')
+        if sha_file(source)!=digest:raise ValueError('Native plan input changed during apply')
     report.update(plan_sha256=record['plan_sha256'],inputs=inputs,difference=actual)
     return output,report

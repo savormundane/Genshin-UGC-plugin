@@ -65,7 +65,8 @@ def collect(path,options,*,snapshot_root=None,inputs=None):
                 native=value['native'];reference(source,native,'plan'if 'plan'in native else'spec','native_plan'if 'plan'in native else'native')
                 if 'after_graphs'in native:reference(source,native,'after_graphs','native')
             for item in value.get('assets',[]):
-                reference(source,item,'source','fit_layers' if item.get('kind')=='fit' and Path(item['source']).suffix.lower()=='.json' else None)
+                source_kind='asset_batch' if item.get('kind')=='batch' else 'fit_layers' if item.get('kind')=='fit' and Path(item['source']).suffix.lower()=='.json' else None
+                reference(source,item,'source',source_kind)
                 if 'spec'in item:reference(source,item,'spec')
             for item in value.get('animation',{}).get('frames',[]):reference(source,item,'asset')
         elif kind in('assembly','level','graphs'):
@@ -77,10 +78,14 @@ def collect(path,options,*,snapshot_root=None,inputs=None):
                     if value.get(key):reference(source,value,key)
         elif kind=='fit_layers':
             for layer in value['layers']:reference(source,layer,'source')
+        elif kind=='asset_batch':
+            for item in value['assets']:reference(source,item,'source')
         elif kind=='native':
+            from native_changes import operation_sources
             for item in value['operations']:
-                if 'source'in item and not (item.get('op')=='place_static_scene' and item['source']=='@scene'):
-                    reference(source,item,'source')
+                for field in operation_sources(item):
+                    if field=='source' and item.get('op')=='place_static_scene' and item[field]=='@scene':continue
+                    reference(source,item,field)
         elif kind=='native_plan':
             for item in value['inputs'].values():reference(source,item,'source')
         elif kind=='simulation':

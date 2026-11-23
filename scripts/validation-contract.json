@@ -85,6 +85,9 @@
     "fixtures/**/*"
   ],
   "coverage": {
+    "asset_batch": [
+      "test_next_workflows.py::NextWorkflowsTests.test_batch_budget_and_append_client_module_to_existing_gil"
+    ],
     "scene": [
       "test_native_scene.py::NativeSceneTests.test_static_readback_and_production",
       "test_native_scene.py::NativeSceneTests.test_reject_unknown_candidate_and_invalid_transform",

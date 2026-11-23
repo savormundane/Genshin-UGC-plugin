@@ -61,12 +61,58 @@ def differing_path(actual, expected, path=()):
     return path if isinstance(actual,bool)!=isinstance(expected,bool) or actual!=expected else None
 
 
-def execute(spec,base,trace=None):
+def scene_sources(spec, base):
+    items = spec['clients'] + ([spec['server']] if 'server' in spec else [])
+    if any(not isinstance(item, dict) or not isinstance(item.get('source'), str) or not item['source'] for item in items):
+        raise ValueError('Each simulation client and server needs a source path')
+    return {str(resolve(base, item['source'])) for item in items}
+
+
+def load_scenario(path, *, replay=False):
+    path = Path(path).resolve()
+    value = read_json(path)
+    record = value.get('replay', value) if isinstance(value, dict) else value
+    is_replay = isinstance(record, dict) and record.get('kind') == 'joint-simulation-replay'
+    if not is_replay and not replay:
+        return value, path.parent, None
+    required = ('schema', 'kind', 'scenario', 'scenario_sha256', 'base', 'inputs')
+    schema(record, required, required, version=1)
+    if not is_replay or sha(canonical(record['scenario']).encode('utf-8')) != record['scenario_sha256']:
+        raise ValueError('Replay scene digest mismatch')
+    base = Path(record['base'])
+    if not base.is_absolute():
+        raise ValueError('Replay requires the original absolute scenario directory')
+    spec = record['scenario']
+    inputs = record['inputs']
+    if not isinstance(inputs, dict) or set(inputs) != scene_sources(spec, base):
+        raise ValueError('Replay inputs must cover every declared scene source')
+    if any(not isinstance(digest, str) or not re.fullmatch('[0-9a-f]{64}', digest) for digest in inputs.values()):
+        raise ValueError('Invalid replay input digest')
+    return spec, base, inputs
+
+
+def execute(spec,base,trace=None,*,expected_inputs=None):
     schema(spec,('schema','clients','server','steps','faults','assertions','observations','clock','expected_pending_packets'),('clients','steps'))
     expected_pending=spec.get('expected_pending_packets',0)
     if type(expected_pending) is not int or expected_pending<0:
         raise ValueError('expected_pending_packets must be a nonnegative integer')
     clients={};variable_bindings={};variable_syncs=[];inputs={};serial=0;queue=[];clock=0;occurrences={};journal=[]
+    def check_digest(path, digest):
+        if expected_inputs is not None and expected_inputs.get(str(path)) != digest:
+            raise DiagnosticError('simulation.replay_input_changed', 'Replay input digest differs', phase='input',
+                                  source=str(path), expected=expected_inputs.get(str(path)), actual=digest)
+
+    def read_source(path):
+        raw = path.read_bytes()
+        digest = sha(raw)
+        check_digest(path, digest)
+        inputs[str(path)] = digest
+        return raw
+
+    if expected_inputs is not None:
+        for source in expected_inputs:
+            path = Path(source)
+            check_digest(path, sha_file(path) if path.is_file() else None)
     if not isinstance(spec['clients'],list) or (not spec['clients'] and 'server' not in spec):
         raise ValueError('Provide independent clients or a native server')
     native_only = not spec['clients']
@@ -79,7 +125,8 @@ def execute(spec,base,trace=None):
         if fault['action']not in('drop','duplicate','delay','reorder'):raise ValueError('Unknown transport fault')
         if 'occurrence'in fault and(type(fault['occurrence'])!=int or fault['occurrence']<1):raise ValueError('Positive fault occurrence required')
         if fault['action']in('delay','reorder')and(type(fault.get('delay'))not in(int,float)or not 0<=fault['delay']<=3600):raise ValueError('Nonnegative finite transport delay required')
-    if trace is not None:trace.update(journal=journal,inputs=inputs,phase='startup',layer=layer)
+    if trace is not None:
+        trace.update(journal=journal,inputs=inputs,phase='startup',layer=layer,declared_sources=scene_sources(spec,base))
     if 'clock'in spec:
         schema(spec['clock'],('start',),('start',));clock=spec['clock']['start']
         if type(clock)not in(int,float)or not 0<=clock<1e12:raise ValueError('Finite nonnegative model clock required')
@@ -102,7 +149,7 @@ def execute(spec,base,trace=None):
             timer_keys.add((entity,name))
         path=resolve(base,s['source'])
         if trace is not None:trace.update(source=str(path),client='server',mapping=None)
-        raw=path.read_bytes();inputs[str(path)]=sha(raw)
+        raw=read_source(path)
         server=NativeModel(raw,s.get('initial'),graph_ids,s.get('instances'),s.get('entity_guids'),s.get('level_entity'),
                            mounted_only=native_only,timer_index_base=s.get('timer_index_base',1))
         server.timers.time=clock
@@ -126,7 +173,7 @@ def execute(spec,base,trace=None):
         variable_bindings[item['id']]=selections
         path=resolve(base,item['source']);mapping=item.get('mapping','main.lua')
         if trace is not None:trace.update(source=str(path),client=item['id'],mapping=mapping)
-        raw=path.read_bytes();inputs[str(path)]=sha(raw)
+        raw=read_source(path)
         source,bindings=script_from_gil(raw,mapping)if path.suffix.lower()=='.gil'else(raw.decode('utf-8-sig'),None)
         clients[item['id']]=Client(source,bindings,mapping,item.get('canvas',(1600,900)),item.get('params'),initial_variables)
     def enqueue(source,target,name,params):
@@ -183,6 +230,8 @@ def execute(spec,base,trace=None):
         client=clients[item['client']]
         return client.plain(client.h.value(item['path']))
     values={};observation_steps=[]
+    if trace is not None:
+        trace.update(observations=values, observation_steps=observation_steps)
     collect();drain()
     for step_index,step in enumerate(spec['steps'],1):
         if trace is not None:trace.update(phase='step',step_index=step_index,step=step,clock=clock)
@@ -309,15 +358,21 @@ def execute(spec,base,trace=None):
             'host_tested':False,'editor_tested':False}
 
 
-def evaluate(spec,base):
+def evaluate(spec,base,*,expected_inputs=None):
     """Collect the same failure and coverage report in the CLI and MCP workers."""
     trace={}
     try:
-        return execute(spec,base,trace)
+        return execute(spec,base,trace,expected_inputs=expected_inputs)
     except Exception as exc:
         import traceback
         from native_model import UncalibratedVariable
         diagnostic=trace.pop('diagnostic',None)
+        replay = {}
+        declared = trace.pop('declared_sources', None)
+        if declared and declared == set(trace['inputs']):
+            replay['replay'] = {'schema': 1, 'kind': 'joint-simulation-replay', 'base': str(Path(base).resolve()),
+                                'scenario': spec, 'scenario_sha256': sha(canonical(spec).encode('utf-8')),
+                                'inputs': trace['inputs']}
         if isinstance(exc,UncalibratedVariable):
             gap=str(exc)
             coverage={'status':'not_checked','gaps':[gap]}
@@ -326,7 +381,9 @@ def evaluate(spec,base):
                     'checks':{'coverage':coverage},
                     'diagnostics':[{'code':'native_variable_default_unchecked','message':gap,
                                     'phase':trace.get('phase','input'),'entity':exc.entity,'variable':exc.variable}],
-                    'inputs':trace.get('inputs',{}),'trace':trace,'editor_tested':False,'host_tested':False}
+                    'inputs':trace.get('inputs',{}),'trace':trace,'editor_tested':False,'host_tested':False,**replay}
+        if isinstance(exc, DiagnosticError):
+            diagnostic=exc.diagnostics[0]
         if diagnostic is None:
             diagnostic={'code':'joint_model_failed','message':str(exc),'phase':trace.get('phase','input')}
             if diagnostic['phase']=='step':
@@ -343,14 +400,14 @@ def evaluate(spec,base):
                                         'executed':diagnostic.get('assertion_index',0)}},
                 'diagnostics':[diagnostic],'inputs':trace.get('inputs',{}),
                 'error':str(exc),'trace':trace,'stack':traceback.format_exc(),
-                'editor_tested':False,'host_tested':False}
+                'editor_tested':False,'host_tested':False,**replay}
 
 
 class SimulationFailure(ValueError):
     def __init__(self,detail):self.detail=detail;super().__init__('Joint model failed: '+canonical(detail))
-def run(spec,base,timeout=30):
+def run(spec,base,timeout=30,*,expected_inputs=None):
     env=os.environ.copy();env['PYTHONPATH']=os.pathsep.join(sys.path);env['PYTHONDONTWRITEBYTECODE']='1'
-    request=canonical({'spec':spec,'base':str(base)})
+    request=canonical({'spec':spec,'base':str(base),'expected_inputs':expected_inputs})
     try:r=subprocess.run([sys.executable,'-X','utf8','-B',__file__,'--worker'],input=request,encoding='utf-8',capture_output=True,timeout=timeout,env=env)
     except subprocess.TimeoutExpired as e:raise ValueError('Joint model timeout')from e
     if r.returncode:
@@ -359,6 +416,6 @@ def run(spec,base,timeout=30):
     return json.loads(r.stdout)
 if __name__=='__main__':
     v=json.loads(sys.stdin.read())
-    result=evaluate(v['spec'],v['base'])
+    result=evaluate(v['spec'],v['base'],expected_inputs=v.get('expected_inputs'))
     print(canonical(result))
     if result['status']=='failed':raise SystemExit(2)

@@ -92,10 +92,10 @@ def main():
                 finish(stage,inputs,kind='native-plan')
             if args.get('summary'):result=plan_summary(result)
         elif op=='simulate':
-            from joint_simulator import evaluate
+            from joint_simulator import evaluate,load_scenario
             from authoring_io import output_directory,finish
-            spec=read_json(args['spec'])
-            result=evaluate(spec,Path(args['spec']).parent)
+            spec,base,inputs=load_scenario(args['spec'])
+            result=evaluate(spec,base,expected_inputs=inputs)
             if result['status']=='passed':
                 with output_directory(args['output'])as stage:
                     write_json(stage/'simulation.json',result)
@@ -128,6 +128,7 @@ def main():
             raw,result=apply_plan(Path(args['input']).read_bytes(),read_json(args['plan']),Path(args['plan']).parent)
             with output_directory(args['output'])as stage:
                 (stage/'level.gil').write_bytes(raw);write_json(stage/'native-report.json',result)
+                if 'layout_bindings' in result:write_json(stage/'layout-bindings.json',result['layout_bindings'])
                 finish(stage,{**request['inputs'],**result['inputs']},kind='native-apply')
         else:raise ValueError('Unknown worker operation')
     write_json(result_path,result)

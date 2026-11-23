@@ -54,6 +54,24 @@ python scripts/qianxing.py level bind CURRENT.gil --control CONTROL_GUID --scrip
 
 字段50/1条目：1=脚本GUID、2=显示名、3=完整映射文件名、5=Lua正文。UI脚本组件的外层属性501=63、类型502=83，其503覆盖消息内501=65；该覆盖的74消息中502/1/1引用脚本GUID。这里的“65”是嵌套属性标记，不是简单的UI记录字段65。更新保留其他组件和原有脚本引用，不改其他顶层字段；关联回读缺失、重复或不闭合即拒绝。
 
+## 追加客户端界面模块
+
+已有客户端原型库的 GIL 可通过 `native plan/apply` 增加容器和预设按钮模板，并给指定的现有客户端容器追加一份 Lua 映射。原生补丁允许顶层字段 `9`、`50`。以 `project inspect` 或 `level inspect` 核对实际挂载 GUID。
+
+```json
+{
+  "op": "append_client_ui",
+  "source": "panel.lua",
+  "mapping": "panel.lua",
+  "mount_guid": 1073745924,
+  "container": {"name": "Panel", "size": [320, 200]},
+  "button": {"name": "Confirm", "size": [150, 50]},
+  "asset_data": "GENERATED/data.json"
+}
+```
+
+两个模板分别注册到现有客户端原型库。脚本可用 `game.InstantiateClientUIControl(qx_templates.container, script.object)` 和 `qx_templates.button` 创建界面实例。可用 `templates_as` 更换模板表名称。可选的 `asset_data` 接受[批量素材](asset-generation.md#多素材共用控件预算)生成的 `data.json`，在脚本中通过 `qx_assets.<素材键>` 使用。Lua 源和素材数据都纳入密封计划。应用报告给出新模板和脚本映射，可用 `simulate check RESULT.gil --mapping panel.lua` 验证启动。
+
 ## 精确替换与错误定位
 
 replace-lua / produce.gil.mapping均按完整字符串相等匹配，含.lua后缀。例如main不匹配main.lua。匹配失败会列出实际映射名；不自动按子串猜选，避免覆盖错误脚本。

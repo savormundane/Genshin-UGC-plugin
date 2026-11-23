@@ -31,7 +31,7 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 | native_diff | input、other，可选 sha256、other_sha256、allowed_top_level_fields。给出允许范围时，核对其余字段的原始字节 |
 | experiment_compare | input、sha256、other、other_sha256。直接返回成对观察比较 |
 | native_plan | input、sha256、output 加一个 patch 对象，或加 spec 和 spec_sha256 文件参数。输出可审阅的 plan.json 和文件摘要 |
-| simulate | spec、sha256、output。执行 schema 2 联合场景或已挂载的纯原生图路径。失败断言在 result.diagnostics 返回，通过时提交输出 |
+| simulate | spec、sha256、output。执行 schema 2 场景，或以失败报告复跑其原始输入。失败返回 `result.diagnostics` 和可用的 `result.replay`，通过时提交输出 |
 | experiment_run | spec、sha256、output：观察实验，开发／保留种子合同不变；失败不提交 |
 | logs_diagnose | spec、sha256：只读解析JSONL及关联产物 |
 | verify | input 指向交付 manifest.json，sha256 必填。artifacts_only、portable、rebuild 默认为 false。仅产物校验独立运行。重建还需 portable=true 和 trusted_inputs_sha256 |

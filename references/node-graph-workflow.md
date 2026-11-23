@@ -26,6 +26,16 @@ plan 根据已判定的任务类型列出责任分工，不是自然语言需求
 
 省略 `--job` 时，无法解析的项目专用信号或事件处理器显示 `not_checked`，已确认的语法和端口错误仍会失败。需要本轮制作分配的具名 ID 显示待绑定。
 
+### 换用编辑器重新导出的 GIL
+
+```text
+python scripts/qianxing.py graph bind NEW.gil --from OLD.gil --bindings OLD_BINDINGS.json --out NEW_BINDINGS.json
+```
+
+旧表必须是与 `OLD.gil` 摘要匹配的 schema 2。对象类型、原生 ID、对象键和记录摘要都一致时，旧键自动沿用。若记录有改动、ID 重分配或出现歧义，报告列出原身份和候选，退出码为 2。用 `--spec CHOICES.json` 补充明确选择，例如 `{"currency:coin":"level/currency/1115684867"}`。所有键都有确定目标后才生成新表。
+
+把新 GIL 和新绑定表填入图构建配置，继续 `graph check --job`、`build` 或 `produce`。原生修改也以新 GIL 重新生成计划。
+
 ## 构建描述 schema 1
 
 以下是结构示例，路径和合同取自当前项目，不把示例作为默认玩法：

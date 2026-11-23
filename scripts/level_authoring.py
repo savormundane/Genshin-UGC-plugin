@@ -6,6 +6,7 @@ import platform_schema as platform
 
 SCHEMA='qianxing-level-spec/v1'
 KINDS={'container':4,'text':5,'image':6,'area':7}
+CLIENT_KIND_COMPONENTS={(68,91):'container',(64,84):'text',(74,97):'image',(65,85):'area',(70,93):'button'}
 def vi(v):
  if type(v)!=int or not 0<=v<2**64:raise ValueError('整数超出uint64范围')
  out=bytearray()
@@ -47,27 +48,34 @@ def template_meta(g):return msg(13,integer(501,g))+integer(501,3)+integer(502,3)
 def reverse_meta(gs):return msg(14,msg(501,b''.join(vi(g) for g in gs)))+integer(501,4)+integer(502,4)
 def component(g,prop,typeid,base_tag,base_value,value_prop,value_tag,value):
  return msg(base_tag,base_value)+integer(501,prop)+integer(502,typeid)+msg(503,msg(value_tag,value)+integer(501,value_prop)+integer(502,typeid)+integer(503,1)+msg(504,locator(g)))
-def rect(g,width,height,stretch=False):
+def rect(g,width,height,stretch=False,*,preset=25):
  def xy(x,y):return flt(501,x)+flt(502,y)
  value=msg(501,flt(1,1)+flt(2,1)+flt(3,1))+msg(502,xy(0 if stretch else .5,0 if stretch else .5))+msg(503,xy(1 if stretch else .5,1 if stretch else .5))+msg(504)+msg(505,xy(width,height))+msg(506,xy(.5,.5))+msg(508)
  states=b''.join(msg(501,(integer(501,s) if s else b'')+msg(502,value)) for s in range(4))
- data=states+integer(502,25)+integer(504,1)
+ data=states+integer(502,preset)+integer(504,1)
  return component(g,1,12,11,msg(12)+integer(501,2),4,13,msg(12,data)+integer(501,2))
 def script_component(g,ids):
  value=integer(501,1)+msg(502,b''.join(msg(1,integer(1,i)) for i in ids)) if ids else b''
  return component(g,63,83,73,b'',65,74,value)
 def control(g,name,kind='container',width=100,height=100,scripts=(),stretch=False):
- if kind not in KINDS:raise ValueError('不支持的控件类型：'+str(kind))
+ if kind not in KINDS and kind!='button':raise ValueError('不支持的控件类型：'+str(kind))
  out=integer(501,g)+msg(502,self_meta(g))+msg(505,msg(12,text(501,name))+integer(501,2)+integer(502,15))
- out+=msg(505,component(g,4,86,14,msg(17)+integer(501,7),5,14,msg(17)+integer(501,7)))+msg(505,rect(g,width,height,stretch))+msg(505,script_component(g,scripts))
+ out+=msg(505,component(g,4,86,14,msg(17)+integer(501,7),5,14,msg(17)+integer(501,7)))+msg(505,rect(g,width,height,stretch,preset=28 if kind=='button' else 25))+msg(505,script_component(g,scripts))
  if kind=='text':out+=msg(505,component(g,64,84,74,b'',66,75,integer(501,20)+integer(503,12)+integer(504,0xffffffff)+integer(505,0xffffff)+integer(507,858993459)+msg(510)+integer(512,20)+integer(513,20)))
  if kind=='image':
   out+=msg(505,component(g,73,96,83,b'',75,84,integer(502,0xffffffff)))
   out+=msg(505,component(g,74,97,84,b'',76,85,integer(502,1)+integer(504,1)+integer(505,1)+integer(507,2)+integer(508,100)+integer(510,1)+msg(511,flt(501,8)+flt(502,8))+flt(512,85)+flt(513,85)+integer(515,1)))
  if kind=='area':out+=msg(505,component(g,65,85,75,b'',67,76,integer(501,1)))
+ if kind=='button':out+=msg(505,component(g,70,93,80,b'',72,81,integer(505,1)+integer(507,1)))
  if kind=='container':out+=msg(505,component(g,68,91,78,b'',70,79,(integer(503,1)+integer(504,1)) if stretch else b''))
  out+=msg(505,component(g,67,90,77,b'',69,78,b''))
  return out
+
+def client_control_kind(fs):
+ signatures={(unique(row,501,0),unique(row,502,0)) for part in vals(fs,505) if (row:=fields(part))}
+ kinds=signatures & CLIENT_KIND_COMPONENTS.keys()
+ if (4,86) in signatures and len(kinds)==1:
+  return CLIENT_KIND_COMPONENTS[next(iter(kinds))]
 
 def ui_records(data):
  _,root=container(data);section=unique(root,9,default=b'')
@@ -108,7 +116,7 @@ def inspect_bindings(data):
    for marker in vals(fs,502):
     meta=fields(marker)
     if unique(meta,501,0)==2 and unique(meta,502,0)==6:kind=unique(fields(unique(meta,12,default=b'')),501,0)
-   kind=next((name for name,value in KINDS.items() if value==kind),'client-root' if kind==8 else None)
+   kind=client_control_kind(fs) or next((name for name,value in KINDS.items() if value==kind),'client-root' if kind==8 else None)
    templates.append({'kind':kind,'entry_guid':gid,'name':names[gid],'template_guid':t,'instantiation_index':t,'reciprocal_reference_verified':valid})
    if not valid:diagnostics.append('模板指向不存在或反向关联不匹配：'+str(gid))
   for c in vals(fs,505):

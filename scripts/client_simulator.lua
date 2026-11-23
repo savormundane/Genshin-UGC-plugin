@@ -53,7 +53,9 @@ local function control(name,prefab,parent,kind)
   for _,k in ipairs({'softEdgeWidthX','softEdgeWidthY','horizontalSoftRange','verticalSoftRange','fillAmount'}) do state[k]=0;writable[k]='number' end
   for _,k in ipairs({'imageType','softEdgeMode','fillType','fillHorizontalType','fillVerticalType','fillRadial90Type','fillRadialType'}) do writable[k]='string' end
  end
- if kind=='area' then state.raycastTarget=true;writable.raycastTarget='boolean' end
+ local cursorControl=kind=='area' or kind=='button'
+ if cursorControl then state.raycastTarget=true;writable.raycastTarget='boolean' end
+ if kind=='button' then state.interactable=true;writable.interactable='boolean' end
  local children,listeners={},{};local methods={};local c
  function methods:SetActive(v)live(self);state.active=boolean(v);H.refresh() end
  function methods:SetVisible(v)live(self);state.visible=boolean(v) end
@@ -85,7 +87,7 @@ local function control(name,prefab,parent,kind)
  end
  for _,family in ipairs({'Cursor','Key','Navigation'}) do
   methods['Add'..family..'EventListener']=function(self,event,cb)
-   live(self);assert(family~='Cursor' or kind=='area','当前模型只有area支持光标监听');assert(type(event)=='string' and type(cb)=='function','监听需要有效枚举及回调')
+   live(self);assert(family~='Cursor' or cursorControl,'光标监听需要检测区域或预设按钮');assert(type(event)=='string' and type(cb)=='function','监听需要有效枚举及回调')
    local key=family..':'..event;listeners[key]=listeners[key] or {};table.insert(listeners[key],cb)
   end
   methods['Remove'..family..'EventListener']=function(self,event,cb)
@@ -95,7 +97,7 @@ local function control(name,prefab,parent,kind)
   methods['Remove'..family..'EventListeners']=function(self,event)live(self);listeners[family..':'..event]=nil end
   methods['RemoveAll'..family..'EventListeners']=function(self)live(self);for key in pairs(listeners) do if key:sub(1,#family+1)==family..':' then listeners[key]=nil end end end
  end
- if kind=='area' then
+ if cursorControl then
   function methods:SimulateCursorClick()for _,event in ipairs({'CursorDown','CursorUp','CursorClick'}) do if self.alive then H.fire(self,'Cursor',event,{}) end end end
  end
  if kind=='image' then
@@ -258,7 +260,10 @@ end
 function H.fire(target,family,event,data)
  live(target)
  if not H.effectiveEnabled then return false end
- if family=='Cursor' and H.stateMap[target].raycastTarget==false then return false end
+ if family=='Cursor' then
+  local state=H.stateMap[target]
+  if state.raycastTarget==false or state.interactable==false then return false end
+ end
  local current=target
  while current do if not current.activeInHierarchy or not current.visible then return false end;current=H.stateMap[current].parent end
  local payload=data

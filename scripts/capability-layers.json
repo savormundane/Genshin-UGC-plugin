@@ -1,6 +1,22 @@
 {
   "schema": 1,
   "capabilities": {
+    "asset_batch": {
+      "generation": {
+        "implementation": "available",
+        "scope": "Measured shared control budget with digest-bound batch generation",
+        "cases": [
+          "test_next_workflows.py::NextWorkflowsTests.test_batch_budget_and_append_client_module_to_existing_gil"
+        ]
+      },
+      "readback": {
+        "implementation": "available",
+        "scope": "Generated control counts, reference image digests and client asset table readback",
+        "cases": [
+          "test_next_workflows.py::NextWorkflowsTests.test_batch_budget_and_append_client_module_to_existing_gil"
+        ]
+      }
+    },
     "scene": {
       "rules": {
         "implementation": "available",

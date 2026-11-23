@@ -50,6 +50,17 @@ def lua(value):
     if isinstance(value,dict):return '{'+','.join('['+lua(k)+']='+lua(v) for k,v in value.items())+'}'
     raise ValueError('Unsupported Lua value')
 
+def lua_payload(asset):
+    data = asset['data']
+    if asset['target'] == 'rectangles':
+        width, height = asset['grid_size']
+        return {'w': width, 'h': height, 'maxRects': asset['controls'], **data}
+    return {'tiles': [
+        {'x': tile['x'], 'y': tile['y'], 'width': tile['width'], 'height': tile['height'],
+         'fontSize': tile['font_size'], 'text': tile['text']}
+        for tile in data['tiles']
+    ]}
+
 def prepare_source(source, *, target='auto', width=None, height=None, step=1, colors=96, alpha_min=128, max_controls=None, columns=64, max_bytes=4096, cell=16, fit='auto'):
     from asset_core import open_single_image
     if target not in ('auto','rectangles','text'):raise ValueError('Unknown target')
@@ -126,9 +137,7 @@ def generate(source, output, *, from_preview=None, candidate=None, **options):
     if max_controls is not None and count>max_controls:
         adjust='use a smaller grid or fewer colors' if target=='rectangles' else 'use a smaller grid or review --columns and --max-bytes'
         raise ValueError(f'{count} controls exceed budget {max_controls} ({target}, {size[0]}x{size[1]} grid); {adjust}')
-    if target=='rectangles':payload={'w':size[0],'h':size[1],'maxRects':count,**data};coordinate='top_left_grid_pixels'
-    else:
-        payload={'tiles':[{'x':t['x'],'y':t['y'],'width':t['width'],'height':t['height'],'fontSize':t['font_size'],'text':t['text']} for t in data['tiles']]};coordinate='top_left_design_units'
+    coordinate='top_left_grid_pixels' if target=='rectangles' else 'top_left_design_units'
     report={'schema':1,'generator':'genshin-ugc-assets','source_kind':source_kind,'source_sha256':original,'source_size':source_size,'grid_size':list(size),'target':target,'controls':count,'coordinate_space':coordinate,
             'parameters':parameters,
             'preview_kind':'quantized reference raster; not host rendering','external_process_started':False,'gil_written':False,'host_tested':False}
@@ -140,7 +149,7 @@ def generate(source, output, *, from_preview=None, candidate=None, **options):
         stage=Path(td)/'result';stage.mkdir()
         for filename,value in [('asset.json',asset),('report.json',report)]:
             (stage/filename).write_text(json.dumps(value,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
-        (stage/'data.lua').write_text('return '+lua(payload)+'\n',encoding='utf-8')
+        (stage/'data.lua').write_text('return '+lua(lua_payload(asset))+'\n',encoding='utf-8')
         preview.save(stage/'preview.png')
         if source_kind=='shapes':
             (stage/'source.json').write_bytes(raw)
@@ -151,7 +160,7 @@ def generate(source, output, *, from_preview=None, candidate=None, **options):
     return report
 
 
-def preview(source, output, *, display=None, min_grid=None, max_error=None, **options):
+def preview(source, output, *, display=None, min_grid=None, max_error=None, explore=False, **options):
     from fractions import Fraction
     from PIL import Image, ImageChops, ImageStat
     from asset_core import harden
@@ -194,6 +203,8 @@ def preview(source, output, *, display=None, min_grid=None, max_error=None, **op
             continue
         grid=tuple(math.ceil(dimension*scale) for dimension in size)
         alternatives.extend([(name,grid,colors),(name+'-fewer-colors',grid,max(1,colors//2))])
+    if explore:
+        candidates.extend(alternatives)
     rows = []
     seen = set()
     with output_directory(output) as stage:
@@ -206,7 +217,7 @@ def preview(source, output, *, display=None, min_grid=None, max_error=None, **op
                         'step':1,'colors':palette_limit}
             raster, _, controls = compile_grid(image, grid, target, settings)
             within_budget = None if limit is None else controls<=limit
-            if name=='original' and within_budget is False:
+            if name=='original' and within_budget is False and not explore:
                 candidates.extend(alternatives)
             dest = stage/name
             dest.mkdir()
@@ -252,7 +263,7 @@ def preview(source, output, *, display=None, min_grid=None, max_error=None, **op
         report = {
             'schema':1, 'kind':'asset-preview', 'status':'passed',
             'source':str(source), 'source_sha256':digest, 'source_size':source_size, 'display_size':list(display_size),
-            'display_source':'source.png','target':target,
+            'display_source':'source.png','target':target,'has_foreground':has_foreground,
             'preview_kind':'quantized reference grid' if target=='text' else 'software rectangle reference',
             'error_metric':'normalized premultiplied RGBA MSE on the display grid',
             'checks':{'budget':{'status':budget_status,'limit':limit,'feasible_candidates':feasible},
@@ -269,6 +280,9 @@ def preview(source, output, *, display=None, min_grid=None, max_error=None, **op
 def main(argv=None):
     # Keep established info/text/layouts commands available through the same public entry.
     args=list(sys.argv[1:] if argv is None else argv)
+    if args and args[0]=='batch':
+        from asset_batch import main as batch_main
+        return batch_main(args[1:])
     if args and args[0]=='fit':
         from asset_fit import main as fit_main
         return fit_main(args[1:])
@@ -299,6 +313,7 @@ def main(argv=None):
             c.add_argument('--from-preview',metavar='REPORT')
             c.add_argument('--candidate',metavar='NAME')
     for name, description in (('fit','Fit primitives to an image or layer manifest'),
+                              ('batch','Allocate a shared control budget across assets'),
                               ('check','Inspect asset statistics'),('diff','Compare asset statistics'),
                               ('import-gia','Read calibrated native rectangle assets'),
                               ('info','Inspect GIL UI import targets'),('text','Generate legacy text data'),

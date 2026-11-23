@@ -98,7 +98,7 @@ def server(bridge):
         return await call('native_plan',ctx,input=input,sha256=sha256,output=output,patch=patch,spec=spec,spec_sha256=spec_sha256,summary=summary)
     @app.tool(structured_output=True)
     async def simulate(spec:str,sha256:str,output:str,ctx:Context)->dict[str,Any]:
-        """Run the corresponding CLI core with digest-bound inputs and exclusive outputs."""
+        """Run a schema 2 scene or replay a recorded joint failure. Replay sources must match their recorded digests."""
         return await call('simulate',ctx,spec=spec,sha256=sha256,output=output)
     @app.tool(structured_output=True)
     async def experiment_run(spec:str,sha256:str,output:str,ctx:Context)->dict[str,Any]:

@@ -524,14 +524,14 @@ def optimize(graph,pure_ids,fanout_cap):
 def apply(data,spec,base,*,bindings=None):
     from authoring_io import DiagnosticError
     from native_gameplay_index import build_gameplay, require_gameplay
-    from native_bindings import Bindings, bind_operation
+    from native_bindings import Bindings, bind_operation, bindings_for_gil
     bindings = Bindings(bindings.ids if bindings is not None else {})
     schema(spec,('schema','base_sha256','allowed_top_level_fields','operations','strict_audit'),('base_sha256','allowed_top_level_fields','operations'))
     digest=sha(data)
     if digest!=spec['base_sha256']:
         raise DiagnosticError('native.base_sha256_mismatch','Base hash mismatch',phase='native_apply',
                               field='base_sha256',expected=spec['base_sha256'],actual=digest)
-    from native_scene_edits import SCENE_EDITS, place_static_scene
+    from native_scene_edits import SCENE_EDITS, arrange_instances, place_static_scene
     from native_scene_settings import SETTINGS_EDITS
     from native_prefabs import OBJECT_CREATION,author_objects
     from native_gameplay import GAMEPLAY_EDITS
@@ -540,10 +540,11 @@ def apply(data,spec,base,*,bindings=None):
     from native_variables import add_native_variables
 
     allowed=spec['allowed_top_level_fields'];before=container(data)[1];logs=[]
+    input_data=data
     scene_ops={op['op'] for op in spec['operations']}
     gameplay_edits=GAMEPLAY_EDITS | ECONOMY_EDITS | HUD_EDITS | {'add_native_variables':add_native_variables}
-    placement=bool(scene_ops & ({'duplicate_entities','place_static_scene'}|OBJECT_CREATION))
-    scoped_authoring={'set_entity_transform','add_scene_points','add_point_light','add_native_movers','set_native_preset_state'}
+    placement=bool(scene_ops & ({'arrange_instances','duplicate_entities','place_static_scene'}|OBJECT_CREATION))
+    scoped_authoring={'set_entity_transform','add_scene_points','add_point_light','add_native_movers','set_native_preset_state','append_client_ui'}
     guarded=placement or bool(scene_ops & (scoped_authoring|gameplay_edits.keys()))
     if guarded:
         label=('Entity placement' if placement else 'Entity transform' if 'set_entity_transform' in scene_ops
@@ -561,6 +562,7 @@ def apply(data,spec,base,*,bindings=None):
         require_gameplay(build_gameplay(data),'baseline')
     authored_templates={}
     authored_entities={}
+    layout_bindings=Bindings()
     for op in spec['operations']:
         kind=op['op'];op=bind_operation(op,bindings)
         scene_edit=SCENE_EDITS.get(kind) or SETTINGS_EDITS.get(kind)
@@ -614,13 +616,24 @@ def apply(data,spec,base,*,bindings=None):
                 bindings.add('entity',row['key'],row['entity_id'])
             logs.append({'op':kind,**detail})
             continue
-        if scene_edit is not None or kind=='place_static_scene':
+        if scene_edit is not None or kind in ('place_static_scene','arrange_instances'):
             if container(data)[0][1:4] != (1, 806, 2):raise ValueError('Scene edits require a calibrated GIL baseline')
-            data,detail=place_static_scene(data,op,base) if kind=='place_static_scene' else scene_edit(data,op)
-            if kind=='duplicate_entities':
-                for row in detail['copies']:
+            if kind=='arrange_instances':
+                data,detail=arrange_instances(data,op,base,baseline=input_data)
+            elif kind=='place_static_scene':
+                data,detail=place_static_scene(data,op,base)
+            else:
+                data,detail=scene_edit(data,op)
+            if kind in ('duplicate_entities','arrange_instances'):
+                for row in detail['copies' if kind=='duplicate_entities' else 'instances']:
                     authored_entities.setdefault(row['key'],[]).append(row['entity_id'])
                     bindings.add('entity',row['key'],row['entity_id'])
+                    if kind=='arrange_instances':layout_bindings.add('entity',row['key'],row['entity_id'])
+            logs.append({'op':kind,**detail})
+            continue
+        if kind=='append_client_ui':
+            from native_client_ui import append_client_ui
+            data,detail=append_client_ui(data,op,base)
             logs.append({'op':kind,**detail})
             continue
         m=model(data)
@@ -733,6 +746,10 @@ def apply(data,spec,base,*,bindings=None):
         require_gameplay(build_gameplay(data),'result')
     result={'schema':2,'operations':logs,'audit':report,'protected_fields_unchanged':True,'sha256':sha(data)}
     if bindings.ids:result['bindings']=bindings.payload()
+    if layout_bindings.ids:
+        if len(set(layout_bindings.ids.values()))!=len(layout_bindings.ids):
+            raise ValueError('Arrangement keys must identify distinct placed instances')
+        result['layout_bindings']=bindings_for_gil(data,layout_bindings)
     return data,result
 def main(argv=None):
     p=argparse.ArgumentParser(description=__doc__);s=p.add_subparsers(dest='op',required=True)

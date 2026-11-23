@@ -9,7 +9,7 @@ DOMAIN_TOOLS={
 # Capability IDs remain those published by capabilities.py. Empty ownership means
 # a shared tool. The client domain shares the Editor Skill.
 OWNERS={
-    'knowledge':('editor','client'),'diagnosis':(), 'asset_fit':('assets',),'asset_inspection':('assets',),
+    'knowledge':('editor','client'),'diagnosis':(), 'asset_fit':('assets',),'asset_inspection':('assets',),'asset_batch':('assets',),
     'mcp':(), 'native':('gil',),'storage':('editor','graph','client','gil'),
     'protocol':('graph','client'),'ui':('client',),'assembly':('client',),
     'simulation':('graph','client'),'algorithms':('client',),'native_assets':('assets','gil'),

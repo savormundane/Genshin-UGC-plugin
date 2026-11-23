@@ -24,14 +24,14 @@ def convert(data,config):
         if guid in records:raise ValueError('Duplicate UI GUID')
         records[guid]=raw
     selected=[];seen=set()
-    allowed={(1,12),(2,15),(4,86),(63,83),(64,84),(65,85),(67,90),(68,91)}
+    allowed={(1,12),(2,15),(4,86),(63,83),(64,84),(65,85),(67,90),(68,91),(70,93)}
     def visit(guid,parent=None):
         if guid in seen or guid not in records:raise ValueError('Missing or cyclic UI child')
         seen.add(guid);raw=records[guid]
         if parent is not None and get(raw,504,0)!=parent:raise ValueError('UI parent/child mismatch')
         components=vals(fields(raw),505);signatures=[(get(c,501,0),get(c,502,0)) for c in components]
         if len(signatures)!=len(set(signatures)) or set(signatures)-allowed:raise ValueError('Uncalibrated UI component; leave pending')
-        if sum(s in signatures for s in ((64,84),(65,85),(68,91)))!=1:raise ValueError('Unsupported or ambiguous UI kind')
+        if sum(s in signatures for s in ((64,84),(65,85),(68,91),(70,93)))!=1:raise ValueError('Unsupported or ambiguous UI kind')
         rect=next((c for c in components if get(c,501,0)==1),None)
         if rect is None:raise ValueError('Missing rectangle')
         overrides=vals(fields(rect),503)

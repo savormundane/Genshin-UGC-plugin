@@ -24,6 +24,28 @@ python scripts/qianxing.py assets generate SOURCE.json --out NEW_DIRECTORY --tar
 
 需要 Python 与 Pillow。step 为下采样步长。width 与 height 成对指定输出网格，使用时 step 须为默认值。单帧位图最多 16,777,216 源像素，输出网格最多 1,048,576 像素。工具在解码前检查两项。超限时按提示预处理源图或调整网格，多帧图先显式拆帧。控件预算由当前任务提供。
 
+## 多素材共用控件预算
+
+```text
+python scripts/qianxing.py assets batch preview BATCH.json --out REVIEW
+python scripts/qianxing.py assets batch generate REVIEW/report.json --out GENERATED
+```
+
+```json
+{
+  "schema": 1,
+  "max_controls": 240,
+  "assets": [
+    {"key": "frame", "source": "frame.png", "weight": 1, "min_grid": [8, 8]},
+    {"key": "action", "source": "action.png", "weight": 4, "max_error": 0.04}
+  ]
+}
+```
+
+每项可给 `display`、`min_grid`、`max_error` 和生成 `options`。预览先为每项选满足约束且消耗最低的候选，再按单位控件带来的加权误差改善分配余额。预算不足时查看 `minimum_controls`。缺少可用候选时按报告给出的素材键调整输入或约束。
+
+生成时核对源摘要、实际控件数和参考图摘要。交付目录中的 `catalog.json` 给出各项资源，`data.json` 汇集 Lua 可用的数据。制作链 `assets` 可加 `{"name":"hud","kind":"batch","source":"REVIEW/report.json"}`。已有 GIL 的 Lua 脚本可通过 [`append_client_ui`](native-authoring.md#追加客户端界面模块) 直接使用这份数据。
+
 ## 共同处理与输出
 
 先按 alpha 阈值硬化，经预乘 BOX 缩放后再次硬化，再量化不透明前景。矩形与富文本共用量化参考网格。矩形采用行程和纵向合并。富文本按不透明行分块，受列数和 UTF-8 字节双重限制。max-controls 限制实际生成数量。超限会报告当前网格和控件数量，可缩小网格或减少矩形颜色，富文本可按控件容量调整分块限制。需要误差目标、分层配额或恢复检查点时用 [assets fit](asset-fit.md)。
