@@ -17,9 +17,9 @@ Python 依赖在 `pyproject.toml` 声明，并用 `uv.lock` 锁定。需要创�
 
 | 入口 | 仓库提供的能力 | 适用边界 |
 | --- | --- | --- |
-| Codex | 从桌面端或终端添加市场，也可用自行打包的 ZIP 登记插件。 | 已验证 Codex CLI 从本地市场发现并安装条目。 |
-| Claude | 同一个插件市场可从界面或命令行添加。 | 已验证 Claude Code 本地市场安装与 MCP 连通。工具调用需要可启动本地 stdio MCP 的会话。 |
-| DeepSeek Harness | 可直接从 GitHub 安装 Cordis Bundle，也可通过市场索引安装或从本地目录导入。 | 已在 `0.2.2-rc.5` 验证 GitHub 直装、索引解析、Bundle 加载和节点查询。 |
+| Codex | 从终端添加市场并安装插件。 | 已验证 Codex CLI 从本地市场发现并安装条目。 |
+| Claude | 从终端添加市场并安装插件。 | 已验证 Claude Code 本地市场安装与 MCP 连通。工具调用需要可启动本地 stdio MCP 的会话。 |
+| DeepSeek Harness | 从 GitHub 直接安装 Cordis Bundle。 | 已在 `0.2.2-rc.5` 验证 GitHub 直装、Bundle 加载和节点查询。 |
 | Agent Plugins | 提供通用插件清单、Skills 和本地 stdio MCP 配置。 | 导入方式和本地工具可用性取决于客户端的实现。 |
 | 独立 CLI | 使用专用 Python 运行 `scripts/qianxing.py`。 | 不依赖 AI 客户端；具体命令仍需相应运行依赖和有效输入。 |
 

@@ -130,7 +130,7 @@ def check(root: Path = ROOT) -> list[str]:
         if not (root / relative).is_file():
             errors.append(f"Missing required file: {relative}")
 
-    if (root / "marketplace").exists():
+    if (root / ".agents/plugins/marketplace.json").exists() or (root / "package.json").exists():
         from marketplace_release import check_marketplace
 
         try:
@@ -139,7 +139,7 @@ def check(root: Path = ROOT) -> list[str]:
             errors.append(f"Marketplace configuration: {exc}")
 
     docs = list(root.glob("*.md"))
-    for directory in ("docs", "skills", "references", "scripts", ".github", "marketplace"):
+    for directory in ("docs", "skills", "references", "scripts", ".github"):
         docs.extend((root / directory).rglob("*.md"))
     provenance = root / "PUBLIC_SOURCES.json"
     raw_paths = set()

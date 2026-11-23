@@ -1,13 +1,11 @@
-"""Generate the marketplace entries for the public plugin root."""
+"""Generate terminal marketplace entries and the DeepSeek Harness Bundle manifest."""
 
 import argparse
 import json
 import re
-import subprocess
 
 from check_repository import REPO, ROOT, SEMVER
 
-INDEX = 'marketplace/dsh-index.json'
 DSH_ENGINE = '0.2.2-rc.5'
 GITHUB = f'https://github.com/{REPO}'
 CLAUDE = '.claude-plugin/marketplace.json'
@@ -64,25 +62,6 @@ def marketplace_files(root):
             CODEX: json_text(codex), 'package.json': json_text(bundle)}
 
 
-def dsh_index(bundle, commit, timestamp, display_name):
-    return {
-        'format': 1,
-        'title': display_name,
-        'plugins': [{
-            'name': bundle['name'],
-            'title': display_name,
-            'description': bundle['description'],
-            'repository': {'url': GITHUB},
-            'versions': [{
-                'version': bundle['version'],
-                'publishTimestamp': timestamp,
-                'source': {'type': 'git', 'url': GITHUB, 'commit': commit},
-                'engines': bundle['engines'],
-            }],
-        }],
-    }
-
-
 def check_marketplace(root):
     errors = []
     for relative, expected in marketplace_files(root).items():
@@ -92,44 +71,18 @@ def check_marketplace(root):
     for relative in ('cordis.patch.yml', 'scripts/dsh-paths.mjs', 'scripts/mcp_launcher.cjs'):
         if not (root / relative).is_file():
             errors.append(f'{relative}: missing plugin entry')
-    if (root / 'marketplace/genshin-ugc').exists():
-        errors.append('Marketplaces must share the root plugin')
-    index = read_json(root, INDEX)
-    pinned, = index['plugins'][0]['versions']
-    bundle = read_json(root, 'package.json')
-    display_name = read_json(root, '.codex-plugin/plugin.json')['interface']['displayName']
-    commit, timestamp = pinned['source']['commit'], pinned['publishTimestamp']
-    if (not re.fullmatch(r'[0-9a-f]{40}', commit) or type(timestamp) is not int or timestamp <= 0
-            or pinned['version'] != bundle['version']
-            or index != dsh_index(bundle, commit, timestamp, display_name)):
-        errors.append(f'{INDEX}: invalid DSH index or mismatched bundle identity')
     return errors
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--dsh-source', metavar='COMMIT', help='Refresh only the DSH index from a committed bundle')
-    args = parser.parse_args()
+    parser.parse_args()
     try:
-        if args.dsh_source:
-            def git(*arguments):
-                return subprocess.check_output(['git', *arguments], cwd=ROOT, encoding='utf-8').strip()
-
-            commit = git('rev-parse', '--verify', '--end-of-options', args.dsh_source + '^{commit}')
-            bundle = json.loads(git('show', f'{commit}:package.json'))
-            if bundle != read_json(ROOT, 'package.json'):
-                raise ValueError('The selected commit must contain the current DSH bundle manifest')
-            for filename in bundle['files']:
-                git('cat-file', '-e', f'{commit}:{filename.rstrip("/")}')
-            timestamp = int(git('show', '-s', '--format=%ct', commit))
-            display_name = read_json(ROOT, '.codex-plugin/plugin.json')['interface']['displayName']
-            (ROOT / INDEX).write_text(json_text(dsh_index(bundle, commit, timestamp, display_name)), encoding='utf-8')
-        else:
-            for relative, contents in marketplace_files(ROOT).items():
-                target = ROOT / relative
-                target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_text(contents, encoding='utf-8')
-    except (OSError, ValueError, KeyError, subprocess.CalledProcessError) as error:
+        for relative, contents in marketplace_files(ROOT).items():
+            target = ROOT / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(contents, encoding='utf-8')
+    except (OSError, ValueError, KeyError) as error:
         parser.exit(1, f'Marketplace preparation failed: {error}\n')
 
 

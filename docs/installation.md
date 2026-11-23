@@ -10,25 +10,17 @@
 
 ### Codex
 
-[桌面端与终端安装](../README.md#codex)
+[终端安装命令](../README.md#codex)
 
 ### Claude
 
-[桌面端与终端安装](../README.md#claude)
+[终端安装命令](../README.md#claude)
 
 使用本地 MCP 时，选择支持本机工具的 Claude 会话。 [Claude 插件说明](https://support.claude.com/en/articles/13837440-use-plugins-in-claude)
 
 ### DeepSeek Harness
 
-当前入口面向 `0.2.2-rc.5`。
-
-#### 直接安装
-
-在 **插件 → 添加插件**（**Plugins → Add plugin**）粘贴下面的完整地址并确认，安装完成后启用 **Miliastra Wonderland**。按包名显示的客户端可识别 `genshin-ugc-dsh`。
-
-```text
-git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
-```
+[GitHub 直装](../README.md#deepseek-harness)
 
 ### Agent Plugins
 
@@ -45,7 +37,7 @@ git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
 
 原 Genshin-UGC 自 1.0.0 起以 Miliastra Wonderland 发行。插件 ID 沿用原值。仍使用旧仓库地址时，从[首页安装入口](../README.md#安装)重新添加。如果客户端按版本数字跳过此次更新，停用旧登记后重新安装。已有 Python、工程目录、输出和配置可以继续使用。
 
-- **DSH 旧直装**若包含 `&path:/marketplace/genshin-ugc`，按[当前直装地址](#直接安装)重新登记。原市场索引 URL 可继续使用。
+- **DSH 旧安装**可按[当前直装地址](../README.md#deepseek-harness)重新登记。
 - **旧 ZIP 或 PowerShell 登记**可保留本地副本供回退。需要重新安装时，使用当前市场、直装或[自行打包](#自行打包-zip)。
 
 ## 从本地目录导入
@@ -54,7 +46,6 @@ git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
 
 | 客户端 | 导入入口 |
 | --- | --- |
-| DeepSeek Harness | 在 **Plugins → Add plugin** 选择包含 `package.json` 与 `cordis.patch.yml` 的根目录。 |
 | Agent Plugins | 在客户端的目录导入入口选择包含 `plugin.json` 的根目录。 |
 
 ## 自行打包 ZIP
@@ -91,7 +82,7 @@ python -B scripts/package_release.py --source . --out ../Miliastra-Wonderland-1.
 
 | 遇到的问题 | 检查方式 |
 | --- | --- |
-| 市场中找不到插件 | 核对仓库名或 DSH 索引 URL。也可[导入本地源码目录](#从本地目录导入)。 |
+| 市场中找不到插件 | 核对终端命令里的 GitHub 仓库名。也可[导入本地源码目录](#从本地目录导入)。 |
 | 能看到 Skill，工具未连通 | 确认客户端能找到 `node` 和已有 Python 环境或 `uv`，并允许本地 MCP。旧环境使用过 `-Root` 时，核对 `UGC_PUBLIC_INSTALL_ROOT` 后重启客户端。 |
 | Python 依赖不匹配 | 检查 `UGC_PYTHON` 或显式绑定的旧环境。也可取消这两项，交给 uv 按锁文件准备。 |
 | 找不到 Python 或目录冲突 | 按[运行要求](compatibility.md#运行要求)检查 Python，必要时用 `-Python` 指定解释器绝对路径。确认[项目和输出目录](#运行依赖与工程目录)互不包含。 |

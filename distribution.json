@@ -2,8 +2,7 @@
   "schema": 1,
   "exclude_prefixes": [
     "samples/seeds/",
-    ".github/",
-    "marketplace/"
+    ".github/"
   ],
   "exclude_files": [
     "runtime.json",

@@ -5,8 +5,7 @@
 ## Unreleased
 
 - 安装入口和项目链接更新为更名后的 GitHub 仓库地址。
-- DeepSeek Harness 的直装和市场安装步骤集中在首页。
-- 首页提供 Codex 和 Claude 的桌面端市场安装步骤。
+- Codex 和 Claude 提供终端安装命令，DeepSeek Harness 通过 GitHub 直装。
 - 精简技术参考与旧依赖文件，修正源码下载入口，自行打包时排除本地配置。
 
 ## 1.0.0
