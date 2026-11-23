@@ -82,7 +82,7 @@ wheels = [
 ]
 
 [[package]]
-name = "genshin-ugc-public"
+name = "miliastra-wonderland"
 version = "0.0.0"
 source = { virtual = "." }
 dependencies = [

@@ -2,6 +2,7 @@
 from pathlib import Path
 import argparse, hashlib, json, math, os, sys, tempfile
 from authoring_io import sha_file, output_directory, write_json, finish
+from asset_core import ASSET_GENERATOR
 
 MAX_SOURCE_PIXELS = 16_777_216
 MAX_GRID_PIXELS = 1_048_576
@@ -138,7 +139,7 @@ def generate(source, output, *, from_preview=None, candidate=None, **options):
         adjust='use a smaller grid or fewer colors' if target=='rectangles' else 'use a smaller grid or review --columns and --max-bytes'
         raise ValueError(f'{count} controls exceed budget {max_controls} ({target}, {size[0]}x{size[1]} grid); {adjust}')
     coordinate='top_left_grid_pixels' if target=='rectangles' else 'top_left_design_units'
-    report={'schema':1,'generator':'genshin-ugc-assets','source_kind':source_kind,'source_sha256':original,'source_size':source_size,'grid_size':list(size),'target':target,'controls':count,'coordinate_space':coordinate,
+    report={'schema':1,'generator':ASSET_GENERATOR,'source_kind':source_kind,'source_sha256':original,'source_size':source_size,'grid_size':list(size),'target':target,'controls':count,'coordinate_space':coordinate,
             'parameters':parameters,
             'preview_kind':'quantized reference raster; not host rendering','external_process_started':False,'gil_written':False,'host_tested':False}
     if selection is not None:

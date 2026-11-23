@@ -3,7 +3,7 @@ from pathlib import Path
 import argparse, json, math, random
 from PIL import Image, ImageDraw, ImageChops, ImageStat
 from authoring_io import read_json, write_json, sha, sha_file, canonical, output_directory, finish
-from asset_core import open_single_image
+from asset_core import ASSET_GENERATOR, open_single_image
 from asset_pipeline import lua
 
 MAX_FIT_PIXELS = 262_144
@@ -202,7 +202,7 @@ def build(source,spec_path,out,resume=None,steps=None,initial=None):
             quality={'target_error':cfg['target_error'],'target_reached':reached,'stop_reason':stop_reason}
             record.update(quality)
             preview.save(dest/'preview.png')
-            write_json(dest/'asset.json',{'schema':1,'generator':'genshin-ugc-assets','target':'rectangles','grid_size':list(image.size),'controls':len(data['rects']),'parameters':{'max_controls':quotas[i]},'data':data})
+            write_json(dest/'asset.json',{'schema':1,'generator':ASSET_GENERATOR,'target':'rectangles','grid_size':list(image.size),'controls':len(data['rects']),'parameters':{'max_controls':quotas[i]},'data':data})
             if cfg['gia']:
                 from native_assets import export_rectangles
                 (dest/'asset.gia').write_bytes(export_rectangles(data,cfg['anchor'],name))

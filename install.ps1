@@ -10,13 +10,18 @@ $ErrorActionPreference = 'Stop'
 if ($Resume -and $Action -ne 'install') { throw '-Resume is only valid for install.' }
 if ($env:OS -ne 'Windows_NT') { throw 'The complete bundle currently supports Windows x64 only.' }
 if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw 'Version must be x.y.z.' }
-if (!$Root) { $Root = Join-Path $env:LOCALAPPDATA 'Genshin-UGC-Public' }
+$explicitRoot = [bool]$Root
+if (!$Root) { $Root = Join-Path $env:LOCALAPPDATA 'Miliastra Wonderland' }
+$legacyRoot = Join-Path $env:LOCALAPPDATA 'Genshin-UGC-Public'
 # Recovery must also work offline, without downloading an old release bootstrap.
 if ($Action -ne 'install') {
     if ($Agent -in @('agent-plugins', 'deepseek-harness')) {
         throw 'Manage registration and rollback in the host. The prepared files are retained.'
     }
-    $state = Get-Content -Raw -LiteralPath (Join-Path $Root ($Agent + '.json')) | ConvertFrom-Json
+    $recordName = $Agent + '.json'
+    if (!$explicitRoot -and !(Test-Path -LiteralPath (Join-Path $Root $recordName)) -and
+        (Test-Path -LiteralPath (Join-Path $legacyRoot $recordName))) { $Root = $legacyRoot }
+    $state = Get-Content -Raw -LiteralPath (Join-Path $Root $recordName) | ConvertFrom-Json
     if ($state.schema -ne 1) { throw 'Unknown installation state version.' }
     $owned = $state.current
     if (!$owned -and $state.history.Count) { $owned = $state.history[-1] }
@@ -24,7 +29,10 @@ if ($Action -ne 'install') {
     $ownedHome = [IO.Path]::GetFullPath($owned.home)
     $ownedRoot = [IO.Path]::GetFullPath($Root).TrimEnd('\') + '\'
     if (!$ownedHome.StartsWith($ownedRoot, [StringComparison]::OrdinalIgnoreCase)) { throw 'Installation is outside the selected root.' }
-    $runner = Join-Path $ownedHome 'Genshin-UGC/scripts/install_public.py'
+    $runner = Join-Path $ownedHome 'miliastra-wonderland/scripts/install_plugin.py'
+    if (!(Test-Path -LiteralPath $runner -PathType Leaf)) {
+        $runner = Join-Path $ownedHome 'Genshin-UGC/scripts/install_public.py'
+    }
     $boundPython = Join-Path $ownedHome 'runtime/Scripts/python.exe'
     & $boundPython -X utf8 -B $runner $Action --agent $Agent --root $Root --version $Version
     if ($LASTEXITCODE -ne 0) { throw ('Installation operation failed: ' + $LASTEXITCODE) }
@@ -51,7 +59,7 @@ if ((Get-FileHash -LiteralPath $Archive -Algorithm SHA256).Hash -ne $Sha256) { t
 if (!$Project) { $Project = Read-Host 'Existing project directory' }
 if (!$Outputs) { $Outputs = Read-Host 'Separate output directory (outside the project)' }
 
-$taskTemp = Join-Path ([IO.Path]::GetTempPath()) ('genshin-ugc-' + [guid]::NewGuid().ToString('N'))
+$taskTemp = Join-Path ([IO.Path]::GetTempPath()) ('miliastra-wonderland-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $taskTemp | Out-Null
 try {
     # Extract only the verified bootstrap, leaving full archive validation to it.
@@ -60,8 +68,15 @@ try {
     try {
         $minMinor = 11
         $maxMinor = 13
-        $entries = @('scripts/install_public.py')
-        $contract = $zip.GetEntry('Genshin-UGC/pyproject.toml')
+        $archiveRoot = 'miliastra-wonderland'
+        $bootstrap = 'scripts/install_plugin.py'
+        if (!$zip.GetEntry("$archiveRoot/$bootstrap") -and $zip.GetEntry('Genshin-UGC/scripts/install_public.py')) {
+            $archiveRoot = 'Genshin-UGC'
+            $bootstrap = 'scripts/install_public.py'
+            if (!$explicitRoot) { $Root = $legacyRoot }
+        }
+        $entries = @($bootstrap)
+        $contract = $zip.GetEntry("$archiveRoot/pyproject.toml")
         if ($contract) {
             $reader = New-Object IO.StreamReader($contract.Open())
             try { $declaration = $reader.ReadToEnd() } finally { $reader.Dispose() }
@@ -74,11 +89,11 @@ try {
         }
         New-Item -ItemType Directory -Path (Join-Path $taskTemp 'scripts') | Out-Null
         foreach ($file in $entries) {
-            $entry = @($zip.Entries | Where-Object { $_.FullName -ceq ('Genshin-UGC/' + $file) })
+            $entry = @($zip.Entries | Where-Object { $_.FullName -ceq "$archiveRoot/$file" })
             if ($entry.Count -ne 1) { throw "Installer entry missing or duplicated: $file" }
             [IO.Compression.ZipFileExtensions]::ExtractToFile($entry[0], (Join-Path $taskTemp $file))
         }
-        $runner = Join-Path $taskTemp 'scripts/install_public.py'
+        $runner = Join-Path $taskTemp $bootstrap
     } finally { $zip.Dispose() }
     if ($Python) {
         $requested = Get-Command -Name $Python -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1

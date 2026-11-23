@@ -23,14 +23,14 @@ Miliastra Wonderland 是面向原神「千星奇域」创作者的非官方 AI �
 
 ```text
 codex plugin marketplace add savormundane/miliastra-wonderland-plugin
-codex plugin add genshin-ugc-public@genshin-ugc
+codex plugin add miliastra-wonderland@miliastra-wonderland
 ```
 
 ### Claude
 
 ```text
 claude plugin marketplace add savormundane/miliastra-wonderland-plugin
-claude plugin install genshin-ugc-public@genshin-ugc
+claude plugin install miliastra-wonderland@miliastra-wonderland
 ```
 
 ### DeepSeek Harness

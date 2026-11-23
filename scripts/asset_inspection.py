@@ -2,6 +2,7 @@
 from pathlib import Path
 import argparse,json,math
 from authoring_io import read_json,sha
+from asset_core import ASSET_GENERATORS
 
 def inspect(path):
     from PIL import Image
@@ -12,7 +13,7 @@ def inspect(path):
         if isinstance(value,dict) and value.get('schema')==1 and 'shapes'in value:
             from asset_pipeline import procedural
             image=procedural(value);representation='shapes'
-        elif isinstance(value,dict) and value.get('generator')=='genshin-ugc-assets' and value.get('schema')==1:
+        elif isinstance(value,dict) and value.get('generator') in ASSET_GENERATORS and value.get('schema')==1:
             representation=value['target'];data=value['data'];size=value['grid_size']
             if len(size)!=2 or any(type(n)is not int or n<=0 for n in size) or math.prod(size)>1048576:raise ValueError('Invalid asset dimensions')
             if representation=='rectangles':

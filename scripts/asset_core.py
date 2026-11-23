@@ -1,6 +1,9 @@
 """Plugin-owned image preparation and rectangle/rich-text compilation; Pillow only."""
 from contextlib import contextmanager
 
+ASSET_GENERATOR = 'miliastra-wonderland-assets'
+ASSET_GENERATORS = (ASSET_GENERATOR, 'genshin-ugc-assets')
+
 
 @contextmanager
 def open_single_image(source, max_pixels):

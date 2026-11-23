@@ -2,6 +2,7 @@
 from pathlib import Path
 import hashlib,json,math,os,re,shutil,struct,tempfile
 from level_inventory import fields,vals,unique,container
+from asset_core import ASSET_GENERATORS
 PLUGIN=Path(__file__).resolve().parents[1]
 def sha(data):return hashlib.sha256(data).hexdigest()
 def load(path):return json.loads(Path(path).read_text(encoding='utf-8-sig'))
@@ -63,7 +64,7 @@ def animation(spec,base):
         anchor=frame['anchor']
         if not isinstance(anchor,list) or len(anchor)!=2 or any(type(v) not in (int,float) or not math.isfinite(v) for v in anchor):raise ValueError('Invalid anchor')
         path=input_path(frame['asset'],base);asset=load(path)
-        if asset.get('schema')!=1 or asset.get('generator')!='genshin-ugc-assets':raise ValueError('Expected native asset.json')
+        if asset.get('schema')!=1 or asset.get('generator') not in ASSET_GENERATORS:raise ValueError('Expected native asset.json')
         size=asset.get('grid_size')
         if not isinstance(size,list) or len(size)!=2 or any(type(v)!=int or v<1 for v in size):raise ValueError('Invalid frame grid')
         current=asset.get('target')

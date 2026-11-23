@@ -12,7 +12,7 @@ import unittest
 from unittest.mock import patch
 import zipfile
 
-import install_public as installer
+import install_plugin as installer
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -34,10 +34,14 @@ class ProtocolTests(unittest.TestCase):
     def test_release_descriptors(self):
         core = installer.read_json(ROOT / 'plugin.json')
         self.assertEqual(core['$schema'], PLUGIN_SCHEMA)
+        self.assertEqual(core['name'], 'miliastra-wonderland')
         version = core['version']
         for relative in ('.codex-plugin/plugin.json', '.claude-plugin/plugin.json'):
             manifest = installer.read_json(ROOT / relative)
             self.assertEqual((manifest['name'], manifest['version']), (core['name'], version))
+        bundle = installer.read_json(ROOT / 'package.json')
+        self.assertEqual((bundle['name'], bundle['version']), (core['name'], version))
+        self.assertEqual(installer.read_json(ROOT / 'locale/en.json')['meta']['title'], 'Miliastra Wonderland')
         for relative, anchor, data in (
             ('mcp.json', '${PLUGIN_ROOT}', '${PLUGIN_DATA}'),
             ('.mcp.json', '${CLAUDE_PLUGIN_ROOT}', '${CLAUDE_PLUGIN_DATA}'),
@@ -78,18 +82,18 @@ class ProtocolTests(unittest.TestCase):
                     skills, mcp = files[Path('cordis-bundle') / patch_file][0]['insert']
                     self.assertEqual(skills['name'], '@deepseek-ai/dsh-skill-filesystem')
                     self.assertFalse(skills['config']['includeDefaultRoots'])
-                    self.assertEqual(skills['config']['customSkillDirs'], [str(home / 'Genshin-UGC/skills')])
+                    self.assertEqual(skills['config']['customSkillDirs'], [str(home / 'miliastra-wonderland/skills')])
                     self.assertEqual(mcp['name'], '@deepseek-ai/dsh-mcp-client')
-                    self.assertEqual(mcp['config']['args'], [str(home / 'Genshin-UGC/scripts/mcp_launcher.cjs')])
+                    self.assertEqual(mcp['config']['args'], [str(home / 'miliastra-wonderland/scripts/mcp_launcher.cjs')])
                     self.assertEqual(mcp['config']['env']['UGC_RUNTIME_CONFIG'], str(config))
                 elif agent == 'claude-code':
                     self.assertIn(Path('.claude-plugin/marketplace.json'), files)
-                    server, = files[Path('Genshin-UGC/.mcp.json')]['mcpServers'].values()
+                    server, = files[Path('miliastra-wonderland/.mcp.json')]['mcpServers'].values()
                     self.assertEqual(server['args'], ['${CLAUDE_PLUGIN_ROOT}/scripts/mcp_launcher.cjs'])
                     self.assertEqual(server['env']['UGC_RUNTIME_CONFIG'], str(config))
-                    self.assertNotIn(Path('Genshin-UGC/mcp.json'), files)
+                    self.assertNotIn(Path('miliastra-wonderland/mcp.json'), files)
                 else:
-                    data = files[Path('Genshin-UGC/mcp.json')]
+                    data = files[Path('miliastra-wonderland/mcp.json')]
                     self.assertEqual(data['$schema'], installer.MCP_SCHEMA)
                     server, = data['mcpServers'].values()
                     self.assertEqual(server['command'], 'node')
@@ -108,9 +112,9 @@ class ProtocolTests(unittest.TestCase):
                                 'scripts/mcp_launcher.cjs', 'vendor/beyond/bundle.json']
                 with zipfile.ZipFile(archive, 'w') as output:
                     for relative in requirements:
-                        output.write(ROOT / relative, 'Genshin-UGC/' + relative)
+                        output.write(ROOT / relative, 'miliastra-wonderland/' + relative)
                     for skill in (ROOT / 'skills').glob('*/SKILL.md'):
-                        output.write(skill, 'Genshin-UGC/' + skill.relative_to(ROOT).as_posix())
+                        output.write(skill, 'miliastra-wonderland/' + skill.relative_to(ROOT).as_posix())
                 project = root / 'test project'
                 project.mkdir()
                 args = argparse.Namespace(action='install', agent=agent, root=root / 'installed',
@@ -136,7 +140,7 @@ class ProtocolTests(unittest.TestCase):
                     result = installer.operate(args)
                     self.assertEqual(result['registration'], 'pending_host_registration')
                     self.assertEqual(result['agent_host_load'], 'not_checked')
-                    self.assertEqual(Path(result['plugin_directory']), home / 'Genshin-UGC')
+                    self.assertEqual(Path(result['plugin_directory']), home / 'miliastra-wonderland')
                     self.assertIn('--adapter', run.call_args.args[0])
                     self.assertFalse((home / 'installation-pending.json').exists())
                     with self.assertRaisesRegex(ValueError, 'already prepared'):

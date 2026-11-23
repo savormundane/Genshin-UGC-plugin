@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "genshin-ugc-public-local": {
+    "miliastra-wonderland": {
       "type": "stdio",
       "command": "node",
       "args": [

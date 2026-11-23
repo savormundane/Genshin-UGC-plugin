@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- 统一插件、市场和运行入口为 Miliastra Wonderland，安装标识为 `miliastra-wonderland`。保留旧运行配置和素材产物的读取支持。
+
 - 安装入口和项目链接更新为更名后的 GitHub 仓库地址。
 - Codex 和 Claude 提供终端安装命令，DeepSeek Harness 通过 GitHub 直装。
 - 精简技术参考与旧依赖文件，修正源码下载入口，自行打包时排除本地配置。

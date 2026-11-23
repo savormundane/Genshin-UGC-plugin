@@ -6,21 +6,21 @@ CLI 和插件 MCP 使用同一套本地工具。可复用已有 Python 或使用
 
 ## 复用 PowerShell 安装器配置的环境
 
-默认版本目录为 `%LOCALAPPDATA%\Genshin-UGC-Public\versions\<Agent>\<版本>`；安装时使用过 `-Root` 则以自选位置为准。
+默认版本目录为 `%LOCALAPPDATA%\Miliastra Wonderland\versions\<Agent>\<版本>`；安装时使用过 `-Root` 则以自选位置为准。
 
 | 版本目录内的路径 | 用途 |
 | --- | --- |
-| `Genshin-UGC\scripts\qianxing.py` | 统一命令行入口。 |
+| `miliastra-wonderland\scripts\qianxing.py` | 统一命令行入口。 |
 | `runtime\Scripts\python.exe` | 安装器已配置的专用 Python。 |
 | `runtime.json` | 记录 Python、项目目录和输出目录的绑定。 |
 
 下面的命令从 Codex 的安装记录读取 Python 和 CLI 路径。Claude 将 `codex.json` 改为 `claude-code.json`。使用过 `-Root` 时，将 `$ugcInstallRoot` 改为实际安装根目录。
 
 ```powershell
-$ugcInstallRoot = Join-Path $env:LOCALAPPDATA 'Genshin-UGC-Public'
+$ugcInstallRoot = Join-Path $env:LOCALAPPDATA 'Miliastra Wonderland'
 $ugcState = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $ugcInstallRoot 'codex.json') | ConvertFrom-Json
 $ugcPython = $ugcState.current.python
-$ugcCli = Join-Path $ugcState.current.home 'Genshin-UGC\scripts\qianxing.py'
+$ugcCli = Join-Path $ugcState.current.home 'miliastra-wonderland\scripts\qianxing.py'
 & $ugcPython $ugcCli --help
 ```
 

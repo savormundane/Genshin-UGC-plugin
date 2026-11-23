@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
   "mcpServers": {
-    "genshin-ugc-public-local": {
+    "miliastra-wonderland": {
       "type": "stdio",
       "command": "node",
       "args": [

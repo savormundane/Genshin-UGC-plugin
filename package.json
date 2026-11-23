@@ -1,5 +1,5 @@
 {
-  "name": "genshin-ugc-dsh",
+  "name": "miliastra-wonderland",
   "version": "1.0.0",
   "description": "Miliastra Wonderland 千星奇域社区创作工具。包含 Qianxing Editor、Qianxing Graph Code、Qianxing GIL 和 Qianxing Assets。",
   "license": "GPL-3.0-only",
@@ -13,6 +13,7 @@
   "files": [
     "cordis.patch.yml",
     "plugin.json",
+    "locale/",
     "assets/",
     "docs/",
     "references/",
@@ -31,5 +32,9 @@
     "bundle": {
       "patch": "./cordis.patch.yml"
     }
+  },
+  "exports": {
+    "./locale/en.json": "./locale/en.json",
+    "./package.json": "./package.json"
   }
 }

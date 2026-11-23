@@ -24,18 +24,18 @@
 
 ### Agent Plugins
 
-其他支持 Agent Plugins 和本地 stdio MCP 的客户端，可通过其市场入口添加 `savormundane/miliastra-wonderland-plugin`，再安装 `genshin-ugc-public`。如果客户端提供的是本地目录导入，按[从本地目录导入](#从本地目录导入)操作。
+其他支持 Agent Plugins 和本地 stdio MCP 的客户端，可通过其市场入口添加 `savormundane/miliastra-wonderland-plugin`，再安装 `miliastra-wonderland`。如果客户端提供的是本地目录导入，按[从本地目录导入](#从本地目录导入)操作。
 
 ## 运行依赖与工程目录
 
 客户端启用插件后，通过 Node 启动本地 MCP。启动器优先使用已选的 Python、当前虚拟环境、PATH 中的 Python 或兼容的旧安装。找不到具备完整依赖的环境时，由 PATH 上的 [uv](https://docs.astral.sh/uv/getting-started/installation/) 按 `uv.lock` 准备环境，必要时也由 uv 获取受支持的 Python。启动过程无需运行 PowerShell 安装器。首次缺少缓存时，uv 需要联网。
 
-- 用 `UGC_PYTHON` 指定已有 Python 的绝对路径。旧安装位于自选位置时，用 `UGC_PUBLIC_INSTALL_ROOT` 指明原安装根。也可用 `UGC_RUNTIME_CONFIG` 直接选择旧的 `runtime.json`。
+- 用 `UGC_PYTHON` 指定已有 Python 的绝对路径。旧安装位于自选位置时，用 `MILIASTRA_WONDERLAND_INSTALL_ROOT` 指明原安装根。也可用 `UGC_RUNTIME_CONFIG` 直接选择旧的 `runtime.json`。
 - 节点、API 与公开资料查询可直接使用。文件工具需要通过 `UGC_PROJECT_ROOT` 和 `UGC_OUTPUT_ROOT` 指定两个已存在且互不包含的绝对目录，分别用于读取工程和保存结果。旧的共享 `agent-plugins` 绑定可自动沿用，其他旧安装可显式选用其 `runtime.json`。修改环境变量后重启客户端。参见[切换工程](runtime-environment.md#连接-mcp-或切换工程)。
 
 ## 从 Genshin-UGC 迁移
 
-原 Genshin-UGC 自 1.0.0 起以 Miliastra Wonderland 发行。插件 ID 沿用原值。仍使用旧仓库地址时，从[首页安装入口](../README.md#安装)重新添加。如果客户端按版本数字跳过此次更新，停用旧登记后重新安装。已有 Python、工程目录、输出和配置可以继续使用。
+从[首页](../README.md#安装)登记 Miliastra Wonderland 并安装。新插件 ID 为 `miliastra-wonderland`。确认新入口可用后，在客户端移除旧插件和市场。已有 Python、工程目录和输出可以继续使用。将 `UGC_RUNTIME_CONFIG` 指向原有的 `runtime.json` 即可复用配置。
 
 - **DSH 旧安装**可按[当前直装地址](../README.md#deepseek-harness)重新登记。
 - **旧 ZIP 或 PowerShell 登记**可保留本地副本供回退。需要重新安装时，使用当前市场、直装或[自行打包](#自行打包-zip)。
@@ -53,7 +53,7 @@
 进入解压后的源码根目录，用 Python 按分发清单打包。命令把完整 Windows x64 ZIP 写到源码目录之外，并输出 SHA-256。
 
 ```powershell
-python -B scripts/package_release.py --source . --out ../Miliastra-Wonderland-1.0.0-windows-x64.zip --layout plugin --archive-root Genshin-UGC
+python -B scripts/package_release.py --source . --out ../Miliastra-Wonderland-1.0.0-windows-x64.zip --layout plugin --archive-root miliastra-wonderland
 ```
 
 可解压后[导入插件目录](#从本地目录导入)。需要用 PowerShell 登记时，从同一份源码目录传入本地包和打包命令给出的摘要。Claude 可将 `-Agent codex` 改为 `-Agent claude-code`。
@@ -83,7 +83,7 @@ python -B scripts/package_release.py --source . --out ../Miliastra-Wonderland-1.
 | 遇到的问题 | 检查方式 |
 | --- | --- |
 | 市场中找不到插件 | 核对终端命令里的 GitHub 仓库名。也可[导入本地源码目录](#从本地目录导入)。 |
-| 能看到 Skill，工具未连通 | 确认客户端能找到 `node` 和已有 Python 环境或 `uv`，并允许本地 MCP。旧环境使用过 `-Root` 时，核对 `UGC_PUBLIC_INSTALL_ROOT` 后重启客户端。 |
+| 能看到 Skill，工具未连通 | 确认客户端能找到 `node` 和已有 Python 环境或 `uv`，并允许本地 MCP。旧环境使用过 `-Root` 时，核对 `MILIASTRA_WONDERLAND_INSTALL_ROOT` 后重启客户端。 |
 | Python 依赖不匹配 | 检查 `UGC_PYTHON` 或显式绑定的旧环境。也可取消这两项，交给 uv 按锁文件准备。 |
 | 找不到 Python 或目录冲突 | 按[运行要求](compatibility.md#运行要求)检查 Python，必要时用 `-Python` 指定解释器绝对路径。确认[项目和输出目录](#运行依赖与工程目录)互不包含。 |
 | 安装中断 | 保留失败目录，用相同参数加 `-Resume` 重跑。Claude 登记后若启用中断，按错误提示核对客户端中的条目。 |

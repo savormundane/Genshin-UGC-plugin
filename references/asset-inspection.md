@@ -2,7 +2,7 @@
 
 入口：`python scripts/qianxing.py assets check INPUT`，`assets diff OLD NEW`。输入只读，输出JSON；无需游戏挂载。依赖Pillow及现有素材核心。
 
-支持单帧图像、schema 1参数形状和现有 `genshin-ugc-assets` schema 1矩形/富文本数据。检查尺寸、颜色、调色板、矩形边界与重叠、声明控件数，并给出透明/半透明像素、颜色数、控件数、文件大小和RGBA摘要。控件上限按实算控件数校验，富文本逐块核对 UTF-8 字节上限。超限诊断包含实际值、上限及超限图块索引。旧产物缺少声明时，对应检查标为 `not_checked`。
+支持单帧图像、schema 1 参数形状和 `miliastra-wonderland-assets` schema 1 矩形／富文本数据。旧素材产物继续可读。检查尺寸、颜色、调色板、矩形边界与重叠、声明控件数，并给出透明/半透明像素、颜色数、控件数、文件大小和RGBA摘要。控件上限按实算控件数校验，富文本逐块核对 UTF-8 字节上限。超限诊断包含实际值、上限及超限图块索引。旧产物缺少声明时，对应检查标为 `not_checked`。
 
 两份输入可跨支持格式比较统一RGBA摘要和统计变化；不同摘要说明像素不同，不推断美术优劣。PNG合法不代表宿主能直接加载PNG。生成与预览仍复用 `assets generate`，原生GIA导入仍使用既有已校准入口。
 

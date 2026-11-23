@@ -18,7 +18,7 @@ CAPABILITIES={
 SUPPORT={
  'knowledge':{'operations':['api_lookup','source_integrity','declared_derived_unknown','conflict_notes','versioned_document_selection'],'authority':'bundled document provenance; no inferred host success'},
  'diagnosis':{'operations':['explicit_readonly_checks','JSON_or_text_report','artifact_bound_manual_records','AST_update_cost_hints'],'performance':'risk indications, not device measurement'},
- 'asset_inspection':{'operations':['check','diff','RGBA_statistics','rectangle_reconstruction','text_cost_statistics'],'formats':['image','shape_schema1','genshin-ugc-assets_schema1'],'host_rendering':'not_checked'},
+ 'asset_inspection':{'operations':['check','diff','RGBA_statistics','rectangle_reconstruction','text_cost_statistics'],'formats':['image','shape_schema1','miliastra-wonderland-assets_schema1'],'host_rendering':'not_checked'},
  'asset_batch':{'operations':['preview','generate','weighted_shared_control_budget','produce'],'host_rendering':'not_checked'},
  'mcp':{'operations':list(OPERATIONS),'builtin_queries':list(BUILTIN_OPERATIONS),
         'transport':'local_stdio','sdk':'mcp==2.3.0','runtime_control':False,'trusted_project_sources_required':True},

@@ -259,7 +259,7 @@ def compile_spec(spec,base):
  report=inspect_bindings(data)
  if report['diagnostics']:raise ValueError('生成关联不闭合：'+repr(report['diagnostics']))
  report.update(template_indices=indices,template_aliases=aliases)
- report.update(generator='genshin-ugc-native-authoring',whole_game_template_used=False,source_sha256=sources,sha256=hashlib.sha256(data).hexdigest(),structural_generation=True,playable_level_verified=False)
+ report.update(generator='miliastra-wonderland-native-authoring',whole_game_template_used=False,source_sha256=sources,sha256=hashlib.sha256(data).hexdigest(),structural_generation=True,playable_level_verified=False)
  return data,report
 
 def create(spec_path,out):

@@ -16,7 +16,7 @@ from runtime_policy import PYTHON_RANGE, supported_python
 MANUAL_AGENTS = ('agent-plugins', 'deepseek-harness')
 AGENTS = ('codex', 'claude-code', *MANUAL_AGENTS)
 MCP_SCHEMA = 'https://agent-plugins.org/schemas/1.0.0/mcp.schema.json'
-MCP_NAME = 'genshin-ugc-public-local'
+MCP_NAME = 'miliastra-wonderland'
 
 
 def read_json(p):
@@ -75,7 +75,7 @@ def extract(archive, expected, destination, version):
         seen = set()
         for item in z.infolist():
             path = PurePosixPath(item.filename)
-            if (not path.parts or path.parts[0] != 'Genshin-UGC' or '..' in path.parts
+            if (not path.parts or path.parts[0] != 'miliastra-wonderland' or '..' in path.parts
                     or '\\' in item.filename or ':' in item.filename or path.is_absolute()
                     or (item.external_attr >> 16) & 0o170000 == 0o120000):
                 raise ValueError('Unsafe archive entry: ' + item.filename)
@@ -84,10 +84,10 @@ def extract(archive, expected, destination, version):
                 raise ValueError('Duplicate or private archive entry: ' + item.filename)
             seen.add(key)
         z.extractall(destination)
-    bundle = destination / 'Genshin-UGC'
+    bundle = destination / 'miliastra-wonderland'
     for name in ('plugin.json', '.codex-plugin/plugin.json', '.claude-plugin/plugin.json'):
         meta = read_json(bundle / name)
-        if meta['name'] != 'genshin-ugc-public' or meta['version'] != version:
+        if meta['name'] != 'miliastra-wonderland' or meta['version'] != version:
             raise ValueError('Wrong plugin identity or version')
     required_skills = {'qianxing-editor', 'qianxing-graph-code', 'qianxing-gil', 'qianxing-assets'}
     skills = {path.parent.name for path in (bundle / 'skills').glob('*/SKILL.md')}
@@ -100,26 +100,26 @@ def extract(archive, expected, destination, version):
 
 
 def marketplace_files(agent, version, node, config):
-    market = 'genshin-ugc-download-' + agent + '-' + version.replace('.', '-')
+    market = 'miliastra-wonderland-download-' + agent + '-' + version.replace('.', '-')
     server = {'type': 'stdio', 'command': 'node',
               'args': ['${PLUGIN_ROOT}/scripts/mcp_launcher.cjs'],
               'env': {'UGC_RUNTIME_CONFIG': str(config)}}
     if agent == 'deepseek-harness':
-        bundle = config.parent / 'Genshin-UGC'
+        bundle = config.parent / 'miliastra-wonderland'
         # The Cordis YAML loader accepts JSON. Using the existing serializer keeps Windows paths
         # and Unicode lossless without evaluating expressions or interpolating YAML strings.
         patch = [{'insert': [
-            {'id': 'genshin-ugc-skills', 'name': '@deepseek-ai/dsh-skill-filesystem',
-             'config': {'providerName': 'genshin-ugc-public', 'includeDefaultRoots': False,
+            {'id': 'miliastra-wonderland-skills', 'name': '@deepseek-ai/dsh-skill-filesystem',
+             'config': {'providerName': 'miliastra-wonderland', 'includeDefaultRoots': False,
                         'customSkillDirs': [str(bundle / 'skills')]}},
-            {'id': 'genshin-ugc-mcp', 'name': '@deepseek-ai/dsh-mcp-client',
-             'config': {'serverName': 'genshin_ugc', 'transport': 'stdio', 'command': node,
+            {'id': 'miliastra-wonderland-mcp', 'name': '@deepseek-ai/dsh-mcp-client',
+             'config': {'serverName': 'miliastra_wonderland', 'transport': 'stdio', 'command': node,
                         'args': [str(bundle / 'scripts/mcp_launcher.cjs')], 'env': server['env'],
                         'cwd': str(bundle), 'toolCallTimeoutMs': 930000, 'failOnStartupError': True}},
         ]}]
         return None, {
             Path('cordis-bundle/package.json'): {
-                'name': '@local/genshin-ugc-public', 'version': version, 'private': True,
+                'name': '@local/miliastra-wonderland', 'version': version, 'private': True,
                 'description': 'Miliastra Wonderland Skills and local MCP for DeepSeek Harness',
                 'engines': {'dsh': '0.2.2-rc.5'}, 'files': ['cordis.patch.yml'],
                 'dsh': {'bundle': {'patch': './cordis.patch.yml'}}},
@@ -128,17 +128,17 @@ def marketplace_files(agent, version, node, config):
     if agent == 'claude-code':
         server.update(command=node, args=['${CLAUDE_PLUGIN_ROOT}/scripts/mcp_launcher.cjs'])
         return market, {
-            Path('Genshin-UGC/.mcp.json'): {'mcpServers': {MCP_NAME: server}},
+            Path('miliastra-wonderland/.mcp.json'): {'mcpServers': {MCP_NAME: server}},
             Path('.claude-plugin/marketplace.json'): {
-                'name': market, 'owner': {'name': 'Genshin-UGC contributors'},
-                'plugins': [{'name': 'genshin-ugc-public', 'source': './Genshin-UGC'}]},
+                'name': market, 'owner': {'name': 'Miliastra Wonderland contributors'},
+                'plugins': [{'name': 'miliastra-wonderland', 'source': './miliastra-wonderland'}]},
         }
-    files = {Path('Genshin-UGC/mcp.json'): {'$schema': MCP_SCHEMA, 'mcpServers': {MCP_NAME: server}}}
+    files = {Path('miliastra-wonderland/mcp.json'): {'$schema': MCP_SCHEMA, 'mcpServers': {MCP_NAME: server}}}
     if agent == 'agent-plugins':
         return None, files
     files[Path('.agents/plugins/marketplace.json')] = {
         'name': market, 'interface': {'displayName': 'Miliastra Wonderland'},
-        'plugins': [{'name': 'genshin-ugc-public', 'source': {'source': 'local', 'path': './Genshin-UGC'},
+        'plugins': [{'name': 'miliastra-wonderland', 'source': {'source': 'local', 'path': './miliastra-wonderland'},
                      'policy': {'installation': 'AVAILABLE', 'authentication': 'ON_INSTALL'}, 'category': 'Productivity'}],
     }
     return market, files
@@ -163,7 +163,7 @@ def verify_unfinished_bundle(home, archive, binding, generated):
     """Compare all retained files with the archive or exact installer-generated configuration."""
     with tempfile.TemporaryDirectory(prefix='resume-check-', dir=home.parent) as temporary:
         extracted = extract(archive, binding['archive_sha256'], Path(temporary), binding['version'])
-        bundle = home / 'Genshin-UGC'
+        bundle = home / 'miliastra-wonderland'
         if linked(bundle) or not bundle.is_dir():
             raise ValueError('Linked or missing unfinished bundle')
         expected = {path.relative_to(extracted.parent): path for path in extracted.rglob('*') if path.is_file()}
@@ -205,7 +205,7 @@ def codex_registration(client, record):
     rows = result['installed'] + result['available']
     if not rows:
         return None
-    selector = 'genshin-ugc-public@' + marketplace
+    selector = 'miliastra-wonderland@' + marketplace
     if len(rows) != 1 or rows[0].get('pluginId') != selector:
         raise ValueError(f'Unexpected Codex registration for {marketplace}')
     row = rows[0]
@@ -216,7 +216,7 @@ def codex_registration(client, record):
     root = Path(record['home']).resolve()
     if (row.get('version') != record['version'] or source.get('source') != 'local'
             or market_source.get('sourceType') != 'local'
-            or not source_path.is_absolute() or not source_path.samefile(root / 'Genshin-UGC')
+            or not source_path.is_absolute() or not source_path.samefile(root / 'miliastra-wonderland')
             or not market_path.is_absolute() or not market_path.samefile(root)):
         raise ValueError(f'Codex registration source or version differs for {selector}')
     if row.get('installed') is not bool(result['installed']) or type(row.get('enabled')) is not bool:
@@ -225,7 +225,7 @@ def codex_registration(client, record):
 
 
 def ensure_codex_active(client, record):
-    selector = 'genshin-ugc-public@' + record['marketplace']
+    selector = 'miliastra-wonderland@' + record['marketplace']
     registration = codex_registration(client, record)
     if registration is None:
         # Codex refuses an existing name attached to another source.
@@ -265,12 +265,12 @@ def activate_codex_install(client, record, previous, state, state_path):
 def activate(client, agent, record, previous):
     install = 'add' if agent == 'codex' else 'install'
     remove = 'remove' if agent == 'codex' else 'uninstall'
-    selector = 'genshin-ugc-public@' + record['marketplace']
+    selector = 'miliastra-wonderland@' + record['marketplace']
     run([client, 'plugin', 'marketplace', 'add', record['home']])
     try:
         run([client, 'plugin', install, selector])
         if previous:
-            run([client, 'plugin', remove, 'genshin-ugc-public@' + previous['marketplace']])
+            run([client, 'plugin', remove, 'miliastra-wonderland@' + previous['marketplace']])
     except BaseException:
         # Best-effort removal of this attempted registration only. The old bundle remains available.
         subprocess.run([client, 'plugin', remove, selector], check=False)
@@ -312,7 +312,7 @@ def operate(args):
         if codex:
             retire_codex_registration(client, previous)
         else:
-            run([client, 'plugin', 'uninstall', 'genshin-ugc-public@' + previous['marketplace']])
+            run([client, 'plugin', 'uninstall', 'miliastra-wonderland@' + previous['marketplace']])
             run([client, 'plugin', 'marketplace', 'remove', previous['marketplace']])
         state['history'].append(previous)
         state['current'] = None
@@ -327,7 +327,7 @@ def operate(args):
         record = selected[-1]
         if not Path(record['home']).is_relative_to(root) or not Path(record['config']).is_file():
             raise ValueError('Retained installation is unavailable')
-        run([record['python'], '-X', 'utf8', '-B', Path(record['home']) / 'Genshin-UGC/scripts/install_smoke.py',
+        run([record['python'], '-X', 'utf8', '-B', Path(record['home']) / 'miliastra-wonderland/scripts/install_smoke.py',
              '--config', record['config'], '--node', node])
         if codex:
             ensure_codex_active(client, record)
@@ -354,7 +354,7 @@ def operate(args):
     journal = home / 'installation-pending.json'
     config = home / 'runtime.json'
     runtime = home / 'runtime'
-    bundle = home / 'Genshin-UGC'
+    bundle = home / 'miliastra-wonderland'
     python = runtime / 'Scripts/python.exe'
     market, generated = marketplace_files(args.agent, args.version, node, config)
     binding = {'schema': 1, 'version': args.version, 'archive_sha256': args.sha256.lower(),

@@ -1,11 +1,11 @@
 {
-  "name": "genshin-ugc",
+  "name": "miliastra-wonderland",
   "owner": {
-    "name": "Genshin-UGC contributors"
+    "name": "Miliastra Wonderland contributors"
   },
   "plugins": [
     {
-      "name": "genshin-ugc-public",
+      "name": "miliastra-wonderland",
       "source": "./",
       "description": "Miliastra Wonderland 千星奇域社区创作工具。包含 Qianxing Editor、Qianxing Graph Code、Qianxing GIL 和 Qianxing Assets。"
     }

@@ -32,7 +32,7 @@ def marketplace_files(root):
         raise ValueError('Codex and Claude display names differ')
     description = claude['description']
     entry = {'name': identity, 'source': './', 'description': description}
-    catalog = {'name': 'genshin-ugc', 'owner': core['author'], 'plugins': [entry]}
+    catalog = {'name': identity, 'owner': core['author'], 'plugins': [entry]}
     codex = {
         'name': catalog['name'],
         'interface': {'displayName': display_name},
@@ -44,22 +44,24 @@ def marketplace_files(root):
         }],
     }
     bundle = {
-        'name': 'genshin-ugc-dsh',
+        'name': identity,
         'version': version,
         'description': description,
         'license': core['license'],
         'repository': {'type': 'git', 'url': f'git+{GITHUB}.git'},
         'engines': {'dsh': DSH_ENGINE},
         'files': [
-            'cordis.patch.yml', 'plugin.json', 'assets/', 'docs/', 'references/',
+            'cordis.patch.yml', 'plugin.json', 'locale/', 'assets/', 'docs/', 'references/',
             'skills/', 'scripts/', 'runtime/', 'samples/', 'vendor/', 'pyproject.toml', 'uv.lock',
             'LICENSE', 'THIRD_PARTY_NOTICES.md', 'PUBLIC_SOURCES.json',
         ],
         'dsh': {'bundle': {'patch': './cordis.patch.yml'}},
+        'exports': {'./locale/en.json': './locale/en.json', './package.json': './package.json'},
     }
     claude_catalog = {**catalog, 'plugins': [{**entry, 'displayName': display_name}]}
     return {CLAUDE: json_text(claude_catalog), AGENT: json_text(catalog),
-            CODEX: json_text(codex), 'package.json': json_text(bundle)}
+            CODEX: json_text(codex), 'package.json': json_text(bundle),
+            'locale/en.json': json_text({'meta': {'title': display_name, 'description': description}})}
 
 
 def check_marketplace(root):

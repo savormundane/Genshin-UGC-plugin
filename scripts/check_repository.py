@@ -27,7 +27,7 @@ SEMVER = r"\d+\.\d+\.\d+"
 REPO = "savormundane/miliastra-wonderland-plugin"
 SOURCE_ARCHIVE = f"https://github.com/{REPO}/archive/refs/heads/main.zip"
 INSTALL_TAG = rf"https://raw\.githubusercontent\.com/{REPO}/v({SEMVER})/install\.ps1\b"
-ZIP_VERSION = rf"\bGenshin-UGC-({SEMVER})-windows-x64\.zip\b"
+ZIP_VERSION = rf"\bMiliastra-Wonderland-({SEMVER})-windows-x64\.zip\b"
 DOC_VERSIONS = {
     "README.md": {
         "current version": rf"\*\*当前版本 `({SEMVER})`\*\*",
@@ -95,6 +95,10 @@ def check(root: Path = ROOT) -> list[str]:
     elif len(set(versions.values())) != 1:
         errors.append(f"Plugin manifest versions differ: {versions}")
     version = versions.get("plugin.json")
+    identities = {path: data.get("name") for path, data in manifests.items()}
+    if any(not isinstance(name, str) or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name)
+           for name in identities.values()) or len(set(identities.values())) > 1:
+        errors.append(f"Invalid Miliastra Wonderland plugin identity: {identities}")
 
     if isinstance(version, str) and re.fullmatch(SEMVER, version):
         readme = root / "README.md"

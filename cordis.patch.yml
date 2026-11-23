@@ -1,19 +1,19 @@
 - insert:
-    - id: genshin-ugc-paths
+    - id: miliastra-wonderland-paths
       name: ./scripts/dsh-paths.mjs
-    - id: genshin-ugc-skills
+    - id: miliastra-wonderland-skills
       name: '@deepseek-ai/dsh-skill-filesystem'
-      inject: [genshinUgcPaths]
+      inject: [miliastraWonderlandPaths]
       config:
-        providerName: genshin-ugc-public
+        providerName: miliastra-wonderland
         includeDefaultRoots: false
-        customSkillDirs: !!js '[ctx.genshinUgcPaths.skills]'
-    - id: genshin-ugc-mcp
+        customSkillDirs: !!js '[ctx.miliastraWonderlandPaths.skills]'
+    - id: miliastra-wonderland-mcp
       name: '@deepseek-ai/dsh-mcp-client'
-      inject: [genshinUgcPaths]
+      inject: [miliastraWonderlandPaths]
       config:
-        serverName: genshin_ugc
+        serverName: miliastra_wonderland
         transport: stdio
         command: node
-        args: !!js '[ctx.genshinUgcPaths.launcher]'
+        args: !!js '[ctx.miliastraWonderlandPaths.launcher]'
         toolCallTimeoutMs: 930000

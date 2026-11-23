@@ -71,11 +71,11 @@ lupa==2.6 ; implementation_name == 'cpython' and platform_machine == 'AMD64' and
     --hash=sha256:b74f944fe46c421e25d0f8692aef1e842192f6f7f68034201382ac440ef9ea67 \
     --hash=sha256:c735a1ce8ee60edb0fe71d665f1e6b7c55c6021f1d340eb8c865952c602cd36f \
     --hash=sha256:fc1498d1a4fc028bc521c26d0fad4ca00ed63b952e32fb95949bda76a04bad52
-    # via genshin-ugc-public
+    # via miliastra-wonderland
 mcp==2.3.0 ; implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32' \
     --hash=sha256:8b147a50441cf059dc88c684e0aeed3687f0aa0f39c6cde7b90330effd2b34d8 \
     --hash=sha256:dd0c44c089d16453e8ae31a3877a0054d7a2314caaa81f5e0541b9b1734b2377
-    # via genshin-ugc-public
+    # via miliastra-wonderland
 mcp-types==2.3.0 ; implementation_name == 'cpython' and platform_machine == 'AMD64' and sys_platform == 'win32' \
     --hash=sha256:968efdbdaedfab06adae40d378a34395f1090c5921d4be3c9cde283aaf76d91d \
     --hash=sha256:d1e46549edb35ee19a94940fcee6d1addd7e589ab7ea92dda83f5d84781fc362
@@ -95,7 +95,7 @@ pillow==12.0.0 ; implementation_name == 'cpython' and platform_machine == 'AMD64
     --hash=sha256:9fe611163f6303d1619bbcb653540a4d60f9e55e622d60a3108be0d5b441017a \
     --hash=sha256:b290fd8aa38422444d4b50d579de197557f182ef1068b75f5aa8558638b8d0a5 \
     --hash=sha256:b583dc9070312190192631373c6c8ed277254aa6e6084b74bdd0a6d3b221608e
-    # via genshin-ugc-public
+    # via miliastra-wonderland
 pycparser==3.12 ; implementation_name == 'cpython' and platform_machine == 'AMD64' and platform_python_implementation != 'PyPy' and sys_platform == 'win32' \
     --hash=sha256:a076f3f489b39b43ed13563a1dafe42447445bec2e294154ec5c57fcdda4c85e \
     --hash=sha256:f03387877eab82ce01bbdfd0ba7252ee55a90b1c708d5129e2ce915475cf1db6

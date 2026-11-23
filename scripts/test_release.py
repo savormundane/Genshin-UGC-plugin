@@ -37,7 +37,7 @@ class ReleaseTests(unittest.TestCase):
         self.git("config", "user.email", "release@example.invalid")
         for name in REQUIRED_FILES:
             self.write(name, "Fixture\n")
-        asset = f"Genshin-UGC-{version}-windows-x64.zip"
+        asset = f"Miliastra-Wonderland-{version}-windows-x64.zip"
         install = f"https://raw.githubusercontent.com/{REPO}/v{version}/install.ps1"
         releases = f"https://github.com/{REPO}/releases"
         self.write("README.md", f"**当前版本 `{version}`**\n[ZIP]({releases}/download/v{version}/{asset})\n"
@@ -77,11 +77,11 @@ class ReleaseTests(unittest.TestCase):
                 self.assertEqual({p.name for p in first.iterdir()}, {filename, "release-notes.md", "release-review.json"})
                 with zipfile.ZipFile(first / filename) as archive:
                     names = archive.namelist()
-                    self.assertIn("Genshin-UGC/vendor/beyond/node_modules/fixture/index.js", names)
-                    self.assertIn("Genshin-UGC/runtime/fixture.bin", names)
-                    self.assertIn("Genshin-UGC/references/中文 文件.txt", names)
+                    self.assertIn("miliastra-wonderland/vendor/beyond/node_modules/fixture/index.js", names)
+                    self.assertIn("miliastra-wonderland/runtime/fixture.bin", names)
+                    self.assertIn("miliastra-wonderland/references/中文 文件.txt", names)
                     self.assertFalse(any("/.git/" in n or "/.venv/" in n for n in names))
-                    self.assertEqual(archive.read("Genshin-UGC/install.ps1"), (self.root / "install.ps1").read_bytes())
+                    self.assertEqual(archive.read("miliastra-wonderland/install.ps1"), (self.root / "install.ps1").read_bytes())
                 with self.assertRaisesRegex(ValueError, "new directory"):
                     prepare(self.root, first, self.notes)
 
@@ -142,7 +142,7 @@ class ReleaseTests(unittest.TestCase):
             ("README.md", readme, "download/v1.2.3", "download/v1.2.2", "download tag"),
             ("docs/installation.md", install, "/tag/v1.2.3", "/tag/v1.2.2", "release tag"),
             ("docs/installation.md", install, "/v1.2.3/install.ps1", "/v1.2.2/install.ps1", "install command tag"),
-            ("docs/installation.md", install, "Genshin-UGC-1.2.3-", "Genshin-UGC-1.2.2-", "ZIP filename"),
+            ("docs/installation.md", install, "Miliastra-Wonderland-1.2.3-", "Miliastra-Wonderland-1.2.2-", "ZIP filename"),
         ):
             with self.subTest(file=file, label=label):
                 self.write(file, text.replace(old, new))

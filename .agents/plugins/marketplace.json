@@ -1,11 +1,11 @@
 {
-  "name": "genshin-ugc",
+  "name": "miliastra-wonderland",
   "interface": {
     "displayName": "Miliastra Wonderland"
   },
   "plugins": [
     {
-      "name": "genshin-ugc-public",
+      "name": "miliastra-wonderland",
       "source": {
         "source": "local",
         "path": "./"

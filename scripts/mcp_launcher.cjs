@@ -51,15 +51,16 @@ function start() {
   delete env.PYTHONPATH;
   delete env.PYTHONHOME;
 
-  const root = env.UGC_PUBLIC_INSTALL_ROOT
-    || (env.LOCALAPPDATA && path.join(env.LOCALAPPDATA, 'Genshin-UGC-Public'));
-  if (!root || !path.isAbsolute(root)) throw new Error('Set UGC_PUBLIC_INSTALL_ROOT to an absolute path.');
+  const configuredRoot = env.MILIASTRA_WONDERLAND_INSTALL_ROOT || env.UGC_PUBLIC_INSTALL_ROOT;
+  const root = configuredRoot || (env.LOCALAPPDATA && path.join(env.LOCALAPPDATA, 'Miliastra Wonderland'));
+  if (!root || !path.isAbsolute(root)) throw new Error('Set MILIASTRA_WONDERLAND_INSTALL_ROOT to an absolute path.');
   const clientConfig = env.UGC_PLUGIN_DATA && path.isAbsolute(env.UGC_PLUGIN_DATA)
     ? path.join(env.UGC_PLUGIN_DATA, 'runtime.json') : null;
   const config = env.UGC_RUNTIME_CONFIG || (clientConfig && fs.existsSync(clientConfig) ? clientConfig : null);
   if (config && !path.isAbsolute(config)) throw new Error('UGC_RUNTIME_CONFIG must be an absolute path.');
   const explicit = config ? readBinding(config) : null;
-  const legacy = legacyBindings(root);
+  const bindingRoots = configuredRoot ? [root] : [root, path.join(env.LOCALAPPDATA, 'Genshin-UGC-Public')];
+  const legacy = bindingRoots.flatMap(legacyBindings);
   // The old agent-plugins preparation was explicitly shared across hosts.
   // Other registrations supply Python only, unless the user selects their config.
   const roots = explicit || legacy.find(({record, agent}) => agent === 'agent-plugins'

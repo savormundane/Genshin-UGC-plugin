@@ -3,7 +3,7 @@ from pathlib import Path
 import hashlib,json,tempfile,unittest,zipfile
 from check_repository import check, MANIFESTS, REPO, REQUIRED_FILES
 from package_release import build_release, validate_windows_names
-from install_public import extract,read_json
+from install_plugin import extract,read_json
 
 
 class ReleaseTests(unittest.TestCase):
@@ -35,10 +35,11 @@ class ReleaseTests(unittest.TestCase):
             for name in MANIFESTS + REQUIRED_FILES:
                 path = root/name
                 path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_text(json.dumps({'version': '1.2.3'}) if name in MANIFESTS else '# Neutral\n', encoding='utf-8')
+                manifest = {'name': 'miliastra-wonderland', 'version': '1.2.3'}
+                path.write_text(json.dumps(manifest) if name in MANIFESTS else '# Neutral\n', encoding='utf-8')
             github = f'https://github.com/{REPO}/releases'
             install = f'https://raw.githubusercontent.com/{REPO}/v1.2.3/install.ps1'
-            zip_name = 'Genshin-UGC-1.2.3-windows-x64.zip'
+            zip_name = 'Miliastra-Wonderland-1.2.3-windows-x64.zip'
             (root/'README.md').write_text(
                 f'**当前版本 `1.2.3`**\n{github}/download/v1.2.3/{zip_name}\n',
                 encoding='utf-8',
@@ -57,7 +58,7 @@ class ReleaseTests(unittest.TestCase):
         root=Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory(prefix='ugc release space ') as td:
             temp=Path(td);zip_path=temp/'plugin.zip'
-            result=build_release(root,zip_path,archive_root='Genshin-UGC')
+            result=build_release(root,zip_path,archive_root='miliastra-wonderland')
             restored=extract(zip_path,result['sha256'],temp/'extracted',read_json(root/'plugin.json')['version'])
             with zipfile.ZipFile(zip_path) as archive:
                 for entry in archive.infolist():

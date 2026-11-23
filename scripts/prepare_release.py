@@ -34,7 +34,7 @@ def prepare(source: Path, output: Path, notes: Path) -> dict:
     # Only committed inputs are exported. Ignored environments and local files
     # cannot accidentally enter the distribution through a filesystem scan.
     output.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix="ugc-release-", dir=output.parent) as temporary:
+    with tempfile.TemporaryDirectory(prefix="miliastra-release-", dir=output.parent) as temporary:
         temporary = Path(temporary)
         snapshot = temporary / "source.zip"
         subprocess.run(["git", "-C", str(source), "archive", "--format=zip",
@@ -54,7 +54,7 @@ def prepare(source: Path, output: Path, notes: Path) -> dict:
         staged = temporary / "assets"
         staged.mkdir()
         filename = f"Miliastra-Wonderland-{version}-windows-x64.zip"
-        package = build_release(tree, staged / filename, "plugin", "Genshin-UGC")
+        package = build_release(tree, staged / filename, "plugin", "miliastra-wonderland")
         assets = {filename: package["sha256"]}
         (staged / "release-notes.md").write_text(release_notes, encoding="utf-8")
         report = {"schema": 1, "version": version, "tag": "v" + version,
