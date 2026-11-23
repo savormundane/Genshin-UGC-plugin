@@ -94,7 +94,7 @@
 
 | 层次 | 阅读时机 |
 | --- | --- |
-| [一句话需求编排](one-sentence-workflow.md)、[主动实现与缺项处理](implementation-policy.md) | 把创作意图落实成设计与可执行任务时。 |
+| [平台接口与工程合同](implementation-policy.md) | 设计新接口或修改现有工程定义时。 |
 | [阶段式实施](staged-production.md)、[跨能力输入输出合同](capability-contract.md) | 任务较复杂，需要协调多个领域时。 |
 | [当前 produce 配置与交付](production-v2.md) | 需要用 schema 2 整合源码、文件和资源时；这是当前制作配置入口。 |
 | [统一 produce 及运行支持](production-core.md) | 查基础制作核心及 schema 1 兼容配置时；不另开一套制作流程。 |
@@ -112,6 +112,5 @@
 - [结构化日志诊断](log-diagnostics.md)
 - [证据等级与验收](validation.md)
 - [能力与验证结果](validation-evidence.md)
-- [可选制作案例与历史观察](production-experience.md)
 
 平台资料的路径和摘要见[来源清单](../PUBLIC_SOURCES.json)。

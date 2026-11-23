@@ -4,7 +4,15 @@ __pycache__/
 .venv/
 /runtime.json
 .env
-.env.local
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+.git-credentials
+AGENTS.override.md
+CLAUDE.local.md
+/.codex/config.toml
+/.claude/settings.local.json
 .DS_Store
 # Local dependency installs; the audited simulator bundle remains tracked.
 node_modules/

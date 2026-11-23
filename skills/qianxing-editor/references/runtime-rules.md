@@ -32,7 +32,7 @@
 
 ## 核心文档与制作经验
 
-以 [完整API](client-controls-api.md) 核对代码签名和权限，以 [官方文档](../../../references/official-index.md) 查编辑器配置。点阵工作读取 [像素指南](../../../references/pixel-import-guide.md)。聊天经验仅作 [补充排查方法](../../../references/production-experience.md)，来源冲突先读 [说明](../../../references/sources-and-conflicts.md)。不收录具体游戏内容或玩家文案。
+以 [完整API](client-controls-api.md) 核对代码签名和权限，以 [官方文档](../../../references/official-index.md) 查编辑器配置。点阵工作读取 [像素指南](../../../references/pixel-import-guide.md)。资料有冲突时查阅[来源说明](../../../references/sources-and-conflicts.md)。
 
 ## 共享参考的读取时机
 
@@ -45,13 +45,13 @@
 
 新功能需要原生事件、服务器状态或结算时，与编辑器/协议能力在同一任务内实现图和通信；本技能继续完成实际Lua调用与回包处理，不因缺少现成信号名停在占位代码。
 
-新合同设计、既有内容兼容和缺项处理按 [主动实现约定](../../../references/implementation-policy.md)。
+工程接口见[平台接口与工程合同](../../../references/implementation-policy.md)。
 
 制作与整合使用 [内部制作核心](../../../references/production-core.md)：统一API检索、协议校验、帧数据、客户端支持及受保护Lua写回；先完成当前职责的实际实现，再通过同一produce入口交付。
 
 将规则状态与控件表现分开，集中映射玩家动作；核对菜单、隐藏、切页、重开和销毁时的输入与监听恢复，按PC/手机实际条件检查可读性和命中。 具体方法见 [体验制作与游玩检查](../../../references/playability-workflow.md)。
 
-键盘与鼠标复用同一行为和禁用条件；按下/松开限制一次触发，弹窗隔离底层操作，页面及生命周期切换清理按压状态。清理OnDisable状态不证明窗口失焦已验证；平台原生退出也不能由Lua导航逻辑替代。布局所有权、键位提示和设备分支按 [制作经验](../../../references/production-experience.md) 的页面章节检查。
+键盘与鼠标复用同一行为和禁用条件；按下/松开限制一次触发，弹窗隔离底层操作，页面及生命周期切换清理按压状态。清理OnDisable状态不证明窗口失焦已验证；平台原生退出也不能由Lua导航逻辑替代。坐标由同一处布局逻辑维护，按设备核对键位提示和实际绑定。
 
 新建关卡与Lua映射/挂载使用 [原生结构生成](../../../references/native-authoring.md)，模板索引读取实际GUID；离线逻辑运行及日志定位使用 [客户端模型与自检](../../../references/client-simulation.md)。
 

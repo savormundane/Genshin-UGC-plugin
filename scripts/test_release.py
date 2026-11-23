@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 import zipfile
 
-from check_repository import check, MANIFESTS, REQUIRED_FILES, REPO
+from check_repository import check, MANIFESTS, REQUIRED_FILES, REPO, SOURCE_ARCHIVE
 from prepare_release import prepare
 from package_release import build_release
 
@@ -86,6 +86,19 @@ class ReleaseTests(unittest.TestCase):
                     prepare(self.root, first, self.notes)
 
 
+    def test_direct_package_excludes_local_settings(self):
+        self.fixture()
+        excluded = {'.codex/config.toml', '.claude/settings.local.json', 'AGENTS.override.md',
+                    'CLAUDE.local.md', '.git-credentials', '.env', 'assets/.env.production'}
+        for name in excluded | {'.env.example', 'assets/.env.sample'}:
+            self.write(name, 'Synthetic fixture')
+        output = self.base / 'direct.zip'
+        build_release(self.root, output, archive_root='Fixture')
+        with zipfile.ZipFile(output) as archive:
+            names = {name.removeprefix('Fixture/') for name in archive.namelist()}
+        self.assertFalse(names & excluded)
+        self.assertTrue({'.env.example', 'assets/.env.sample'} <= names)
+
     def test_zip_verification_failure_keeps_target_absent(self):
         self.fixture()
         output = self.base / 'failed.zip'
@@ -141,9 +154,11 @@ class ReleaseTests(unittest.TestCase):
     def test_source_release_verifies_tag_and_local_package_version(self):
         self.fixture('1.0.0')
         release = f'https://github.com/{REPO}/releases/tag/v1.0.0'
-        self.write('README.md', f'**当前版本 `1.0.0`**\n[Source]({release})\n')
-        self.write('docs/installation.md', f'[Source]({release})\n`Miliastra-Wonderland-1.0.0-windows-x64.zip`\n')
-        self.assertEqual(check(self.root), [])
+        for source in (SOURCE_ARCHIVE, release):
+            with self.subTest(source=source):
+                self.write('README.md', f'**当前版本 `1.0.0`**\n[Source]({source})\n')
+                self.write('docs/installation.md', f'[Source]({source})\n`Miliastra-Wonderland-1.0.0-windows-x64.zip`\n')
+                self.assertEqual(check(self.root), [])
         self.write('docs/installation.md', f'[Source]({release})\n`Miliastra-Wonderland-4.1.2-windows-x64.zip`\n')
         self.assertTrue(any('local ZIP filename' in error for error in check(self.root)))
 

@@ -8,4 +8,4 @@
 
 具体配置名称和参数查 [官方索引](official-index.md)。涉及导出/写回使用 [节点图制作](node-graph-workflow.md) 与 [离线工具链](ayaya-offline-toolchain.md)。
 
-新协议/图逻辑与必要文件适配由Agent按 [主动实现约定](implementation-policy.md) 设计并制作；已有配置读取兼容，缺少通用命令时补工具后继续交付。
+新增协议及已有工程定义遵循[平台接口与工程合同](implementation-policy.md)。

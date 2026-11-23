@@ -74,9 +74,13 @@ def build_release(source, output, layout='auto', archive_root=None):
         if any(p in ('.git', '.venv', '__pycache__', '.pytest_cache') for p in parts):
             continue
         relative = '/'.join(parts)
-        if relative in excluded_files or any(relative.startswith(p) for p in excluded):
+        if (relative in excluded_files or any(relative.startswith(p) for p in excluded)
+                or relative in ('.codex/config.toml', '.claude/settings.local.json')):
             continue
-        if f.is_file() and f.name not in ('AGENTS.md', '.env', '.env.local') and f.suffix not in ('.pyc','.pyo'):
+        if (f.name in ('AGENTS.md', 'AGENTS.override.md', 'CLAUDE.local.md', '.git-credentials', '.env')
+                or f.name.startswith('.env.') and f.name not in ('.env.example', '.env.sample', '.env.template')):
+            continue
+        if f.is_file() and f.suffix not in ('.pyc', '.pyo'):
             files.append(f)
     if not files:
         raise ValueError('No package files')

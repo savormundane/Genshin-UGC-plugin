@@ -15,7 +15,7 @@ scripts/gil-toolkit.mjs 是 Node.js ES 模块，也可通过可用的 Node REPL 
 
 未知节点图应先核对真实编辑器样本和对应类型定义。不要把历史用于改图的硬编码脚本直接拿来修改新存档。
 
-新协议/图逻辑与必要文件适配由Agent按 [主动实现约定](implementation-policy.md) 设计并制作；已有配置读取兼容，缺少通用命令时补工具后继续交付。
+新增协议及已有工程定义遵循[平台接口与工程合同](implementation-policy.md)。
 
 跨能力执行与交付由 [内部制作核心](production-core.md) 的统一produce入口处理；兼容命令保留，当前核心和后端边界见该工作流。
 

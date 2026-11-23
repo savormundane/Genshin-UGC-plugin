@@ -25,6 +25,7 @@ REQUIRED_FILES = (
 )
 SEMVER = r"\d+\.\d+\.\d+"
 REPO = "savormundane/miliastra-wonderland-plugin"
+SOURCE_ARCHIVE = f"https://github.com/{REPO}/archive/refs/heads/main.zip"
 INSTALL_TAG = rf"https://raw\.githubusercontent\.com/{REPO}/v({SEMVER})/install\.ps1\b"
 ZIP_VERSION = rf"\bGenshin-UGC-({SEMVER})-windows-x64\.zip\b"
 DOC_VERSIONS = {
@@ -108,6 +109,8 @@ def check(root: Path = ROOT) -> list[str]:
                 errors.append(f"{relative}: source release must use local ZIP packaging")
             for label, pattern in patterns.items():
                 found = set(re.findall(pattern, text))
+                if source_release and label == "release tag" and not found and SOURCE_ARCHIVE in text:
+                    continue
                 if found != {version}:
                     details = ", ".join(sorted(found)) if found else "missing"
                     errors.append(f"{relative}: {label} must match plugin.json ({version}); found {details}")

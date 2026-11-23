@@ -62,10 +62,12 @@ class NativeWorkflowTests(unittest.TestCase):
                 self.assertIn("objects", full["result"])
                 self.assertEqual(selected["result"]["target"]["id"], INSTANCE)
                 self.assertIn(TEMPLATE, [item["id"] for item in selected["result"]["dependencies"]])
-                ambiguous = await self.call(client, "project_inspect", {
+                missing = await self.call(client, "project_inspect", {
                     **inp, "selector": {"kind": "custom_variable", "name": "missing"},
                 }, "failed")
-                self.assertIn("Object selector must be unique", ambiguous["error"])
+                diagnostic, = missing["result"]["diagnostics"]
+                self.assertEqual(diagnostic["code"], "project.selector_missing")
+                self.assertEqual(diagnostic["candidates"], [])
                 traced = await self.call(client, "project_inspect", {
                     **inp, "selector": {"kind": "custom_variable", "name": VARIABLE}, "transitive": True,
                 })

@@ -90,4 +90,4 @@ kind支持feature/fix/ui/assets/delivery，各自缩减为适用阶段。check�
 }
 ```
 
-done步骤需要evidence列表，每项为kind（source/static/simulation/editor/host）、path和sha256；blocked步骤需要具体blocker。示例只是计划格式，不意味着已修复或已验证。与 [主动实现](implementation-policy.md)、[需求到关卡](one-sentence-workflow.md) 共同使用；底层业务不重复造轮子。
+done步骤需要evidence列表，每项为kind（source/static/simulation/editor/host）、path和sha256；blocked步骤需要具体blocker。按 [制作流程](production-workflow.md) 选择合适的工具。

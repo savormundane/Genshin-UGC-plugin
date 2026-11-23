@@ -50,7 +50,7 @@ git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
 
 ## 从本地目录导入
 
-解压 [v1.0.0 源码 Release](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/v1.0.0) 的源码归档，或检出同一标签。选择包含插件清单的源码根目录。
+解压[仓库源码](https://github.com/savormundane/miliastra-wonderland-plugin/archive/refs/heads/main.zip)，或检出 GitHub 的 `main` 分支。选择包含插件清单的源码根目录。
 
 | 客户端 | 导入入口 |
 | --- | --- |
@@ -59,7 +59,7 @@ git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
 
 ## 自行打包 ZIP
 
-进入解压后的干净标签源码根目录，用 Python 按分发清单打包。命令把完整 Windows x64 ZIP 写到源码目录之外，并输出 SHA-256。
+进入解压后的源码根目录，用 Python 按分发清单打包。命令把完整 Windows x64 ZIP 写到源码目录之外，并输出 SHA-256。
 
 ```powershell
 python -B scripts/package_release.py --source . --out ../Miliastra-Wonderland-1.0.0-windows-x64.zip --layout plugin --archive-root Genshin-UGC

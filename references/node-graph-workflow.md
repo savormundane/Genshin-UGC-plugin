@@ -81,4 +81,4 @@ max_stored_nodes 是可选的当前任务离线节点预算；不能替代编辑
 
 配套低层参数与 HTML 操作查 [离线工具链](ayaya-offline-toolchain.md)，API 和平台设置查 [官方索引](official-index.md)。
 
-实际事件、分支、循环、变量与信号连接按 [节点逻辑设计](graph-authoring.md) 实施；新协议由Agent设计，既有合同兼容按 [主动实现](implementation-policy.md)。
+实际事件、分支、循环、变量与信号连接按 [节点逻辑设计](graph-authoring.md) 实施；信号声明和兼容规则见[平台接口与工程合同](implementation-policy.md)。

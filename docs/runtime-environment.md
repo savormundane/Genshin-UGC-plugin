@@ -4,7 +4,7 @@ CLI 和插件 MCP 使用同一套本地工具。可复用已有 Python 或使用
 
 [安装指南](installation.md) · [运行要求与支持范围](compatibility.md)
 
-## 已安装插件：直接复用环境
+## 复用 PowerShell 安装器配置的环境
 
 默认版本目录为 `%LOCALAPPDATA%\Genshin-UGC-Public\versions\<Agent>\<版本>`；安装时使用过 `-Root` 则以自选位置为准。
 
@@ -13,7 +13,6 @@ CLI 和插件 MCP 使用同一套本地工具。可复用已有 Python 或使用
 | `Genshin-UGC\scripts\qianxing.py` | 统一命令行入口。 |
 | `runtime\Scripts\python.exe` | 安装器已配置的专用 Python。 |
 | `runtime.json` | 记录 Python、项目目录和输出目录的绑定。 |
-| `cordis-bundle\` | DeepSeek Harness 的导入入口，其他接入方式没有此项。 |
 
 下面的命令从 Codex 的安装记录读取 Python 和 CLI 路径。Claude 将 `codex.json` 改为 `claude-code.json`。使用过 `-Root` 时，将 `$ugcInstallRoot` 改为实际安装根目录。
 
@@ -25,7 +24,7 @@ $ugcCli = Join-Path $ugcState.current.home 'Genshin-UGC\scripts\qianxing.py'
 & $ugcPython $ugcCli --help
 ```
 
-这段命令适用于当前仍有已登记安装的 Codex / Claude Code。DeepSeek Harness 或通用插件用户，使用准备命令输出的目录，在其所属版本目录找到上表中的 Python 与 CLI 即可。无需再次安装同一套依赖。
+通过客户端市场或直装安装的用户，可从下方源码目录运行 CLI。
 
 ## 只用 CLI
 

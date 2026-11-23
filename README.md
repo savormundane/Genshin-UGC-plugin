@@ -77,11 +77,11 @@ https://raw.githubusercontent.com/savormundane/miliastra-wonderland-plugin/main/
 
 [Agent Plugins 安装说明](docs/installation.md#agent-plugins)
 
-### 源码发行
+### 源码下载
 
 **当前版本 `1.0.0`**
 
-[源码 Release](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/v1.0.0) · [自行打包 ZIP](docs/installation.md#自行打包-zip) · [版本记录](CHANGELOG.md)
+[下载源码](https://github.com/savormundane/miliastra-wonderland-plugin/archive/refs/heads/main.zip) · [自行打包 ZIP](docs/installation.md#自行打包-zip) · [版本记录](CHANGELOG.md)
 
 ## 参与项目
 

@@ -1,2 +1,0 @@
-# Official Python MCP SDK. Install explicitly in an isolated environment.
-mcp==2.3.0
