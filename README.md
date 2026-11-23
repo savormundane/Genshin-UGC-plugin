@@ -61,9 +61,6 @@ git+https://github.com/savormundane/Genshin-UGC-plugin.git#main
 
 手动安装请下载完整 ZIP，再按指南接入。指南还包含更新和回退步骤。 [下载完整 ZIP](https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v4.1.2/Genshin-UGC-4.1.2-windows-x64.zip) · [手动安装](docs/installation.md#手动接入) · [版本记录](CHANGELOG.md)
 
-> [!IMPORTANT]
-> 使用本地文件工具时，需要指定两个已存在且互不包含的目录，分别用于读取工程和保存产物。 [工程目录配置](docs/installation.md#运行依赖与工程目录)
-
 ## 参与项目
 
 - **报告问题**。请说明所用客户端、插件版本、预期结果和实际报错。有可公开的最小复现时一并附上。 [反馈问题](https://github.com/savormundane/Genshin-UGC-plugin/issues/new/choose) · [安全问题报告](SECURITY.md)
