@@ -37,10 +37,22 @@ claude plugin install genshin-ugc-public@genshin-ugc
 
 ### DeepSeek Harness
 
+#### 直接安装
+
 在 **插件 → 添加插件** 粘贴下方地址，直接安装 **Miliastra Wonderland**。
 
 ```text
 git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
+```
+
+#### 从市场安装
+
+1. 在 **Plugins → Experimental plugins** 启用 **Custom plugin indexes**。
+2. 在 **Discover → Add index source** 添加下方地址。
+3. 选择 **Miliastra Wonderland** 安装。
+
+```text
+https://raw.githubusercontent.com/savormundane/miliastra-wonderland-plugin/main/marketplace/dsh-index.json
 ```
 
 ### 其他客户端

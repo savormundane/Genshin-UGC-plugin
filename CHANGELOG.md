@@ -5,6 +5,7 @@
 ## Unreleased
 
 - 安装入口和项目链接更新为更名后的 GitHub 仓库地址。
+- DeepSeek Harness 的直装和市场安装步骤集中在首页。
 
 ## 1.0.0
 

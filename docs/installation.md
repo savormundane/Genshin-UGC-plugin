@@ -42,16 +42,6 @@ claude plugin install genshin-ugc-public@genshin-ugc
 git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
 ```
 
-#### 从市场安装
-
-1. 在 **Plugins → Experimental plugins** 启用 **Custom plugin indexes**。
-2. 在 **Discover → Add index source** 添加下方地址。
-3. 选择 **Miliastra Wonderland** 安装。
-
-```text
-https://raw.githubusercontent.com/savormundane/miliastra-wonderland-plugin/main/marketplace/dsh-index.json
-```
-
 ### Agent Plugins
 
 其他支持 Agent Plugins 和本地 stdio MCP 的客户端，可通过其市场入口添加 `savormundane/miliastra-wonderland-plugin`，再安装 `genshin-ugc-public`。如果客户端提供的是本地目录导入，按[从本地目录导入](#从本地目录导入)操作。
@@ -65,7 +55,7 @@ https://raw.githubusercontent.com/savormundane/miliastra-wonderland-plugin/main/
 
 ## 从 Genshin-UGC 迁移
 
-原 Genshin-UGC 自 1.0.0 起以 Miliastra Wonderland 发行。仓库地址和插件 ID 沿用原值。4.x 用户刷新原市场或重载直装入口。如果客户端按版本数字跳过此次更新，停用旧登记，再通过原市场或直装地址安装。已有 Python、工程目录、输出和配置可以继续使用。
+原 Genshin-UGC 自 1.0.0 起以 Miliastra Wonderland 发行。插件 ID 沿用原值。仍使用旧仓库地址时，从[首页安装入口](../README.md#安装)重新添加。如果客户端按版本数字跳过此次更新，停用旧登记后重新安装。已有 Python、工程目录、输出和配置可以继续使用。
 
 - **DSH 旧直装**若包含 `&path:/marketplace/genshin-ugc`，按[当前直装地址](#直接安装)重新登记。原市场索引 URL 可继续使用。
 - **旧 ZIP 或 PowerShell 登记**可保留本地副本供回退。需要重新安装时，使用当前市场、直装或[自行打包](#自行打包-zip)。
