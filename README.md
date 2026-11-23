@@ -17,7 +17,7 @@ Genshin-UGC 是面向《原神》千星奇域创作者的非官方社区插件�
 
 ### 运行要求
 
-从当前仓库通过市场、DSH 直装或目录导入时，完整工具支持 **Windows x64**。本地 MCP 需要 **Node.js 22+**，DeepSeek Harness 接入使用 **Node.js 24.9+**。启动器优先复用装好依赖的 **CPython 3.11–3.14** 环境，找不到时由 PATH 上的 `uv` 按锁文件准备。 [运行要求与支持范围](docs/compatibility.md#运行要求)
+完整工具支持 **Windows x64**。本地 MCP 需要 **Node.js 22+**，DeepSeek Harness 接入使用 **Node.js 24.9+**。启动器优先复用装好依赖的 **CPython 3.11–3.14** 环境，找不到时由 PATH 上的 `uv` 按锁文件准备。 [运行要求与支持范围](docs/compatibility.md#运行要求)
 
 ### Codex
 
