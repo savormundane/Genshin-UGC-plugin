@@ -21,6 +21,18 @@ Miliastra Wonderland 是面向原神「千星奇域」创作者的非官方 AI �
 
 ### Codex
 
+**桌面端**
+
+打开 **插件（Plugins）→ 添加（Add）→ 添加市场（Add a marketplace）**，在 **来源（Source）** 粘贴下方地址。Git ref 和 Sparse paths 留空。
+
+```text
+savormundane/miliastra-wonderland-plugin
+```
+
+添加市场后，选中 **Miliastra Wonderland** 并点击安装。
+
+**终端**
+
 ```text
 codex plugin marketplace add savormundane/miliastra-wonderland-plugin
 codex plugin add genshin-ugc-public@genshin-ugc
@@ -28,7 +40,17 @@ codex plugin add genshin-ugc-public@genshin-ugc
 
 ### Claude
 
-有 `claude` 命令时可直接在终端安装，也可在 [Claude 插件界面](docs/installation.md#claude)添加同一个市场。
+**桌面端**
+
+打开 **自定义（Customize）→ 插件（Plugins）→ 添加（Add）→ 添加市场（Add marketplace）**，选择 **从仓库添加（Add from a repository）**，粘贴下方地址。
+
+```text
+https://github.com/savormundane/miliastra-wonderland-plugin
+```
+
+同步后，选中 **Miliastra Wonderland** 并点击安装。
+
+**终端**
 
 ```text
 claude plugin marketplace add savormundane/miliastra-wonderland-plugin

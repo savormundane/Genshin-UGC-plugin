@@ -10,23 +10,11 @@
 
 ### Codex
 
-在终端添加市场并安装插件。
-
-```text
-codex plugin marketplace add savormundane/miliastra-wonderland-plugin
-codex plugin add genshin-ugc-public@genshin-ugc
-```
-
-添加市场后，也可从 Codex 的插件列表选择 Miliastra Wonderland。
+[桌面端与终端安装](../README.md#codex)
 
 ### Claude
 
-在 **Customize → Plugins → Add → Add marketplace** 添加 `savormundane/miliastra-wonderland-plugin`，再从市场安装 Miliastra Wonderland。也可在终端添加同一个条目。
-
-```text
-claude plugin marketplace add savormundane/miliastra-wonderland-plugin
-claude plugin install genshin-ugc-public@genshin-ugc
-```
+[桌面端与终端安装](../README.md#claude)
 
 使用本地 MCP 时，选择支持本机工具的 Claude 会话。 [Claude 插件说明](https://support.claude.com/en/articles/13837440-use-plugins-in-claude)
 
