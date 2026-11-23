@@ -6,6 +6,7 @@
     "marketplace/"
   ],
   "exclude_files": [
+    "runtime.json",
     ".agents/plugins/marketplace.json",
     ".claude-plugin/marketplace.json"
   ]

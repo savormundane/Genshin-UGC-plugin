@@ -7,7 +7,8 @@
     {
       "name": "genshin-ugc-public",
       "source": "./",
-      "description": "千星奇域开发工具。包含 Qianxing Editor、Qianxing Graph Code、Qianxing GIL 和 Qianxing Assets。"
+      "description": "Miliastra Wonderland 千星奇域社区创作工具。包含 Qianxing Editor、Qianxing Graph Code、Qianxing GIL 和 Qianxing Assets。",
+      "displayName": "Miliastra Wonderland"
     }
   ]
 }

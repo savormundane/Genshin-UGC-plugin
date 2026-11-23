@@ -21,6 +21,6 @@ description: 检查、比较和安全修改千星奇域GIL/GIA容器，处理脚
 
 跨GIL迁移仅限工具明确支持的身份及引用，不直接复制带旧引用的字段，不承诺全工程ID重映射。最终文件审计覆盖新增消费者和挂载；编译回读、模型、编辑器导入和宿主运行按[验证边界](../../references/validation.md)分别报告。
 
-使用 MCP 编辑现有工程时，以 `project_inspect` 的 `selector` 精确定位对象，将 `inputs_sha256.input` 传给 `native_plan`。审阅变更后，用 `outputs_sha256["plan.json"]` 调用 `native_apply`，最后用 `native_diff` 核对允许范围。 [调用合同](../../references/local-mcp.md)
+使用 MCP 编辑现有工程时，以 `project_inspect` 的 `query` 查找对象，再用所选对象键精确定位。将 `inputs_sha256.input` 传给 `native_plan`。审阅变更后，用 `outputs_sha256["plan.json"]` 调用 `native_apply`，最后用 `native_diff` 核对允许范围。 [调用合同](../../references/local-mcp.md)
 
 已摆放物件也可按 [三维实体变换](../../references/native-entity-transform.md) 核对模型、坐标和保护范围。

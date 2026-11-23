@@ -10,9 +10,9 @@
 python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PATH_TO_OUTPUTS
 ```
 
-两个目录必须已存在且互不包含，输出目录不得与插件源码重叠。也可通过UGC_PROJECT_ROOT和UGC_OUTPUT_ROOT环境变量指定；缺失时拒绝启动。包内mcp.json通过Node启动器读取独立runtime.json中的解释器和目录绑定；直接CLI入口仍可显式传参。宿主实际加载与SDK协议调用分别验证。
+节点、API、平台文档和内置资源查询可在启动后直接使用。读取或写入工程文件时，通过上述参数或 `UGC_PROJECT_ROOT` 和 `UGC_OUTPUT_ROOT` 指定两个已存在且互不包含的目录。输出目录须在插件源码之外。包内 MCP 启动器也可读取运行绑定。`doctor.project_context` 给出目录是否有效，宿主实际加载与 SDK 协议调用分别验证。
 
-协议只走 stdout，执行日志走 stderr 或请求临时日志。当前提供二十个工具。
+协议走 stdout，执行日志走 stderr 或请求临时日志。实际工具清单由 `capabilities` 报告。
 
 | 工具 | 参数与行为 |
 | --- | --- |
@@ -25,7 +25,7 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 | graph_check | input 指向一张 Graph Code 源文件。可给 job 载入制作任务，或给 bindings 提供具名绑定。sha256、job_sha256、bindings_sha256 可选，工具返回直接输入和实际读取的项目依赖摘要 |
 | resources_lookup | version、query、mode、limit。查模型候选和原生样本中的模板 ID。可选 catalogue 和 catalogue_sha256，未给摘要时由服务计算 |
 | native_inspect / native_audit | input，可选 sha256。读取或审计指定原生文件 |
-| project_inspect | input，可选 sha256、selector、transitive、scope、summary。`scope="scene"` 查询 3D 对象和挂载，`scope="gameplay"` 查询玩法资源和类型化引用 |
+| project_inspect | input，可选 sha256、scope。用 query、kind、limit 搜索对象，用 selector、transitive 查精确目标和关系，或用 summary 查看对象数。`scope="scene"` 查询 3D，`scope="gameplay"` 查询玩法资源 |
 | client_check | input，可选 sha256、mapping、contract、contract_sha256。编译 Lua 正文，可选择单个 GIL 映射或检查 API 合同 |
 | produce | spec、sha256、output：执行已有制作链 |
 | native_diff | input、other，可选 sha256、other_sha256、allowed_top_level_fields。给出允许范围时，核对其余字段的原始字节 |

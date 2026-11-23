@@ -28,12 +28,16 @@ def marketplace_files(root):
     version, identity = core['version'], core['name']
     if not re.fullmatch(SEMVER, version):
         raise ValueError('Invalid public plugin version')
-    description = read_json(root, '.claude-plugin/plugin.json')['description']
+    display_name = read_json(root, '.codex-plugin/plugin.json')['interface']['displayName']
+    claude = read_json(root, '.claude-plugin/plugin.json')
+    if claude['displayName'] != display_name:
+        raise ValueError('Codex and Claude display names differ')
+    description = claude['description']
     entry = {'name': identity, 'source': './', 'description': description}
     catalog = {'name': 'genshin-ugc', 'owner': core['author'], 'plugins': [entry]}
     codex = {
         'name': catalog['name'],
-        'interface': {'displayName': 'Genshin-UGC'},
+        'interface': {'displayName': display_name},
         'plugins': [{
             'name': identity,
             'source': {'source': 'local', 'path': './'},
@@ -55,17 +59,18 @@ def marketplace_files(root):
         ],
         'dsh': {'bundle': {'patch': './cordis.patch.yml'}},
     }
-    return {CLAUDE: json_text(catalog), AGENT: json_text(catalog),
+    claude_catalog = {**catalog, 'plugins': [{**entry, 'displayName': display_name}]}
+    return {CLAUDE: json_text(claude_catalog), AGENT: json_text(catalog),
             CODEX: json_text(codex), 'package.json': json_text(bundle)}
 
 
-def dsh_index(bundle, commit, timestamp):
+def dsh_index(bundle, commit, timestamp, display_name):
     return {
         'format': 1,
-        'title': 'Genshin-UGC',
+        'title': display_name,
         'plugins': [{
             'name': bundle['name'],
-            'title': 'Genshin-UGC',
+            'title': display_name,
             'description': bundle['description'],
             'repository': {'url': GITHUB},
             'versions': [{
@@ -92,12 +97,11 @@ def check_marketplace(root):
     index = read_json(root, INDEX)
     pinned, = index['plugins'][0]['versions']
     bundle = read_json(root, 'package.json')
-    version, current = pinned['version'], bundle['version']
+    display_name = read_json(root, '.codex-plugin/plugin.json')['interface']['displayName']
     commit, timestamp = pinned['source']['commit'], pinned['publishTimestamp']
     if (not re.fullmatch(r'[0-9a-f]{40}', commit) or type(timestamp) is not int or timestamp <= 0
-            or not re.fullmatch(SEMVER, version)
-            or tuple(map(int, version.split('.'))) > tuple(map(int, current.split('.')))
-            or index != dsh_index({**bundle, 'version': version}, commit, timestamp)):
+            or pinned['version'] != bundle['version']
+            or index != dsh_index(bundle, commit, timestamp, display_name)):
         errors.append(f'{INDEX}: invalid DSH index or mismatched bundle identity')
     return errors
 
@@ -118,7 +122,8 @@ def main():
             for filename in bundle['files']:
                 git('cat-file', '-e', f'{commit}:{filename.rstrip("/")}')
             timestamp = int(git('show', '-s', '--format=%ct', commit))
-            (ROOT / INDEX).write_text(json_text(dsh_index(bundle, commit, timestamp)), encoding='utf-8')
+            display_name = read_json(ROOT, '.codex-plugin/plugin.json')['interface']['displayName']
+            (ROOT / INDEX).write_text(json_text(dsh_index(bundle, commit, timestamp, display_name)), encoding='utf-8')
         else:
             for relative, contents in marketplace_files(ROOT).items():
                 target = ROOT / relative

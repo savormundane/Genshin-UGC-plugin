@@ -6,6 +6,23 @@ DOMAIN_TOOLS={
     'editor':['docs','platform','project','resources','ids','ui','scene'],
     'graph':['nodes','graph','build'],'client':['client','simulate'],
     'gil':['native','level','inspect','verify'],'assets':['assets']}
+TASK_ENTRYPOINTS = {
+    'game': {'cli': ['produce JOB.json --out DIR'], 'mcp': ['produce']},
+    'editor': {'cli': ['project search INPUT QUERY', 'docs search --version VERSION QUERY'],
+               'mcp': ['project_inspect', 'docs_search']},
+    'nodes': {'cli': ['nodes QUERY', 'graph check SOURCE.py', 'build SPEC.json --out DIR'],
+              'mcp': ['nodes_lookup', 'graph_check']},
+    'lua': {'cli': ['knowledge api SYMBOL', 'client check INPUT'], 'mcp': ['api_lookup', 'client_check']},
+    'gil': {'cli': ['project search INPUT QUERY', 'native plan INPUT --spec PATCH.json --out PLAN.json',
+                    'native apply INPUT --plan PLAN.json --out EDITED.gil', 'native diff INPUT EDITED.gil'],
+            'mcp': ['project_inspect', 'native_plan', 'native_apply', 'native_diff']},
+    'assets': {'cli': ['assets preview INPUT --out DIR', 'assets batch preview SPEC.json --out DIR'],
+               'mcp': ['resources_lookup']},
+    'animation': {'cli': ['client assemble SPEC.json --out SOURCE.lua', 'simulate preview SPEC.json --out DIR'], 'mcp': ['client_check']},
+    'diagnosis': {'cli': ['diagnose SPEC.json'], 'mcp': ['diagnose']},
+    'storage': {'cli': ['storage --help', 'produce JOB.json --out DIR'], 'mcp': ['produce']},
+    'protocol': {'cli': ['produce JOB.json --out DIR', 'simulate run SCENE.json'], 'mcp': ['produce','simulate']},
+}
 # Capability IDs remain those published by capabilities.py. Empty ownership means
 # a shared tool. The client domain shares the Editor Skill.
 OWNERS={
@@ -38,7 +55,8 @@ def resolve_owner(owner):
 def describe():
     from capabilities import CAPABILITIES,SUPPORT
     if set(CAPABILITIES)!=set(OWNERS):raise ValueError('Capability ownership registration differs')
-    return {'schema':1,'domains':DOMAINS,'domain_tools':DOMAIN_TOOLS,'shared_tools':['knowledge','diagnose','logs','doctor','capabilities','produce','workflow','experiment','beyond','mcp'],
+    return {'schema':1,'domains':DOMAINS,'domain_tools':DOMAIN_TOOLS,'task_entrypoints':TASK_ENTRYPOINTS,
+            'shared_tools':['knowledge','diagnose','logs','doctor','capabilities','produce','workflow','experiment','beyond','mcp'],
             'workflows':WORKFLOWS,'legacy_owners':LEGACY_OWNERS,
             'capabilities':{key:{'domains':list(OWNERS[key]),'entry':'scripts/'+entry,'guide':'references/'+guide,
                                  'operations':SUPPORT[key].get('operations',[])}for key,(entry,guide)in CAPABILITIES.items()},

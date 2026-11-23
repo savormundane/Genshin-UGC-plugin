@@ -72,10 +72,10 @@ class ReleaseTests(unittest.TestCase):
                 for name, sha in report["assets"].items():
                     self.assertEqual(hashlib.sha256((first / name).read_bytes()).hexdigest(), sha)
                     self.assertEqual((first / name).read_bytes(), (second / name).read_bytes())
-                filename = f"Genshin-UGC-{version}-windows-x64.zip"
+                filename = f"Miliastra-Wonderland-{version}-windows-x64.zip"
                 self.assertEqual(set(report["assets"]), {filename})
                 self.assertEqual({p.name for p in first.iterdir()}, {filename, "release-notes.md", "release-review.json"})
-                with zipfile.ZipFile(first / f"Genshin-UGC-{version}-windows-x64.zip") as archive:
+                with zipfile.ZipFile(first / filename) as archive:
                     names = archive.namelist()
                     self.assertIn("Genshin-UGC/vendor/beyond/node_modules/fixture/index.js", names)
                     self.assertIn("Genshin-UGC/runtime/fixture.bin", names)
@@ -137,6 +137,15 @@ class ReleaseTests(unittest.TestCase):
                 self.write(file, text)
         self.write("docs/contributing/guide.md", "[bad](missing.md)")
         self.assertTrue(any("missing.md" in error for error in check(self.root)))
+
+    def test_source_release_verifies_tag_and_local_package_version(self):
+        self.fixture('1.0.0')
+        release = f'https://github.com/{REPO}/releases/tag/v1.0.0'
+        self.write('README.md', f'**当前版本 `1.0.0`**\n[Source]({release})\n')
+        self.write('docs/installation.md', f'[Source]({release})\n`Miliastra-Wonderland-1.0.0-windows-x64.zip`\n')
+        self.assertEqual(check(self.root), [])
+        self.write('docs/installation.md', f'[Source]({release})\n`Miliastra-Wonderland-4.1.2-windows-x64.zip`\n')
+        self.assertTrue(any('local ZIP filename' in error for error in check(self.root)))
 
     def test_dirty_input_rejected_without_output(self):
         self.fixture()

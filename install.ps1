@@ -1,7 +1,7 @@
 param(
     [ValidateSet('codex', 'claude-code', 'agent-plugins', 'deepseek-harness')][string]$Agent = 'codex',
     [ValidateSet('install', 'rollback', 'uninstall')][string]$Action = 'install',
-    [string]$Version = '4.1.2',
+    [string]$Version = '1.0.0',
     [switch]$Resume,
     [string]$Project, [string]$Outputs, [string]$Python,
     [string]$Root, [string]$Archive, [string]$Sha256
@@ -44,31 +44,16 @@ function Find-SupportedPython([string]$Executable, [string[]]$Selector = @()) {
     }
 }
 
-if ($Action -eq 'install') {
-    if (!$Project) { $Project = Read-Host 'Existing project directory' }
-    if (!$Outputs) { $Outputs = Read-Host 'Separate output directory (outside the project)' }
+if (!$Archive -or $Sha256 -notmatch '^[0-9a-fA-F]{64}$') {
+    throw 'Provide the locally built ZIP with -Archive and its SHA-256 with -Sha256. See docs/installation.md.'
 }
-# A downloaded release ZIP is checked before any packaged Python is executed.
+if ((Get-FileHash -LiteralPath $Archive -Algorithm SHA256).Hash -ne $Sha256) { throw 'Archive SHA-256 mismatch.' }
+if (!$Project) { $Project = Read-Host 'Existing project directory' }
+if (!$Outputs) { $Outputs = Read-Host 'Separate output directory (outside the project)' }
+
 $taskTemp = Join-Path ([IO.Path]::GetTempPath()) ('genshin-ugc-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $taskTemp | Out-Null
 try {
-    if (!$Archive) {
-        $base = 'https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v' + $Version
-        $filename = 'Genshin-UGC-' + $Version + '-windows-x64.zip'
-        $uri = 'https://api.github.com/repos/savormundane/Genshin-UGC-plugin/releases/tags/v' + $Version
-        $release = Invoke-RestMethod $uri -UseBasicParsing -TimeoutSec 30 -Headers @{ Accept = 'application/vnd.github+json' }
-        $asset = @($release.assets | Where-Object { $_.name -ceq $filename })
-        if ($release.tag_name -cne ('v' + $Version) -or $release.draft -ne $false -or
-            $asset.Count -ne 1 -or $asset[0].state -ne 'uploaded' -or
-            $asset[0].digest -notmatch '^sha256:([0-9a-fA-F]{64})$') {
-            throw 'The release must publish one Windows ZIP with a GitHub SHA-256 digest.'
-        }
-        $Sha256 = $asset[0].digest.Substring(7)
-        $Archive = Join-Path $taskTemp $filename
-        Invoke-WebRequest ($base + '/' + $filename) -UseBasicParsing -OutFile $Archive
-    }
-    if ($Sha256 -notmatch '^[0-9a-fA-F]{64}$') { throw 'A local ZIP requires -Sha256.' }
-    if ((Get-FileHash -LiteralPath $Archive -Algorithm SHA256).Hash -ne $Sha256) { throw 'Archive SHA-256 mismatch.' }
     # Extract only the verified bootstrap, leaving full archive validation to it.
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     $zip = [IO.Compression.ZipFile]::OpenRead((Resolve-Path -LiteralPath $Archive).Path)

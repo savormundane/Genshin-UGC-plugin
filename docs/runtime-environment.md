@@ -35,7 +35,7 @@ $ugcCli = Join-Path $ugcState.current.home 'Genshin-UGC\scripts\qianxing.py'
 uv run --locked --no-build python -B .\scripts\qianxing.py --help
 ```
 
-已发布的 4.1.2 ZIP 使用[安装器](installation.md#powershell-安装)或现有的专用 Python。
+可在源码目录运行 CLI。需要完整 Windows ZIP 时，按[自行打包](installation.md#自行打包-zip)生成。
 
 ## 连接 MCP 或切换工程
 

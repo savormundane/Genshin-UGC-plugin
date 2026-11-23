@@ -446,6 +446,31 @@ def select(report,selector):
     return matches[0]
 
 
+def search(report, query, kind=None, limit=20):
+    if not isinstance(query, str) or not query.strip():
+        raise ValueError('Project search requires a nonempty query')
+    if kind is not None and (not isinstance(kind, str) or not kind.strip()):
+        raise ValueError('Project search kind must be a nonempty string')
+    if type(limit) is not int or not 1 <= limit <= 100:
+        raise ValueError('Project search limit must be from 1 to 100')
+    needle = query.strip().casefold()
+    matches = []
+    for row in report['objects']:
+        if kind is not None and row['kind'] != kind:
+            continue
+        name = (row.get('name') or '').casefold()
+        key = row['key'].casefold()
+        exact = needle in (name, key, str(row['id']).casefold())
+        if exact or needle in name:
+            matches.append((not exact, row['key'], {field: row[field] for field in ('key', 'kind', 'id', 'name')}))
+    matches.sort(key=lambda item: item[:2])
+    return {'schema': 2, 'status': 'passed', 'index_status': report['status'],
+            'scope': report.get('scope', 'full'), 'inputs': report['inputs'],
+            'complete_reference_index': report['complete_reference_index'],
+            'total_matches': len(matches), 'truncated': len(matches) > limit,
+            'matches': [row for _, _, row in matches[:limit]]}
+
+
 def consumers(report,selector,transitive=False):
     target=select(report,selector);incoming=defaultdict(list)
     for r in report['references']:incoming[r['target']].append(r)
@@ -484,8 +509,14 @@ def inspect_summary(report):
 
 def main(argv=None):
     parser=argparse.ArgumentParser();commands=parser.add_subparsers(dest='operation',required=True)
-    for name in('inspect','check','consumers'):
+    for name in('inspect','check','consumers','search'):
         command=commands.add_parser(name);command.add_argument('input')
+        if name == 'search':
+            command.add_argument('query')
+            command.add_argument('--scope', choices=['scene','gameplay'])
+            command.add_argument('--kind')
+            command.add_argument('--limit', type=int, default=20)
+            command.add_argument('--out')
         if name in ('inspect','consumers'):
             command.add_argument('--scope',choices=['scene','gameplay'])
             command.add_argument('--summary',action='store_true')
@@ -495,7 +526,9 @@ def main(argv=None):
             command.add_argument('--kind');command.add_argument('--transitive',action='store_true')
     args=parser.parse_args(argv);result=inspect(args.input,scope=getattr(args,'scope',None))
     selector = {k:getattr(args,k) for k in ('key','kind','name','id') if getattr(args,k,None) is not None}
-    if selector:
+    if args.operation == 'search':
+        result = search(result,args.query,args.kind,args.limit)
+    elif selector:
         result=consumers(result,selector,args.transitive)
     elif getattr(args,'transitive',False):
         parser.error('--transitive requires a selector')

@@ -1,6 +1,7 @@
 """Actual execution prerequisites and source-bound capability evidence."""
-import importlib.util,importlib.metadata,json,shutil,sys,subprocess
+import importlib.util,importlib.metadata,json,os,shutil,sys,subprocess
 from authoring_io import *
+from mcp_bridge import BUILTIN_OPERATIONS,OPERATIONS,project_context
 from runtime_policy import REQUIREMENTS,supported_python
 from validation_evidence import execution_inventory,validation_dependencies,backend_inventory,case_coverage
 CAPABILITIES={
@@ -19,13 +20,13 @@ SUPPORT={
  'diagnosis':{'operations':['explicit_readonly_checks','JSON_or_text_report','artifact_bound_manual_records','AST_update_cost_hints'],'performance':'risk indications, not device measurement'},
  'asset_inspection':{'operations':['check','diff','RGBA_statistics','rectangle_reconstruction','text_cost_statistics'],'formats':['image','shape_schema1','genshin-ugc-assets_schema1'],'host_rendering':'not_checked'},
  'asset_batch':{'operations':['preview','generate','weighted_shared_control_budget','produce'],'host_rendering':'not_checked'},
- 'mcp':{'operations':['doctor','capabilities','docs_search','nodes_lookup','graph_check','resources_lookup','native_inspect','native_audit','project_inspect','client_check','produce','native_apply','native_diff','native_plan','simulate','experiment_run','experiment_compare','logs_diagnose','verify','api_lookup','diagnose'],
+ 'mcp':{'operations':list(OPERATIONS),'builtin_queries':list(BUILTIN_OPERATIONS),
         'transport':'local_stdio','sdk':'mcp==2.3.0','runtime_control':False,'trusted_project_sources_required':True},
  'scene':{'operations':['native_model_catalogue','static_gia','place_static_scene','duplicate_entities','arrange_instances','create_object_templates','instantiate_object_templates','place_model_instances',
                         'add_scene_points','add_respawn_points','add_native_movers','set_native_preset_state','add_point_light','inspect','scene_scope','set_entity_transform','whitebox_preview','export_whitebox','gil_plan_apply','produce'],
           'static_gia_target':{'version':'7.2','mode':'beyond'},'editor':'not_checked','host':'not_checked'},
  'native_changes':{'operations':['diff','plan','apply_plan','source_content_binding','expected_result_binding','protected_bytes','produce','portable'],'diff_formats':['gil','gia'],'plan_baseline':'gil','complete_semantic_diff':False,'scope':'calibrated objects/references/ports and complete top-level byte change detection'},
- 'project':{'operations':['inspect','scene_scope','check','direct_consumers','transitive_consumers','required_references','custom_variable_declarations','graph_variable_declarations_and_defaults','static_graph_variable_accesses','variable_inheritance_and_structure_references','final_production_check','portable_artifacts'],'scope':'calibrated native and client object references','complete_reference_index':False,'unindexed':['arbitrary_component_payloads','custom_variable_access_and_literal_targets','graph_variable_dynamic_access_and_overrides','implicit_graph_structure_identity','untyped_numeric_constants','dynamic_Lua_identifiers','platform_resource_catalogue']},
+ 'project':{'operations':['inspect','search','scene_scope','check','direct_consumers','transitive_consumers','required_references','custom_variable_declarations','graph_variable_declarations_and_defaults','static_graph_variable_accesses','variable_inheritance_and_structure_references','final_production_check','portable_artifacts'],'scope':'calibrated native and client object references','complete_reference_index':False,'unindexed':['arbitrary_component_payloads','custom_variable_access_and_literal_targets','graph_variable_dynamic_access_and_overrides','implicit_graph_structure_identity','untyped_numeric_constants','dynamic_Lua_identifiers','platform_resource_catalogue']},
  'platform':{'operations':['docs_search','docs_show','docs_diff','profile','configuration_check','selected_native_timer_binding','final_timer_constant_readback','set_timer_sequence','disturbance_semantics','push_collision_prerequisites','filter_semantics','camera_takeover_restore','velocity_force_distinction','declared_translation_coverage','zero_arrival_radius'],'modes':['classic','beyond'],'scope':'declared_configuration','native_artifact_verified':False},
  'native':{'operations':['inspect','audit','append_graph','replace_graph','rewire','mount_instance','mount_template','section_from','optimize_read_expression','set_custom_variable_default','set_timer_sequence','set_object_transform','set_entity_transform','set_decoration','append_decorations','add_box_trigger','set_linear_motion',
                        'place_static_scene','duplicate_entities','arrange_instances','add_scene_points','set_scene_camera','set_scene_point','set_terrain_cells','set_fixed_environment_hour','set_point_light',
@@ -47,9 +48,9 @@ SUPPORT={
 CAPABILITY_GROUPS = {
     'entrypoints': (
         'plugin.json', '.codex-plugin/plugin.json', 'mcp.json',
-        'pyproject.toml', 'uv.lock', 'scripts/runtime_policy.py',
         'scripts/qianxing.py', 'scripts/mcp_launcher.cjs', 'scripts/mcp_service.py', 'scripts/mcp_bridge.py',
         'scripts/mcp_worker.py', 'scripts/capability_index.py', 'scripts/capability-layers.json', 'scripts/capabilities.py',
+        'pyproject.toml', 'uv.lock', 'scripts/runtime_policy.py',
     ),
     'editor': (
         'scripts/platform-sources.json', 'scripts/platform_profiles.py', 'scripts/platform_rules72.py',
@@ -143,6 +144,7 @@ def doctor(compare=None):
         'vendor/ayaya/VENDORED.json', 'vendor/beyond/bundle.json',
     )
     return {'schema':2,'status':status,
+            'project_context':project_context(os.environ.get('UGC_PROJECT_ROOT'),os.environ.get('UGC_OUTPUT_ROOT')),
             'plugin':capability_snapshot(fingerprint_files,compare),
             'python':sys.version.split()[0],'python_executable':sys.executable,'python_supported':supported,'node':node,'node_version':node_version,'node_supported':node_supported,
             'dependencies':dependencies,'dependency_imports':{'status':'passed' if imports.returncode==0 else 'failed','error':imports.stderr[-1500:] if imports.returncode else None},

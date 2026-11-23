@@ -1,8 +1,8 @@
-# Genshin-UGC
+# Miliastra Wonderland
 
-Genshin-UGC 是面向《原神》千星奇域创作者的非官方社区插件，为 AI 助手提供平台资料和本地工程工具，覆盖原生 3D 场景、节点图、客户端 Lua 和界面素材。
+Miliastra Wonderland 是面向《原神》千星奇域创作者的非官方社区插件。它给 AI 助手提供带版本依据的平台资料和本地工程工具，覆盖原生 3D 场景、节点图、客户端 Lua 和界面素材。
 
-有现成关卡时，可以读取 GIL，查找实体、模板和挂载关系，审阅并另存局部修改。从创作需求开始时，可以搭建静态场景、编译节点图、编写控件脚本或生成图元，交付可继续编辑的文件。
+可以直接查询节点、API 和平台规则。有现成关卡时，可以搜索 GIL 中的实体、模板和挂载关系，审阅并另存局部修改。从创作需求开始时，可以搭建静态场景、编译节点图、编写控件脚本或生成图元，交付可继续编辑的文件。
 
 ## Skills
 
@@ -37,7 +37,7 @@ claude plugin install genshin-ugc-public@genshin-ugc
 
 ### DeepSeek Harness
 
-在 **插件 → 添加插件** 粘贴下方地址，直接安装 **Genshin-UGC**。
+在 **插件 → 添加插件** 粘贴下方地址，直接安装 **Miliastra Wonderland**。
 
 ```text
 git+https://github.com/savormundane/Genshin-UGC-plugin.git#main
@@ -49,13 +49,11 @@ git+https://github.com/savormundane/Genshin-UGC-plugin.git#main
 
 [Agent Plugins 安装说明](docs/installation.md#agent-plugins)
 
-### ZIP 安装
+### 源码发行
 
-**当前版本 `4.1.2`**（正式发行包，包含五项 Skills）
+**当前版本 `1.0.0`**
 
-下载完整 ZIP 后按指南安装，使用该版安装器需要 Python 3.11 或 3.12。首次安装依赖可能需要联网。
-
-[下载完整 ZIP](https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v4.1.2/Genshin-UGC-4.1.2-windows-x64.zip) · [手动安装](docs/installation.md#手动接入) · [版本记录](CHANGELOG.md)
+[源码 Release](https://github.com/savormundane/Genshin-UGC-plugin/releases/tag/v1.0.0) · [自行打包 ZIP](docs/installation.md#自行打包-zip) · [版本记录](CHANGELOG.md)
 
 ## 参与项目
 
@@ -69,7 +67,7 @@ git+https://github.com/savormundane/Genshin-UGC-plugin.git#main
 ## 更多文档
 
 - **技术参考**。查阅平台版本规则、节点签名、Lua API、原生文件格式与制作流程。\
-  [技术参考索引](references/README.md)
+  [技术参考索引](references/README.md) · [术语表](docs/glossary.md)
 - **终端工具**。在终端直接编译节点图、检查 GIL 或复现工具报错。\
   [在终端运行工具](docs/runtime-environment.md#只用-cli)
 - **插件开发**。查看源码入口、按改动选择本地检查。\

@@ -17,7 +17,7 @@ DELEGATED = {
     'verify': ('delivery_verify', 'Verify a delivery'),
     'docs': ('platform_profiles', 'Query platform documents'),
     'platform': ('platform_profiles', 'Check platform configuration'),
-    'project': ('project_index', 'Inspect project objects and references'),
+    'project': ('project_index', 'Search and inspect project objects and references'),
     'logs': ('log_diagnostics', 'Diagnose logs'),
     'ids': ('id_registry', 'Check registered IDs'),
     'ui': ('native_ui', 'Check or update native UI layout'),

@@ -1,7 +1,8 @@
 {
   "name": "genshin-ugc-public",
-  "version": "4.1.2",
-  "description": "千星奇域开发工具。包含 Qianxing Editor、Qianxing Graph Code、Qianxing GIL 和 Qianxing Assets。",
+  "version": "1.0.0",
+  "displayName": "Miliastra Wonderland",
+  "description": "Miliastra Wonderland 千星奇域社区创作工具。包含 Qianxing Editor、Qianxing Graph Code、Qianxing GIL 和 Qianxing Assets。",
   "author": {
     "name": "Genshin-UGC contributors"
   },

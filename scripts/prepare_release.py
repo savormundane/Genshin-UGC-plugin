@@ -53,7 +53,7 @@ def prepare(source: Path, output: Path, notes: Path) -> dict:
         version = json.loads((tree / "plugin.json").read_text(encoding="utf-8-sig"))["version"]
         staged = temporary / "assets"
         staged.mkdir()
-        filename = f"Genshin-UGC-{version}-windows-x64.zip"
+        filename = f"Miliastra-Wonderland-{version}-windows-x64.zip"
         package = build_release(tree, staged / filename, "plugin", "Genshin-UGC")
         assets = {filename: package["sha256"]}
         (staged / "release-notes.md").write_text(release_notes, encoding="utf-8")

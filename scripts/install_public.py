@@ -120,7 +120,7 @@ def marketplace_files(agent, version, node, config):
         return None, {
             Path('cordis-bundle/package.json'): {
                 'name': '@local/genshin-ugc-public', 'version': version, 'private': True,
-                'description': 'Genshin-UGC Skills and local MCP for DeepSeek Harness',
+                'description': 'Miliastra Wonderland Skills and local MCP for DeepSeek Harness',
                 'engines': {'dsh': '0.2.2-rc.5'}, 'files': ['cordis.patch.yml'],
                 'dsh': {'bundle': {'patch': './cordis.patch.yml'}}},
             Path('cordis-bundle/cordis.patch.yml'): patch,
@@ -137,7 +137,7 @@ def marketplace_files(agent, version, node, config):
     if agent == 'agent-plugins':
         return None, files
     files[Path('.agents/plugins/marketplace.json')] = {
-        'name': market, 'interface': {'displayName': 'Genshin-UGC'},
+        'name': market, 'interface': {'displayName': 'Miliastra Wonderland'},
         'plugins': [{'name': 'genshin-ugc-public', 'source': {'source': 'local', 'path': './Genshin-UGC'},
                      'policy': {'installation': 'AVAILABLE', 'authentication': 'ON_INSTALL'}, 'category': 'Productivity'}],
     }

@@ -39,6 +39,12 @@ DOC_VERSIONS = {
         "ZIP filename": ZIP_VERSION,
     },
 }
+RELEASE_TAG = rf"https://github\.com/{REPO}/releases/tag/v({SEMVER})\b"
+SOURCE_DOC_VERSIONS = {
+    "README.md": {"current version": DOC_VERSIONS["README.md"]["current version"], "release tag": RELEASE_TAG},
+    "docs/installation.md": {"release tag": RELEASE_TAG,
+                             "local ZIP filename": rf"\bMiliastra-Wonderland-({SEMVER})-windows-x64\.zip\b"},
+}
 DESTINATION = r'(<[^\n<>]+>|(?:[^()\s]|\([^()\n]*\))+)'
 LINK_RE = re.compile(r'(?<!\\)\]\(\s*' + DESTINATION + r'''(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*\)''')
 REFERENCE_RE = re.compile(r'^ {0,3}\[[^]\n]+\]:\s*' + DESTINATION, re.M)
@@ -90,11 +96,16 @@ def check(root: Path = ROOT) -> list[str]:
     version = versions.get("plugin.json")
 
     if isinstance(version, str) and re.fullmatch(SEMVER, version):
-        for relative, patterns in DOC_VERSIONS.items():
+        readme = root / "README.md"
+        source_release = readme.is_file() and not re.search(
+            DOC_VERSIONS["README.md"]["download tag"], readme.read_text(encoding="utf-8-sig"))
+        for relative, patterns in (SOURCE_DOC_VERSIONS if source_release else DOC_VERSIONS).items():
             path = root / relative
             if not path.is_file():
                 continue
             text = path.read_text(encoding="utf-8-sig")
+            if source_release and (re.search(DOC_VERSIONS["README.md"]["download tag"], text) or re.search(INSTALL_TAG, text)):
+                errors.append(f"{relative}: source release must use local ZIP packaging")
             for label, pattern in patterns.items():
                 found = set(re.findall(pattern, text))
                 if found != {version}:

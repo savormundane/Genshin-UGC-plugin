@@ -6,9 +6,12 @@ from authoring_io import DiagnosticError,PLUGIN,sha_file,read_json,write_json,re
 
 def main():
     request=read_json(sys.argv[1]);result_path=Path(sys.argv[2]);args=request['arguments'];op=request['operation']
-    roots=[Path(request[k]).resolve()for k in('project','output_root')]+[PLUGIN.resolve(),Path(sys.base_prefix).resolve()]
-    roots.extend(Path(p).resolve()for p in sys.path if p and Path(p).is_dir()and not Path(p).resolve().is_relative_to(Path(request['project'])))
     scratch=Path(request['scratch']).resolve()
+    project=Path(request['project']) if request['project'] else None
+    roots=[scratch,PLUGIN.resolve(),Path(sys.base_prefix).resolve()]
+    roots.extend(Path(request[k]).resolve() for k in ('project','output_root') if request[k])
+    roots.extend(Path(p).resolve() for p in sys.path if p and Path(p).is_dir()
+                 and (project is None or not Path(p).resolve().is_relative_to(project)))
     # A dependency boundary for trusted project builds, not an OS security sandbox.
     def boundary(event,values):
         if event not in('open','os.listdir','os.scandir'):return
@@ -53,13 +56,15 @@ def main():
         elif op in('native_inspect','native_audit','project_inspect'):
             path=Path(args['input'])
             if op=='project_inspect':
-                from project_index import build,consumers,inspect,inspect_summary
+                from project_index import build,consumers,inspect,inspect_summary,search
                 if path.suffix.lower()=='.json' or 'scope'in args:
                     result=inspect(path,scope=args.get('scope'))
                 else:
                     result=build(path.read_bytes())
                     result['inputs']={str(path):result['artifacts']['level']['sha256']}
-                if 'selector' in args:
+                if 'query' in args:
+                    result=search(result,args['query'],args.get('kind'),args.get('limit',20))
+                elif 'selector' in args:
                     result=consumers(result,args['selector'],args.get('transitive',False))
                 if args.get('summary'):result=inspect_summary(result)
             else:

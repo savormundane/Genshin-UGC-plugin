@@ -13,6 +13,8 @@
 
 使用 `plan --kind nodes|lua|gil|assets|editor` 选择直接领域；game、animation及--multiplayer旧参数保留，storage、protocol、diagnosis选择共享流程。support仅列可选协作方，不要求全部加载、运行或读取所有官方资料。节点任务进入 Qianxing Graph Code，动画运行进入 Qianxing Editor 的 Client Lua；未知故障先diagnose，按发现对象进入领域。完整制作继续复用produce。
 
+`plan.entrypoints` 与 `capabilities.architecture.task_entrypoints` 提供同一套 CLI 和 MCP 入口。查平台资料可直接使用内置查询。已有工程先按名称定位对象，随后按对象键核对关系并准备修改。交付多个关联产物时用 `produce`。
+
 诊断对象已知时使用 `plan --kind diagnosis --target-domain editor|graph|client|gil|assets`。`--task-mode ui|assets|delivery` 也可提供已有工作流线索。新调用方读取 `diagnosis.entrypoint` 与 `diagnosis.target_domain`。对象未定时运行共享 `diagnose`，根据发现的输入再选领域。为保留 schema 2，顶层 `primary` 在对象未定时仍保留历史值。
 
 旧版 schema 1 工作流照常读取，原记录不重写。旧 owner client-controls-lua 在 resolved_owners 中保留 client 技术域，并路由到 qianxing-editor。手动调用 Skill 时使用 qianxing-editor。更早的退役 Skill 名仍可解析到共享工作流。

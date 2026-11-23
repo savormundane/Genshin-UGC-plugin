@@ -4,6 +4,7 @@
 
 ```text
 python scripts/qianxing.py project inspect LEVEL.gil
+python scripts/qianxing.py project search LEVEL.gil QUERY --scope scene --kind entity --limit 20
 python scripts/qianxing.py project inspect LEVEL.gil --scope scene
 python scripts/qianxing.py project inspect LEVEL.gil --scope scene --key level/entity/1077936389
 python scripts/qianxing.py project inspect LEVEL.gil --scope gameplay --summary --out gameplay.json
@@ -28,6 +29,10 @@ inspect和check输出同一结构化报告，包含objects、references、issues
 `--summary` 返回对象数、关系数和诊断。加 `--out` 可同时写出完整报告。带选择器时返回目标、已知引用者和依赖。
 
 ## 对象身份和查询
+
+先用 `search` 按名称查找，也可传完整对象键或原生 ID。精确项排在部分名称匹配前。同名对象分别显示，`total_matches` 和 `truncated` 标明结果是否截断。用选中的 `key` 接续 `inspect` 或 `consumers`。`status` 表示查询结果，`index_status` 保留索引检查结论。
+
+MCP 对应 `project_inspect(input, query, scope, kind, limit)`。输入摘要省略时由工具记录，`inputs_sha256.input` 可传给后续 `native_plan`。
 
 对象key由文件命名空间、kind、作用域和id组成，每段使用URL百分号编码。例如level/graph/ordinary/1073741900与level/graph/composite/1073741900不同；level/template/1086324737与level/entity/1086324737也不同。脚本、控件、声明、结构体、存档模板/槽位、信号及GIA资源均保留自身命名空间。以inspect返回的完整key作为后续选择器，不按名称或数字猜选对象。
 
@@ -75,6 +80,8 @@ produce schema 2在Lua嵌入及最终原生审计之后、模拟之前自动检�
 
 project-report.json记录最终文件摘要、对象及引用，project_references阶段只有passed才允许提交。任何引用检查失败都撤销本轮暂存输出，原始输入和已有输出保持。project配置与外部参考文件进入输入依赖；portable收纳它们并在原工程目录不可用时重新执行检查。报告属于证据角色，交付正文仍按实际产物角色进行字节比较。
 
-对象身份、引用查询与修改计划可通过[公开回归](../docs/contributing/development.md#复现已有工程的修改流程)复现。
+独立检查为开发侧test_project_index.py，覆盖两种中性UI/脚本配置、两份原始GIA结构体校准、两个存档布局、动态信号、同号对象、层级与挂载故障、多文件CLI、必需关系，以及新建/已有关卡两种制作与迁移重建。editor和host始终保持not_checked，人工导入后的回读证据单独登记。
 
 [节点图变量声明与默认值](native-graph-variables.md)保留图作用域、类型和默认值摘要，并记录显式结构体消费者。静态读写消费者使用graph_variable_read/write关系，动态名称单列访问记录；动态目标、实体覆写及未显式保存的结构体身份仍列unindexed，不按形状推断迁移目标。
+
+对象身份、引用查询与修改计划可通过[公开回归](../docs/contributing/development.md#复现已有工程的修改流程)复现。

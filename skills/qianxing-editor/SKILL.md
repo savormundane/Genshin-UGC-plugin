@@ -9,7 +9,7 @@ description: 设计和检查千星奇域原生 3D 场景、实体、模板、组
 
 ## 原生工程
 
-负责平台工程与配置语义。先读取实际工程和目标平台版本／模式，通过 `qianxing.py project inspect`、`docs search/show`、`platform profile/check` 核对对象和规则。声明配置检查不等于最终GIL已落地，已校准原生绑定需最终回读。
+负责平台工程与配置语义。平台资料可直接查 `docs_search` 或 `docs search/show`。查看已有工程时，先用 `project search INPUT QUERY` 或 MCP `project_inspect` 的 `query` 找到对象键，再按范围检查引用。原生绑定用产物回读核对。
 
 | 任务 | 按需资料 |
 | --- | --- |

@@ -44,7 +44,7 @@ function legacyBindings(root) {
 
 function start() {
   if (process.platform !== 'win32' || process.arch !== 'x64') {
-    throw new Error('The complete Genshin-UGC runtime requires Windows x64.');
+    throw new Error('The complete Miliastra Wonderland runtime requires Windows x64.');
   }
   if (Number(process.versions.node.split('.')[0]) < 22) throw new Error('Node.js 22+ required.');
   const env = {...process.env, PYTHONNOUSERSITE: '1', PYTHONDONTWRITEBYTECODE: '1'};
@@ -109,7 +109,7 @@ function start() {
 }
 
 function fail(error) {
-  console.error('Genshin-UGC: ' + error.message);
+  console.error('Miliastra Wonderland: ' + error.message);
   process.exitCode = 2;
 }
 

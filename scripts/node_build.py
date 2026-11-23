@@ -21,7 +21,7 @@ def route(kind='game',interface='lua',multiplayer=False,output='gil',task_mode=N
     if kind not in ['game','nodes','lua','gil','assets','animation','editor','diagnosis','storage','protocol']:raise ValueError('Unknown task kind')
     if interface not in ['lua','html','native','none']:raise ValueError('Unknown UI implementation')
     if output not in ['gia','gil','both','source']:raise ValueError('Unknown output format')
-    from capability_index import DOMAINS,WORKFLOWS
+    from capability_index import DOMAINS,TASK_ENTRYPOINTS,WORKFLOWS
     primary=DOMAINS[{'game':'editor','nodes':'graph','lua':'client','gil':'gil','assets':'assets','animation':'client','editor':'editor','diagnosis':'editor','storage':'editor','protocol':'graph'}[kind]]
     if target_domain is not None and (kind != 'diagnosis' or target_domain not in DOMAINS):
         raise ValueError('Target domain requires a known diagnosis domain')
@@ -38,7 +38,7 @@ def route(kind='game',interface='lua',multiplayer=False,output='gil',task_mode=N
     workflow=guide(task_mode or {'gil':'delivery','assets':'assets','lua':'ui','diagnosis':'fix'}.get(kind,'feature'))
     routing = {'domain':workflow['domain'],'workflow':workflow,'primary':primary,'support':[x for x in dict.fromkeys(helpers) if x!=primary],
             'decisions':{'kind':kind,'interface':interface,'multiplayer':multiplayer,'output':output},
-            'routing_schema':2,'shared_workflows':selected_workflows,
+            'routing_schema':2,'shared_workflows':selected_workflows,'entrypoints':TASK_ENTRYPOINTS[kind],
             'loading':'Primary domain first; support lists available domains, not mandatory reads or execution.',
             'steps':['inspect_current_inputs','define_contracts_and_ownership','query_node_or_API_catalog','author_sources','strict_validate','build_requested_artifacts','readback_and_check_mounts'],
             'missing_contract_policy':'Design and implement new contracts; read and preserve existing contracts. Inspect or create verified bindings; ask only for essential unavailable inputs.',

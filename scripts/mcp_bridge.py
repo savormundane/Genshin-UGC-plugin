@@ -14,7 +14,8 @@ OPERATIONS={'doctor':(), 'capabilities':(), 'docs_search':('version','query'),'a
             'produce':('spec','sha256','output'),'native_apply':('input','sha256','plan','plan_sha256','output')}
 
 READ_FILE_OPERATIONS={
-    'native_inspect':('sha256',),'native_audit':('sha256',),'project_inspect':('sha256','selector','transitive','scope','summary'),
+    'native_inspect':('sha256',),'native_audit':('sha256',),
+    'project_inspect':('sha256','selector','transitive','scope','summary','query','kind','limit'),
     'native_diff':('sha256','other_sha256','allowed_top_level_fields'),
     'client_check':('sha256','contract','contract_sha256','mapping'),
     'graph_check':('sha256','job','job_sha256','bindings','bindings_sha256'),
@@ -22,7 +23,32 @@ READ_FILE_OPERATIONS={
 }
 OPTIONAL_FIELDS={**READ_FILE_OPERATIONS,'native_plan':('patch','spec','spec_sha256','summary'),'produce':('summary',),
                  'nodes_lookup':('query','scope','limit'),'verify':('rebuild','portable','trusted_inputs_sha256','artifacts_only')}
-UNBOUND_OPERATIONS={'doctor','capabilities','docs_search','api_lookup','nodes_lookup','resources_lookup'}
+BUILTIN_OPERATIONS = ('doctor', 'capabilities', 'docs_search', 'api_lookup', 'nodes_lookup', 'resources_lookup')
+
+
+def project_context(project, output_root):
+    context = {'project_root': str(project) if project else None,
+               'output_root': str(output_root) if output_root else None}
+    if not project and not output_root:
+        return {**context, 'status': 'unconfigured',
+                'message': 'Set UGC_PROJECT_ROOT and UGC_OUTPUT_ROOT to use tools that read or write project files.'}
+    if not project or not output_root:
+        return {**context, 'status': 'invalid', 'message': 'Both UGC_PROJECT_ROOT and UGC_OUTPUT_ROOT are required.'}
+    try:
+        project, output_root = Path(project).resolve(strict=True), Path(output_root).resolve(strict=True)
+    except (OSError, ValueError, RuntimeError) as exc:
+        return {**context, 'status': 'invalid', 'message': 'Cannot resolve project/output roots: ' + str(exc)}
+    if not project.is_dir() or not output_root.is_dir():
+        message = 'Project/output roots must be directories'
+    elif project == Path(project.anchor):
+        message = 'Project root must be a specific directory'
+    elif project.is_relative_to(output_root) or output_root.is_relative_to(project):
+        message = 'Project and output roots must be disjoint'
+    elif output_root.is_relative_to(PLUGIN) or PLUGIN.is_relative_to(output_root):
+        message = 'Output root overlaps plugin source'
+    else:
+        return {'status': 'ready', 'project_root': str(project), 'output_root': str(output_root)}
+    return {**context, 'status': 'invalid', 'message': message}
 
 async def finish_worker(process):
     """Finish cleanup before releasing the request directory."""
@@ -69,22 +95,20 @@ async def finish_worker(process):
 
 
 class Bridge:
-    def __init__(self,project,output_root):
+    def __init__(self,project=None,output_root=None):
         self.timeouts = {kind: float(os.environ.get(variable, default)) for kind, variable, default in
                          [('ordinary','UGC_MCP_TIMEOUT_SECONDS','120'),('build','UGC_MCP_BUILD_TIMEOUT_SECONDS','900')]}
         if any(not math.isfinite(value) or not 0 < value <= 3600 for value in self.timeouts.values()):
             raise ValueError('MCP timeouts must be finite seconds in (0, 3600]')
-        if not project and not output_root:
-            self.project=self.output_root=None
-            return
-        if not project or not output_root:raise ValueError('Set both UGC_PROJECT_ROOT and UGC_OUTPUT_ROOT')
-        self.project=Path(project).resolve(strict=True);self.output_root=Path(output_root).resolve(strict=True)
-        if not self.project.is_dir()or not self.output_root.is_dir():raise ValueError('Project/output roots must be directories')
-        if self.project == Path(self.project.anchor):raise ValueError('Project root must be a specific directory')
-        if self.project.is_relative_to(self.output_root)or self.output_root.is_relative_to(self.project):raise ValueError('Project and output roots must be disjoint')
-        if self.output_root.is_relative_to(PLUGIN)or PLUGIN.is_relative_to(self.output_root):raise ValueError('Output root overlaps plugin source')
+        self.context = project_context(project, output_root)
+        self.project = self.output_root = None
+        if self.context['status'] == 'ready':
+            self.project = Path(self.context['project_root'])
+            self.output_root = Path(self.context['output_root'])
 
     def path(self,value,output=False):
+        if self.project is None:
+            raise DiagnosticError('mcp.workspace_required', self.context['message'], context=self.context)
         if not isinstance(value,str)or not value:raise ValueError('Nonempty path required')
         root=self.output_root if output else self.project
         original=Path(os.path.abspath(root/value));resolved=original.resolve()
@@ -111,16 +135,12 @@ class Bridge:
         if operation not in OPERATIONS:raise ValueError('Unknown bridge operation')
         required=OPERATIONS[operation]
         schema(arguments,required+OPTIONAL_FIELDS.get(operation,()),required)
-        if self.project is None:
-            if operation not in UNBOUND_OPERATIONS or {'catalogue','catalogue_sha256'} & arguments.keys():
-                raise DiagnosticError('mcp.workspace_required',
-                                      'Set UGC_PROJECT_ROOT and UGC_OUTPUT_ROOT to use project files',phase=operation)
-            with tempfile.TemporaryDirectory(prefix='qianxing-mcp-catalogue-') as temporary:
-                root=Path(temporary);project=root/'project';outputs=root/'outputs'
-                project.mkdir();outputs.mkdir()
-                return await Bridge(project,outputs)._call(operation,arguments,progress)
         args=dict(arguments);bound={};input_hashes={}
         automatic=operation in READ_FILE_OPERATIONS
+        builtin = operation in BUILTIN_OPERATIONS and 'catalogue' not in args
+        if not builtin and self.project is None:
+            raise DiagnosticError('mcp.workspace_required', self.context['message'],
+                                  phase=operation, context=self.context)
         if 'summary' in args and type(args['summary']) is not bool:raise ValueError('summary must be a boolean')
         if operation=='native_plan':
             supplied=set(args)&{'patch','spec','spec_sha256'}
@@ -131,6 +151,11 @@ class Bridge:
         if operation=='project_inspect' and 'transitive' in args:
             if 'selector' not in args or type(args['transitive']) is not bool:
                 raise ValueError('transitive requires a selector and a boolean value')
+        if operation == 'project_inspect':
+            if 'query' in args and ('selector' in args or args.get('summary')):
+                raise ValueError('Project search cannot be combined with a selector or summary')
+            if 'query' not in args and ('limit' in args or 'kind' in args):
+                raise ValueError('Project search kind and limit require a query')
         if 'contract_sha256'in args and 'contract'not in args:raise ValueError('Contract path required')
         if 'mapping'in args and (not isinstance(args['mapping'],str) or not args['mapping']):
             raise ValueError('Nonempty Lua mapping required')
@@ -159,18 +184,20 @@ class Bridge:
         destination=self.path(args['output'],True)if 'output'in args else None
         if progress:await progress(0,3,'Inputs bound')
         # Only this request's private directory is removed on failure/cancellation.
-        with tempfile.TemporaryDirectory(prefix='qianxing-mcp-',dir=self.output_root)as temporary:
+        project, output_root = (None, None) if builtin else (self.project, self.output_root)
+        with tempfile.TemporaryDirectory(prefix='qianxing-mcp-',dir=output_root)as temporary:
             scratch=Path(temporary);request=scratch/'request.json';result_path=scratch/'result.json'
             if destination:args['output']=str(scratch/'delivery')
-            write_json(request,{'operation':operation,'arguments':args,'inputs':bound,'project':str(self.project),
-                               'output_root':str(self.output_root),'scratch':str(scratch)})
+            write_json(request,{'operation':operation,'arguments':args,'inputs':bound,
+                               'project':str(project) if project else None,
+                               'output_root':str(output_root) if output_root else None,'scratch':str(scratch)})
             process=None
             code=None
             with (scratch/'stdout.log').open('wb')as stdout,(scratch/'stderr.log').open('wb')as stderr:
                 try:
                     from portable_trust import child_environment
                     process=await asyncio.create_subprocess_exec(sys.executable,'-X','utf8','-B',str(PLUGIN/'scripts/mcp_worker.py'),
-                        str(request),str(result_path),cwd=self.project,stdout=stdout,stderr=stderr,
+                        str(request),str(result_path),cwd=project or PLUGIN,stdout=stdout,stderr=stderr,
                         env={**child_environment(),'PYTHONDONTWRITEBYTECODE':'1'},start_new_session=os.name!='nt')
                     if progress:await progress(1,3,'Core operation running')
                     code=await process.wait()
@@ -186,6 +213,8 @@ class Bridge:
                 detail=(scratch/'stderr.log').read_text(encoding='utf-8',errors='replace')[-8000:] or f'MCP worker exited with status {code}'
                 return {'schema':2,'operation':operation,'status':'failed','error':detail,'output':None}
             result=read_json(result_path)
+            if operation == 'doctor':
+                result['project_context'] = self.context
             for path,digest in bound.items():
                 actual=sha_file(path)
                 if actual!=digest:
@@ -221,8 +250,6 @@ def main(argv=None):
         command=sub.add_parser(name);command.add_argument('--project',default=os.environ.get('UGC_PROJECT_ROOT'));command.add_argument('--output-root',default=os.environ.get('UGC_OUTPUT_ROOT'))
         if name=='call':command.add_argument('request')
     args=parser.parse_args(argv)
-    if bool(args.project)!=bool(args.output_root) or args.operation=='call' and not args.project:
-        parser.error('Explicit project/output roots or UGC_PROJECT_ROOT/UGC_OUTPUT_ROOT required')
     bridge=Bridge(args.project,args.output_root)
     if args.operation=='serve':
         from mcp_service import server

@@ -12,7 +12,7 @@ from runtime_policy import REQUIREMENTS
 
 def server(bridge):
     if version('mcp')!=REQUIREMENTS['mcp']:raise ValueError('MCP service requires pinned mcp=='+REQUIREMENTS['mcp'])
-    app=MCPServer('Genshin-UGC')
+    app=MCPServer('Miliastra Wonderland')
     async def call(operation,ctx,**args):
         try:
             return await bridge.call(operation,{k:v for k,v in args.items() if v is not None},ctx.report_progress)
@@ -68,9 +68,11 @@ def server(bridge):
     @app.tool(structured_output=True)
     async def project_inspect(input:str,ctx:Context,sha256:str|None=None,
                               selector:dict[str,str|StrictInt]|None=None,transitive:bool|None=None,
-                              scope:Literal['scene','gameplay']|None=None,summary:bool=False)->dict[str,Any]:
-        """Find native objects and references. Use scene for transforms or gameplay for typed resources and consumers."""
-        return await call('project_inspect',ctx,input=input,sha256=sha256,selector=selector,transitive=transitive,scope=scope,summary=summary)
+                              scope:Literal['scene','gameplay']|None=None,summary:bool=False,
+                              query:str|None=None,kind:str|None=None,limit:StrictInt|None=None)->dict[str,Any]:
+        """Search by query for object keys or select a known object to read its references."""
+        return await call('project_inspect',ctx,input=input,sha256=sha256,selector=selector,transitive=transitive,
+                          scope=scope,summary=summary,query=query,kind=kind,limit=limit)
     @app.tool(structured_output=True)
     async def client_check(input:str,ctx:Context,sha256:str|None=None,contract:str|None=None,
                            contract_sha256:str|None=None,mapping:str|None=None)->dict[str,Any]:
