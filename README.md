@@ -23,13 +23,11 @@ Miliastra Wonderland 是面向原神「千星奇域」创作者的非官方 AI �
 
 **桌面端**
 
-打开 **插件（Plugins）→ 添加（Add）→ 添加市场（Add a marketplace）**，在 **来源（Source）** 粘贴下方地址。Git ref 和 Sparse paths 留空。
+**插件 → 添加 → 添加市场**，粘贴地址后安装 **Miliastra Wonderland**。
 
 ```text
 savormundane/miliastra-wonderland-plugin
 ```
-
-添加市场后，选中 **Miliastra Wonderland** 并点击安装。
 
 **终端**
 
@@ -42,13 +40,11 @@ codex plugin add genshin-ugc-public@genshin-ugc
 
 **桌面端**
 
-打开 **自定义（Customize）→ 插件（Plugins）→ 添加（Add）→ 添加市场（Add marketplace）**，选择 **从仓库添加（Add from a repository）**，粘贴下方地址。
+**自定义 → 插件 → 添加 → 添加市场 → 从仓库添加**，粘贴地址并同步，再安装 **Miliastra Wonderland**。
 
 ```text
 https://github.com/savormundane/miliastra-wonderland-plugin
 ```
-
-同步后，选中 **Miliastra Wonderland** 并点击安装。
 
 **终端**
 
@@ -69,9 +65,7 @@ git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
 
 #### 从市场安装
 
-1. 在 **Plugins → Experimental plugins** 启用 **Custom plugin indexes**。
-2. 在 **Discover → Add index source** 添加下方地址。
-3. 选择 **Miliastra Wonderland** 安装。
+在 **Plugins → Experimental plugins** 启用 **Custom plugin indexes**，再到 **Discover → Add index source** 粘贴地址并安装 **Miliastra Wonderland**。
 
 ```text
 https://raw.githubusercontent.com/savormundane/miliastra-wonderland-plugin/main/marketplace/dsh-index.json
