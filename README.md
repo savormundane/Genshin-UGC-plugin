@@ -17,7 +17,7 @@ Genshin-UGC 是面向《原神》千星奇域创作者的非官方社区插件�
 
 ### 运行要求
 
-完整工具支持 **Windows x64**。本地 MCP 需要 **Node.js 22+**，DeepSeek Harness 接入使用 **Node.js 24.9+**。启动器优先复用装好依赖的 **CPython 3.11–3.14** 环境，找不到时由 PATH 上的 `uv` 按锁文件准备。 [运行要求与支持范围](docs/compatibility.md#运行要求)
+从当前仓库通过市场、DSH 直装或目录导入时，完整工具支持 **Windows x64**。本地 MCP 需要 **Node.js 22+**，DeepSeek Harness 接入使用 **Node.js 24.9+**。启动器优先复用装好依赖的 **CPython 3.11–3.14** 环境，找不到时由 PATH 上的 `uv` 按锁文件准备。 [运行要求与支持范围](docs/compatibility.md#运行要求)
 
 ### Codex
 
@@ -45,7 +45,7 @@ git+https://github.com/savormundane/Genshin-UGC-plugin.git#main
 
 ### PowerShell 安装
 
-下面的命令使用正式 ZIP 为 Codex 安装插件。安装到 Claude 时，将末尾改为 `-Agent claude-code`。 [PowerShell 安装说明](docs/installation.md#powershell-安装)
+下面的命令使用 `v4.1.2` 正式 ZIP，要求 **Python 3.11 或 3.12**。默认安装到 Codex，安装到 Claude 时将末尾改为 `-Agent claude-code`。 [PowerShell 安装说明](docs/installation.md#powershell-安装)
 
 ```powershell
 & ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/savormundane/Genshin-UGC-plugin/v4.1.2/install.ps1'))) -Agent codex
@@ -55,11 +55,11 @@ git+https://github.com/savormundane/Genshin-UGC-plugin.git#main
 
 支持 Agent Plugins 和本地 MCP 的客户端，可按客户端提供的方式添加仓库市场或导入完整插件目录。 [Agent Plugins 安装说明](docs/installation.md#agent-plugins)
 
-### 下载与离线安装
+### ZIP 安装
 
-**当前版本 `4.1.2`**
+**当前版本 `4.1.2`**（正式发行包，包含五项 Skills）
 
-手动安装请下载完整 ZIP，再按指南接入。指南还包含更新和回退步骤。 [下载完整 ZIP](https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v4.1.2/Genshin-UGC-4.1.2-windows-x64.zip) · [手动安装](docs/installation.md#手动接入) · [版本记录](CHANGELOG.md)
+下载完整 ZIP 后按指南安装，使用该版安装器需要 Python 3.11 或 3.12。首次安装依赖可能需要联网。 [下载完整 ZIP](https://github.com/savormundane/Genshin-UGC-plugin/releases/download/v4.1.2/Genshin-UGC-4.1.2-windows-x64.zip) · [手动安装](docs/installation.md#手动接入) · [版本记录](CHANGELOG.md)
 
 ## 参与项目
 
@@ -77,7 +77,7 @@ git+https://github.com/savormundane/Genshin-UGC-plugin.git#main
 
 - Ayaya 为节点图工具链提供了基础，Beyond 提供离线模拟和界面预览。 [Ayaya](https://github.com/AyayaXiaowang/Ayaya_Miliastra_Editor) · [Beyond](https://github.com/1475505/miliastra-beyond-simulator)
 - 感谢奇匠学院提供官方平台资料，也感谢 Miliastra-knowledge 对资料的整理。 [奇匠学院文档索引](references/official-index.md) · [Miliastra-knowledge](https://github.com/1475505/Miliastra-knowledge)
-- 感谢 GEIMG 的图元处理资料，以及社区公开分享的千星奇域文件格式研究。 [GEIMG 资料](https://docs.lumkfs.cn/GEIMG-WIKI/Download/) · [第三方声明](THIRD_PARTY_NOTICES.md)
+- 感谢 GEIMG 的图元处理资料，以及社区公开分享的千星奇域文件格式研究。 [GEIMG Wiki](https://docs.lumkfs.cn/GEIMG-WIKI/README/) · [第三方声明](THIRD_PARTY_NOTICES.md)
 
 ## 许可证
 
