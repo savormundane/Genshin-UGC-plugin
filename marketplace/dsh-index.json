@@ -12,11 +12,11 @@
       "versions": [
         {
           "version": "1.0.0",
-          "publishTimestamp": 1795429988,
+          "publishTimestamp": 1795436237,
           "source": {
             "type": "git",
             "url": "https://github.com/savormundane/miliastra-wonderland-plugin",
-            "commit": "06e0404372758503af0c521cda5884d94aefc94b"
+            "commit": "547ebeac47743eac27ed74c7111915e16c31e982"
           },
           "engines": {
             "dsh": "0.2.2-rc.5"
