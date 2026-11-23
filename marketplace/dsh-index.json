@@ -1,22 +1,22 @@
 {
   "format": 1,
-  "title": "Genshin-UGC",
+  "title": "Miliastra Wonderland",
   "plugins": [
     {
       "name": "genshin-ugc-dsh",
-      "title": "Genshin-UGC",
-      "description": "千星奇域开发工具。包含 Qianxing Editor、Qianxing Graph Code、Qianxing GIL 和 Qianxing Assets。",
+      "title": "Miliastra Wonderland",
+      "description": "Miliastra Wonderland 千星奇域社区创作工具。包含 Qianxing Editor、Qianxing Graph Code、Qianxing GIL 和 Qianxing Assets。",
       "repository": {
         "url": "https://github.com/savormundane/Genshin-UGC-plugin"
       },
       "versions": [
         {
-          "version": "4.1.2",
-          "publishTimestamp": 1795412210,
+          "version": "1.0.0",
+          "publishTimestamp": 1795429988,
           "source": {
             "type": "git",
             "url": "https://github.com/savormundane/Genshin-UGC-plugin",
-            "commit": "dcb745610ed8332fd500058fa5fc27026bf35d88"
+            "commit": "06e0404372758503af0c521cda5884d94aefc94b"
           },
           "engines": {
             "dsh": "0.2.2-rc.5"
