@@ -96,6 +96,4 @@ https://raw.githubusercontent.com/savormundane/miliastra-wonderland-plugin/main/
 
 ## 许可证
 
-本项目自有代码采用 GPL-3.0-only。随包的第三方代码、资料和素材保留各自的权利与许可。
-
-[许可证](LICENSE) · [来源清单](PUBLIC_SOURCES.json)
+本项目自有代码采用 GPL-3.0-only。随包的第三方代码、资料和素材保留各自的权利与许可。[许可证](LICENSE) · [来源清单](PUBLIC_SOURCES.json)
