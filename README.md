@@ -1,5 +1,4 @@
 # 千星奇域开发插件
-Miliastra Wonderland Plugin
 
 Miliastra Wonderland 是面向原神「千星奇域」创作者的非官方 AI 辅助开发插件。它给 AI 助手提供带版本依据的平台资料和本地工程工具，覆盖原生 3D 场景、节点图、客户端 Lua 和界面素材。
 
