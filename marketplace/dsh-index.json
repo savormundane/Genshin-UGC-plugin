@@ -5,18 +5,18 @@
     {
       "name": "genshin-ugc-dsh",
       "title": "Genshin-UGC",
-      "description": "千星奇域 工程检查、Graph Code、Client Lua、GIL 与 Assets 开发工具",
+      "description": "千星奇域开发工具。包含 Qianxing Editor、Qianxing Graph Code、Qianxing GIL 和 Qianxing Assets。",
       "repository": {
         "url": "https://github.com/savormundane/Genshin-UGC-plugin"
       },
       "versions": [
         {
           "version": "4.1.2",
-          "publishTimestamp": 1795373591,
+          "publishTimestamp": 1795412210,
           "source": {
             "type": "git",
             "url": "https://github.com/savormundane/Genshin-UGC-plugin",
-            "commit": "bf144675e10639ef7fee7322fec65a9e4f446829"
+            "commit": "dcb745610ed8332fd500058fa5fc27026bf35d88"
           },
           "engines": {
             "dsh": "0.2.2-rc.5"
