@@ -1,6 +1,6 @@
 """Shared deterministic I/O boundaries for the schema-2 authoring tools."""
 from pathlib import Path
-import hashlib,json,os,tempfile
+import hashlib,json,os,stat,tempfile
 from contextlib import contextmanager
 
 PLUGIN=Path(__file__).resolve().parents[1]
@@ -65,21 +65,30 @@ def schema(value,allowed,required=(),version=2):
     if 'schema' in allowed and (type(value.get('schema'))!=int or value['schema']!=version):raise ValueError('Expected schema '+str(version))
 def resolve(base,path):return (Path(base)/path).resolve()
 def inventory(root, *, cache=None):
+    def fail(error):
+        raise error
+
     root=Path(root);result={}
-    for p in sorted(root.rglob('*')):
-        if p.is_symlink():raise ValueError('Linked inputs are unsupported: '+str(p))
-        if p.is_file() and '__pycache__' not in p.parts and p.suffix not in ('.pyc','.pyo'):
+    excluded = {'.git', '__pycache__'}
+    for directory, dirs, files in os.walk(root, onerror=fail):
+        dirs[:] = [name for name in dirs if name not in excluded]
+        for entry in dirs + [name for name in files if name not in excluded]:
+            p = Path(directory)/entry
+            item = p.lstat()
+            if stat.S_ISLNK(item.st_mode) or getattr(item,'st_file_attributes',0)&stat.FILE_ATTRIBUTE_REPARSE_POINT:
+                raise ValueError('Linked inputs are unsupported: '+str(p))
+            if not stat.S_ISREG(item.st_mode) or p.suffix in ('.pyc','.pyo'):
+                continue
             name = p.relative_to(root).as_posix()
             if cache is None:
                 result[name] = sha_file(p)
                 continue
-            item = p.stat()
             signature = (item.st_size, item.st_mtime_ns, item.st_ctime_ns, item.st_ino)
             previous = cache.get(name)
             digest = previous[1] if previous is not None and previous[0] == signature else sha_file(p)
             cache[name] = (signature, digest)
             result[name] = digest
-    return result
+    return dict(sorted(result.items()))
 @contextmanager
 def output_directory(out):
     out=Path(out).resolve()
