@@ -31,7 +31,7 @@
 客户端启用插件后，通过 Node 启动本地 MCP。启动器优先使用已选的 Python、当前虚拟环境、PATH 中的 Python 或兼容的旧安装。找不到具备完整依赖的环境时，由 PATH 上的 [uv](https://docs.astral.sh/uv/getting-started/installation/) 按 `uv.lock` 准备环境，必要时也由 uv 获取受支持的 Python。启动过程无需运行 PowerShell 安装器。首次缺少缓存时，uv 需要联网。
 
 - 用 `UGC_PYTHON` 指定已有 Python 的绝对路径。旧安装位于自选位置时，用 `MILIASTRA_WONDERLAND_INSTALL_ROOT` 指明原安装根。也可用 `UGC_RUNTIME_CONFIG` 直接选择旧的 `runtime.json`。
-- 节点、API 与公开资料查询可直接使用。文件工具需要通过 `UGC_PROJECT_ROOT` 和 `UGC_OUTPUT_ROOT` 指定两个已存在且互不包含的绝对目录，分别用于读取工程和保存结果。旧的共享 `agent-plugins` 绑定可自动沿用，其他旧安装可显式选用其 `runtime.json`。修改环境变量后重启客户端。参见[切换工程](runtime-environment.md#连接-mcp-或切换工程)。
+- 节点、API 与公开资料查询可直接使用。文件工具优先使用显式工程路径，其次使用客户端通过 MCP Roots 提供的会话目录。客户端未提供目录时，可沿用 `runtime.json`。只读查询只需要工程目录。写入默认按工程归档到本机插件数据目录，也可指定独立的输出目录。参见[切换工程](runtime-environment.md#连接-mcp-或切换工程)。
 
 ## 从 Genshin-UGC 迁移
 
@@ -65,6 +65,7 @@ python -B scripts/package_release.py --source . --out ../Miliastra-Wonderland-1.
 ## 回退与卸载
 
 - **市场安装和直装**通过客户端管理更新和卸载。需要更换依赖时，启动器会交给 uv。
+- **同版本重发**后，若客户端仍加载旧缓存，请从原入口卸载并重新安装。保留现有运行配置或通过 `UGC_RUNTIME_CONFIG` 指回原文件，便可继续使用原工程和解释器。
 - **PowerShell 登记的 Codex 和 Claude**可从新版安装器升级。回退或卸载可用完整 ZIP 内的命令。改用 `-Agent claude-code` 即可操作 Claude，使用过 `-Root` 的用户应传入原值。
 - **本地目录导入**通过客户端管理。升级时导入新目录，回退时重新指向保留的旧版本。
 

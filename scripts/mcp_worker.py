@@ -76,6 +76,9 @@ def main():
         elif op=='native_diff':
             from native_changes import difference
             result=difference(Path(args['input']).read_bytes(),Path(args['other']).read_bytes(),args.get('allowed_top_level_fields'))
+        elif op == 'scene_preview':
+            from scene_preview import preview
+            result = preview(args['input'], args['output'], before=args.get('before'))
         elif op=='native_plan':
             from native_changes import plan,plan_summary
             from authoring_io import output_directory,finish

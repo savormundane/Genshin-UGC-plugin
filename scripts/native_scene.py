@@ -28,6 +28,32 @@ def encode_vector(values):
     return b''.join(flt(i, value) for i, value in enumerate(values, 1) if value)
 
 
+def route_box_entry(points, center, size):
+    """Find the first crossing into the open interior of an axis-aligned box."""
+    lower = [c - width / 2 for c, width in zip(center, size)]
+    upper = [c + width / 2 for c, width in zip(center, size)]
+    if any(a >= b for a, b in zip(lower, upper)):
+        raise ValueError('Trigger bounds cannot be represented at this position')
+    for segment, (start, end) in enumerate(zip(points, points[1:]), 1):
+        if all(lo < coord < hi for lo, coord, hi in zip(lower, start, upper)):
+            continue
+        near, far = 0.0, 1.0
+        delta = [b - a for a, b in zip(start, end)]
+        for lo, hi, origin, step in zip(lower, upper, start, delta):
+            if step == 0:
+                if not lo < origin < hi:
+                    break
+                continue
+            enter, leave = sorted(((lo - origin) / step, (hi - origin) / step))
+            near, far = max(near, enter), min(far, leave)
+            if near >= far:
+                break
+        else:
+            return {'segment': segment, 'fraction': near,
+                    'position_m': [origin + near * step for origin, step in zip(start, delta)]}
+    return None
+
+
 def singular(rows, number, wire=2, default=None):
     matches = [(w, value) for field, w, value, _ in rows if field == number]
     if not matches:

@@ -1,7 +1,7 @@
 """Read-only engineering identities and calibrated dependency/consumer queries."""
 from pathlib import Path
 from collections import Counter,defaultdict,deque
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 import argparse,json
 from authoring_io import DiagnosticError,sha,read_json,schema,resolve
 from level_inventory import container,fields,vals,unique,graph_records,entity_graph_ids,graph_library_ids
@@ -10,6 +10,65 @@ from native_core import model,audit,get,ref,slot,definition_id,node_catalog
 
 
 def key(*parts):return '/'.join(quote(str(p),safe='')for p in parts)
+
+
+def write_audit_error(report, phase, message, *, code='native.audit_failed'):
+    """Describe the blocking reference with its most specific known identity."""
+    objects = defaultdict(list)
+    for row in report.get('objects', ()):
+        objects[row['key']].append(row)
+    ui_fields = {
+        'ui_parent': 'parent', 'ui_child': 'children', 'ui_template': 'template',
+        'ui_template_entry': 'template entries', 'ui_root_control': 'root control',
+        'ui_registry': 'control registry', 'script_mount': 'mounted script',
+    }
+    findings = report['issues'] + report['unresolved']
+    error = DiagnosticError(code, message, phase=phase)
+    diagnostics = []
+    for finding in findings[:24]:
+        resolution = finding.get('resolution')
+        finding_code = 'native.reference_' + resolution if resolution in ('missing', 'ambiguous', 'wrong_type') else code
+        row = {'code': finding_code, 'phase': phase,
+               'message': finding.get('error', 'Native reference or port could not be verified'), **finding}
+        source = finding.get('source') or finding.get('object') or finding.get('key')
+        if not isinstance(source, str) or '/' not in source:
+            source = key('level', 'control', finding['control']) if 'control' in finding else None
+        if source:
+            row['source_key'] = source
+            matches = objects[source]
+            if len(matches) == 1:
+                row['source_id'] = matches[0]['id']
+                if matches[0]['name']:
+                    row['source_name'] = matches[0]['name']
+        target = finding.get('target')
+        if isinstance(target, str) and '/' in target:
+            row['target_key'] = target
+            ident = unquote(target.rsplit('/', 1)[1])
+            row['target_id'] = int(ident) if ident.isascii() and ident.isdecimal() else ident
+        elif type(target) is int:
+            row['target_id'] = target
+        relation = finding.get('relation')
+        location = finding.get('location')
+        field = finding.get('field') or (location.get('field') if isinstance(location, dict) else None) or ui_fields.get(relation)
+        if field is not None:
+            row['field'] = field
+        selector = {'key': source} if source and len(objects[source]) == 1 else None
+        if relation in ui_fields or 'control' in finding:
+            row['next_step'] = {'action': 'repair_in_editor', 'field': field,
+                                'then': 'Export the repaired GIL and rerun native_plan with its new digest'}
+        else:
+            row['next_step'] = {'action': 'inspect_reference',
+                                'tool': 'project_inspect' if selector or 'graph' not in finding else 'native_audit',
+                                **({'selector': selector} if selector else {}),
+                                'then': 'Correct the reference and replan against the new input digest'}
+        diagnostics.append(row)
+    if len(findings) > len(diagnostics):
+        diagnostics.append({'code': 'native.more_findings', 'phase': phase,
+                            'message': 'Run project_inspect for the full validation report',
+                            'remaining': len(findings) - len(diagnostics)})
+    if diagnostics:
+        error.diagnostics = diagnostics
+    return error
 
 
 def build(data,namespace='level',*,include_scene=True,include_gameplay=True,validation=None):

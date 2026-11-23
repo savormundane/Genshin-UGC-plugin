@@ -184,7 +184,16 @@ def plan(data,spec,base,destination):
     if spec.get('strict_audit',True)is not True:raise ValueError('Modification plans require strict audit')
     output,applied=apply(data,spec,base)
     diff=difference(data,output,spec['allowed_top_level_fields'])
-    if diff['status']!='passed':raise ValueError('Modification plan final reference/protection check failed: '+canonical(diff))
+    if diff['status']!='passed':
+        from authoring_io import DiagnosticError
+        from project_index import write_audit_error
+
+        if not diff['protected']['unchanged']:
+            raise DiagnosticError('native.protected_bytes_changed', 'Modification plan protected bytes changed',
+                                  phase='result', allowed_top_level_fields=spec['allowed_top_level_fields'])
+        raise write_audit_error(diff['validation']['after'], 'result',
+                                'Modification plan final reference/protection check failed',
+                                code='native.result_reference_failed')
     for item in inputs.values():
         if sha_file(resolve(destination,item['source']))!=item['sha256']:raise ValueError('Plan input changed while reading')
     result={'schema':2,'kind':'native-change-plan','patch':bound,'inputs':inputs,

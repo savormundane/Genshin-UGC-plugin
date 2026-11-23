@@ -10,7 +10,7 @@
 python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PATH_TO_OUTPUTS
 ```
 
-节点、API、平台文档和内置资源查询可在启动后直接使用。读取或写入工程文件时，通过上述参数或 `UGC_PROJECT_ROOT` 和 `UGC_OUTPUT_ROOT` 指定两个已存在且互不包含的目录。输出目录须在插件源码之外。包内 MCP 启动器也可读取运行绑定。`doctor.project_context` 给出目录是否有效，宿主实际加载与 SDK 协议调用分别验证。
+节点、API、平台文档和内置资源查询可在启动后直接使用。文件工具按显式工程路径、会话 MCP Roots、`runtime.json` 的顺序选择工程。会话有多个根时，用输入绝对路径选择其中一处。输出可显式设置，也可使用插件数据目录内按工程分开的默认路径。只读请求使用独立临时目录，无需创建输出目录。`doctor` 的 `project_context` 记录目录、来源、候选及缺失项。 [工程绑定](../docs/runtime-environment.md#连接-mcp-或切换工程)
 
 协议走 stdout，执行日志走 stderr 或请求临时日志。实际工具清单由 `capabilities` 报告。
 
@@ -25,6 +25,7 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 | graph_check | input 指向一张 Graph Code 源文件。可给 job 载入制作任务，或给 bindings 提供具名绑定。sha256、job_sha256、bindings_sha256 可选，工具返回直接输入和实际读取的项目依赖摘要 |
 | resources_lookup | version、query、mode、limit。查模型候选和原生样本中的模板 ID。可选 catalogue 和 catalogue_sha256，未给摘要时由服务计算 |
 | native_inspect / native_audit | input，可选 sha256。读取或审计指定原生文件 |
+| scene_preview | input、output，可选 before、sha256、before_sha256。绘制全场布局及前后对照，输出 PNG 和 layout.json |
 | project_inspect | input，可选 sha256、scope。用 query、kind、limit 搜索对象，用 selector、transitive 查精确目标和关系，或用 summary 查看对象数。`scope="scene"` 查询 3D，`scope="gameplay"` 查询玩法资源 |
 | client_check | input，可选 sha256、mapping、contract、contract_sha256。编译 Lua 正文，可选择单个 GIL 映射或检查 API 合同 |
 | produce | spec、sha256、output：执行已有制作链 |
@@ -39,14 +40,14 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 
 input/spec/plan/contract相对工程根目录，或为工程/输出根内绝对路径。output相对输出根目录，必须是尚不存在的新目录，其父目录须存在。sha256均为对应输入文件原始字节摘要；plan_sha256参数是计划文件摘要，计划内部的语义摘要由原生核心继续核对。
 
-直接读取文件的五项工具会检查显式传入的摘要，省略时由工具计算。结果的 `inputs_sha256` 按 input、other 或 contract 返回实际读取的摘要。编辑既有 GIL 时可把 `inputs_sha256.input` 交给 `native_plan`。配置诊断、计划、实际写入和重建使用各自的必填摘要。
+带可选摘要的工具在省略时自行计算，并在 `inputs_sha256` 按参数名返回。编辑既有 GIL 时可把 `inputs_sha256.input` 交给 `native_plan`。配置诊断、修改计划、原生写入和重建继续使用各自的必填摘要。
 
 ## 审阅并另存已有工程
 
 
 
 1. 调用 `project_inspect`，例如传入 `{"input":"level.gil","selector":{"kind":"template","id":1086324737}}`。复用 `inputs_sha256.input`。追踪一个模板参数时，可选中变量的完整 `key` 并开启 `transitive`。
-2. 给 `native_plan` 传入基底的 `input`、`sha256` 和新 `output`，将包含 `base_sha256`、`allowed_top_level_fields` 和 `operations` 的 schema 2 对象作为 `patch`。内联补丁中的相对 `source` 以项目目录为准。使用 `spec` 文件时以该文件的目录为准，并提供 `spec_sha256`。
+2. 给 `native_plan` 传入基底的 `input`、`sha256` 和新 `output`，将包含 `allowed_top_level_fields` 和 `operations` 的 schema 2 对象作为 `patch`。工具会写入已验证的 `base_sha256`。若内联补丁也提供该字段，两处摘要须一致。内联 `source` 相对当前工程。文件补丁沿用自身的基底摘要和路径规则，并在调用中提供 `spec_sha256`。
 3. 审阅 `result.difference`。确认后调用 `native_apply`，使用同一基底和新输出目录。用计划 `output` 目录下的 `plan.json` 作为 `plan`，用 `outputs_sha256["plan.json"]` 作为 `plan_sha256`。
 4. `native_apply` 返回另存的 `level.gil`、实际操作和审计结果，以及 `outputs_sha256`。用 `native_diff` 的 `allowed_top_level_fields` 核对保护范围，或将 `manifest.json` 和对应摘要交给 `verify` 做静态完整性检查。计划和应用清单均记录外部来源摘要。
 
@@ -68,7 +69,7 @@ produce复用实际制作链，native_apply复用native_changes.apply_plan；不
 
 ## 取消和输出保护
 
-每次调用创建输出根下独立临时目录，以固定Python工作进程执行。输入开始/结束核对摘要，成功且通过提交前取消检查后才将产物目录改名为正式输出。已有目录不覆盖。取消时终止本次工作进程，Windows同时终止其进程树；清理仅限该请求的临时目录。成功提交为同步边界，此后到达的取消不能撤回已经提交的产物。
+每次调用在独立临时目录内用固定 Python 工作进程执行，写入任务在输出根内暂存。输入开始和结束时核对摘要，成功且通过提交前取消检查后才将产物目录改名为正式输出。已有目录不覆盖。取消时终止本次工作进程，Windows 同时终止其进程树。清理仅限该请求的临时目录。
 
 进度依次报告输入绑定、核心运行和结果检查。普通操作默认时限 120 秒，制作、应用和重建为 900 秒。可分别设置 `UGC_MCP_TIMEOUT_SECONDS` 和 `UGC_MCP_BUILD_TIMEOUT_SECONDS`，范围为大于 0 且不超过 3600 秒。
 

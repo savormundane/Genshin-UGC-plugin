@@ -42,6 +42,10 @@ class UncalibratedVariable(ValueError):
         super().__init__(f'Native variable {variable!r} on entity {entity} has no calibrated initial value: {reason}')
 
 
+class UncalibratedRoute(ValueError):
+    """The native record or graph is outside the route model's calibrated scope."""
+
+
 class NativeModel:
     def __init__(self,data,initial=None,graph_ids=None,instances=None,entity_guids=None,level_entity=None,*,
                  mounted_only=False,timer_index_base=1):
@@ -269,6 +273,62 @@ class NativeModel:
         elapsed=min(self.timers.time-motion['time'],motion['seconds'])
         return [origin+speed*elapsed for origin,speed in zip(motion['position_m'],motion['velocity_m_s'])]
 
+    def walk_route(self, entity, owner, trigger_id, points, report):
+        from native_scene import route_box_entry, vector
+        from native_scene_edits import read_box_trigger
+
+        if (any(type(ident) is not int or ident not in self.entities or ident in self.removed_entities
+                for ident in (entity, owner)) or entity == owner):
+            raise ValueError('Route requires distinct live entrant and trigger-owner entities')
+        if type(trigger_id) is not int or trigger_id < 1:
+            raise ValueError('Route trigger ID must be a positive integer')
+        if not isinstance(points, list) or not 2 <= len(points) <= 4096:
+            raise ValueError('Route requires 2 to 4096 world-space points')
+        points = [vector(point, 'Route point') for point in points]
+        try:
+            position = self.position_m(owner)
+            pose = self.scene_objects['entity', owner]['transform']
+            if owner in self.linear_motions or pose['scale'] != [1, 1, 1] or any(
+                    angle % 360 for angle in pose['rotation_deg']):
+                raise ValueError('Route coverage requires a stationary unrotated trigger owner at unit scale')
+            offset, size = read_box_trigger(self.scene_data, owner, trigger_id)
+            center = [coordinate + delta for coordinate, delta in zip(position, offset)]
+            crossing = route_box_entry(points, center, size)
+        except ValueError as exc:
+            report['geometry']['reason'] = str(exc)
+            raise UncalibratedRoute(str(exc)) from exc
+        report['geometry'] = {'status': 'hit' if crossing else 'missed', 'center_m': center, 'size_m': size}
+        if not crossing:
+            report['node_execution']['reason'] = 'The route did not enter the box'
+            return []
+        report['geometry']['entry'] = crossing
+        mounted = {row['graph_id'] for row in self.mount_origins
+                   if row['owner_entity'] == owner and row['origins']}
+        pending = []
+        handlers = []
+        for graph, instance in self.instances:
+            if instance != owner or graph['id'] not in mounted or get(get(graph['raw'], 1, default=b''), 2, 0) != 20000:
+                continue
+            for ident, node in graph['nodes'].items():
+                if self.builtin_event(node, 92):
+                    handlers.append({'graph_id': graph['id'], 'node_id': ident})
+                    pending.append((graph, owner, ident, None, [], {'collision_enter': (entity, trigger_id)}))
+        report['node_execution']['handlers'] = handlers
+        if not pending:
+            reason = 'No selected, natively mounted server graph has a calibrated collision-entry node on this trigger owner'
+            report['node_execution']['reason'] = reason
+            raise UncalibratedRoute(reason)
+        try:
+            emitted = self._dispatch(pending)
+        except ValueError as exc:
+            report['node_execution']['reason'] = str(exc)
+            if str(exc).startswith(('Unsupported native execution', 'Unsupported native output')):
+                raise UncalibratedRoute(str(exc)) from exc
+            report['node_execution']['status'] = 'failed'
+            raise
+        report['node_execution']['status'] = 'passed'
+        return emitted
+
     def tick(self,dt):
         emitted=[]
         def fire(entity,name,index,cycle):
@@ -298,6 +358,18 @@ class NativeModel:
                 v=constant(get(p,3,default=b''));return bool(v)if get(p,4,0)==4 else v
             def output(ident,index=0):
                 if ident==event_id:
+                    if change is not None and 'collision_enter' in change:
+                        entrant, trigger_id = change['collision_enter']
+                        if index in (0, 2):
+                            return entrant if index == 0 else owner
+                        if index in (1, 3):
+                            key = str(entrant if index == 1 else owner)
+                            if key not in self.entity_guids:
+                                raise ValueError('Collision-entry GUID output requires entity_guids mapping')
+                            return self.entity_guids[key]
+                        if index == 4:
+                            return trigger_id
+                        raise ValueError('Unknown collision-entry event output')
                     if change is not None and change.get('lifecycle')=='entity_removed':
                         if index!=0:raise ValueError('Unknown entity removal output')
                         return change['guid']

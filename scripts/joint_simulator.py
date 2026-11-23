@@ -229,7 +229,7 @@ def execute(spec,base,trace=None,*,expected_inputs=None):
             raise ValueError('Unknown native observation path')
         client=clients[item['client']]
         return client.plain(client.h.value(item['path']))
-    values={};observation_steps=[]
+    values={};observation_steps=[];route_events=[]
     if trace is not None:
         trace.update(observations=values, observation_steps=observation_steps)
     collect();drain()
@@ -279,6 +279,20 @@ def execute(spec,base,trace=None,*,expected_inputs=None):
             schema(step,('op','entity'),('op','entity'))
             if server is None:raise ValueError('Native server required')
             for p in getattr(server,op)(step['entity']):enqueue('server',p['target'],p['name'],p['params'])
+        elif op == 'route':
+            route_fields = ('entity', 'trigger_entity', 'trigger_id', 'points_m')
+            schema(step, ('op', *route_fields), route_fields)
+            if server is None:
+                raise ValueError('Route requires a native server')
+            route = {key: step[key] for key in route_fields if key != 'points_m'}
+            route.update(step_index=step_index, time=clock, geometry={'status': 'not_checked'},
+                         node_execution={'status': 'not_checked'}, host='not_checked')
+            route_events.append(route)
+            if trace is not None:
+                trace['route_events'] = route_events
+            for packet in server.walk_route(step['entity'], step['trigger_entity'], step['trigger_id'],
+                                            step['points_m'], route):
+                enqueue('server', packet['target'], packet['name'], packet['params'])
         elif op=='signal':enqueue(step['source'],step['target'],step['name'],step['params'])
         elif op in('settle','reenter'):
             if server is None:raise ValueError('Native server required')
@@ -354,6 +368,7 @@ def execute(spec,base,trace=None,*,expected_inputs=None):
             'model_visibility':{str(ident):visible for ident,visible in server.model_visibility.items()} if server else {},
             'model_visibility_events':[event for event in server.event_log if 'model_visible' in event] if server else [],
             'motion_events':[event for event in server.event_log if 'motion' in event] if server else [],
+            **({'route_events': route_events} if route_events else {}),
             'observation_steps':observation_steps,
             'host_tested':False,'editor_tested':False}
 
@@ -365,7 +380,7 @@ def evaluate(spec,base,*,expected_inputs=None):
         return execute(spec,base,trace,expected_inputs=expected_inputs)
     except Exception as exc:
         import traceback
-        from native_model import UncalibratedVariable
+        from native_model import UncalibratedRoute, UncalibratedVariable
         diagnostic=trace.pop('diagnostic',None)
         replay = {}
         declared = trace.pop('declared_sources', None)
@@ -373,14 +388,17 @@ def evaluate(spec,base,*,expected_inputs=None):
             replay['replay'] = {'schema': 1, 'kind': 'joint-simulation-replay', 'base': str(Path(base).resolve()),
                                 'scenario': spec, 'scenario_sha256': sha(canonical(spec).encode('utf-8')),
                                 'inputs': trace['inputs']}
-        if isinstance(exc,UncalibratedVariable):
+        if isinstance(exc, (UncalibratedVariable, UncalibratedRoute)):
             gap=str(exc)
             coverage={'status':'not_checked','gaps':[gap]}
+            details = ({'code': 'native_variable_default_unchecked', 'entity': exc.entity, 'variable': exc.variable}
+                       if isinstance(exc, UncalibratedVariable) else
+                       {'code': 'native_route_unchecked', 'step_index': trace['step_index']})
             return {'schema':2,'layer':trace.get('layer','lua_model'),'status':'not_checked',
                     'execution_status':'not_checked','acceptance':coverage,
                     'checks':{'coverage':coverage},
-                    'diagnostics':[{'code':'native_variable_default_unchecked','message':gap,
-                                    'phase':trace.get('phase','input'),'entity':exc.entity,'variable':exc.variable}],
+                    'diagnostics':[{**details, 'message': gap, 'phase': trace.get('phase','input')}],
+                    **({'route_events': trace['route_events']} if 'route_events' in trace else {}),
                     'inputs':trace.get('inputs',{}),'trace':trace,'editor_tested':False,'host_tested':False,**replay}
         if isinstance(exc, DiagnosticError):
             diagnostic=exc.diagnostics[0]
@@ -399,6 +417,7 @@ def evaluate(spec,base,*,expected_inputs=None):
                 'checks':{'assertions':{'status':'failed' if assertion_failed else 'not_checked',
                                         'executed':diagnostic.get('assertion_index',0)}},
                 'diagnostics':[diagnostic],'inputs':trace.get('inputs',{}),
+                **({'route_events': trace['route_events']} if 'route_events' in trace else {}),
                 'error':str(exc),'trace':trace,'stack':traceback.format_exc(),
                 'editor_tested':False,'host_tested':False,**replay}
 

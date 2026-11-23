@@ -109,6 +109,8 @@ python scripts/qianxing.py scene inspect scene-output/scene.gia
 
 白盒形状 ID 支持长方体 `10009001`、球体 `10009002`、圆柱 `10009008` 和圆锥 `10009009`。颜色为 `#RRGGBB`。新增装饰写到元件，场景已有实例的装饰列表独立保留。`scene preview LEVEL.gil --template-id ID --out PREVIEW` 用 Pillow 绘制俯视和侧视中零件的轴对齐近似。
 
+省略 `--template-id` 可预览整个 GIL。运行 `scene preview LEVEL.gil --before OLD.gil --out PREVIEW` 或 MCP `scene_preview` 可对照改动。结果包含共用范围的 `top.png`、`side.png` 和世界坐标清单 `layout.json`。按原生对象键对应新增、移动、旋转和移除。轮廓是按已知尺寸计算的包围盒代理，未校准的尺寸用原点标记。对象清单保留名称、模型、原始变换及解析覆盖。触发路线用[联合模拟](joint-simulation.md#盒形触发路线)验证。
+
 `scene export-whitebox LEVEL.gil --template-id ID --out OUTPUT` 将原点空模型元件的白盒零件另存为独立 `whitebox.gia`。它随包记录形状、局部变换、颜色和依赖索引。使用 `"scene":{"whitebox":{"source":"@level","template_id":ID}}` 可在制作任务最终 GIL 上执行相同导出。交互、组件和每个实例的修改由 GIL 版本承载。 [原生玩法制作](native-gameplay.md)
 
 查看地形栅格时用 `scene inspect LEVEL.gil --terrain-id ID`。每格 5 米，每层 2.5 米，可读取格心、顶部高度、水面、路径及斜坡。平格用顶部高度定位布景，斜坡的落点高度需要按落点复核。写入只改已有格。材质使用 `grass`、`tile`、`sand`、`stone_wall`、`snow`。地块 `layers` 加上 `water_layers` 的合计从 1 到 20。道路用 `path:true`，水体用 `water_layers`，直线斜坡用 `slope` 的 `+z`、`+x`、`-z`、`-x` 或 `flat`，方向对应下降的一侧。水体和道路、直线斜坡分格布设。先保存关卡副本，再按需要烘焙寻路。

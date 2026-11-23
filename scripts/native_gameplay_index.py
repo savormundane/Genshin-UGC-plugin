@@ -1,7 +1,7 @@
 """Read calibrated gameplay identities and reference carriers from a GIL."""
 from collections import Counter, defaultdict
 
-from authoring_io import DiagnosticError, sha
+from authoring_io import sha
 from level_inventory import container, fields, graph_records, unique, vals
 from native_core import get, ref
 from native_economy import RESOURCES
@@ -188,7 +188,8 @@ def build_gameplay(data, namespace='level', *, record_hashes=None):
 def require_gameplay(report, phase):
     issues = [issue for issue in report['issues'] if issue.get('domain') == 'gameplay']
     if issues:
+        from project_index import write_audit_error
+
         first = issues[0]
-        error = DiagnosticError(first['code'], f'{phase} gameplay references failed: {first["error"]}', phase=phase)
-        error.diagnostics = [{'phase': phase, 'message': issue['error'], **issue} for issue in issues]
-        raise error
+        raise write_audit_error({**report, 'issues': issues, 'unresolved': []}, phase,
+                                f'{phase} gameplay references failed: {first["error"]}', code=first['code'])

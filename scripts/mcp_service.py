@@ -1,12 +1,16 @@
 """Official MCP SDK stdio adapter for the shared fixed-operation bridge."""
 from importlib.metadata import version
+import asyncio
 import json
 from typing import Any, Literal
+from mcp import types
 from mcp.server import MCPServer
 from mcp.server.mcpserver import Context
 from mcp.server.mcpserver.exceptions import ToolError
+from mcp.shared.exceptions import MCPError
 from pydantic import StrictInt
 from authoring_io import DiagnosticError
+from mcp_bridge import BUILTIN_OPERATIONS
 from runtime_policy import REQUIREMENTS
 
 
@@ -15,7 +19,25 @@ def server(bridge):
     app=MCPServer('Miliastra Wonderland')
     async def call(operation,ctx,**args):
         try:
-            return await bridge.call(operation,{k:v for k,v in args.items() if v is not None},ctx.report_progress)
+            args = {k: v for k, v in args.items() if v is not None}
+            roots = ()
+            roots_error = None
+            needs_workspace = operation == 'doctor' or operation not in BUILTIN_OPERATIONS or 'catalogue' in args
+            if needs_workspace and not bridge.project and ctx.session.check_client_capability(
+                    types.ClientCapabilities(roots=types.RootsCapability())):
+                try:
+                    listed = await asyncio.wait_for(ctx.session.list_roots(), 5)
+                    roots = tuple(str(root.uri) for root in listed.roots)
+                except (MCPError, TimeoutError) as exc:
+                    unsupported = isinstance(exc, MCPError) and exc.code == types.METHOD_NOT_FOUND
+                    if operation != 'doctor' and not unsupported:
+                        raise DiagnosticError('mcp.roots_unavailable', 'Client workspace directories could not be read',
+                                              phase=operation, detail=str(exc) or 'Roots request timed out') from exc
+                    roots_error = str(exc) or 'Roots request timed out'
+            response = await bridge.call(operation, args, ctx.report_progress, roots=roots)
+            if roots_error and 'result' in response:
+                response['result']['project_context']['roots_error'] = roots_error
+            return response
         except DiagnosticError as exc:
             raise ToolError(json.dumps({'error':str(exc),'diagnostics':exc.diagnostics},ensure_ascii=False)) from exc
         except (ValueError,OSError) as exc:
@@ -61,6 +83,13 @@ def server(bridge):
     async def native_inspect(input:str,ctx:Context,sha256:str|None=None)->dict[str,Any]:
         """Read native identities and return the file digest."""
         return await call('native_inspect',ctx,input=input,sha256=sha256)
+
+    @app.tool(structured_output=True)
+    async def scene_preview(input:str,output:str,ctx:Context,before:str|None=None,
+                            sha256:str|None=None,before_sha256:str|None=None)->dict[str,Any]:
+        """Draw scene layout PNGs and a world-space object list. Compare an optional earlier GIL at the same scale."""
+        return await call('scene_preview',ctx,input=input,output=output,before=before,
+                          sha256=sha256,before_sha256=before_sha256)
     @app.tool(structured_output=True)
     async def native_audit(input:str,ctx:Context,sha256:str|None=None)->dict[str,Any]:
         """Audit final native types and references without modifying input."""

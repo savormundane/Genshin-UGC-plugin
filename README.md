@@ -8,7 +8,7 @@ Miliastra Wonderland 是面向原神「千星奇域」创作者的非官方 AI �
 
 | Skill | 适用任务 |
 | --- | --- |
-| [Qianxing Editor](skills/qianxing-editor/SKILL.md) | 查看和配置关卡对象与原生界面，查询 API、编写和检查 [Client Lua](skills/qianxing-editor/SKILL.md#client-lua)。 |
+| [Qianxing Editor](skills/qianxing-editor/SKILL.md) | 查看关卡对象、对照 3D 布设并配置原生界面，查询 API、编写和检查 [Client Lua](skills/qianxing-editor/SKILL.md#client-lua)。 |
 | [Qianxing Graph Code](skills/qianxing-graph-code/SKILL.md) | 确认节点签名，编写并检查节点图。 |
 | [Qianxing GIL](skills/qianxing-gil/SKILL.md) | 审阅局部修改计划，另存 GIL 并核对差异。 |
 | [Qianxing Assets](skills/qianxing-assets/SKILL.md) | 将 PNG 转成图元，比较候选方案的效果和控件预算。 |

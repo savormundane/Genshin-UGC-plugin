@@ -1,12 +1,14 @@
 """Public fixture for a reviewed template edit over the real MCP stdio transport."""
 
 import asyncio
+import os
 from pathlib import Path
+import shutil
 import sys
 import tempfile
 import unittest
 
-from mcp import Client, StdioServerParameters
+from mcp import Client, StdioServerParameters, types
 
 from authoring_io import PLUGIN, sha_file, write_json
 from level_authoring import initial_level, integer, msg, set_section, text
@@ -33,6 +35,7 @@ class NativeWorkflowTests(unittest.TestCase):
         directory = tempfile.TemporaryDirectory(prefix="qianxing public workflow ")
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
+        self.root = root
         self.project = root / "project"
         self.outputs = root / "outputs"
         self.project.mkdir()
@@ -44,6 +47,12 @@ class NativeWorkflowTests(unittest.TestCase):
             args=["-X", "utf8", "-B", str(PLUGIN / "scripts/qianxing.py"), "mcp", "serve",
                   "--project", str(self.project), "--output-root", str(self.outputs)],
         )
+
+    def workspace_environment(self):
+        env = {key: value for key, value in os.environ.items()
+               if key not in ('UGC_PROJECT_ROOT', 'UGC_OUTPUT_ROOT', 'UGC_RUNTIME_CONFIG', 'UGC_PYTHON')}
+        env['UGC_PLUGIN_DATA'] = str(self.root / 'plugin-data')
+        return env
 
     async def call(self, client, tool, params, status="passed"):
         outcome = await client.call_tool(tool, params)
@@ -86,7 +95,15 @@ class NativeWorkflowTests(unittest.TestCase):
                 }, "failed")
                 self.assertIn("operations as a list of objects", malformed["error"])
                 self.assertFalse((self.outputs / "invalid-review").exists())
-                planned = await self.call(client, "native_plan", {**bound, "patch": patch, "output": "review"})
+                wrong_base = await client.call_tool("native_plan", {
+                    **bound, "patch": {**patch, "base_sha256": "0" * 64}, "output": "wrong-base",
+                })
+                self.assertTrue(wrong_base.is_error, wrong_base)
+                self.assertIn("native.base_sha256_mismatch", wrong_base.content[0].text)
+                self.assertFalse((self.outputs / "wrong-base").exists())
+                inline = {k: v for k, v in patch.items() if k != "base_sha256"}
+                planned = await self.call(client, "native_plan", {**bound, "patch": inline, "output": "review"})
+                self.assertEqual(planned["result"]["patch"]["base_sha256"], bound["sha256"])
                 self.assertTrue(planned["result"]["difference"]["protected"]["unchanged"])
                 self.assertFalse((self.outputs / "review/level.gil").exists())
                 plan = Path(planned["output"]) / "plan.json"
@@ -141,6 +158,79 @@ class NativeWorkflowTests(unittest.TestCase):
                         "rebuild": False, "portable": False,
                     }, "failed")
                     self.assertEqual(stale["result"]["source_changes"], [str(reference)])
+
+        asyncio.run(run())
+
+    def test_session_roots_switch_and_scope_default_output(self):
+        another = self.root / "另一关卡"
+        another.mkdir()
+        (another / "entrance.gil").write_bytes(initial_level("Second", (2, 2)))
+        roots = [self.project]
+
+        async def list_roots(_):
+            return types.ListRootsResult(roots=[types.Root(uri=directory.as_uri()) for directory in roots])
+
+        async def run():
+            params = StdioServerParameters(command=sys.executable,
+                                           args=self.server.args[:-4], env=self.workspace_environment())
+            async with Client(params, list_roots_callback=list_roots, mode="legacy") as client:
+                original = await self.call(client, "project_inspect", {"input": "entrance.gil", "scope": "scene"})
+                self.assertFalse((self.root / "plugin-data").exists())
+                context = (await self.call(client, "doctor", {}))["result"]["project_context"]
+                self.assertEqual((context["source"], context["output_source"]), ("mcp_roots", "plugin_data"))
+                plan = await self.call(client, "native_plan", {
+                    "input": "entrance.gil", "sha256": original["inputs_sha256"]["input"], "output": "review",
+                    "patch": {"schema": 2, "allowed_top_level_fields": [4],
+                              "operations": [{"op": "set_custom_variable_default", "section": 4,
+                                              "entity_id": TEMPLATE, "name": VARIABLE, "value": 12}]},
+                })
+                self.assertEqual(Path(plan["output"]).parent, Path(context["output_root"]))
+                self.assertTrue((Path(plan["output"]) / "plan.json").is_file())
+                roots[:] = [another]
+                switched = await self.call(client, "project_inspect", {"input": "entrance.gil", "scope": "scene"})
+                self.assertEqual(switched["inputs_sha256"]["input"], sha_file(another / "entrance.gil"))
+                for escaped in (str(self.project / "entrance.gil"), str(Path(plan["output"]) / "plan.json"),
+                                "../project/entrance.gil"):
+                    denied = await client.call_tool("project_inspect", {"input": escaped})
+                    self.assertTrue(denied.is_error, denied)
+                    self.assertIn("outside allowed", denied.content[0].text)
+
+                roots[:] = [self.project, another]
+                denied = await client.call_tool("project_inspect", {"input": "entrance.gil"})
+                self.assertTrue(denied.is_error, denied)
+                self.assertIn("mcp.workspace_ambiguous", denied.content[0].text)
+                selected = await self.call(client, "project_inspect", {
+                    "input": str(self.project / "entrance.gil"), "scope": "scene",
+                })
+                self.assertEqual(selected["inputs_sha256"], original["inputs_sha256"])
+                forbidden = await client.call_tool("native_diff", {
+                    "input": str(self.project / "entrance.gil"), "other": str(another / "entrance.gil"),
+                })
+                self.assertTrue(forbidden.is_error, forbidden)
+
+        asyncio.run(run())
+
+    @unittest.skipUnless(sys.platform == "win32" and shutil.which("node"), "Windows Node.js required")
+    def test_launcher_reads_updated_runtime_workspace_without_restart(self):
+        second = self.root / "second"
+        second.mkdir()
+        (second / "entrance.gil").write_bytes(initial_level("Changed", (2, 2)))
+        config = self.root / "runtime.json"
+        env = {**self.workspace_environment(), "UGC_RUNTIME_CONFIG": str(config)}
+        binding = {"schema": 1, "python": sys.executable}
+        write_json(config, {**binding, "project_root": str(self.project)})
+
+        async def run():
+            params = StdioServerParameters(command="node", args=[str(PLUGIN / "scripts/mcp_launcher.cjs")], env=env)
+            async with Client(params) as client:
+                context = (await self.call(client, "doctor", {}))["result"]["project_context"]
+                self.assertEqual((context["source"], context["project_root"]), ("runtime_config", str(self.project)))
+                write_json(config, {**binding, "project_root": str(second), "output_root": str(second / "invalid")})
+                result = await self.call(client, "project_inspect", {"input": "entrance.gil", "scope": "scene"})
+                self.assertEqual(result["inputs_sha256"]["input"], sha_file(second / "entrance.gil"))
+                context = (await self.call(client, "doctor", {}))["result"]["project_context"]
+                self.assertEqual(context["missing"], ["output_root"])
+                self.assertEqual(context["project_root"], str(second))
 
         asyncio.run(run())
 

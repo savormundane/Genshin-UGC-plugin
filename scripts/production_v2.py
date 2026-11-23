@@ -457,7 +457,10 @@ def produce(path,out,evidence=None,*,job=None,job_digest=None):
                 state('native_after_graphs')
             from native_core import audit
             result=audit((stage/'level.gil').read_bytes());write_json(stage/'native-audit.json',result)
-            if result['status']!='passed':raise ValueError('Final native audit failed: '+canonical(result))
+            if result['status']!='passed':
+                from project_index import write_audit_error
+                raise write_audit_error(result, 'result', 'Final native audit failed',
+                                        code='native.result_audit_failed')
             state('native_audit')
             if ui_spec is not None:
                 from native_ui import layout
@@ -484,7 +487,7 @@ def produce(path,out,evidence=None,*,job=None,job_digest=None):
             if native_platform['status']!='passed':raise ValueError('Final platform native binding incomplete: '+canonical(native_platform['checks']))
             state('platform_native');evidence['platform_native'].update(layer='readback',scope=native_platform['scope'],report='platform-native-report.json',whole_artifact_verified=False)
         if 'project'in job or (stage/'level.gil').exists():
-            from project_index import build as index_native,inspect as inspect_project
+            from project_index import build as index_native,inspect as inspect_project,write_audit_error
             final=(stage/'level.gil').read_bytes()if (stage/'level.gil').exists()else None
             if 'project'in job and final is not None:
                 project_spec=read_json(resolve(base,job['project']['spec']))
@@ -496,7 +499,8 @@ def produce(path,out,evidence=None,*,job=None,job_digest=None):
             if project_report['status']!='passed':
                 from native_gameplay_index import require_gameplay
                 require_gameplay(project_report,'project_references')
-                raise ValueError('Final project reference check failed: '+canonical(project_report['issues']+project_report['unresolved']))
+                raise write_audit_error(project_report, 'project_references', 'Final project reference check failed',
+                                        code='native.result_reference_failed')
             state('project_references');evidence['project_references'].update(scope=project_report['scope'],complete_reference_index=False,report='project-report.json')
         if whitebox is not None:
             from scene_authoring import export_whitebox

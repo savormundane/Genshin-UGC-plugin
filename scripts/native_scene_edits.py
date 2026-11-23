@@ -544,6 +544,38 @@ def dynamic_target(data, op):
     return number,section,target,inherited
 
 
+def box_trigger_record(ident, offset, size):
+    area = msg(11, msg(1, encode_vector(offset)) + msg(2, encode_vector(size)) + msg(3))
+    area += text(502, '区域1') + integer(503, 1)
+    return (integer(1, ident) + integer(2, 1) + msg(3, b'\x01\x02') + msg(4, area)
+            + text(502, f'触发器 序号:{ident}') + msg(503, b'\x00'))
+
+
+def read_box_trigger(data, entity, trigger_id):
+    """Accept the calibrated character-entry box with the same contract as its writer."""
+    _, _, target, inherited = dynamic_target(data, {'entity_id': entity})
+    if any(typed_record(target, 7, kind, strict=True) or typed_record(inherited, 8, kind, strict=True)
+           for kind in (4, 9)):
+        raise ValueError('Route coverage excludes owners with basic or follow movers')
+    carriers = [record for record in (typed_record(target, 7, 5, strict=True),
+                                      typed_record(inherited, 8, 5, strict=True)) if record is not None]
+    if len(carriers) != 1 or singular(fields(carriers[0]), 2, 0) != 1:
+        raise ValueError('Route requires one enabled local or inherited trigger component')
+    rows = fields(singular(fields(carriers[0]), 15, default=b''))
+    trigger = one([raw for raw in vals(rows, 1) if singular(fields(raw), 1, 0) == trigger_id],
+                  'Calibrated character trigger')
+    area = fields(singular(fields(trigger), 4, default=b''))
+    shape = singular(area, 11)
+    if shape is None:
+        raise ValueError('Route coverage excludes non-box trigger geometry')
+    shape = fields(shape)
+    offset = read_vector(singular(shape, 1, default=b''))
+    size = read_vector(singular(shape, 2, default=b''), require_axes=True)
+    if min(size) <= 0 or max(size) > 500 or trigger != box_trigger_record(trigger_id, offset, size):
+        raise ValueError('Route coverage requires the calibrated unrotated character-entry box')
+    return offset, size
+
+
 def add_box_trigger(data, op):
     schema(op, ('op', 'section','entity_id', 'offset_m', 'size_m'), ('op', 'entity_id', 'size_m'))
     number,section,target,inherited = dynamic_target(data,op)
@@ -554,12 +586,7 @@ def add_box_trigger(data, op):
     offset = vector(op.get('offset_m', [0, 0, 0]), 'Trigger offset')
     if max(size) > 500:
         raise ValueError('Calibrated trigger box dimensions must be at most 500 metres')
-    area = msg(11, msg(1, encode_vector(offset)) + msg(2, encode_vector(size)) + msg(3))
-    area += text(502, '区域1') + integer(503, 1)
-    trigger = (
-        integer(1, 1) + integer(2, 1) + msg(3, b'\x01\x02') + msg(4, area)
-        + text(502, '触发器 序号:1') + msg(503, b'\x00')
-    )
+    trigger = box_trigger_record(1, offset, size)
     config = msg(carrier, integer(1, 5) + integer(2, 1) + msg(15, msg(1, trigger)))
     rows = fields(target)
     at = next((i for i, row in enumerate(rows) if row[0] > carrier), len(rows))

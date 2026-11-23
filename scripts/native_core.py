@@ -523,6 +523,7 @@ def optimize(graph,pure_ids,fanout_cap):
     return graph,aliases
 def apply(data,spec,base,*,bindings=None):
     from authoring_io import DiagnosticError
+    from project_index import build as project_index, write_audit_error
     from native_gameplay_index import build_gameplay, require_gameplay
     from native_bindings import Bindings, bind_operation, bindings_for_gil
     bindings = Bindings(bindings.ids if bindings is not None else {})
@@ -549,15 +550,13 @@ def apply(data,spec,base,*,bindings=None):
     if guarded:
         label=('Entity placement' if placement else 'Entity transform' if 'set_entity_transform' in scene_ops
                else 'Native gameplay' if scene_ops & gameplay_edits.keys() else 'Native scene')
-        from project_index import build as project_index
         if spec.get('strict_audit',True) is not True:
             raise ValueError(label+' edits require strict audit')
         baseline=project_index(data,include_scene=False)
         require_gameplay(baseline,'baseline')
         if baseline['status']!='passed':
-            failures=baseline['issues']+baseline['unresolved']
-            raise ValueError(label+' baseline audit failed. Run native audit and project inspect for details: '
-                             +json.dumps(failures[:4],ensure_ascii=False))
+            raise write_audit_error(baseline, 'baseline', label+' baseline audit failed',
+                                    code='native.baseline_audit_failed')
     elif spec.get('strict_audit',True) and container(data)[0][3]==2:
         require_gameplay(build_gameplay(data),'baseline')
     authored_templates={}
@@ -731,17 +730,20 @@ def apply(data,spec,base,*,bindings=None):
         else:raise ValueError('Unsupported native operation '+str(kind))
         logs.append({'op':kind})
     after=container(data)[1]
-    if [r for n,w,v,r in before if n not in allowed]!=[r for n,w,v,r in after if n not in allowed]:raise ValueError('Protected bytes changed')
+    if [r for n,w,v,r in before if n not in allowed]!=[r for n,w,v,r in after if n not in allowed]:
+        raise DiagnosticError('native.protected_bytes_changed', 'Protected bytes changed', phase='result',
+                              allowed_top_level_fields=allowed)
     report=audit(data,spec.get('strict_audit',True))
     if report['status']!='passed':
         failures=report['issues']+report['unresolved']
-        raise ValueError(f'Final audit failed ({len(failures)} findings): '+json.dumps(failures[:4],ensure_ascii=False))
+        raise write_audit_error(report, 'result', f'Final audit failed ({len(failures)} findings)',
+                                code='native.result_audit_failed')
     if guarded:
         final=project_index(data,include_scene=False,validation=report)
         require_gameplay(final,'result')
         if final['status']!='passed':
-            failures=final['issues']+final['unresolved']
-            raise ValueError('Final project references failed: '+json.dumps(failures[:4],ensure_ascii=False))
+            raise write_audit_error(final, 'result', 'Final project references failed',
+                                    code='native.result_reference_failed')
     elif allowed and set(allowed) & {4,5,9,10,12,15} and spec.get('strict_audit',True) and container(data)[0][3]==2:
         require_gameplay(build_gameplay(data),'result')
     result={'schema':2,'operations':logs,'audit':report,'protected_fields_unchanged':True,'sha256':sha(data)}

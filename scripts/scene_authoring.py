@@ -305,7 +305,9 @@ def main(argv=None):
     inspect_command.add_argument('--terrain-id', type=int)
     preview_command = commands.add_parser('preview')
     preview_command.add_argument('input')
-    preview_command.add_argument('--template-id', required=True, type=int)
+    preview_selection = preview_command.add_mutually_exclusive_group()
+    preview_selection.add_argument('--template-id', type=int)
+    preview_selection.add_argument('--before')
     preview_command.add_argument('--out', required=True)
     prefab_command = commands.add_parser('export-whitebox')
     prefab_command.add_argument('input')
@@ -318,8 +320,11 @@ def main(argv=None):
         result = capture_catalogue(args.sample, args.out, args.version, args.mode)
     elif args.operation == 'inspect':
         result = inspect(args.input, args.terrain_id)
-    elif args.operation=='preview':
+    elif args.operation == 'preview' and args.template_id is not None:
         result = preview(args.input, args.template_id, args.out)
+    elif args.operation == 'preview':
+        from scene_preview import preview as preview_scene
+        result = preview_scene(args.input, args.out, before=args.before)
     else:
         result = export_whitebox(args.input,args.template_id,args.out)
     print(json.dumps(result, ensure_ascii=False, indent=2))

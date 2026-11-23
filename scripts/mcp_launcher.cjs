@@ -9,8 +9,9 @@ const cli = path.join(__dirname, 'qianxing.py');
 
 function readBinding(filename) {
   const record = JSON.parse(fs.readFileSync(filename, 'utf8').replace(/^\uFEFF/, ''));
-  if (record.schema !== 1 || !['python', 'project_root', 'output_root'].every(
-      key => typeof record[key] === 'string' && path.isAbsolute(record[key]))) {
+  if (record.schema !== 1 || typeof record.python !== 'string' || !path.isAbsolute(record.python)
+      || !['project_root', 'output_root'].every(key => record[key] == null
+        || (typeof record[key] === 'string' && path.isAbsolute(record[key])))) {
     throw new Error('Invalid runtime binding: ' + filename);
   }
   return record;
@@ -32,7 +33,7 @@ function legacyBindings(root) {
       try {
         const record = readBinding(filename);
         if (fs.realpathSync.native(record.python) === fs.realpathSync.native(python)) {
-          bindings.push({record, agent});
+          bindings.push({record, agent, filename});
         }
       } catch {
         // An invalid legacy record is not a usable interpreter candidate.
@@ -63,12 +64,10 @@ function start() {
   const legacy = bindingRoots.flatMap(legacyBindings);
   // The old agent-plugins preparation was explicitly shared across hosts.
   // Other registrations supply Python only, unless the user selects their config.
-  const roots = explicit || legacy.find(({record, agent}) => agent === 'agent-plugins'
-    && [record.project_root, record.output_root].every(dir => fs.statSync(dir, {throwIfNoEntry: false})?.isDirectory()))?.record;
-  if (roots && !env.UGC_PROJECT_ROOT && !env.UGC_OUTPUT_ROOT) {
-    env.UGC_PROJECT_ROOT = roots.project_root;
-    env.UGC_OUTPUT_ROOT = roots.output_root;
-  }
+  const shared = legacy.find(({record, agent}) => agent === 'agent-plugins'
+    && [record.project_root, record.output_root].every(dir => dir && fs.statSync(dir, {throwIfNoEntry: false})?.isDirectory()));
+  const workspaceConfig = config || shared?.filename;
+  if (workspaceConfig) env.UGC_RUNTIME_CONFIG = workspaceConfig;
 
   const chosen = env.UGC_PYTHON;
   if (chosen && !path.isAbsolute(chosen)) throw new Error('UGC_PYTHON must be an absolute path.');

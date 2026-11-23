@@ -38,8 +38,8 @@ uv run --locked --no-build python -B .\scripts\qianxing.py --help
 
 ## 连接 MCP 或切换工程
 
-手动连接 MCP 时，让客户端通过 Node 启动插件的 `scripts/mcp_launcher.cjs`。文件工具通过 `UGC_PROJECT_ROOT` 和 `UGC_OUTPUT_ROOT` 访问两个独立的绝对目录。切换工程时更新这两个值并重启 MCP 或客户端。完整配置见[客户端适配](contributing/development.md#客户端适配)。
+手动连接 MCP 时，让客户端通过 Node 启动插件的 `scripts/mcp_launcher.cjs`。支持 MCP Roots 的客户端可直接使用会话中已授权的工程目录。多个目录时，用输入的绝对路径选定一处。
 
-`UGC_RUNTIME_CONFIG` 也可指向本机已有的 `runtime.json`，沿用其中的 Python 与目录。另行设置的目录变量优先。
+客户端未提供目录时，从插件数据目录读取 `runtime.json`，也可用 `UGC_RUNTIME_CONFIG` 选定旧绑定文件。修改文件中的 `project_root` 或 `output_root` 后，下一次工具调用会读取新值。Python 路径在启动时选择。显式 `UGC_PROJECT_ROOT`、`UGC_OUTPUT_ROOT` 或对应 CLI 参数作为固定覆盖。只有读文件时可省略输出目录，写文件默认在插件数据目录内按工程分开保存。用 `doctor` 查看当前来源及缺失项。 [客户端适配](contributing/development.md#客户端适配)
 
 旧版本目录可保留用于回退；不要只移动其中的插件或运行环境子目录。[更新与回退](installation.md#回退与卸载)
