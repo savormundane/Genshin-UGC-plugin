@@ -26,7 +26,15 @@ Miliastra Wonderland 是面向原神「千星奇域」创作者的非官方 AI �
 
 ### Codex
 
-适用于 **Codex CLI**。先装好 CLI，再在 Windows PowerShell 执行下面两行。
+**桌面端**先在 Windows PowerShell 登记市场。
+
+```text
+codex plugin marketplace add savormundane/miliastra-wonderland-plugin
+```
+
+打开桌面应用的插件目录，选择 Miliastra Wonderland 市场并安装。 [Codex 桌面端安装](docs/installation.md#codex-桌面端)
+
+**Codex CLI** 可在终端完成登记和安装。
 
 ```text
 codex plugin marketplace add savormundane/miliastra-wonderland-plugin
@@ -37,7 +45,9 @@ codex plugin add miliastra-wonderland@miliastra-wonderland
 
 ### Claude
 
-适用于 **Claude Code**。先装好 CLI，再在 Windows PowerShell 执行下面两行。
+**Claude 桌面端**在「自定义 → 插件」添加来自仓库的市场，输入 `https://github.com/savormundane/miliastra-wonderland-plugin`，同步后安装 Miliastra Wonderland。 [Claude 桌面端安装](docs/installation.md#claude-桌面端)
+
+**Claude Code** 先装好 CLI，再在 Windows PowerShell 执行下面两行。
 
 ```text
 claude plugin marketplace add savormundane/miliastra-wonderland-plugin
@@ -67,7 +77,7 @@ git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
 - 输入为「流程入」「目标GUID（GUID）」和「单位标签索引列表（整数列表）」，输出只有「流程出」。
 - 用途是按 GUID 创建已预先布设在场景里的实体。查询结果附有节点定义路径，端口已对照随包的[官方《执行节点》](references/official/节点介绍/执行节点__mhw66orrrfkm.md#2-创建实体)。该次查询未返回游戏版本号。
 
-看到实际工具调用和上述端口结果，表示本地工具已连通。如果助手无法调用插件，先[运行安装自检](docs/installation.md#安装自检)。
+看到实际工具调用和上述端口结果，表示本地工具已连通。接着可以按任务跟做 [五个中文教程](samples/creator-demos/README.md)。如果助手无法调用插件，先[运行安装自检](docs/installation.md#安装自检)。
 
 ### 只读查看已有的关卡
 
@@ -85,8 +95,6 @@ git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
 - **Lua 和图元素材**。按交付说明将 Lua 接到目标客户端控件。可在具备素材工具的本地 MCP 客户端中试算 PNG，选定方案后拿到 `asset.json`、`data.lua` 和最终预览。 [PNG 试算与生成](references/local-mcp.md#单张-png-试算与生成) · [Lua 接入](references/client-assembly.md)
 
 回复还会说明生成了什么、改了哪里，以及本次完成了哪些检查。打开编辑器导入、到游戏里运行时，分别核对对应结果。 [验证分层](docs/compatibility.md#验证分层)
-
-想看一次完整的实际操作，可以跟做 [PNG 转图元和 GIL 局部修改教程](samples/creator-demos/README.md)。
 
 ## Skills
 

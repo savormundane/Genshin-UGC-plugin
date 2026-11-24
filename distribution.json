@@ -2,7 +2,10 @@
   "schema": 1,
   "exclude_prefixes": [
     "samples/seeds/",
-    ".github/"
+    ".github/",
+    "vendor/beyond/node_modules/gifuct-js/demo/",
+    "vendor/beyond/node_modules/js-binary-schema-parser/example/",
+    "vendor/beyond/node_modules/fengari/test/"
   ],
   "exclude_files": [
     "runtime.json",

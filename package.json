@@ -26,7 +26,10 @@
     "uv.lock",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
-    "PUBLIC_SOURCES.json"
+    "PUBLIC_SOURCES.json",
+    "!vendor/beyond/node_modules/gifuct-js/demo/**",
+    "!vendor/beyond/node_modules/js-binary-schema-parser/example/**",
+    "!vendor/beyond/node_modules/fengari/test/**"
   ],
   "dsh": {
     "bundle": {

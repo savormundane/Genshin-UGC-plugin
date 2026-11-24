@@ -6,17 +6,41 @@
 
 [返回首页](../README.md)
 
-## Marketplace
+## 按客户端安装
 
-### Codex
+### Codex 桌面端
+
+在 Windows PowerShell 登记 GitHub 市场。
+
+```text
+codex plugin marketplace add savormundane/miliastra-wonderland-plugin
+```
+
+打开桌面应用，进入插件目录，从市场列表选择 **Miliastra Wonderland**。打开插件详情并安装。市场未出现时，确认终端与桌面应用使用同一份 Codex 配置，重新打开桌面应用后查看。 [Codex 市场说明](https://developers.openai.com/plugins/build/plugins) · [Obsidian Skills 安装示例](https://github.com/obsidianmd/obsidian-skills#installation)
+
+### Codex CLI
 
 [终端安装命令](../README.md#codex)
 
-### Claude
+### Claude 桌面端
+
+1. 打开「自定义 → 插件」。选择「添加 → 添加市场 → 从仓库添加」。
+2. 输入 `https://github.com/savormundane/miliastra-wonderland-plugin` 并同步。
+3. 在已添加的市场中打开 **Miliastra Wonderland**，安装并启用。
+4. 在连接到这台 Windows 电脑的对话里验证本地工具。涉及工程的任务按客户端提示选取本机文件夹。 [Claude 插件与市场说明](https://support.claude.com/en/articles/13837440-use-plugins-in-claude) · [统一 Claude 体验](https://support.claude.com/en/articles/16761823-claude-cowork-and-chat-are-one-claude)
+
+### Claude Code
 
 [终端安装命令](../README.md#claude)
 
-使用本地 MCP 时，选择支持本机工具的 Claude 会话。 [Claude 插件说明](https://support.claude.com/en/articles/13837440-use-plugins-in-claude)
+也可在 Claude Code 会话里依次运行。
+
+```text
+/plugin marketplace add savormundane/miliastra-wonderland-plugin
+/plugin install miliastra-wonderland@miliastra-wonderland
+```
+
+用 `/plugin` 查看安装状态，按客户端提示重新加载或开启新会话。 [Claude Code 插件说明](https://code.claude.com/docs/en/plugins/install)
 
 ### DeepSeek Harness
 
@@ -27,6 +51,8 @@
 其他支持 Agent Plugins 和本地 stdio MCP 的客户端，可通过其市场入口添加 `savormundane/miliastra-wonderland-plugin`，再安装 `miliastra-wonderland`。如果客户端提供的是本地目录导入，按[从本地目录导入](#从本地目录导入)操作。
 
 ## 运行依赖与工程目录
+
+完整工具需要 Windows x64、Node.js 22+（DeepSeek Harness 24.9+），以及具备锁定依赖的 CPython 3.11–3.14 或 PATH 上的 uv。安装前在终端用 `node --version` 和 `uv --version` 检查对应依赖。启用插件后开启新对话，使用[「创建实体」查询](../README.md#查询第一个节点)核对真实 `nodes_lookup` 调用和结果。
 
 客户端启用插件后，通过 Node 启动本地 MCP。启动器依次查找运行绑定指定的 Python、当前虚拟环境、兼容的旧安装和 PATH 上的 Python。显式设置 `UGC_PYTHON` 时，使用该路径。找不到具备完整依赖的环境时，可由 PATH 上的 uv 按 `uv.lock` 准备环境，需要时也会获取受支持的 Python。首次缺少缓存时，uv 需要联网。 [uv 安装说明](https://docs.astral.sh/uv/getting-started/installation/)
 
@@ -65,6 +91,7 @@ python -B scripts/package_release.py --source . --out ../Miliastra-Wonderland-1.
 ## 回退与卸载
 
 - **市场安装和直装**通过客户端管理更新和卸载。需要更换依赖时，启动器会交给 uv。
+- **Codex 桌面端**在插件目录的已安装列表管理插件。通过终端登记的市场可用 `codex plugin marketplace upgrade miliastra-wonderland` 刷新，再到桌面应用检查安装状态。**Claude 桌面端**在「自定义 → 插件」管理安装项和已添加的市场。更新后开启新对话复验工具。
 - **同版本重发**后，若客户端仍加载旧缓存，请从原入口卸载并重新安装。保留现有运行配置或通过 `UGC_RUNTIME_CONFIG` 指回原文件，便可继续使用原工程和解释器。
 - **PowerShell 登记的 Codex 和 Claude**可从新版安装器升级。回退或卸载可用完整 ZIP 内的命令。改用 `-Agent claude-code` 即可操作 Claude，使用过 `-Root` 的用户应传入原值。
 - **本地目录导入**通过客户端管理。升级时导入新目录，回退时重新指向保留的旧版本。
@@ -97,7 +124,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-install.
 
 | 遇到的问题 | 适用安装方式 | 下一步 |
 | --- | --- | --- |
-| 市场中找不到插件 | Codex CLI 或 Claude Code 的市场安装 | 核对[终端安装命令](../README.md#安装)中的 GitHub 仓库名和插件 ID。 |
+| 市场中找不到插件 | Codex 或 Claude 的市场安装 | 核对[客户端安装步骤](#按客户端安装)中的 GitHub 仓库名和插件 ID，确认已完成市场登记或同步。 |
 | 直装地址无法加载 | DeepSeek Harness 的 GitHub 直装 | 核对直装地址和客户端版本，再到「插件 → 添加插件」重试。 [直装说明](../README.md#deepseek-harness) |
 | 能看到 Skill，工具未连通 | 所有安装方式 | 先[运行安装自检](#安装自检)。修复后重启客户端，确认插件已启用并允许本地 MCP。使用自选旧安装根目录时，核对 `MILIASTRA_WONDERLAND_INSTALL_ROOT`。 |
 | MCP 启动时缺少 Python 或依赖 | 所有安装方式 | 安装 uv 并确认新终端能运行 `uv --version`，或让 `UGC_PYTHON` 指向已配置依赖的解释器。修正旧绑定后重新打开客户端。 |

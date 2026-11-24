@@ -64,4 +64,4 @@ Python依赖按scripts/runtime-requirements.lock安装，不把所需依赖冒�
 
 如需更正署名、来源或许可记录，请通过仓库Issue提供对应文件和依据。
 
-公开分发修改：Beyond的.gitattributes改为保留原始字节，bundle.json仅更新该文件摘要，防止Git换行转换破坏依赖完整性；原始与当前摘要记录在PUBLIC_SOURCES.json的distribution_changes中。执行代码未改。
+Beyond 的 `.gitattributes` 保留原始字节，避免 Git 换行转换影响依赖校验。Windows ZIP 和 Cordis 打包省略三个第三方示例及测试目录。运行清单、移出条目的原始摘要和来源见 [PUBLIC_SOURCES.json](PUBLIC_SOURCES.json) 的 `distribution_changes`。

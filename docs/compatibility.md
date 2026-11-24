@@ -15,12 +15,14 @@ Python 依赖在 `pyproject.toml` 声明，并用 `uv.lock` 锁定。需要创�
 
 ## 客户端接入
 
-下表的验收状态对应 V1.0.0 的[重发提交 `f80f8d8`](https://github.com/savormundane/miliastra-wonderland-plugin/commit/f80f8d83e7f22e20900c823d288b72da078beb20)。
+已发布版本的验收基线是 V1.0.0 的[重发提交 `f80f8d8`](https://github.com/savormundane/miliastra-wonderland-plugin/commit/f80f8d83e7f22e20900c823d288b72da078beb20)。桌面安装步骤与当前源码验证见下方。
 
 | 入口 | 仓库提供的能力 | 验收状态与适用边界 |
 | --- | --- | --- |
-| Codex | 从终端添加市场并安装插件。 | 已验证 Windows x64 本地市场安装和 MCP 工具调用。 |
+| Codex CLI | 从终端添加市场并安装插件。 | 已验证 Windows x64 本地市场安装和 MCP 工具调用。 |
+| Codex 桌面端 | 登记市场后在插件目录安装。 | 当前源码已通过隔离桌面后端的本地市场发现与安装，以及从安装缓存发起的 stdio 查询。桌面图形界面操作待验。 [安装步骤](installation.md#codex-桌面端) |
 | Claude Code | 从终端添加市场并安装插件。 | 安装清单已检查。客户端安装和 MCP 工具调用待验。 |
+| Claude 桌面端 | 从「自定义 → 插件」添加仓库市场并安装。 | 已核对市场清单与本地 stdio 启动。Claude 桌面客户端的同步、安装及调用待验。 [安装步骤](installation.md#claude-桌面端) |
 | DeepSeek Harness | 从 GitHub 直接安装 Cordis Bundle。 | 安装清单已检查。GitHub 直装、Bundle 加载和节点查询待验。 |
 | Agent Plugins | 提供通用插件清单、Skills 和本地 stdio MCP 配置。 | 导入方式和本地工具可用性取决于客户端的实现。 |
 | 独立 CLI | 使用专用 Python 运行 `scripts/qianxing.py`。 | 不依赖 AI 客户端；具体命令仍需相应运行依赖和有效输入。 |

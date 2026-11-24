@@ -44,6 +44,9 @@ def marketplace_files(root):
             'category': 'Productivity',
         }],
     }
+    distribution = read_json(root, 'distribution.json')
+    vendor_exclusions = ['!' + prefix + '**' for prefix in distribution['exclude_prefixes']
+                         if prefix.startswith('vendor/')]
     bundle = {
         'name': identity,
         'version': version,
@@ -55,7 +58,7 @@ def marketplace_files(root):
             'cordis.patch.yml', 'plugin.json', 'locale/', 'assets/', 'docs/', 'references/',
             'skills/', 'scripts/', 'runtime/', 'samples/', 'vendor/', 'pyproject.toml', 'uv.lock',
             'LICENSE', 'THIRD_PARTY_NOTICES.md', 'PUBLIC_SOURCES.json',
-        ],
+        ] + vendor_exclusions,
         'dsh': {'bundle': {'patch': './cordis.patch.yml'}},
         'exports': {'./locale/*.json': './locale/*.json', './package.json': './package.json'},
     }

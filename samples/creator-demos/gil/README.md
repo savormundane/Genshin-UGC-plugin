@@ -1,8 +1,16 @@
 # 审阅并另存一次 GIL 局部修改
 
-在 [v1.0.0](https://github.com/savormundane/miliastra-wonderland-plugin/tree/v1.0.0) 中，修改一个模板变量的默认值。[原始 entrance.gil](entrance.gil) 是合成关卡，只含用于演示的模板、实例和变量。将它复制到 AI 对话可读的工程目录，再[配置独立输出位置](../../../docs/runtime-environment.md#连接-mcp-或切换工程)。
+下载[原始 entrance.gil](entrance.gil)。它是合成关卡，只含用于演示的模板、实例和变量。将它复制到 AI 对话可读的工程目录。只读查找需要工程的读取权限，另存还需要独立输出位置。 [工程绑定](../../../docs/runtime-environment.md#连接-mcp-或切换工程)
 
-## 对 AI 怎么说
+## 只读查找关卡对象
+
+> 请用千星奇域插件只读查看当前工程的 entrance.gil。查找 ActivationDelay，告诉我变量定义属于哪个模板、场景中哪个实例继承它，以及识别到的引用关系。
+
+`project_inspect` 先查变量名，再沿模板和实例的引用回读。可用结果里的模板 ID **1086324737** 和实例 ID **1077936129** 在后续对话中指定对象。样例查询核对了继承关系和输入 SHA-256。
+
+## 审阅并另存
+
+下面的预存计划、另存文件和差异来自 [v1.0.0](https://github.com/savormundane/miliastra-wonderland-plugin/tree/v1.0.0) 的实跑。
 
 > 请查看当前工程的 entrance.gil。我想把入口机关模板的 ActivationDelay 默认值改为 12。先定位变量、所属模板和继承它的场景实例，再做待审计划。告诉我现在的值、拟改值和保护范围。等我确认后再另存。
 
