@@ -2,6 +2,7 @@
 from pathlib import Path
 import argparse,json,subprocess,tempfile,shutil
 from authoring_io import read_json,sha,schema,resolve,output_directory,write_json,finish
+from beyond_native import LOCK_NAME, native_canvas_environment, native_library_path, read_native_lock
 PIN='02a5ea2cd38bb5bcf7a7ce6dd745be3bb1ae655c'
 BUNDLED=Path(__file__).resolve().parent.parent/'vendor/beyond'
 # npm-compatible Git installations omit these upstream ignore rules.
@@ -31,10 +32,12 @@ def run(path,backend,out,*,final_gil=None,preview=False):
             schema(check,('name','width','height','text'),('name',))
             if not isinstance(check['name'],str) or not check['name'] or len(check)==1:raise ValueError('Named render expectation required')
     if Path(out).exists():raise ValueError('Output exists; use a new directory')
-    bundle=backend/'bundle.json'
+    bundle=backend/'bundle.json';native_lock=None
     if bundle.is_file():
         manifest=read_json(bundle);revision=manifest['commit']
+        native_lock=read_native_lock(backend)
         for name,digest in manifest['files'].items():
+            if native_lock and name in native_lock['files']:continue
             target=(backend/name).resolve()
             if name in NON_RUNTIME_GITIGNORE and not target.exists():continue
             if not target.is_relative_to(backend) or not target.is_file() or sha(target.read_bytes())!=digest:raise ValueError('Bundled backend integrity failure: '+name)
@@ -75,6 +78,7 @@ def run(path,backend,out,*,final_gil=None,preview=False):
         else:scripts.append({k:item[k]for k in ('controlId','controlAsset','path')}|{'source':code})
     if gil and mounted!={(b['control_guid'],b['script_guid']) for b in gil['bindings']}:raise ValueError('Every selected native script mount must be supplied')
     if bundle.is_file():inputs[str(bundle)]=sha(bundle.read_bytes())
+    if native_lock:inputs[str(backend/LOCK_NAME)]=sha((backend/LOCK_NAME).read_bytes())
     # Refuse hidden embedded scripts: every executed source must be digest-bound.
     def embedded(v):
         if isinstance(v,dict):
@@ -86,9 +90,10 @@ def run(path,backend,out,*,final_gil=None,preview=False):
     node=shutil.which('node')
     if not node:raise ValueError('Node 22+ required')
     if int(subprocess.check_output([node,'--version'],text=True).strip().lstrip('v').split('.')[0])<22:raise ValueError('Node 22+ required')
+    native_binding=native_library_path(backend,lock=native_lock) if native_lock else None
     with tempfile.TemporaryDirectory(prefix='ugc-beyond-')as td:
         td=Path(td);write_json(td/'job.json',{'entry':str(backend/'studio/index.js'),'project':project_data,'gil':gil,'scripts':scripts,'case':spec['case'],'render':spec.get('render',False),'render_checks':spec.get('render_checks',[])})
-        proc=subprocess.run([node,str(Path(__file__).with_name('beyond_worker.mjs')),str(td/'job.json'),str(td/'result.json')],capture_output=True,text=True,encoding='utf-8',timeout=45)
+        proc=subprocess.run([node,str(Path(__file__).with_name('beyond_worker.mjs')),str(td/'job.json'),str(td/'result.json')],capture_output=True,text=True,encoding='utf-8',timeout=45,env=native_canvas_environment(native_binding))
         if proc.returncode:raise ValueError('External simulator failed: '+proc.stderr[-3000:])
         result=read_json(td/'result.json')
         passed=result.get('passed') is True

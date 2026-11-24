@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "url": "https://github.com/savormundane/miliastra-wonderland-plugin/releases/download/beyond-canvas-v0.1.100/miliastra-beyond-canvas-0.1.100-windows-x64.zip",
+  "sha256": "98918311ba549da643f2d584e1b07a694295adf63422a27b58e0d973b5ade3ba",
+  "files": {
+    "node_modules/@napi-rs/canvas-win32-x64-msvc/icudtl.dat": "9ae98c06cbb0ea43c5cd6b5725310c008c65e46072421a1118cb88e1de9a8b92",
+    "node_modules/@napi-rs/canvas-win32-x64-msvc/skia.win32-x64-msvc.node": "0f76fb0648fbff832856f6ce202059fc3fa38be7ad925300e96935906ea11132"
+  }
+}

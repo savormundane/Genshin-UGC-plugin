@@ -7,6 +7,7 @@ import os
 import subprocess
 import tempfile
 from mcp import Client, StdioServerParameters
+from beyond_native import NATIVE_BINARY, native_canvas_environment, read_native_lock, verify_native_files
 from mcp_bridge import OPERATIONS
 
 
@@ -47,16 +48,21 @@ async def check(config, node, adapter=None):
             if result.is_error or result.structured_content['status'] != 'passed':
                 raise ValueError('MCP lookup failed: ' + symbol)
     backend = bundle / 'vendor/beyond'
-    with tempfile.TemporaryDirectory(prefix='ugc-smoke-') as td:
-        probe = Path(td) / 'render.mjs'
-        probe.write_text('import {createStudio} from ' + json.dumps((backend / 'studio/index.js').as_uri()) + ';\n'
-                         'import {createDefaultProject} from ' + json.dumps((backend / 'studio/ui/authoring.js').as_uri()) + ';\n'
-                         'import {renderPaintPng} from ' + json.dumps((backend / 'studio/host-png.js').as_uri()) + ';\n'
-                         'let s=createStudio(createDefaultProject());s.playStart();s.playStep(.1);'
-                         'let p=s.playGet({paint:true});let r=renderPaintPng(p.paint,p.canvasWidth,p.canvasHeight);'
-                         's.playStop();if(r.data.length<100)throw Error("empty PNG");console.log(r.data.length);', encoding='utf-8')
-        subprocess.run([node, str(probe)], check=True)
-    print(json.dumps({'stdio': 'passed', 'tools': len(tools), 'software_png': 'passed',
+    native_lock = read_native_lock(backend)
+    software_png = 'not_checked'
+    if native_lock is None or verify_native_files(backend, native_lock):
+        binding = backend / NATIVE_BINARY if native_lock else None
+        with tempfile.TemporaryDirectory(prefix='ugc-smoke-') as td:
+            probe = Path(td) / 'render.mjs'
+            probe.write_text('import {createStudio} from ' + json.dumps((backend / 'studio/index.js').as_uri()) + ';\n'
+                             'import {createDefaultProject} from ' + json.dumps((backend / 'studio/ui/authoring.js').as_uri()) + ';\n'
+                             'import {renderPaintPng} from ' + json.dumps((backend / 'studio/host-png.js').as_uri()) + ';\n'
+                             'let s=createStudio(createDefaultProject());s.playStart();s.playStep(.1);'
+                             'let p=s.playGet({paint:true});let r=renderPaintPng(p.paint,p.canvasWidth,p.canvasHeight);'
+                             's.playStop();if(r.data.length<100)throw Error("empty PNG");console.log(r.data.length);', encoding='utf-8')
+            subprocess.run([node, str(probe)], check=True, env=native_canvas_environment(binding))
+        software_png = 'passed'
+    print(json.dumps({'stdio': 'passed', 'tools': len(tools), 'software_png': software_png,
                       'agent_host': 'not_checked', 'editor': 'not_checked', 'game_host': 'not_checked'}))
 
 

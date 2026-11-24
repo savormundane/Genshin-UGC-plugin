@@ -1,6 +1,7 @@
 """Manual release check: actual ZIP structure, extraction and content identity."""
 from pathlib import Path
 import hashlib,json,shutil,subprocess,sys,tempfile,unittest,zipfile
+from unittest.mock import patch
 from check_repository import check, MANIFESTS, REPO, REQUIRED_FILES
 from marketplace_release import marketplace_files
 from package_release import build_release, validate_windows_names
@@ -8,6 +9,64 @@ from install_plugin import extract,read_json
 
 
 class ReleaseTests(unittest.TestCase):
+    def test_windows_zip_bundles_locked_beyond_native_files(self):
+        with tempfile.TemporaryDirectory(prefix='ugc native bundle ') as temporary:
+            root = Path(temporary)
+            source = root / 'plugin'
+            backend = source / 'vendor/beyond'
+            backend.mkdir(parents=True)
+            skill = source / 'skills/fixture/SKILL.md'
+            skill.parent.mkdir(parents=True)
+            skill.write_text('---\nname: fixture\ndescription: Distribution fixture\n---\n', encoding='utf-8')
+            (source / 'plugin.json').write_text('{"name": "fixture"}\n', encoding='utf-8')
+            native_package = 'node_modules/@napi-rs/canvas-win32-x64-msvc'
+            payload = {f'{native_package}/skia.win32-x64-msvc.node': b'fixture canvas native module',
+                       f'{native_package}/icudtl.dat': b'fixture ICU data'}
+            asset = root / 'canvas.zip'
+            with zipfile.ZipFile(asset, 'w') as archive:
+                for name, contents in payload.items():
+                    archive.writestr(name, contents)
+            lock = {
+                'schema': 1,
+                'url': ('https://github.com/savormundane/miliastra-wonderland-plugin/releases/download/'
+                        'beyond-canvas-v0.1.100/miliastra-beyond-canvas-0.1.100-windows-x64.zip'),
+                'sha256': hashlib.sha256(asset.read_bytes()).hexdigest(),
+                'files': {name: hashlib.sha256(contents).hexdigest() for name, contents in payload.items()},
+            }
+            (backend / 'native-canvas.json').write_text(json.dumps(lock), encoding='utf-8')
+            (backend / 'bundle.json').write_text(json.dumps({'files': lock['files']}), encoding='utf-8')
+            offline = root / 'offline.zip'
+            with patch('beyond_native.download_native_archive', side_effect=AssertionError('Unexpected download')):
+                result = build_release(source, offline, beyond_native_archive=asset)
+                with zipfile.ZipFile(offline) as archive:
+                    for name, contents in payload.items():
+                        self.assertEqual(archive.read(f'plugin/vendor/beyond/{name}'), contents)
+                self.assertFalse(any((backend / name).exists() for name in payload))
+                self.assertEqual(result['files'], 6)
+                corrupt = root / 'corrupt.zip'
+                corrupt.write_bytes(asset.read_bytes() + b'tampered')
+                invalid = root / 'invalid.zip'
+                with self.assertRaises(ValueError):
+                    build_release(source, invalid, beyond_native_archive=corrupt)
+                self.assertFalse(invalid.exists())
+
+            fetched = root / 'fetched.zip'
+            with patch('beyond_native.download_native_archive',
+                       side_effect=lambda lock, path: shutil.copyfile(asset, path)) as download:
+                build_release(source, fetched)
+            download.assert_called_once()
+            self.assertEqual(fetched.read_bytes(), offline.read_bytes())
+            self.assertFalse(any((backend / name).exists() for name in payload))
+
+            repackage = root / 'repackage.zip'
+            for name, contents in payload.items():
+                file = backend / name
+                file.parent.mkdir(parents=True, exist_ok=True)
+                file.write_bytes(contents)
+            with patch('beyond_native.download_native_archive', side_effect=AssertionError('Unexpected download')):
+                build_release(source, repackage)
+            self.assertEqual(repackage.read_bytes(), offline.read_bytes())
+
     def test_shared_zip_and_cordis_exclusions(self):
         npm = shutil.which('npm.cmd' if sys.platform == 'win32' else 'npm')
         if not npm:
@@ -104,6 +163,8 @@ class ReleaseTests(unittest.TestCase):
             temp=Path(td);zip_path=temp/'plugin.zip'
             result=build_release(root,zip_path,archive_root='miliastra-wonderland')
             restored=extract(zip_path,result['sha256'],temp/'extracted',read_json(root/'plugin.json')['version'])
+            lock_path=root/'vendor/beyond/native-canvas.json'
+            locked={Path('vendor/beyond')/name: digest for name,digest in read_json(lock_path)['files'].items()} if lock_path.is_file() else {}
             with zipfile.ZipFile(zip_path) as archive:
                 for entry in archive.infolist():
                     path=Path(entry.filename);relative=Path(*path.parts[1:])
@@ -113,7 +174,12 @@ class ReleaseTests(unittest.TestCase):
                     self.assertFalse(entry.filename.endswith('GE_IMG_Tool.exe'))
                     self.assertFalse(entry.filename.endswith('Invoke-Geimg.ps1'))
                     self.assertFalse(entry.filename.endswith('GEIMG LOGO.png'))
-                    self.assertEqual((restored/relative).read_bytes(),(root/relative).read_bytes())
+                    contents=(restored/relative).read_bytes()
+                    if relative in locked:
+                        self.assertEqual(hashlib.sha256(contents).hexdigest(),locked[relative])
+                    else:
+                        self.assertEqual(contents,(root/relative).read_bytes())
+            self.assertTrue(all((restored/relative).is_file() for relative in locked))
             bundle=read_json(restored/'vendor/beyond/bundle.json')
             for path,digest in bundle['files'].items():
                 self.assertEqual(hashlib.sha256((restored/'vendor/beyond'/path).read_bytes()).hexdigest(),digest)

@@ -60,7 +60,7 @@ def distribution_exclusions(source, *, required=False):
     return prefixes, files
 
 
-def build_release(source, output, layout='auto', archive_root=None):
+def build_release(source, output, layout='auto', archive_root=None, *, beyond_native_archive=None):
     source, output = Path(source).resolve(), Path(output).absolute()
     if os.path.lexists(output):
         raise FileExistsError(f'Output already exists: {output}')
@@ -126,18 +126,48 @@ def build_release(source, output, layout='auto', archive_root=None):
             raise ValueError('Plugin identity and skills required')
     else:
         raise ValueError('Unknown layout')
-    members = {archive_root + '/' + f.relative_to(source).as_posix(): f for f in files}
-    validate_windows_names(members)
+    members = {f.relative_to(source): f for f in files}
+    beyond = Path('vendor/beyond')
+    native_lock = beyond / 'native-canvas.json'
+    locked_members = {}
+    if beyond_native_archive is not None and not (source / native_lock).is_file():
+        raise ValueError('A Beyond native archive requires vendor/beyond/native-canvas.json')
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='.ugc-package-', dir=output.parent) as staging:
-        staged = Path(staging) / output.name
+        staging = Path(staging)
+        if (source / native_lock).is_file():
+            from beyond_native import (download_native_archive, extract_native_archive,
+                                       read_native_lock, verify_native_files)
+            if native_lock not in members or beyond / 'bundle.json' not in members:
+                raise ValueError('The full Windows ZIP must include the Beyond lock and manifest')
+            lock = read_native_lock(source / beyond)
+            native_files = {beyond / relative: relative for relative in lock['files']}
+            if any(path.as_posix() in excluded_files or path.as_posix().startswith(tuple(excluded))
+                   for path in native_files):
+                raise ValueError('The full Windows ZIP must include the locked Beyond native files')
+            locked_members = {f'{archive_root}/{path.as_posix()}': lock['files'][relative]
+                              for path, relative in native_files.items()}
+            bundled = verify_native_files(source / beyond, lock)
+            if beyond_native_archive is not None or not bundled:
+                archive = Path(beyond_native_archive) if beyond_native_archive is not None else staging / 'native-canvas.zip'
+                if beyond_native_archive is None:
+                    download_native_archive(lock, archive)
+                hydrated = staging / 'native-canvas'
+                extract_native_archive(lock, archive, hydrated)
+                members.update({path: hydrated / relative for path, relative in native_files.items()})
+        members = {archive_root + '/' + path.as_posix(): members[path] for path in sorted(members)}
+        validate_windows_names(members)
+        staged = staging / 'package.zip'
         with zipfile.ZipFile(staged, 'x', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
             for member, f in members.items():
                 info = zipfile.ZipInfo(member, date_time=(1980, 1, 1, 0, 0, 0))
                 info.compress_type = zipfile.ZIP_DEFLATED
                 info.create_system = 3
                 info.external_attr = 0o100644 << 16
-                archive.writestr(info, f.read_bytes())
+                contents = f.read_bytes()
+                if member in locked_members and hashlib.sha256(contents).hexdigest() != locked_members[member]:
+                    raise ValueError(f'ZIP native Canvas member SHA-256 mismatch: {member}')
+                archive.writestr(info, contents)
         with tempfile.TemporaryDirectory(prefix='ugc-zip-check-') as temporary, zipfile.ZipFile(staged) as archive:
             if archive.testzip() is not None:
                 raise ValueError('ZIP CRC failed')
@@ -157,15 +187,16 @@ def build_release(source, output, layout='auto', archive_root=None):
                     raise ValueError('Extracted bytes differ from source: ' + member)
         file_size = staged.stat().st_size
         digest = sha256_file(staged)
+        largest_file_bytes = max(path.stat().st_size for path in members.values())
         if os.name == 'nt':
             staged.rename(output)
         else:
             # POSIX rename overwrites a file created during the build.
             os.link(staged, output)
     return {'layout': layout, 'excluded_prefixes': excluded, 'excluded_files': excluded_files,
-            'files': len(files), 'skills': len(entries),
+            'files': len(members), 'skills': len(entries),
             'zip_bytes': file_size,
-            'largest_file_bytes': max(f.stat().st_size for f in files),
+            'largest_file_bytes': largest_file_bytes,
             'sha256': digest,
             'archive_content_verified': True, 'extracted_names_verified': True,
             'utf8_entries': len(unicode_names), 'agent_installation_tested': False}
@@ -177,5 +208,8 @@ if __name__ == '__main__':
     parser.add_argument('--out', type=Path, required=True)
     parser.add_argument('--layout', choices=['auto', 'skill', 'plugin'], default='auto')
     parser.add_argument('--archive-root')
+    parser.add_argument('--beyond-native-archive', type=Path,
+                        help='Use a local Beyond Windows x64 release asset verified against the source lock')
     args = parser.parse_args()
-    print(json.dumps(build_release(args.source, args.out, args.layout, args.archive_root)))
+    print(json.dumps(build_release(args.source, args.out, args.layout, args.archive_root,
+                                   beyond_native_archive=args.beyond_native_archive)))

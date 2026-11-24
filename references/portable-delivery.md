@@ -2,6 +2,8 @@
 
 可选 Beyond 阶段支持随包默认后端：自动收集其配置和显式文件依赖，保留 `@level` 到最终 GIL 生成后绑定，详细格式见 [模拟器后端](beyond-backend.md)。portable 不接受显式外部 backend；缺失依赖、越界输入及断言失败不提交交付目录。整个随包后端及许可证纳入工具链，仍需满足 Python/Lua、Node 和当前 Windows x64 渲染条件。
 
+从精简的 Git 安装制作 Beyond 交付时，经校验的 Canvas 原生文件收入 `portable/native-canvas/`。重建时按当前插件锁定的摘要核对这两份文件，并在隔离目录中离线加载。完整 Windows ZIP 已包含原生文件，随工具链一同保存。
+
 能力名：portable-delivery。入口produce schema 2的portable配置与qianxing.py verify --portable。适用于独立交付源码和工具后，在原工程目录不可用时重建；依赖相同指纹的Python、Node、Lua/Pillow环境，不安装或修改全局环境。
 
 ## 配置与使用

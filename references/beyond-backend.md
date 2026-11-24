@@ -1,6 +1,6 @@
 # 可选外部模拟器后端
 
-能力名：beyond-backend。插件随包提供固定提交 02a5ea2cd38bb5bcf7a7ce6dd745be3bb1ae655c 的 miliastra-beyond-simulator 源码、GPL-3.0-only 许可证和 Windows x64 运行依赖。需要 Node 22+，无需另外下载模拟器或安装 npm 包。其他系统的原生渲染依赖尚未随包提供。默认模拟后端不变。
+能力名：beyond-backend。插件提供固定提交 02a5ea2cd38bb5bcf7a7ce6dd745be3bb1ae655c 的 miliastra-beyond-simulator 源码及 GPL-3.0-only 许可证。需要 Windows x64 和 Node 22+。完整 Windows ZIP 已携带 Canvas 原生模块和 ICU 数据，有可用的插件运行环境时可以离线预览。Git 市场和 Cordis 安装在首次使用 Beyond 时下载这两个文件，校验 ZIP 和每个文件的 SHA-256 后写入用户数据目录，后续复用经过校验的缓存。 [原生资产锁定清单](../vendor/beyond/native-canvas.json)
 
 ```text
 python scripts/qianxing.py simulate preview samples/beyond-button/preview.json --out NEW_PREVIEW

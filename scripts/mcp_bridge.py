@@ -2,7 +2,7 @@
 from pathlib import Path
 import argparse,asyncio,json,os,re,sys,tempfile,math
 from authoring_io import DiagnosticError,PLUGIN,sha_file,schema,read_json,write_json,missing_input,require_new_output
-from mcp_workspace import linked, workspace as project_context
+from mcp_workspace import data_directory, linked, workspace as project_context
 
 OPERATIONS={'doctor':(), 'capabilities':(), 'docs_search':('version','query'),'api_lookup':('symbol',),'nodes_lookup':(),'resources_lookup':('version',),'diagnose':('spec','sha256'),
             'native_inspect':('input',),'native_audit':('input',),
@@ -195,9 +195,11 @@ class Bridge:
             with (scratch/'stdout.log').open('wb')as stdout,(scratch/'stderr.log').open('wb')as stderr:
                 try:
                     from portable_trust import child_environment
+                    env={**child_environment(),'PYTHONDONTWRITEBYTECODE':'1'}
+                    if (data:=data_directory()) is not None:env['UGC_PLUGIN_DATA']=str(data)
                     process=await asyncio.create_subprocess_exec(sys.executable,'-X','utf8','-B',str(PLUGIN/'scripts/mcp_worker.py'),
                         str(request),str(result_path),cwd=project or PLUGIN,stdout=stdout,stderr=stderr,
-                        env={**child_environment(),'PYTHONDONTWRITEBYTECODE':'1'},start_new_session=os.name!='nt')
+                        env=env,start_new_session=os.name!='nt')
                     if progress:await progress(1,3,'Core operation running')
                     code=await process.wait()
                 finally:

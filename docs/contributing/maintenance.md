@@ -31,4 +31,6 @@ Python 依赖有变更时运行 `uv lock`，并用 `uv export --locked --no-dev 
 | Windows 安装 ZIP | 36,433,668 | 29,463,982 |
 | Cordis `npm pack` | 33,904,622 | 26,947,641 |
 
-两种安装包均从干净目录解包复验。60 个路径均已省略，其余 Beyond 运行文件及许可证的摘要匹配清单。安装自检、真实 MCP stdio 的五个教程和 Beyond 点击断言均通过，软件预览记录 `Button clicked`。其余大型文件保留，包括上游的 Windows 原生 Canvas 二进制及数据、Pixi 的多入口构建和公开教程夹具。
+上述快照的两种安装包均从干净目录解包复验，60 个路径均已省略，Beyond 运行文件及许可证的摘要匹配清单。安装自检、真实 MCP stdio 的五个教程和 Beyond 点击断言均通过，软件预览记录 `Button clicked`。
+
+当前 Canvas Windows x64 原生模块与 ICU 数据由版本化 Release 资产分发。原文件摘要仍登记在 Beyond 运行清单，另用 [native-canvas.json](../../vendor/beyond/native-canvas.json) 锁定资产地址、ZIP 摘要和两个文件摘要。更新时核对上游版本、许可证、待打包文件和已发布资产的下载摘要。完整 ZIP 成品须包含这两个路径，Git 与 Cordis 的成品须实测首次下载和离线缓存复用。 [Canvas 0.1.100 资产](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/beyond-canvas-v0.1.100)

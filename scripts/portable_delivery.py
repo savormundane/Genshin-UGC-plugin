@@ -4,6 +4,26 @@ import importlib.util,json,os,re,shutil,subprocess,sys,tempfile
 from authoring_io import PLUGIN,ProductionInputs,read_json,sha,inventory,write_json,output_directory,finish,schema
 from validation_evidence import backend_inventory
 
+
+def unbundled_canvas_lock(job, backend):
+    if 'beyond' not in job:
+        return None
+    from beyond_native import read_native_lock, verify_native_files
+    lock = read_native_lock(backend)
+    return lock if lock is not None and not verify_native_files(backend, lock) else None
+
+
+def copy_canvas_payload(source, destination, lock):
+    from beyond_native import verify_native_files
+    if not verify_native_files(source, lock):
+        raise ValueError('Portable Beyond Canvas input missing')
+    for name in lock['files']:
+        target = destination / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source / name, target)
+    verify_native_files(destination, lock)
+
+
 def collect(path,options,*,snapshot_root=None,inputs=None):
     path=Path(path).resolve();base=path.parent
     schema(options,('roots','dependencies'))
@@ -121,6 +141,13 @@ def execute(bundle,out,trusted_inputs_sha256=None):
     work=bundle/'workspace'
     with tempfile.TemporaryDirectory(prefix='qianxing-portable-run-')as temporary:
         scratch=Path(temporary);trace=scratch/'trace';trace.mkdir()
+        beyond_backend = PLUGIN / 'vendor/beyond'
+        native_lock = unbundled_canvas_lock(read_json(work / record['job']), beyond_backend)
+        env = child_environment()
+        if native_lock is not None:
+            native_root = scratch / 'native-canvas'
+            copy_canvas_payload(bundle / 'native-canvas', native_root, native_lock)
+            env['UGC_BEYOND_NATIVE_ROOT'] = str(native_root)
         read_roots=[str(work),str(out.parent),str(scratch),str(Path(sys.base_prefix).resolve()),str(Path(sys.prefix).resolve())]
         package_paths=[]
         for name in('lupa','PIL'):
@@ -132,7 +159,8 @@ def execute(bundle,out,trusted_inputs_sha256=None):
         read_roots.append(str(PLUGIN))
         runner=PLUGIN/'scripts/dependency_runner.py'
         command=[sys.executable,'-X','utf8','-B',str(runner),str(PLUGIN/'scripts/qianxing.py'),'produce',str(work/record['job']),'--out',str(out)]
-        env={**child_environment(),'UGC_BUILD_BOUNDARY':json.dumps(boundary),'TMP':str(scratch),'TEMP':str(scratch),'TMPDIR':str(scratch),'PYTHONDONTWRITEBYTECODE':'1','PYTHONPATH':os.pathsep.join(dict.fromkeys(package_paths))}
+        env.update(UGC_BUILD_BOUNDARY=json.dumps(boundary), TMP=str(scratch), TEMP=str(scratch), TMPDIR=str(scratch),
+                   PYTHONDONTWRITEBYTECODE='1', PYTHONPATH=os.pathsep.join(dict.fromkeys(package_paths)))
         process=subprocess.run(command,cwd=scratch,env=env,capture_output=True,text=True,encoding='utf-8',timeout=900)
         if process.returncode:raise ValueError('Portable build failed: '+(process.stdout+process.stderr)[-18000:])
         traces=list(trace.glob('*.json'));reads=sorted({name for path in traces for name in read_json(path)})
@@ -162,6 +190,13 @@ def produce(path,out,evidence,*,job=None,job_digest=None):
             relocations.append({'configuration':files[config],'field':key,'original':container[key],'relocated':value})
             container[key]=value
         for source,(_,value)in configs.items():write_json(work/files[source],value)
+        beyond_backend = PLUGIN / 'vendor/beyond'
+        native_lock = unbundled_canvas_lock(job, beyond_backend)
+        if native_lock is not None:
+            from beyond_native import NATIVE_BINARY, native_library_path
+            binary = native_library_path(beyond_backend, lock=native_lock)
+            native_root = binary.parents[len(Path(NATIVE_BINARY).parts) - 1]
+            copy_canvas_payload(native_root, bundle / 'native-canvas', native_lock)
         write_json(bundle/'portable.json',{'schema':1,'job':files[path],'backends':backends,'original_inputs':original,'relocations':relocations,'files':inventory(bundle),'directories':sorted(p.relative_to(bundle).as_posix() for p in bundle.rglob('*') if p.is_dir())})
         snapshot=inventory(bundle)
         with tempfile.TemporaryDirectory(prefix='qianxing-portable-output-',dir=stage.parent)as directory:

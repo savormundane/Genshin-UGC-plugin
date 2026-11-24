@@ -143,6 +143,15 @@ def check(root: Path = ROOT) -> list[str]:
         except (OSError, ValueError, KeyError, TypeError, IndexError) as exc:
             errors.append(f"Marketplace configuration: {exc}")
 
+    backend = root / "vendor/beyond"
+    if (backend / "native-canvas.json").exists():
+        from beyond_native import read_native_lock, verify_native_files
+
+        try:
+            verify_native_files(backend, read_native_lock(backend))
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            errors.append(f"Beyond native Canvas distribution: {exc}")
+
     docs = list(root.glob("*.md"))
     for directory in ("docs", "skills", "references", "scripts", ".github"):
         docs.extend((root / directory).rglob("*.md"))
