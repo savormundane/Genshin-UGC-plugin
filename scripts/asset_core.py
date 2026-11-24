@@ -6,10 +6,10 @@ ASSET_GENERATORS = (ASSET_GENERATOR, 'genshin-ugc-assets')
 
 
 @contextmanager
-def open_single_image(source, max_pixels):
+def open_single_image(source, max_pixels, *, formats=None):
     from PIL import Image
     try:
-        image = Image.open(source)
+        image = Image.open(source, formats=formats)
     except Image.DecompressionBombError as error:
         raise ValueError(f'{source.name}: {error} This tool allows {max_pixels} source pixels; preprocess explicitly') from error
     with image:

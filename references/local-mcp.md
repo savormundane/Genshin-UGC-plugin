@@ -26,6 +26,7 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 | resources_lookup | version、query、mode、limit。查模型候选和原生样本中的模板 ID。可选 catalogue 和 catalogue_sha256，未给摘要时由服务计算 |
 | native_inspect / native_audit | input，可选 sha256。读取或审计指定原生文件 |
 | scene_preview | input、output，可选 before、sha256、before_sha256。绘制全场布局及前后对照，输出 PNG 和 layout.json |
+| asset_preview | input、output，可选 sha256、max_controls、step。试算单张 PNG 的矩形图元方案，返回各方案的控件数、误差、预算结果及预览路径 |
 | project_inspect | input，可选 sha256、scope。用 query、kind、limit 搜索对象，用 selector、transitive 查精确目标和关系，或用 summary 查看对象数。`scope="scene"` 查询 3D，`scope="gameplay"` 查询玩法资源 |
 | client_check | input，可选 sha256、mapping、contract、contract_sha256。编译 Lua 正文，可选择单个 GIL 映射或检查 API 合同 |
 | produce | spec、sha256、output：执行已有制作链 |
@@ -41,6 +42,8 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 input/spec/plan/contract相对工程根目录，或为工程/输出根内绝对路径。output相对输出根目录，必须是尚不存在的新目录，其父目录须存在。sha256均为对应输入文件原始字节摘要；plan_sha256参数是计划文件摘要，计划内部的语义摘要由原生核心继续核对。
 
 带可选摘要的工具在省略时自行计算，并在 `inputs_sha256` 按参数名返回。编辑既有 GIL 时可把 `inputs_sha256.input` 交给 `native_plan`。配置诊断、修改计划、原生写入和重建继续使用各自的必填摘要。
+
+`asset_preview` 的 `result.candidates` 包含各方案的 `controls` 和相对于 `output` 的 `display_preview`。MCP 随响应附上原方案和一个低控件数备选的缩略 PNG（有备选时）。指定 `max_controls` 后，查看候选的 `within_budget` 和报告的 `recommendations` 选择方案。输出目录的 `report.json` 可交给 [assets generate](asset-generation.md)。预览以离线参考图为准，游戏内渲染待实测。
 
 ## 审阅并另存已有工程
 

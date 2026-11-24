@@ -62,7 +62,7 @@ def lua_payload(asset):
         for tile in data['tiles']
     ]}
 
-def prepare_source(source, *, target='auto', width=None, height=None, step=1, colors=96, alpha_min=128, max_controls=None, columns=64, max_bytes=4096, cell=16, fit='auto'):
+def prepare_source(source, *, target='auto', width=None, height=None, step=1, colors=96, alpha_min=128, max_controls=None, columns=64, max_bytes=4096, cell=16, fit='auto', image_format=None):
     from asset_core import open_single_image
     if target not in ('auto','rectangles','text'):raise ValueError('Unknown target')
     target='rectangles' if target=='auto' else target
@@ -80,14 +80,14 @@ def prepare_source(source, *, target='auto', width=None, height=None, step=1, co
         return size
     if width is not None:grid_size(width,height)
     raw = None
-    if source.suffix.lower()=='.json':
+    if image_format is None and source.suffix.lower()=='.json':
         raw=source.read_bytes()
         original=hashlib.sha256(raw).hexdigest()
         image=procedural(json.loads(raw))
         size=grid_size(*image.size)
     else:
         original=sha_file(source)
-        with open_single_image(source,MAX_SOURCE_PIXELS) as im:
+        with open_single_image(source, MAX_SOURCE_PIXELS, formats=[image_format] if image_format else None) as im:
             size=grid_size(*im.size)
             image=im.convert('RGBA')
     parameters = {'step':step,'colors':colors,'alpha_min':alpha_min,'columns':columns,

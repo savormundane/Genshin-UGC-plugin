@@ -90,6 +90,21 @@ def server(bridge):
         """Draw scene layout PNGs and a world-space object list. Compare an optional earlier GIL at the same scale."""
         return await call('scene_preview',ctx,input=input,output=output,before=before,
                           sha256=sha256,before_sha256=before_sha256)
+
+    @app.tool(structured_output=True)
+    async def asset_preview(input:str,output:str,ctx:Context,sha256:str|None=None,
+                            max_controls:StrictInt|None=None,step:StrictInt|None=None)->types.CallToolResult:
+        """Compare rectangle conversions of a PNG. Return control counts, PNG previews and a report in a new output directory."""
+        response = await call('asset_preview', ctx, input=input, output=output, sha256=sha256,
+                              max_controls=max_controls, step=step)
+        previews = response.get('result', {}).pop('_inline_previews', [])
+        content = [types.TextContent(type='text', text=json.dumps(response, ensure_ascii=False))]
+        for preview in previews:
+            content.extend([
+                types.TextContent(type='text', text=f"{preview['name']} · {preview['controls']} 个控件"),
+                types.ImageContent(type='image', mime_type='image/png', data=preview['data']),
+            ])
+        return types.CallToolResult(content=content, structured_content=response, is_error=response['status'] == 'failed')
     @app.tool(structured_output=True)
     async def native_audit(input:str,ctx:Context,sha256:str|None=None)->dict[str,Any]:
         """Audit final native types and references without modifying input."""

@@ -1,6 +1,8 @@
 """Public fixture for a reviewed template edit over the real MCP stdio transport."""
 
 import asyncio
+from base64 import b64decode
+from io import BytesIO
 import os
 from pathlib import Path
 import shutil
@@ -9,8 +11,9 @@ import tempfile
 import unittest
 
 from mcp import Client, StdioServerParameters, types
+from PIL import Image
 
-from authoring_io import PLUGIN, sha_file, write_json
+from authoring_io import PLUGIN, read_json, sha_file, write_json
 from level_authoring import initial_level, integer, msg, set_section, text
 
 TEMPLATE = 0x40C00001
@@ -59,6 +62,54 @@ class NativeWorkflowTests(unittest.TestCase):
         self.assertFalse(outcome.is_error, outcome)
         self.assertEqual(outcome.structured_content["status"], status, outcome)
         return outcome.structured_content
+
+    def test_asset_preview_returns_images_and_counts(self):
+        source = self.project / "练习 图标.png"
+        with Image.new("RGBA", (16, 16)) as image:
+            for y in range(1, 15):
+                for x in range(1, 15):
+                    image.putpixel((x, y), (255, 48, 64, 255) if (x + y) % 2 else (0, 80, 255, 255))
+            image.save(source)
+        digest = sha_file(source)
+        args = {"input": source.name, "output": "素材对比", "max_controls": 20}
+
+        async def run():
+            async with Client(self.server) as client:
+                outcome = await client.call_tool("asset_preview", args)
+                response = outcome.structured_content
+                self.assertFalse(outcome.is_error, outcome)
+                self.assertEqual(response["status"], "passed")
+                self.assertEqual(response["inputs_sha256"]["input"], digest)
+                output = self.outputs / args["output"]
+                self.assertEqual(Path(response["output"]), output)
+                persisted = read_json(output / "report.json")
+                candidates = response["result"]["candidates"]
+                self.assertEqual(candidates, persisted["candidates"])
+                counts = [candidate["controls"] for candidate in candidates]
+                self.assertGreater(counts[0], 20)
+                self.assertTrue(any(0 < count <= 20 for count in counts[1:]))
+                for candidate in candidates:
+                    with Image.open(output / candidate["display_preview"]) as image:
+                        image.verify()
+                thumbnails = [item for item in outcome.content if item.type == "image"]
+                self.assertEqual(len(thumbnails), 2)
+                for thumbnail in thumbnails:
+                    self.assertEqual(thumbnail.mime_type, "image/png")
+                    with Image.open(BytesIO(b64decode(thumbnail.data))) as image:
+                        image.verify()
+                self.assertEqual(sha_file(source), digest)
+
+                retry = await client.call_tool("asset_preview", args)
+                self.assertTrue(retry.is_error)
+                self.assertIn("Output exists", retry.content[0].text)
+                invalid = await client.call_tool("asset_preview", {
+                    "input": "entrance.gil", "output": "invalid-preview",
+                })
+                self.assertTrue(invalid.is_error)
+                self.assertIn("asset.preview_invalid", invalid.structured_content["diagnostics"][0]["code"])
+                self.assertFalse((self.outputs / "invalid-preview").exists())
+
+        asyncio.run(run())
 
     def test_trace_preview_write_and_verify(self):
         async def run():

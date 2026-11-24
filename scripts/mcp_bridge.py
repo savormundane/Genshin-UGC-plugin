@@ -7,7 +7,7 @@ from mcp_workspace import linked, workspace as project_context
 OPERATIONS={'doctor':(), 'capabilities':(), 'docs_search':('version','query'),'api_lookup':('symbol',),'nodes_lookup':(),'resources_lookup':('version',),'diagnose':('spec','sha256'),
             'native_inspect':('input',),'native_audit':('input',),
             'project_inspect':('input',),'client_check':('input',),'graph_check':('input',),
-            'native_diff':('input','other'), 'scene_preview':('input','output'),
+            'native_diff':('input','other'), 'scene_preview':('input','output'), 'asset_preview':('input','output'),
             'native_plan':('input','sha256','output'),
             'simulate':('spec','sha256','output'),'experiment_run':('spec','sha256','output'),
             'experiment_compare':('input','sha256','other','other_sha256'),
@@ -22,6 +22,7 @@ READ_FILE_OPERATIONS={
     'graph_check':('sha256','job','job_sha256','bindings','bindings_sha256'),
     'resources_lookup':('query','mode','limit','catalogue','catalogue_sha256'),
     'scene_preview':('sha256','before','before_sha256'),
+    'asset_preview':('sha256','max_controls','step'),
 }
 OPTIONAL_FIELDS={**READ_FILE_OPERATIONS,'native_plan':('patch','spec','spec_sha256','summary'),'produce':('summary',),
                  'nodes_lookup':('query','scope','limit'),'verify':('rebuild','portable','trusted_inputs_sha256','artifacts_only')}
@@ -253,4 +254,6 @@ def main(argv=None):
         server(bridge).run(transport='stdio');return 0
     request=read_json(args.request);schema(request,('schema','operation','arguments'),('operation','arguments'))
     result=asyncio.run(bridge.call(request['operation'],request['arguments']))
+    if request['operation'] == 'asset_preview':
+        result.get('result', {}).pop('_inline_previews', None)
     print(json.dumps(result,ensure_ascii=False));return 1 if result['status']in('failed','not_checked')else 0

@@ -79,6 +79,32 @@ def main():
         elif op == 'scene_preview':
             from scene_preview import preview
             result = preview(args['input'], args['output'], before=args.get('before'))
+        elif op == 'asset_preview':
+            from base64 import b64encode
+            from io import BytesIO
+            from PIL import Image
+            from asset_pipeline import preview
+            output = Path(args['output'])
+            try:
+                result = preview(args['input'], output, image_format='PNG', explore=True,
+                                 max_controls=args.get('max_controls'), step=args.get('step', 1))
+            except (OSError, ValueError) as exc:
+                raise DiagnosticError('asset.preview_invalid', str(exc), phase=op, source=args['input']) from exc
+            original, *alternatives = result['candidates']
+            selected = [original]
+            if alternatives:
+                visible = [candidate for candidate in alternatives if candidate['controls']]
+                selected.append(min(visible or alternatives, key=lambda candidate: (
+                    candidate['within_budget'] is False, candidate['controls'], candidate['error'])))
+            result['_inline_previews'] = []
+            for candidate in selected:
+                with Image.open(output / candidate['display_preview']) as image, BytesIO() as thumbnail:
+                    image.thumbnail((256, 256), Image.Resampling.NEAREST)
+                    image.save(thumbnail, format='PNG')
+                    result['_inline_previews'].append({
+                        'name': candidate['name'], 'controls': candidate['controls'],
+                        'data': b64encode(thumbnail.getvalue()).decode('ascii'),
+                    })
         elif op=='native_plan':
             from native_changes import plan,plan_summary
             from authoring_io import output_directory,finish
