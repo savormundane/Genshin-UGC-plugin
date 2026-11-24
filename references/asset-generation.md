@@ -1,6 +1,18 @@
 # 内置素材生成
 
-## 一个入口
+## 素材任务与客户端能力
+
+| 任务 | 所需客户端能力 |
+| --- | --- |
+| 查找原生模型和模板 ID | 本地 MCP 的 `resources_lookup`，或终端的 `resources search`。 |
+| 单张 PNG 转矩形图元 | 本地 MCP 先用 `asset_preview` 比较候选，再用 `asset_generate` 生成所选方案。终端可用 `assets preview/generate`。 |
+| 自定网格、富文本和参数化图形 | 用终端运行 `assets preview/generate`，指定相应参数或图形 JSON。 |
+| 多素材共用控件预算 | 用终端执行 `assets batch preview/generate`。已有预算报告和制作配置时，可通过 MCP 的 `produce` 执行 `kind: "batch"` 生成步骤。 |
+| 分层拟合和续算 | 用终端执行 `assets fit`。已有拟合制作配置时，可通过 MCP 的 `produce` 执行 `kind: "fit"` 拟合。 |
+
+单张 PNG 的 MCP 流程需要客户端连接本地工具并授权工程目录。使用客户端图像预览查看随工具返回的缩略图，也可打开输出目录中的候选 PNG。 [MCP 调用顺序](local-mcp.md#单张-png-试算与生成) · [已有制作配置](production-v2.md)
+
+## 单张素材的命令行
 
 素材由插件自有asset_core与asset_pipeline实现，共用图像处理、预算检查、预览及交付。Agent根据目标选择输出类型，用户无需选择框架。默认生成矩形控件数据；需要文本控件时选text。auto固定选择rectangles，不在预算超限时静默换路线或降低质量。
 

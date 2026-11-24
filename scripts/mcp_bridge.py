@@ -8,6 +8,7 @@ OPERATIONS={'doctor':(), 'capabilities':(), 'docs_search':('version','query'),'a
             'native_inspect':('input',),'native_audit':('input',),
             'project_inspect':('input',),'client_check':('input',),'graph_check':('input',),
             'native_diff':('input','other'), 'scene_preview':('input','output'), 'asset_preview':('input','output'),
+            'asset_generate':('input','sha256','report','report_sha256','candidate','output'),
             'native_plan':('input','sha256','output'),
             'simulate':('spec','sha256','output'),'experiment_run':('spec','sha256','output'),
             'experiment_compare':('input','sha256','other','other_sha256'),
@@ -152,7 +153,7 @@ class Bridge:
                 raise ValueError('Resource lookup limit must be from 1 to 100')
         digest_fields=(('catalogue','catalogue_sha256'),('input','sha256'),
                        ('spec','spec_sha256' if operation=='native_plan' else 'sha256'),('other','other_sha256'),
-                       ('plan','plan_sha256'),('contract','contract_sha256'),('job','job_sha256'),
+                       ('plan','plan_sha256'),('report','report_sha256'),('contract','contract_sha256'),('job','job_sha256'),
                        ('bindings','bindings_sha256'),('before','before_sha256'))
         for field,digest_field in digest_fields:
             if field not in args:
@@ -229,9 +230,12 @@ class Bridge:
             output_hashes=None
             if destination:
                 delivery=scratch/'delivery'
-                if operation in ('native_plan','native_apply'):
+                if operation in ('native_plan','native_apply','asset_generate'):
                     manifest=delivery/'manifest.json'
-                    output_hashes={**read_json(manifest)['files'],'manifest.json':sha_file(manifest)}
+                    field = 'files_sha256' if operation == 'asset_generate' else 'files'
+                    output_hashes={**read_json(manifest)[field],'manifest.json':sha_file(manifest)}
+                elif operation == 'asset_preview':
+                    output_hashes = {'report.json': sha_file(delivery / 'report.json')}
                 self.path(str(destination),project,output_root,output=True)
                 os.rename(delivery,destination)
                 if operation=='produce' and 'output_directory' in result:result['output_directory']=str(destination)
@@ -254,6 +258,6 @@ def main(argv=None):
         server(bridge).run(transport='stdio');return 0
     request=read_json(args.request);schema(request,('schema','operation','arguments'),('operation','arguments'))
     result=asyncio.run(bridge.call(request['operation'],request['arguments']))
-    if request['operation'] == 'asset_preview':
+    if request['operation'] in ('asset_preview', 'asset_generate'):
         result.get('result', {}).pop('_inline_previews', None)
     print(json.dumps(result,ensure_ascii=False));return 1 if result['status']in('failed','not_checked')else 0

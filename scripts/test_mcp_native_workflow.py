@@ -114,6 +114,91 @@ class NativeWorkflowTests(unittest.TestCase):
 
         asyncio.run(run())
 
+    def test_asset_generate_uses_reviewed_candidate_and_protects_inputs(self):
+        source = self.project / "透明 检查点.png"
+        shutil.copyfile(PLUGIN / "samples/creator-demos/png/checkpoint-marker.png", source)
+        original = source.read_bytes()
+
+        async def run():
+            async with Client(self.server) as client:
+                preview = await self.call(client, "asset_preview", {
+                    "input": source.name, "output": "素材试算", "max_controls": 20,
+                })
+                report = Path(preview["output"]) / "report.json"
+                report_digest = preview["outputs_sha256"]["report.json"]
+                self.assertEqual(sha_file(report), report_digest)
+                chosen = preview["result"]["recommendations"][0]
+                self.assertEqual(chosen, "grid-25")
+                candidate = next(row for row in preview["result"]["candidates"] if row["name"] == chosen)
+                args = {
+                    "input": source.name, "sha256": preview["inputs_sha256"]["input"],
+                    "report": str(report), "report_sha256": report_digest,
+                    "candidate": chosen, "output": "图元交付",
+                }
+                delivered = await client.call_tool("asset_generate", args)
+                self.assertFalse(delivered.is_error, delivered)
+                response = delivered.structured_content
+                self.assertEqual(response["status"], "passed")
+                self.assertEqual(response["result"]["controls"], candidate["controls"])
+                self.assertEqual(candidate["controls"], 11)
+                output = Path(response["output"])
+                self.assertEqual(output, self.outputs / args["output"])
+                self.assertEqual(read_json(output / "report.json")["preview_selection"],
+                                 {"candidate": chosen, "preview_sha256": report_digest})
+                self.assertEqual(sha_file(output / "preview.png"), sha_file(report.parent / candidate["preview"]))
+                files = {"asset.json", "data.lua", "preview.png", "report.json", "manifest.json"}
+                digests = response["outputs_sha256"]
+                self.assertEqual(digests, {name: sha_file(output / name) for name in files})
+                asset = read_json(output / "asset.json")
+                self.assertEqual(len(asset["data"]["rects"]), 11)
+                image, = [item for item in delivered.content if item.type == "image"]
+                with Image.open(BytesIO(b64decode(image.data))) as thumbnail:
+                    self.assertEqual(thumbnail.size, (6, 6))
+                    thumbnail.verify()
+
+                repeat = await client.call_tool("asset_generate", args)
+                self.assertTrue(repeat.is_error)
+                self.assertIn("io.output_exists", repeat.content[0].text)
+                self.assertEqual(digests, {name: sha_file(output / name) for name in files})
+                self.assertEqual(sha_file(report), report_digest)
+                self.assertEqual(source.read_bytes(), original)
+
+                for name, detail in (("original", "exceeds a declared constraint"),
+                                     ("unknown-candidate", "Expected an exact preview candidate name")):
+                    refused = await client.call_tool("asset_generate", {**args, "candidate": name, "output": name})
+                    self.assertTrue(refused.is_error)
+                    diagnostic, = refused.structured_content["diagnostics"]
+                    self.assertEqual(diagnostic["code"], "asset.generate_invalid")
+                    self.assertIn(detail, diagnostic["detail"])
+                    self.assertFalse((self.outputs / name).exists())
+
+                foreign = self.root / "report.json"
+                shutil.copyfile(report, foreign)
+                outside = await client.call_tool("asset_generate", {**args, "report": str(foreign), "output": "outside"})
+                self.assertTrue(outside.is_error)
+                self.assertIn("Path outside allowed", outside.content[0].text)
+                self.assertFalse((self.outputs / "outside").exists())
+
+                source.write_bytes(original + b"\n")
+                stale_input = await client.call_tool("asset_generate", {**args, "output": "stale-input"})
+                self.assertTrue(stale_input.is_error)
+                self.assertIn("Input digest mismatch: input", stale_input.content[0].text)
+                changed = await client.call_tool("asset_generate", {
+                    **args, "sha256": sha_file(source), "output": "stale-input",
+                })
+                self.assertTrue(changed.is_error)
+                self.assertIn("Preview source digest differs", changed.structured_content["diagnostics"][0]["detail"])
+                self.assertFalse((self.outputs / "stale-input").exists())
+                source.write_bytes(original)
+
+                report.write_bytes(report.read_bytes() + b"\n")
+                stale_report = await client.call_tool("asset_generate", {**args, "output": "stale-report"})
+                self.assertTrue(stale_report.is_error)
+                self.assertIn("Input digest mismatch: report", stale_report.content[0].text)
+                self.assertFalse((self.outputs / "stale-report").exists())
+
+        asyncio.run(run())
+
     def test_common_failures_include_recovery_and_original_details(self):
         async def run():
             unbound = StdioServerParameters(command=sys.executable, args=self.server.args[:-4],

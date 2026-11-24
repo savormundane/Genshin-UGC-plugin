@@ -25,6 +25,12 @@ python -X utf8 -B scripts/qianxing.py assets generate --from-preview "$markerOut
 
 换图时，从新报告的 `recommendations` 里选候选名称。
 
+## 用本地 MCP 复现
+
+如果客户端的工具列表同时有 `asset_preview` 和 `asset_generate`，将样图放入已授权的工程目录，在本机对话里使用上面的例句。助手先试算，用原图和试算报告的摘要生成选定方案，输出到新目录。 [MCP 调用顺序](../../../references/local-mcp.md#单张-png-试算与生成)
+
+关闭终端工具的 Codex 会话实跑了这两步。选中的 `grid-25` 在 Lua 中读回 11 个矩形。用同一份试算报告走命令行生成，五个交付文件逐字节一致。
+
 ## 看到了什么
 
 原图是 24 × 24 的透明底标记。预览统一按 144 × 144 的显示尺寸生成。试算共生成 14 个候选，这里列出原尺寸和两个预算内方案。

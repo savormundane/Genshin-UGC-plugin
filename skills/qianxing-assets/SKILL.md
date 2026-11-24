@@ -5,7 +5,9 @@ description: 查找千星奇域原生3D模型、选择白盒形状，生成、�
 
 # Qianxing Assets
 
-先确定输入、坐标空间、输出表示和项目预算。对比单张 PNG 的矩形图元方案时，用 MCP `asset_preview` 返回预览和各方案控件数。命令行用[素材试算](../../references/asset-generation.md)的 `assets preview` 对照目标尺寸、控件数和透明边缘。选定方案后，用 `assets generate --from-preview REPORT --candidate NAME --out DIR` 生成数据。多项素材共用控件预算时用 `assets batch preview/generate`。需要分层拟合或续算时用 `assets fit`，查看顶层 `quality` 和停止原因。按需运行 `assets check/diff`，再将生成数据接入客户端界面。
+先确定输入、坐标空间、输出表示和项目预算。单张 PNG 转矩形图元时，用 MCP `asset_preview` 比较预览、控件数和预算。候选确定后，用 `asset_generate` 生成数据。继续使用同一张 PNG、试算报告和工具返回的两份摘要，交付到新目录。 [MCP 调用顺序](../../references/local-mcp.md#单张-png-试算与生成)
+
+可用终端时，`assets preview/generate` 还支持自定网格和富文本。多项素材共用控件预算时用 `assets batch preview/generate`。分层拟合或续算用 `assets fit`，查看顶层 `quality` 和停止原因。已有相应制作配置时，MCP `produce` 可执行批量生成或拟合。按需运行 `assets check/diff`，再将数据接入客户端界面。 [素材任务与客户端能力](../../references/asset-generation.md#素材任务与客户端能力)
 
 | 任务 | 资料 |
 | --- | --- |

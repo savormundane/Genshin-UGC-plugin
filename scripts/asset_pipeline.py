@@ -115,7 +115,7 @@ def generate(source, output, *, from_preview=None, candidate=None, **options):
         from_preview=Path(from_preview).resolve()
         report_raw=from_preview.read_bytes()
         preview_report=json.loads(report_raw.decode('utf-8-sig'))
-        if preview_report.get('schema')!=1 or preview_report.get('kind')!='asset-preview':
+        if not isinstance(preview_report,dict) or preview_report.get('schema')!=1 or preview_report.get('kind')!='asset-preview':
             raise ValueError('Expected an assets preview report')
         matches=[row for row in preview_report['candidates'] if row['name']==candidate]
         if len(matches)!=1:raise ValueError(f'Expected an exact preview candidate name: {candidate}')

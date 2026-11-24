@@ -26,7 +26,8 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 | resources_lookup | version、query、mode、limit。查模型候选和原生样本中的模板 ID。可选 catalogue 和 catalogue_sha256，未给摘要时由服务计算 |
 | native_inspect / native_audit | input，可选 sha256。读取或审计指定原生文件 |
 | scene_preview | input、output，可选 before、sha256、before_sha256。绘制全场布局及前后对照，输出 PNG 和 layout.json |
-| asset_preview | input、output，可选 sha256、max_controls、step。试算单张 PNG 的矩形图元方案，返回各方案的控件数、误差、预算结果及预览路径 |
+| asset_preview | input、output，可选 sha256、max_controls、step。试算单张 PNG 的矩形图元方案，返回各方案的控件数、误差、预算结果及预览路径，附 `report.json` 的摘要 |
+| asset_generate | input、sha256、report、report_sha256、candidate、output。用已选候选生成矩形图元或试算报告指定的素材，返回参考 PNG、实际控件数和产物摘要 |
 | project_inspect | input，可选 sha256、scope。用 query、kind、limit 搜索对象，用 selector、transitive 查精确目标和关系，或用 summary 查看对象数。`scope="scene"` 查询 3D，`scope="gameplay"` 查询玩法资源 |
 | client_check | input，可选 sha256、mapping、contract、contract_sha256。编译 Lua 正文，可选择单个 GIL 映射或检查 API 合同 |
 | produce | spec、sha256、output：执行已有制作链 |
@@ -39,11 +40,18 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 | verify | input 指向交付 manifest.json，sha256 必填。artifacts_only、portable、rebuild 默认为 false。仅产物校验独立运行。重建还需 portable=true 和 trusted_inputs_sha256 |
 | native_apply | input、sha256、plan、plan_sha256、output：执行已有摘要绑定原生计划 |
 
-input/spec/plan/contract相对工程根目录，或为工程/输出根内绝对路径。output相对输出根目录，必须是尚不存在的新目录，其父目录须存在。sha256均为对应输入文件原始字节摘要；plan_sha256参数是计划文件摘要，计划内部的语义摘要由原生核心继续核对。
+input/spec/plan/contract/report 相对工程根目录，或为工程根或输出根内的绝对路径。output 相对输出根目录，必须是尚不存在的新目录，其父目录须存在。sha256 均为对应输入文件的原始字节摘要。plan_sha256 参数是计划文件摘要，计划内部的语义摘要由原生核心继续核对。
 
 带可选摘要的工具在省略时自行计算，并在 `inputs_sha256` 按参数名返回。编辑既有 GIL 时可把 `inputs_sha256.input` 交给 `native_plan`。配置诊断、修改计划、原生写入和重建继续使用各自的必填摘要。
 
-`asset_preview` 的 `result.candidates` 包含各方案的 `controls` 和相对于 `output` 的 `display_preview`。MCP 随响应附上原方案和一个低控件数备选的缩略 PNG（有备选时）。指定 `max_controls` 后，查看候选的 `within_budget` 和报告的 `recommendations` 选择方案。输出目录的 `report.json` 可交给 [assets generate](asset-generation.md)。预览以离线参考图为准，游戏内渲染待实测。
+## 单张 PNG 试算与生成
+
+1. 将 PNG 放入已授权的工程目录。调用 `asset_preview`，例如传入 `{"input":"checkpoint-marker.png","output":"marker-review","max_controls":20}`。
+2. 用 `result.candidates` 比较 `controls`、`error`、`within_budget` 和候选名。工具返回原方案和低控件数备选的缩略 PNG（有备选时），全部候选的 `display_preview` 是相对于返回的 `output` 的路径。`result.recommendations` 按试算结果给出可选候选。
+3. 确定候选后调用 `asset_generate`。`input` 继续指向同一张 PNG，`sha256` 取自 `inputs_sha256.input`。`report` 使用试算输出目录下 `report.json` 的绝对路径，`report_sha256` 取自 `outputs_sha256["report.json"]`。`candidate` 填试算的准确名称，`output` 填新目录名，例如 `marker-material`。
+4. 查看实际控件数 `result.controls` 和最终参考图。生成目录含 `asset.json`、`data.lua`、`preview.png`、`report.json` 和 `manifest.json`，SHA-256 见 `outputs_sha256`。源图或试算报告变化时，重新试算后选择候选。
+
+采用离线软件预览。按产物的坐标与数据格式接入客户端界面，再检查千星奇域内的显示。 [素材接入](asset-generation.md#接入与兼容)
 
 ## 审阅并另存已有工程
 

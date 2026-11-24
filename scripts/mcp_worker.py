@@ -4,6 +4,17 @@ import contextlib,json,os,sys
 from authoring_io import DiagnosticError,PLUGIN,sha_file,read_json,write_json,resolve
 
 
+def _asset_thumbnail(path, name, controls):
+    from base64 import b64encode
+    from io import BytesIO
+    from PIL import Image
+
+    with Image.open(path) as image, BytesIO() as thumbnail:
+        image.thumbnail((256, 256), Image.Resampling.NEAREST)
+        image.save(thumbnail, format='PNG')
+        return {'name': name, 'controls': controls, 'data': b64encode(thumbnail.getvalue()).decode('ascii')}
+
+
 def main():
     request=read_json(sys.argv[1]);result_path=Path(sys.argv[2]);args=request['arguments'];op=request['operation']
     scratch=Path(request['scratch']).resolve()
@@ -80,9 +91,6 @@ def main():
             from scene_preview import preview
             result = preview(args['input'], args['output'], before=args.get('before'))
         elif op == 'asset_preview':
-            from base64 import b64encode
-            from io import BytesIO
-            from PIL import Image
             from asset_pipeline import preview
             output = Path(args['output'])
             try:
@@ -96,15 +104,22 @@ def main():
                 visible = [candidate for candidate in alternatives if candidate['controls']]
                 selected.append(min(visible or alternatives, key=lambda candidate: (
                     candidate['within_budget'] is False, candidate['controls'], candidate['error'])))
-            result['_inline_previews'] = []
-            for candidate in selected:
-                with Image.open(output / candidate['display_preview']) as image, BytesIO() as thumbnail:
-                    image.thumbnail((256, 256), Image.Resampling.NEAREST)
-                    image.save(thumbnail, format='PNG')
-                    result['_inline_previews'].append({
-                        'name': candidate['name'], 'controls': candidate['controls'],
-                        'data': b64encode(thumbnail.getvalue()).decode('ascii'),
-                    })
+            result['_inline_previews'] = [
+                _asset_thumbnail(output / candidate['display_preview'], candidate['name'], candidate['controls'])
+                for candidate in selected
+            ]
+        elif op == 'asset_generate':
+            from asset_pipeline import generate
+            try:
+                result = generate(args['input'], args['output'], from_preview=args['report'], candidate=args['candidate'])
+            except (OSError, ValueError, TypeError, KeyError) as exc:
+                raise DiagnosticError(
+                    'asset.generate_invalid', '素材生成失败。请核对源图对应的试算报告、候选名称和预算后重试。',
+                    phase=op, source=args['input'], report=args['report'], candidate=args['candidate'], detail=str(exc),
+                ) from exc
+            result['_inline_previews'] = [
+                _asset_thumbnail(Path(args['output']) / 'preview.png', args['candidate'], result['controls'])
+            ]
         elif op=='native_plan':
             from native_changes import plan,plan_summary
             from authoring_io import output_directory,finish
