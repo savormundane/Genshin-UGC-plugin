@@ -24,6 +24,7 @@ $ugcPython = (Resolve-Path .\.venv\Scripts\python.exe).Path
 | Python 脚本 | `python -m compileall -q scripts` |
 | GIL 容器和 Lua 替换 | `node scripts/test_gil.mjs` |
 | MCP、原生修改计划 | `& $ugcPython -B scripts/test_mcp_native_workflow.py -v` |
+| 中文 API 检索、资料与节点查询 | `& $ugcPython -B scripts/test_chinese_lookup.py -v` |
 | 三维物件读取、变换与字段保护 | `& $ugcPython -B scripts/test_native_entity_transform.py -v` |
 | 安装器与各客户端配置 | `& $ugcPython -B scripts/test_agent_protocols.py -v`、`& $ugcPython -B scripts/test_distribution.py -v` |
 | 打包和版本校验 | `python -B scripts/test_release.py -v` |

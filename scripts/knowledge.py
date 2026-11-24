@@ -1,9 +1,26 @@
 """Source-bound knowledge queries. Documentation authority is not host evidence."""
+from difflib import SequenceMatcher
 from pathlib import Path
-import argparse,json
+from unicodedata import normalize
+import argparse,json,re
 from authoring_io import PLUGIN,read_json,sha
 
 REGISTRY=PLUGIN/'scripts/knowledge-sources.json'
+HAN = re.compile(r'[\u3400-\u4dbf\u4e00-\u9fff]+')
+FORMAL_NAME = re.compile(r'[a-z_][a-z_0-9]*(?:\.[a-z_][a-z_0-9]*)*')
+BUTTON_CLICK = ('按钮点击', '点击按钮', '按钮被点击', '点按钮', '监听按钮', '绑定点击', '点击事件')
+AREA_CLICK = ('点击区域', '区域点击')
+API_ALIASES = {
+    'ClientUIPresetButtonControl.AddCursorEventListener': BUTTON_CLICK,
+    'ClientUICursorEventAreaControl.AddCursorEventListener': AREA_CLICK,
+    'Enum.CursorEventType.CursorClick': BUTTON_CLICK + AREA_CLICK,
+    'ClientUIBaseControl.SetVisible': ('隐藏控件', '隐藏界面', '显示控件', '显示界面', '控件显隐', '显示隐藏'),
+    'ClientUIBaseControl.SetActive': ('停用控件', '禁用控件', '激活控件'),
+    'ClientUIBaseControl.SetAnchoredPosition': ('设置位置', '设置控件位置', '移动控件', '改控件位置'),
+    'ClientUIBaseControl.AddKeyEventListener': ('监听按键', '按键事件', '注册按键'),
+    'Script.RegisterServerSignalHandler': ('监听服务器信号', '接收服务器信号', '监听服务端信号', '接收服务端信号'),
+}
+MATCH_BASES = ('symbol_exact', 'symbol_mention', 'alias', 'description', 'symbol_fragment')
 
 def sources():
     registry=read_json(REGISTRY)
@@ -17,34 +34,93 @@ def sources():
                      'actual_sha256':actual,'editor':'not_checked','host':'not_checked'}
     return result
 
-def client_catalogue(source=None):
+def client_catalogue(source=None, *, include_search_details=False):
     from client_api_catalogue import catalogue
     if source is None:source=sources()['client_api']
     if source['integrity']!='passed':raise ValueError('Client API source changed; review source registry before use')
-    parsed=catalogue(PLUGIN/source['path'])
+    parsed=catalogue(PLUGIN/source['path'], include_search_details=include_search_details)
     if parsed['sha256']!=source['sha256']:raise ValueError('Client API source changed during parsing')
     return parsed,source
 
 
 def api(symbol):
-    if not isinstance(symbol,str) or not symbol.strip():raise ValueError('Nonempty API symbol required')
-    cat,source=client_catalogue();matches=[]
-    for name,row in cat['methods'].items():
-        if name==symbol or symbol.casefold() in name.casefold():
-            basis=row['parameter_basis']+[row['return_basis']]
-            matches.append({'symbol':name,**row,'source':source,'knowledge_status':'unknown' if 'unknown'in basis else 'derived' if 'derived'in basis else 'documented'})
-    for owner,fields in cat['fields'].items():
-        for name,row in fields.items():
-            qualified=owner+'.'+name
-            if qualified==symbol or symbol.casefold() in qualified.casefold():matches.append({'symbol':qualified,**row,'source':source,'knowledge_status':'documented'})
-    for name,values in cat['enums'].items():
-        if symbol.casefold() in name.casefold():matches.append({'symbol':name,'values':values,'source':source,'knowledge_status':'documented'})
-    for name,row in cat['callbacks'].items():
-        if symbol.casefold() in name.casefold():matches.append({'symbol':name,**row,'source':source,'knowledge_status':'documented','kind':'lifecycle_callback'})
-    exact=[r for r in matches if r['symbol']==symbol]
-    return {'schema':1,'status':'passed' if matches else 'not_checked','query':symbol,'matches':exact or matches[:20],
-            'conflicts':[c for c in read_json(REGISTRY)['conflicts'] if any(symbol.casefold() in x.casefold() or x.casefold() in symbol.casefold() for x in c['symbols'])],
-            'scope':'bundled API contract; documented is not editor or host verified','editor':'not_checked','host':'not_checked'}
+    if not isinstance(symbol, str) or not symbol.strip():
+        raise ValueError('Nonempty API query required')
+    cat, source = client_catalogue(include_search_details=True)
+    query = normalize('NFKC', symbol).strip().casefold().replace(':', '.')
+    han = HAN.findall(query)
+    names = set(FORMAL_NAME.findall(query)) if han else set()
+    member_names = names | {query}
+    phrases = {phrase for phrase in han if len(phrase) >= 4}
+    short = han[0] if len(han) == 1 and not names and 2 <= len(han[0]) <= 3 else ''
+
+    def score(name, description, member=None):
+        key = name.casefold()
+        if key == query:
+            return 0, 0
+        if key in names or (member and member.casefold() in member_names):
+            return 1, 0
+        if not han:
+            return (4, 0) if member is None and query in key else None
+        alias_length = max((len(phrase) for phrase in API_ALIASES.get(name, ()) if phrase in query), default=0)
+        if alias_length:
+            return 2, -alias_length
+        if not description:
+            return None
+        if short and short in description:
+            return 3, -len(short)
+        span = max((SequenceMatcher(None, phrase, description, autojunk=False).find_longest_match().size
+                    for phrase in phrases), default=0)
+        return (3, -span) if span >= 4 else None
+
+    entries = {}
+    for name, row in cat['methods'].items():
+        basis = row['parameter_basis'] + [row['return_basis']]
+        status = 'unknown' if 'unknown' in basis else 'derived' if 'derived' in basis else 'documented'
+        entries[name] = {**row, 'knowledge_status': status}
+    entries.update((f'{owner}.{name}', {**row, 'knowledge_status': 'documented'})
+                   for owner, fields in cat['fields'].items() for name, row in fields.items())
+    entries.update((name, {'values': values, 'knowledge_status': 'documented'}) for name, values in cat['enums'].items())
+    entries.update((name, {**row, 'knowledge_status': 'documented', 'kind': 'lifecycle_callback'})
+                   for name, row in cat['callbacks'].items())
+
+    ranked = []
+    for name, row in entries.items():
+        rank = score(name, row.get('description'))
+        if name in cat['enum_members']:
+            members = cat['enum_members'][name]
+            hits = []
+            for member in members:
+                value = member['value']
+                member_rank = score(f'{name}.{value}', member['description'], value)
+                if member_rank is not None:
+                    hits.append((member_rank, member))
+            hits.sort(key=lambda item: (item[0], item[1]['line']))
+            row['line'] = members[0]['line']
+            if hits:
+                member_rank, best = hits[0]
+                rank = member_rank if rank is None else min(rank, member_rank)
+                row.update(line=best['line'], description=best['description'],
+                           matched_values=[member for _, member in hits[:3]])
+        if rank is not None:
+            description = row.get('description')
+            ranked.append((rank, {**row, 'symbol': name, 'source': source,
+                                  'description': None if description in ('', '-', '—') else description,
+                                  'match_basis': MATCH_BASES[rank[0]]}))
+
+    ranked.sort(key=lambda item: (item[0], item[1]['symbol'] if han else ''))
+    exact = [row for rank, row in ranked if rank[0] == 0]
+    matches = exact or [row for _, row in ranked[:20]]
+    matched_names = {part for row in matches for part in (row['symbol'].casefold(), row['symbol'].rsplit('.', 1)[-1].casefold())}
+    conflicts = [entry for entry in read_json(REGISTRY)['conflicts']
+                 if any(query in name.casefold() or name.casefold() in query or name.casefold() in matched_names
+                        for name in entry['symbols'])]
+    result = {'schema':1, 'status':'passed' if matches else 'not_checked', 'query':symbol, 'matches':matches,
+              'conflicts':conflicts, 'scope':'bundled API contract; documented is not editor or host verified',
+              'editor':'not_checked', 'host':'not_checked'}
+    if not matches:
+        result['retry_hint'] = '随包客户端 Lua API 资料中未找到匹配。请用更短的术语、已知别名或正式符号重查。'
+    return result
 
 def snapshot():
     records=sources()
@@ -92,7 +168,7 @@ def difference(before,after):
 
 def main(argv=None):
     p=argparse.ArgumentParser();sub=p.add_subparsers(dest='operation',required=True)
-    q=sub.add_parser('api');q.add_argument('symbol');sub.add_parser('sources');sub.add_parser('snapshot')
+    q=sub.add_parser('api');q.add_argument('symbol', metavar='QUERY', help='Formal symbol, English fragment, or Chinese purpose');sub.add_parser('sources');sub.add_parser('snapshot')
     diff=sub.add_parser('diff');diff.add_argument('before');diff.add_argument('after')
     a=p.parse_args(argv)
     result=api(a.symbol) if a.operation=='api' else snapshot() if a.operation=='snapshot' else difference(a.before,a.after) if a.operation=='diff' else {'schema':1,'sources':sources()}

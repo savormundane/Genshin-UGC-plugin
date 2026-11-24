@@ -11,6 +11,8 @@ description: 设计和检查千星奇域原生 3D 场景、实体、模板、组
 
 负责平台工程与配置语义。平台资料可直接查 `docs_search` 或 `docs search/show`。查看已有工程时，先用 `project search INPUT QUERY` 或 MCP `project_inspect` 的 `query` 找到对象键，再按范围检查引用。原生绑定用产物回读核对。
 
+中文问题先提取平台术语，例如用「定时器」查时序规则。按任务指定版本，回复中标明请求版本和资料来源版本。零结果按[中文查询](../../references/knowledge-reliability.md#中文查询)改用短词、别名或正式名称重查。
+
 | 任务 | 按需资料 |
 | --- | --- |
 | 机关、关卡经济、角色技能、拾取、原生 HUD 与多人进度 | 用 `project inspect --scope gameplay` 定位资源和引用者。按[原生玩法制作](../../references/native-gameplay.md)创建或配置资源，再编译和挂载行为图，用 `produce` 交付 GIL。 |
@@ -31,7 +33,7 @@ description: 设计和检查千星奇域原生 3D 场景、实体、模板、组
 
 ## Client Lua
 
-先确认 Lua 5.3 脚本、绑定与调用环境。通过 MCP `api_lookup` 或 `qianxing.py knowledge api SYMBOL` 查签名、原文行和推导项。编写后用 `client_check` 或 `client check` 检查源码，或通过 `mapping` 选定现有 GIL 中的单个脚本。提供 API 合同可同时核对调用和已声明引用。
+先确认 Lua 5.3 脚本、绑定与调用环境。通过 MCP `api_lookup` 或 `qianxing.py knowledge api QUERY` 查正式符号、签名、原文行和推导项。复合任务按动作拆查，例如先查「按钮点击」，再查「隐藏控件」，使用查到的正式符号写代码。零结果按[中文查询](../../references/knowledge-reliability.md#中文查询)重试。编写后用 `client_check` 或 `client check` 检查源码，或通过 `mapping` 选定现有 GIL 中的单个脚本。提供 API 合同可同时核对调用和已声明引用。
 
 用 `simulate check INPUT` 检查启动日志和第一条异常。看界面或验收联合场景时，选择[软件预览或场景检查](../../references/client-simulation.md)。
 

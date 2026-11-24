@@ -45,7 +45,7 @@ def server(bridge):
 
     @app.tool(structured_output=True)
     async def api_lookup(symbol:str,ctx:Context)->dict[str,Any]:
-        """Query a source-bound API signature and its declared/derived basis."""
+        """Find a client Lua API by formal symbol, English fragment, or Chinese purpose. Return canonical symbols and source evidence."""
         return await call('api_lookup',ctx,symbol=symbol)
     @app.tool(structured_output=True)
     async def diagnose(spec:str,sha256:str,ctx:Context)->dict[str,Any]:

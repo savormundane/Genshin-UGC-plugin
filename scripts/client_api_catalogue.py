@@ -3,8 +3,9 @@ import hashlib,re
 from pathlib import Path
 
 
-def catalogue(path):
+def catalogue(path, *, include_search_details=False):
     raw=Path(path).read_bytes();methods={};fields={};enums={};section=None;unparsed=[];callbacks={}
+    enum_members = {}
     for line,text in enumerate(raw.decode('utf-8-sig').splitlines(),1):
         heading=re.match(r'## \d+\.(.+)$',text)
         if heading:section=heading[1]
@@ -12,10 +13,17 @@ def catalogue(path):
         cells=[x.strip().replace('`','')for x in text.strip('|').split('|')]
         signature=cells[0]
         if signature.startswith('Enum.'):
-            enums.setdefault(signature,[]).append(cells[1]);continue
+            enums.setdefault(signature,[]).append(cells[1])
+            if include_search_details:
+                enum_members.setdefault(signature, []).append(
+                    {'value': cells[1], 'line': line, 'description': cells[2] if len(cells) > 2 else None})
+            continue
         if len(cells)>=4 and cells[2].split('、')[0]in ('只读','读写'):
             for name in signature.split(','):
-                fields.setdefault(section,{})[name.strip()]={'type':cells[1],'writable':cells[2].startswith('读写'),'line':line,'tweenable':'Tweenable'in cells[2]+cells[3]}
+                field = {'type':cells[1],'writable':cells[2].startswith('读写'),'line':line,'tweenable':'Tweenable'in cells[2]+cells[3]}
+                if include_search_details:
+                    field['description'] = cells[3]
+                fields.setdefault(section,{})[name.strip()] = field
         elif '('in signature:
             matched=re.fullmatch(r'([\w.:]+)\((.*)\)',signature)
             if not matched:unparsed.append({'line':line,'signature':signature});continue
@@ -33,7 +41,11 @@ def catalogue(path):
                     if value:parameters.append(value)
             if depth:unparsed.append({'line':line,'signature':signature,'reason':'unbalanced parameters'});continue
             if section=='脚本生命周期':
-                callbacks[name]={'parameters':parameters,'line':line};continue
+                callback = {'parameters':parameters,'line':line}
+                if include_search_details:
+                    callback['description'] = cells[2]
+                callbacks[name] = callback
+                continue
             record={'parameters':parameters,'declared_parameters':parameters.copy(),'returns':cells[1],'indexer':indexer,'line':line,'description':cells[2]}
             if owner=='debug'and name=='traceback':record['parameters']=['message: string?','level: integer?'];record['signature_basis']='derived'
             key=owner+'.'+name
@@ -96,6 +108,9 @@ def catalogue(path):
     methods['ClientUIBaseControl.GetControllerNavigation']['return_types']=['ControllerNavigationMode','ClientUIBaseControl']
     methods['ClientUIBaseControl.GetControllerNavigation']['return_basis']='derived'
     for method in methods.values():method.setdefault('return_basis','declared')
-    return {'sha256':hashlib.sha256(raw).hexdigest(),'methods':methods,'fields':fields,'enums':enums,'callbacks':callbacks,'unparsed':unparsed}
+    result = {'sha256':hashlib.sha256(raw).hexdigest(),'methods':methods,'fields':fields,'enums':enums,'callbacks':callbacks,'unparsed':unparsed}
+    if include_search_details:
+        result['enum_members'] = enum_members
+    return result
 
 

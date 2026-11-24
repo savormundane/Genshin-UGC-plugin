@@ -18,7 +18,7 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 | --- | --- |
 | doctor | 返回依赖状态、当前加载路径、版本、原能力指纹和 `plugin.capability_groups` 分组摘要。用 CLI `doctor --compare PLUGIN_ROOT` 定位同版本的文件差异 |
 | capabilities | 返回当前实现和证据边界 |
-| api_lookup | symbol。查询客户端 Lua API、来源与推导状态 |
+| api_lookup | symbol。接受客户端 Lua 的正式符号、英文片段或中文用途。返回正式符号、原文说明、来源与推导状态 |
 | diagnose | spec、sha256。按配置执行只读的环境、Lua、GIL 和素材检查 |
 | docs_search | version、query：检索固定版本资料 |
 | nodes_lookup | query、scope、limit 均可选。查询 Graph Code 调用、作用域、签名和端口。scope 为 all、client 或 server，limit 默认 20，范围 1 到 100 |
