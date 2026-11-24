@@ -1,0 +1,32 @@
+# 审阅并另存一次 GIL 局部修改
+
+在 [v1.0.0](https://github.com/savormundane/miliastra-wonderland-plugin/tree/v1.0.0) 中，修改一个模板变量的默认值。[原始 entrance.gil](entrance.gil) 是合成关卡，只含用于演示的模板、实例和变量。将它复制到 AI 对话可读的工程目录，再[配置独立输出位置](../../../docs/runtime-environment.md#连接-mcp-或切换工程)。
+
+## 对 AI 怎么说
+
+> 请查看当前工程的 entrance.gil。我想把入口机关模板的 ActivationDelay 默认值改为 12。先定位变量、所属模板和继承它的场景实例，再做待审计划。告诉我现在的值、拟改值和保护范围。等我确认后再另存。
+
+实际调用先用 `project_inspect` 找到模板 `1086324737`（`0x40C00001`）和继承实例 `1077936129`（`0x40400001`）。随后 `native_plan` 生成[待审计划](review/plan.json)，将唯一的操作绑定到输入摘要，允许修改的顶层字段为 `4`。第一轮索引给出了值摘要，具体旧值后来由应用报告读出。
+
+确认计划只涉及所需变量后，再继续。
+
+> 我已审阅并确认刚才的计划。请用这份计划把 entrance.gil 另存为 edited/level.gil。核对原文件摘要、前后差异和新文件里的变量值，再说明怎么用另存文件。
+
+## 看到了什么
+
+`native_apply` 生成了[另存的 level.gil](edited/level.gil)，应用报告记录 `ActivationDelay` 从 **7 改为 12**。随后实际调用了 `native_diff` 和 `project_inspect`。
+
+| 检查项 | 结果 |
+| --- | --- |
+| 输入文件 | 原始 `entrance.gil` 的 SHA-256 与应用前一致 |
+| 另存文件 | 摘要与待审计划预计的结果摘要一致 |
+| [前后差异](diff.json) | 顶层只变动字段 `4`，保护范围内的字节一致 |
+| 新文件回读 | 变量值摘要与差异报告一致，继承实例仍指向该模板变量 |
+
+计划文件的 SHA-256 从 `native_plan.outputs_sha256["plan.json"]` 取得，供 `native_apply` 绑定文件。计划内部也有一个 `plan_sha256`，它是内容摘要，与应用报告里的内容摘要核对。本例两项各自通过校验。
+
+## 接下来怎么用
+
+下载另存的 GIL 副本，按[关卡复核步骤](../../../references/native-changes.md#人工再导出核对)在编辑器导入并核对实际挂载。复现时用自己这次查询返回的对象标识、输入摘要和计划文件摘要，并选一个新的输出目录。 [工具调用顺序](../../../references/local-mcp.md#审阅并另存已有工程)
+
+本次结果来自静态回读和差异检查。千星奇域编辑器导入及游戏内运行待实测。

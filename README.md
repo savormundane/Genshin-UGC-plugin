@@ -84,6 +84,8 @@ git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
 
 回复还会说明生成了什么、改了哪里，以及本次完成了哪些检查。打开编辑器导入、到游戏里运行时，分别核对对应结果。 [验证分层](docs/compatibility.md#验证分层)
 
+想看一次完整的实际操作，可以跟做 [PNG 转图元和 GIL 局部修改教程](samples/creator-demos/README.md)。
+
 ## Skills
 
 | Skill | 适用任务 |

@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "generator": "miliastra-wonderland-assets",
+  "source_kind": "image",
+  "source_sha256": "d4d0029c329feb847213e6f937b24580edfa1638dd0449aca0166c49a62b3601",
+  "source_size": [
+    24,
+    24
+  ],
+  "grid_size": [
+    6,
+    6
+  ],
+  "target": "rectangles",
+  "controls": 11,
+  "coordinate_space": "top_left_grid_pixels",
+  "parameters": {
+    "step": 1,
+    "colors": 96,
+    "alpha_min": 128,
+    "columns": 64,
+    "max_bytes": 4096,
+    "cell": 16,
+    "fit": "auto",
+    "max_controls": 20
+  },
+  "preview_kind": "quantized reference raster; not host rendering",
+  "external_process_started": false,
+  "gil_written": false,
+  "host_tested": false,
+  "preview_selection": {
+    "candidate": "grid-25",
+    "preview_sha256": "cefd4f07e41af7470e8d7ac93b3c8fc40f8594f2a586a8ee69d0ac93e9b8c8f3"
+  }
+}

@@ -1,5 +1,13 @@
 # Beyond 按钮预览
 
+在安装了插件的本机对话里，可以这样问。
+
+> 请运行随包的 Beyond 按钮预览，模拟点击 Action，把生成的预览图和点击日志给我看。
+
+这个任务使用 `simulate preview`。用 v1.0.0 源码实跑时，点击断言通过，日志里出现了 `Button clicked`。打开输出目录中的 `preview.png` 看软件预览，在 `external-simulation.json` 里核对断言。需要带着产物继续编辑时，可跟做 [PNG 转图元](../creator-demos/png/README.md) 或 [GIL 局部修改](../creator-demos/gil/README.md)。
+
+## 命令行复现
+
 从插件根目录用[专用 Python](../../docs/runtime-environment.md)执行。预览使用随包的 Beyond 后端和 Node。
 
 ```text

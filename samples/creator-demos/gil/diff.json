@@ -1,0 +1,136 @@
+{
+  "after_sha256": "ae8eb070f1de3d3c37af8fa9fd85bc718752b1a228335726726b02ae2f787278",
+  "before_sha256": "99d58d5ddb552465e35526b9278686900a0c52105e3d07ea683d804db54d48ba",
+  "bytes_equal": false,
+  "complete_semantic_diff": false,
+  "editor": "not_checked",
+  "envelope": {
+    "after": [
+      1,
+      806,
+      2
+    ],
+    "before": [
+      1,
+      806,
+      2
+    ],
+    "changed": false
+  },
+  "field_order_changed": false,
+  "host": "not_checked",
+  "kind": "native-diff",
+  "objects": [
+    {
+      "after": {
+        "artifact": "level",
+        "descriptor_sha256": "a6ca9a256c76d50a57e8275e021b0cf60128866495e9ac5cf3168202080cfcbc",
+        "entity_id": 1086324737,
+        "group_field": 8,
+        "group_index": 0,
+        "id": "ActivationDelay",
+        "index": 0,
+        "key": "level/custom_variable/template/1086324737/ActivationDelay",
+        "kind": "custom_variable",
+        "name": "ActivationDelay",
+        "scope": [
+          "template",
+          1086324737
+        ],
+        "section": 4,
+        "type_id": 3,
+        "value_sha256": "75172e1be5d912da8c8efcd85fc890210ddb6fdaf075b1d29f929cc19de2ad9e"
+      },
+      "before": {
+        "artifact": "level",
+        "descriptor_sha256": "a6ca9a256c76d50a57e8275e021b0cf60128866495e9ac5cf3168202080cfcbc",
+        "entity_id": 1086324737,
+        "group_field": 8,
+        "group_index": 0,
+        "id": "ActivationDelay",
+        "index": 0,
+        "key": "level/custom_variable/template/1086324737/ActivationDelay",
+        "kind": "custom_variable",
+        "name": "ActivationDelay",
+        "scope": [
+          "template",
+          1086324737
+        ],
+        "section": 4,
+        "type_id": 3,
+        "value_sha256": "ed935c23525699c3cc59cef3a9c96b6edad12571cfc3f11490559c69b11e2695"
+      },
+      "change": "modified",
+      "key": "level/custom_variable/template/1086324737/ActivationDelay"
+    }
+  ],
+  "protected": {
+    "after_sha256": "555a042999f76636ef08b7028beb01107abbdcf3a31b50e108ef18a6d7133807",
+    "allowed_top_level_fields": [
+      4
+    ],
+    "before_sha256": "555a042999f76636ef08b7028beb01107abbdcf3a31b50e108ef18a6d7133807",
+    "unchanged": true
+  },
+  "references": {
+    "added": [],
+    "removed": []
+  },
+  "schema": 2,
+  "serialized_objects": [
+    {
+      "after": "24799e37ab3b182cd4e35534870fcb016d7b69a50421a61101cc6c7390b95419",
+      "before": "7b52a0184efc58b90325668092660d40ed95f29c0bb91bd4043732f52acc7860",
+      "change": "modified",
+      "key": "level/custom_variable/template/1086324737/ActivationDelay"
+    },
+    {
+      "after": "aee62539ff07a6cdc992e870142d56004dab03c4aad1897b848245ce392a7c99",
+      "before": "35061117bf9fa7ea7d67d8a6438a3ad4386b236a3f9b9e12d793f26004b9e5b0",
+      "change": "modified",
+      "key": "level/template/1086324737"
+    }
+  ],
+  "status": "passed",
+  "top_level_fields": [
+    {
+      "after": [
+        {
+          "bytes": 61,
+          "sha256": "70bb10200e3e4001514c905c95058d82c7323930168f3ac140618d14ad5cff2a",
+          "wire": 2
+        }
+      ],
+      "before": [
+        {
+          "bytes": 61,
+          "sha256": "106622883cc886861396f17a7bb054c31d9204b3d55504ffda598d35a0a91b87",
+          "wire": 2
+        }
+      ],
+      "change": "modified",
+      "key": "4"
+    }
+  ],
+  "unindexed": [
+    "arbitrary_component_payloads",
+    "custom_variable_access_and_literal_targets",
+    "dynamic_Lua_identifiers",
+    "graph_variable_dynamic_access_and_overrides",
+    "implicit_graph_structure_identity",
+    "platform_resource_catalogue",
+    "untyped_numeric_constants"
+  ],
+  "validation": {
+    "after": {
+      "issues": [],
+      "status": "passed",
+      "unresolved": []
+    },
+    "before": {
+      "issues": [],
+      "status": "passed",
+      "unresolved": []
+    }
+  }
+}
