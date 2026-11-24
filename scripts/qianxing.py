@@ -1,6 +1,7 @@
 """Unified Qianxing task routing, node discovery, input inventory and graph build CLI."""
 from pathlib import Path
 import argparse,json,subprocess,sys
+from authoring_io import missing_input
 from node_build import route,catalog,build
 from level_inventory import inspect_file
 
@@ -75,7 +76,10 @@ def main(argv=None):
         else:
             path=Path(a.input)
             paths=sorted(path.glob('*.gil'))+sorted(path.glob('*.gia')) if path.is_dir() else [path]
-            reports=[inspect_file(p) for p in paths]
+            try:
+                reports=[inspect_file(p) for p in paths]
+            except FileNotFoundError as exc:
+                raise missing_input(exc.filename or path, str(exc)) from exc
             value={'schema':'qianxing-inspect/v2','files':reports} if path.is_dir() or a.collection else {'schema':'qianxing-inspect/v2',**reports[0]}
             if a.out:
                 with Path(a.out).open('x',encoding='utf-8') as f:json.dump(value,f,ensure_ascii=False,indent=2)

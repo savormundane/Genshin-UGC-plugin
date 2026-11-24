@@ -1,7 +1,7 @@
 """Fixed operations shared by local MCP and CLI; no arbitrary command tool."""
 from pathlib import Path
 import argparse,asyncio,json,os,re,sys,tempfile,math
-from authoring_io import DiagnosticError,PLUGIN,sha_file,schema,read_json,write_json
+from authoring_io import DiagnosticError,PLUGIN,sha_file,schema,read_json,write_json,missing_input,require_new_output
 from mcp_workspace import linked, workspace as project_context
 
 OPERATIONS={'doctor':(), 'capabilities':(), 'docs_search':('version','query'),'api_lookup':('symbol',),'nodes_lookup':(),'resources_lookup':('version',),'diagnose':('spec','sha256'),
@@ -98,10 +98,10 @@ class Bridge:
         if resolved == owner or not resolved.is_relative_to(owner):
             raise ValueError('Path outside allowed project/output roots')
         if output:
-            if resolved.exists():raise ValueError('Output exists; choose a new directory')
+            require_new_output(resolved)
             if not resolved.parent.is_dir() and not (default_output and resolved.parent == output_root):
                 raise ValueError('Output parent must exist')
-        elif not resolved.is_file():raise ValueError('Input file missing')
+        elif not resolved.is_file():raise missing_input(resolved)
         return resolved
 
     async def call(self,operation,arguments,progress=None,*,roots=()):

@@ -1,7 +1,7 @@
 """Versioned document selection and explicit platform configuration checks."""
 from pathlib import Path
 import argparse,difflib,json,math
-from authoring_io import PLUGIN,read_json,sha,schema,canonical
+from authoring_io import DiagnosticError,PLUGIN,read_json,sha,schema,canonical
 
 CATALOGUE=PLUGIN/'scripts/platform-sources.json'
 MOVERS=('linear','rotation','target_rotation','path','point','level_path')
@@ -14,7 +14,11 @@ def selection(version):
     index=json.loads(raw.decode('utf-8-sig'))
     if index['schema']!=1:raise ValueError('Unknown platform source catalogue schema')
     profiles=index['profiles']
-    if not isinstance(version,str)or version not in profiles:raise ValueError('Unknown platform version: '+str(version))
+    if not isinstance(version,str) or version not in profiles:
+        raise DiagnosticError('platform.version_unknown',
+                              f'无法识别千星奇域版本 {version!r}。请核对游戏内版本后重试。'
+                              f'当前已收录 {"、".join(profiles)}。目标版本尚未收录时，可附上版本号和资料来源反馈。',
+                              supported_versions=list(profiles), detail='Unknown platform version: '+str(version))
     lineage=[];current=version
     while current is not None:
         if not isinstance(current,str)or current not in profiles:

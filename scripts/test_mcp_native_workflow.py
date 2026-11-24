@@ -102,12 +102,44 @@ class NativeWorkflowTests(unittest.TestCase):
                 retry = await client.call_tool("asset_preview", args)
                 self.assertTrue(retry.is_error)
                 self.assertIn("Output exists", retry.content[0].text)
+                self.assertIn("io.output_exists", retry.content[0].text)
+                self.assertIn("换用尚不存在的输出目录", retry.content[0].text)
+                self.assertEqual(read_json(output / "report.json"), persisted)
                 invalid = await client.call_tool("asset_preview", {
                     "input": "entrance.gil", "output": "invalid-preview",
                 })
                 self.assertTrue(invalid.is_error)
                 self.assertIn("asset.preview_invalid", invalid.structured_content["diagnostics"][0]["code"])
                 self.assertFalse((self.outputs / "invalid-preview").exists())
+
+        asyncio.run(run())
+
+    def test_common_failures_include_recovery_and_original_details(self):
+        async def run():
+            unbound = StdioServerParameters(command=sys.executable, args=self.server.args[:-4],
+                                           env=self.workspace_environment())
+            async with Client(unbound) as client:
+                denied = await client.call_tool("project_inspect", {"input": "entrance.gil"})
+                self.assertTrue(denied.is_error)
+                self.assertIn("mcp.workspace_required", denied.content[0].text)
+                self.assertIn("尚未绑定工程目录", denied.content[0].text)
+                self.assertIn("UGC_PROJECT_ROOT", denied.content[0].text)
+                self.assertIn("Open a workspace", denied.content[0].text)
+
+                version = await self.call(client, "docs_search", {"version": "1.0.0", "query": "节点"}, "failed")
+                diagnostic, = version["result"]["diagnostics"]
+                self.assertEqual(diagnostic["code"], "platform.version_unknown")
+                self.assertIn("核对游戏内版本", diagnostic["message"])
+                self.assertIn("7.2", diagnostic["supported_versions"])
+                self.assertEqual(diagnostic["detail"], "Unknown platform version: 1.0.0")
+
+            async with Client(self.server) as client:
+                absent = await client.call_tool("project_inspect", {"input": "缺失 关卡.gil"})
+                self.assertTrue(absent.is_error)
+                self.assertIn("io.input_missing", absent.content[0].text)
+                self.assertIn("缺失 关卡.gil", absent.content[0].text)
+                self.assertIn("请核对文件名、扩展名", absent.content[0].text)
+                self.assertIn("Input file missing", absent.content[0].text)
 
         asyncio.run(run())
 

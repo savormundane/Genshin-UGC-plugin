@@ -1,7 +1,7 @@
 """Unified native static asset generation; no external fitter process is launched."""
 from pathlib import Path
 import argparse, hashlib, json, math, os, sys, tempfile
-from authoring_io import sha_file, output_directory, write_json, finish
+from authoring_io import DiagnosticError, sha_file, output_directory, write_json, finish, missing_input, require_new_output
 from asset_core import ASSET_GENERATOR
 
 MAX_SOURCE_PIXELS = 16_777_216
@@ -106,7 +106,7 @@ def compile_grid(image, size, target, parameters):
 def generate(source, output, *, from_preview=None, candidate=None, **options):
     from asset_core import harden
     output=Path(output).resolve()
-    if output.exists():raise ValueError('Output exists; select a new directory')
+    require_new_output(output)
     selection=None
     if (from_preview is None)!=(candidate is None):
         raise ValueError('--from-preview and --candidate must be used together')
@@ -167,8 +167,7 @@ def preview(source, output, *, display=None, min_grid=None, max_error=None, expl
     from asset_core import harden
 
     source = Path(source).resolve()
-    if Path(output).exists():
-        raise ValueError('Output exists; select a new directory')
+    require_new_output(Path(output))
     if display is not None:
         if not isinstance(display,(list,tuple)) or len(display)!=2:
             raise ValueError('Display requires width and height')
@@ -330,10 +329,16 @@ def main(argv=None):
         print(json.dumps(result,ensure_ascii=False,indent=2))
         return 0
     except (ValueError,OSError,ImportError,TypeError,KeyError) as e:
+        if isinstance(e, FileNotFoundError) and e.filename:
+            e = missing_input(e.filename, str(e))
         if operation=='preview':
-            print(json.dumps({'status':'failed','checks':{},'diagnostics':[
-                {'code':'asset_preview_failed','message':str(e),'source':str(source)}
-            ]},ensure_ascii=False))
+            diagnostic = {'code':'asset_preview_failed','message':str(e),'source':str(source)}
+            if isinstance(e, DiagnosticError):
+                cause, = e.diagnostics
+                diagnostic.update(cause_code=cause['code'], detail=cause.get('detail'), path=cause.get('source'))
+            print(json.dumps({'status':'failed','checks':{},'diagnostics':[diagnostic]},ensure_ascii=False))
+        elif isinstance(e, DiagnosticError):
+            print(json.dumps({'error':str(e),'diagnostics':e.diagnostics},ensure_ascii=False),file=sys.stderr)
         else:
             print(str(e),file=sys.stderr)
         return 2

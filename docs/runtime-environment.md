@@ -42,4 +42,13 @@ uv run --locked --no-build python -B .\scripts\qianxing.py --help
 
 客户端未提供目录时，从插件数据目录读取 `runtime.json`，也可用 `UGC_RUNTIME_CONFIG` 选定旧绑定文件。修改文件中的 `project_root` 或 `output_root` 后，下一次工具调用会读取新值。Python 路径在启动时选择。显式 `UGC_PROJECT_ROOT`、`UGC_OUTPUT_ROOT` 或对应 CLI 参数作为固定覆盖。只有读文件时可省略输出目录，写文件默认在插件数据目录内按工程分开保存。用 `doctor` 查看当前来源及缺失项。 [客户端适配](contributing/development.md#客户端适配)
 
+从终端启动客户端时，也可以先设定工程路径。以 Codex CLI 为例，把下面的路径换成实际包含输入文件的目录，再从同一个 PowerShell 窗口打开 Codex。
+
+```powershell
+$env:UGC_PROJECT_ROOT = 'C:\千星项目'
+codex
+```
+
+如果 MCP 还未连通，先[运行安装自检](installation.md#安装自检)。
+
 旧版本目录可保留用于回退；不要只移动其中的插件或运行环境子目录。[更新与回退](installation.md#回退与卸载)

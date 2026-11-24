@@ -28,7 +28,7 @@
 
 ## 运行依赖与工程目录
 
-客户端启用插件后，通过 Node 启动本地 MCP。启动器优先使用已选的 Python、当前虚拟环境、PATH 中的 Python 或兼容的旧安装。找不到具备完整依赖的环境时，由 PATH 上的 [uv](https://docs.astral.sh/uv/getting-started/installation/) 按 `uv.lock` 准备环境，必要时也由 uv 获取受支持的 Python。启动过程无需运行 PowerShell 安装器。首次缺少缓存时，uv 需要联网。
+客户端启用插件后，通过 Node 启动本地 MCP。启动器依次查找运行绑定指定的 Python、当前虚拟环境、兼容的旧安装和 PATH 上的 Python。显式设置 `UGC_PYTHON` 时，使用该路径。找不到具备完整依赖的环境时，可由 PATH 上的 uv 按 `uv.lock` 准备环境，需要时也会获取受支持的 Python。首次缺少缓存时，uv 需要联网。 [uv 安装说明](https://docs.astral.sh/uv/getting-started/installation/)
 
 - 用 `UGC_PYTHON` 指定已有 Python 的绝对路径。旧安装位于自选位置时，用 `MILIASTRA_WONDERLAND_INSTALL_ROOT` 指明原安装根。也可用 `UGC_RUNTIME_CONFIG` 直接选择旧的 `runtime.json`。
 - 节点、API 与公开资料查询可直接使用。文件工具优先使用显式工程路径，其次使用客户端通过 MCP Roots 提供的会话目录。客户端未提供目录时，可沿用 `runtime.json`。只读查询只需要工程目录。写入默认按工程归档到本机插件数据目录，也可指定独立的输出目录。参见[切换工程](runtime-environment.md#连接-mcp-或切换工程)。
@@ -79,15 +79,33 @@ python -B scripts/package_release.py --source . --out ../Miliastra-Wonderland-1.
 
 卸载保留项目、输出和各版本的运行环境。清理旧版本目录前，确认其他客户端已停用该版本，并且无需回退。
 
+## 安装自检
+
+工具连不上时，在 Windows PowerShell 进入要检查的插件目录。若检查客户端安装的副本，可从 MCP 日志中的 `scripts\mcp_launcher.cjs` 路径找到其上两级目录。用 PowerShell 登记的插件可从[安装记录](runtime-environment.md#复用-powershell-安装器配置的环境)中的 `current.home` 找到 `miliastra-wonderland` 子目录。然后运行以下命令。
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-install.ps1
+```
+
+能运行 Node 时，也可以直接执行 `node .\scripts\mcp_launcher.cjs --check`。
+
+自检适用于市场、GitHub 直装、本地导入和 PowerShell 登记。它检查启动文件、Node.js 版本、已有 Python 环境及 PATH 上的 uv，遇到阻塞项时会显示失败环节、原始错误和下一步。自检只做本机探测。如果报告会由 uv 准备环境，请在依赖源可访问时重启客户端，再[查询第一个节点](../README.md#查询第一个节点)确认工具连通。MCP 连通后，可继续用 `doctor` 查看客户端实际采用的工程目录和依赖。
+
+自检读取当前终端的 PATH、`UGC_PYTHON` 和 `UGC_RUNTIME_CONFIG` 等环境变量。客户端单独配置了解释器或绑定文件时，把同样的值设置到自检终端。使用 WinGet 的用户可运行 `winget install --id=astral-sh.uv -e` 安装 uv，再打开新终端检查 `uv --version`。 [uv 的 WinGet 安装说明](https://docs.astral.sh/uv/getting-started/installation/#winget)
+
 ## 失败后续装
 
-| 遇到的问题 | 检查方式 |
-| --- | --- |
-| 市场中找不到插件 | 核对终端命令里的 GitHub 仓库名。也可[导入本地源码目录](#从本地目录导入)。 |
-| 能看到 Skill，工具未连通 | 确认客户端能找到 `node` 和已有 Python 环境或 `uv`，并允许本地 MCP。旧环境使用过 `-Root` 时，核对 `MILIASTRA_WONDERLAND_INSTALL_ROOT` 后重启客户端。 |
-| Python 依赖不匹配 | 检查 `UGC_PYTHON` 或显式绑定的旧环境。也可取消这两项，交给 uv 按锁文件准备。 |
-| 找不到 Python 或目录冲突 | 按[运行要求](compatibility.md#运行要求)检查 Python，必要时用 `-Python` 指定解释器绝对路径。确认[项目和输出目录](#运行依赖与工程目录)互不包含。 |
-| 安装中断 | 保留失败目录，用相同参数加 `-Resume` 重跑。Claude 登记后若启用中断，按错误提示核对客户端中的条目。 |
-| CLI 正常，客户端无法调用工具 | 检查插件是否启用、MCP 配置是否指向预期的插件目录。 [连接 MCP](runtime-environment.md#连接-mcp-或切换工程) |
+| 遇到的问题 | 适用安装方式 | 下一步 |
+| --- | --- | --- |
+| 市场中找不到插件 | Codex CLI 或 Claude Code 的市场安装 | 核对[终端安装命令](../README.md#安装)中的 GitHub 仓库名和插件 ID。 |
+| 直装地址无法加载 | DeepSeek Harness 的 GitHub 直装 | 核对直装地址和客户端版本，再到「插件 → 添加插件」重试。 [直装说明](../README.md#deepseek-harness) |
+| 能看到 Skill，工具未连通 | 所有安装方式 | 先[运行安装自检](#安装自检)。修复后重启客户端，确认插件已启用并允许本地 MCP。使用自选旧安装根目录时，核对 `MILIASTRA_WONDERLAND_INSTALL_ROOT`。 |
+| MCP 启动时缺少 Python 或依赖 | 所有安装方式 | 安装 uv 并确认新终端能运行 `uv --version`，或让 `UGC_PYTHON` 指向已配置依赖的解释器。修正旧绑定后重新打开客户端。 |
+| 安装器找不到 Python，或提示工程与输出路径冲突 | 用 `install.ps1` 准备本地 ZIP | 缺少 Python 时，给原安装命令加 `-Python '<解释器绝对路径>'`。目录冲突时，为 `-Project` 和 `-Outputs` 选择互不包含的目录。 |
+| 安装准备中断 | 用 `install.ps1` 准备本地 ZIP | 保留未完成的安装目录。按报错修复后，用同一安装命令加 `-Resume` 重跑。已进入 Claude 登记时，按错误提示核对客户端中的条目。 |
+| 工程目录未绑定，或找不到输入文件 | 所有安装方式 | 打开包含输入的本地工程并授权，或按[工程绑定说明](runtime-environment.md#连接-mcp-或切换工程)配置目录。核对输入文件的路径和扩展名。 |
+| 输出目录已存在 | 所有安装方式 | 在独立输出根目录下，给本次输出取一个尚未使用的目录名。 |
+| 无法识别千星奇域版本 | 所有安装方式 | 核对游戏内版本和报错列出的已收录版本。目标版本尚未收录时，可附版本号和资料来源反馈。 |
+| CLI 正常，客户端无法调用工具 | 所有安装方式 | 确认插件已启用，并核对 MCP 配置是否指向自检通过的插件目录。 [连接 MCP](runtime-environment.md#连接-mcp-或切换工程) |
 
-仍无法解决时，通过 [Bug 反馈](https://github.com/savormundane/miliastra-wonderland-plugin/issues/new?template=bug_report.yml)提供版本、客户端、执行命令和第一条错误信息。可先删去路径、日志和截图中无需公开的内容。
+仍无法解决时，提供插件版本、客户端、执行命令、自检失败环节和原始错误。可先删去路径、日志和截图中无需公开的内容。 [提交 Bug 反馈](https://github.com/savormundane/miliastra-wonderland-plugin/issues/new?template=bug_report.yml)

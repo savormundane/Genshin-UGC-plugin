@@ -18,6 +18,17 @@ class DiagnosticError(ValueError):
         self.diagnostics = [{'code': code, 'message': message, **details}]
 
 
+def missing_input(path, detail='Input file missing'):
+    return DiagnosticError('io.input_missing', f'找不到输入文件 {path}。请核对文件名、扩展名和所在目录后重试。',
+                           source=str(path), detail=detail)
+
+
+def require_new_output(path):
+    if path.exists():
+        raise DiagnosticError('io.output_exists', f'输出目录 {path} 已存在。请换用尚不存在的输出目录后重试。',
+                              source=str(path), detail='Output exists; use a new path: '+str(path))
+
+
 class ProductionInputs(dict):
     """Keep the digest first observed by production, including child receipts."""
 
@@ -92,7 +103,7 @@ def inventory(root, *, cache=None):
 @contextmanager
 def output_directory(out):
     out=Path(out).resolve()
-    if out.exists():raise ValueError('Output exists; use a new path: '+str(out))
+    require_new_output(out)
     out.parent.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='qianxing-stage-',dir=out.parent) as td:
         stage=Path(td)/'result';stage.mkdir()

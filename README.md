@@ -20,7 +20,7 @@ Miliastra Wonderland 是面向原神「千星奇域」创作者的非官方 AI �
 
 ### 运行要求
 
-在 **Windows x64** 上任选下面一个客户端。插件的本地工具需要 **Node.js 22+**（DeepSeek Harness 用 **24.9+**），以及装好依赖的 **CPython 3.11–3.14** 或 PATH 上的 `uv`。首次由 `uv` 准备依赖时可能需要联网。 [运行要求与验收状态](docs/compatibility.md) · [安装排障](docs/installation.md#失败后续装)
+在 **Windows x64** 上任选下面一个客户端。插件的本地工具需要 **Node.js 22+**（DeepSeek Harness 用 **24.9+**），以及装好依赖的 **CPython 3.11–3.14** 或 PATH 上的 `uv`。首次由 `uv` 准备依赖时可能需要联网。 [运行要求与验收状态](docs/compatibility.md) · [安装自检](docs/installation.md#安装自检)
 
 ### Codex
 
@@ -65,7 +65,7 @@ git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
 - 输入为「流程入」「目标GUID（GUID）」和「单位标签索引列表（整数列表）」，输出只有「流程出」。
 - 用途是按 GUID 创建已预先布设在场景里的实体。查询结果附有节点定义路径，端口已对照随包的[官方《执行节点》](references/official/节点介绍/执行节点__mhw66orrrfkm.md#2-创建实体)。该次查询未返回游戏版本号。
 
-看到实际工具调用和上述端口结果，表示本地工具已连通。如果助手无法调用插件，先看[安装排障](docs/installation.md#失败后续装)。
+看到实际工具调用和上述端口结果，表示本地工具已连通。如果助手无法调用插件，先[运行安装自检](docs/installation.md#安装自检)。
 
 ### 只读查看已有的关卡
 

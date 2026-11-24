@@ -100,7 +100,8 @@ def workspace(project, output, roots=(), arguments=None):
                     path.is_relative_to(workspace_outputs(data, candidate)))]
                 if len(matches) != 1:
                     return {**context, 'status': 'ambiguous', 'source': 'mcp_roots',
-                            'message': 'Use an absolute input path identifying one authorized workspace'}
+                            'message': '会话中有多个工程目录。请提供能定位到其中一个已授权工程的输入文件绝对路径后重试。',
+                            'detail': 'Use an absolute input path identifying one authorized workspace'}
                 selected, = matches
             else:
                 selected, = candidates
@@ -111,11 +112,15 @@ def workspace(project, output, roots=(), arguments=None):
         else:
             if config_error:
                 raise ValueError(config_error)
-            return {**context, 'message': 'Open a workspace in an MCP client that provides Roots, or set a project in runtime.json or UGC_PROJECT_ROOT'}
+            return {**context,
+                    'message': '尚未绑定工程目录。请在客户端打开并授权工程目录，或在启动客户端的终端将 UGC_PROJECT_ROOT 设为工程的绝对路径。已有 runtime.json 时可填写 project_root 后重试。',
+                    'detail': 'Open a workspace in an MCP client that provides Roots, or set a project in runtime.json or UGC_PROJECT_ROOT'}
         if selected == Path(selected.anchor):
             raise ValueError('Project root must be a specific directory')
     except (OSError, ValueError, RuntimeError) as exc:
-        return {**context, 'status': 'invalid', 'message': str(exc)}
+        return {**context, 'status': 'invalid',
+                'message': '无法使用当前工程目录。请确认目录存在并已在客户端授权，或检查 UGC_PROJECT_ROOT 与 runtime.json 中的 project_root。修正后重试。',
+                'detail': str(exc)}
 
     context.update(status='ready', project_root=str(selected), source=source, missing=['output_root'])
     runtime_project = record.get('project_root')

@@ -29,7 +29,56 @@ class ProtocolTests(unittest.TestCase):
             result = subprocess.run(['node', str(ROOT / 'scripts/mcp_launcher.cjs')],
                                     env=env, capture_output=True, text=True, encoding='utf-8', timeout=10)
             self.assertEqual((result.returncode, result.stdout), (2, ''))
+            self.assertIn('指定的 Python 路径无效', result.stderr)
             self.assertIn('UGC_PYTHON must be an absolute path', result.stderr)
+
+    @unittest.skipUnless(sys.platform == 'win32' and shutil.which('node'), 'Windows Node.js required')
+    def test_standalone_check_reuses_runtime_failure(self):
+        with tempfile.TemporaryDirectory(prefix='ugc 自检 ') as temporary:
+            env = {key: value for key, value in os.environ.items()
+                   if not key.startswith('UGC_') and key.upper() not in ('PATH', 'VIRTUAL_ENV')}
+            env.update(PATH=temporary, MILIASTRA_WONDERLAND_INSTALL_ROOT=str(Path(temporary) / 'install'))
+            command = [shutil.which('node'), str(ROOT / 'scripts/mcp_launcher.cjs')]
+            serve = subprocess.run(command, env=env, capture_output=True, encoding='utf-8', timeout=15)
+            check = subprocess.run([*command, '--check'], env=env, capture_output=True, encoding='utf-8', timeout=15)
+            self.assertEqual((serve.returncode, check.returncode, serve.stdout), (2, 2, ''))
+            self.assertEqual(serve.stderr, check.stderr)
+            self.assertIn('插件启动文件齐全', check.stdout)
+            self.assertIn('未找到可用的 uv', check.stdout)
+            self.assertIn('[runtime.python] 未找到可用的 Python 运行环境', check.stderr)
+            self.assertIn('uv --version', check.stderr)
+            self.assertIn('spawnSync python.exe ENOENT', check.stderr)
+            self.assertFalse((Path(temporary) / 'install').exists())
+
+    @unittest.skipUnless(sys.platform == 'win32' and shutil.which('node'), 'Windows Node.js required')
+    def test_standalone_check_reports_incomplete_plugin(self):
+        with tempfile.TemporaryDirectory(prefix='ugc 不完整插件 ') as temporary:
+            scripts = Path(temporary) / 'scripts'
+            scripts.mkdir()
+            launcher = scripts / 'mcp_launcher.cjs'
+            shutil.copyfile(ROOT / 'scripts' / launcher.name, launcher)
+            result = subprocess.run(['node', str(launcher), '--check'], capture_output=True,
+                                    encoding='utf-8', timeout=10)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn('不完整插件', result.stdout)
+            self.assertIn('[install.files] 插件缺少启动所需文件', result.stderr)
+            self.assertIn('pyproject.toml', result.stderr)
+
+    @unittest.skipUnless(sys.platform == 'win32' and shutil.which('powershell.exe'), 'Windows PowerShell required')
+    def test_standalone_check_without_node(self):
+        with tempfile.TemporaryDirectory(prefix='ugc 无 Node ') as temporary:
+            env = {key: value for key, value in os.environ.items() if key.upper() != 'PATH'}
+            env['PATH'] = temporary
+            script = str(ROOT / 'scripts/check-install.ps1').replace("'", "''")
+            check = ("[Console]::OutputEncoding = [Text.Encoding]::GetEncoding(437)\n"
+                     f"& '{script}'\nexit $LASTEXITCODE")
+            command = [shutil.which('powershell.exe'), '-NoProfile', '-ExecutionPolicy', 'Bypass',
+                       '-Command', check]
+            result = subprocess.run(command, env=env, capture_output=True, encoding='utf-8',
+                                    creationflags=subprocess.CREATE_NO_WINDOW, timeout=15)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn('[runtime.node] 当前 PowerShell 的 PATH 找不到 Node.js', result.stdout)
+            self.assertIn('node --version', result.stdout)
 
     def test_release_descriptors(self):
         core = installer.read_json(ROOT / 'plugin.json')
