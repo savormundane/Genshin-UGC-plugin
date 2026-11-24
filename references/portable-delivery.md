@@ -40,6 +40,8 @@ python scripts/qianxing.py verify MOVED_DIRECTORY --portable --rebuild --trusted
 
 该参数声明调用方已同意执行对应工程代码，不能从“哈希一致”自动推导授权。缺少确认、清单遗漏、越界或链接、工具链与当前插件不一致、后端指纹不同都拒绝重建。历史 `--rebuild` 需增加 portable 闭包与摘要确认；不再执行没有闭包的原路径重建。报告按字节比较可确定产物，不重签旧证据。
 
+重建以整套工具链文件清单为准。Git 市场、Windows ZIP 和 Cordis 包的文件范围可能不同。同版本切换分发形态时，使用原交付的匹配工具链重建，或用 `--portable` 保留静态核对。遇到 `portable.toolchain_mismatch` 可核对两份工具链摘要和文件差异数量。
+
 Python制作进程和Ayaya编译子进程检查实际文件读取范围，禁止把原路径当作隐含依赖；输入副本不可写，生成与编译临时目录可写。该检查服务于可信本地工程的依赖完整性，不是运行不可信源码的操作系统沙箱。Python、Node和外部包由环境提供并核对指纹；不承诺任意机器或后端版本均兼容。
 
 manifest的artifacts为所有文件登记delivery、evidence、intermediate或input_snapshot。delivery按字节比较，包括JSON目录、协议定义、生成源码和其他格式；不以扩展名决定是否检查。重建必须具有相同文件集合与角色。证据与中间报告保留实际路径/耗时并由各轮清单校验，不要求跨轮字节相同；输入闭包单独校验。无角色清单的历史报告保留原有限比较范围，结果标记legacy_suffixes。

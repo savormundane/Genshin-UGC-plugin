@@ -545,6 +545,9 @@ def produce(path,out,evidence=None,*,job=None,job_digest=None):
             write_json(stage/'client-resource-report.json',references)
             if references['status']!='passed':raise ValueError('Final client resource check incomplete: '+canonical(references))
             state('client_resource_references');evidence['client_resource_references'].update(scope=references['scope'],report='client-resource-report.json',complete_reference_index=False)
+        final_gil_path=stage/'level.gil'
+        final_gil_sha256=(sha_file(final_gil_path)
+                          if ('simulation'in job or 'beyond'in job) and final_gil_path.is_file() else None)
         if 'simulation'in job:
             from joint_simulator import run
             sp=track(resolve(base,job['simulation']['spec']));scene=read_json(sp)
@@ -558,8 +561,24 @@ def produce(path,out,evidence=None,*,job=None,job_digest=None):
                 evidence['simulation']={'status':'failed','coverage':result['acceptance']}
                 raise ValueError('Required simulation acceptance incomplete: '+str(result['acceptance']['gaps']))
             state('simulation');evidence['simulation']['layer']='lua_model' if scene['clients'] else 'native_graph_model'
-            evidence['lua_model']={'status':result['evidence']['lua_model'],'report':'simulation.json' if scene['clients'] else None}
-            evidence['native_graph_model']={'status':result['evidence']['native_graph_model'],'report':'simulation.json'if scene.get('server')else None}
+            clients=[{'client':item['id'],'source':item['source'],'sha256':result['inputs'][item['source']],
+                      'mapping':item.get('mapping','main.lua') if Path(item['source']).suffix.lower()=='.gil' else None}
+                     for item in scene['clients']]
+            server=scene.get('server')
+            servers=[{'source':server['source'],'sha256':result['inputs'][server['source']]}] if server else []
+            for layer,sources in (('lua_model',clients),('native_graph_model',servers)):
+                model_status=result['evidence'][layer]
+                bound=bool(final_gil_sha256 and sources and all(
+                    item['sha256']==final_gil_sha256 and (layer!='lua_model' or item['mapping']) for item in sources))
+                evidence[layer]={'status':model_status if bound or not sources else 'not_checked',
+                                 'model_status':model_status,'report':'simulation.json' if sources else None,
+                                 'artifact_scope':'final_gil' if bound else 'external_or_mixed' if sources else 'not_applicable',
+                                 'artifact_sha256':final_gil_sha256 if bound else None,'bindings':sources}
+            final_scene=all(evidence[layer]['artifact_scope']!='external_or_mixed'
+                            for layer in ('lua_model','native_graph_model'))
+            evidence['simulation'].update(artifact_scope='final_gil' if final_scene else 'external_or_mixed',
+                                          artifact_sha256=final_gil_sha256 if final_scene else None,
+                                          report='simulation.json')
         if 'experiment'in job:
             from experiments import execute
             ep=track(resolve(base,job['experiment']['spec']));r=execute(read_json(ep),ep.parent);inputs.merge(r['inputs'],'experiment');write_json(stage/'experiment.json',r)
@@ -570,11 +589,19 @@ def produce(path,out,evidence=None,*,job=None,job_digest=None):
             from beyond_backend import run as run_beyond
             schema(job['beyond'],('spec','backend'),('spec',))
             external=track(resolve(base,job['beyond']['spec']))
-            outcome=run_beyond(external,resolve(base,job['beyond']['backend']) if 'backend'in job['beyond'] else None,stage/'beyond',final_gil=stage/'level.gil')
+            outcome=run_beyond(external,resolve(base,job['beyond']['backend']) if 'backend'in job['beyond'] else None,stage/'beyond',final_gil=final_gil_path)
             inputs.merge({p:h for p,h in outcome['inputs'].items() if not Path(p).is_relative_to(stage)},'beyond')
-            state('external_simulation');evidence['external_simulation'].update(layer='external_lua_model',report='beyond/external-simulation.json')
             preview=read_json(stage/'beyond/external-simulation.json')
-            evidence['external_software_preview']={'status':preview['rendering'],'layer':'software_preview','report':'beyond/render.json' if preview['preview_generated'] else None}
+            binding=preview['gil_binding']
+            bound=bool(final_gil_sha256 and binding and binding['sha256']==final_gil_sha256)
+            attribution={'artifact_scope':'final_gil' if bound else 'external_or_mixed',
+                         'artifact_sha256':final_gil_sha256 if bound else None}
+            state('external_simulation')
+            evidence['external_simulation'].update(layer='external_lua_model',report='beyond/external-simulation.json',
+                                                   final_gil_status=preview['status'] if bound else 'not_checked',**attribution)
+            evidence['external_software_preview']={'status':preview['rendering'],'layer':'software_preview',
+                                                  'report':'beyond/render.json' if preview['preview_generated'] else None,
+                                                  'final_gil_status':preview['rendering'] if bound else 'not_checked',**attribution}
         for name in('lua_model','native_graph_model','compilation_readback','software_preview'):
             evidence.setdefault(name,{'status':'not_applicable'})
         if graph_spec:evidence['compilation_readback']={'status':'passed','report':'build/graphs/replacement-report.json'if graph_spec.get('schema')==2 else'build/graphs/build-report.json'}

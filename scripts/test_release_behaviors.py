@@ -104,8 +104,11 @@ class ReleaseBehaviorTests(unittest.TestCase):
                 report = verify(root, portable=True)
                 self.assertTrue(report['passed'])
                 self.assertEqual(report['rebuild'], 'not_checked')
-                with self.assertRaisesRegex(ValueError, 'current trusted'):
+                with self.assertRaisesRegex(ValueError, 'current trusted') as mismatch:
                     verify(root, True, True, report['trusted_inputs_sha256'])
+                reason, = mismatch.exception.diagnostics
+                self.assertEqual(reason['code'], 'portable.toolchain_mismatch')
+                self.assertNotEqual(reason['expected'], reason['actual'])
                 extra = project / 'unregistered.txt'
                 extra.write_text('neutral', encoding='utf-8')
                 with self.assertRaisesRegex(ValueError, 'Unregistered'):

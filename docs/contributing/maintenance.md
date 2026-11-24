@@ -7,6 +7,8 @@
 
 Python 依赖有变更时运行 `uv lock`，并用 `uv export --locked --no-dev --no-emit-project --no-header --format requirements-txt --output-file scripts/runtime-requirements.lock` 同步本地安装器的依赖锁。
 
+发行前核对 [来源登记](../../PUBLIC_SOURCES.json) 中的文件、分组、摘要和再分发状态。逐项确认发行范围，记录有明确依据的许可变更和未确认项的处理决定。来源、公开可访问性及再分发许可分别登记。仓库检查核对记录和文件的一致性。
+
 ## 分发内容核对
 
 Windows ZIP 与 Cordis 包共用 [distribution.json](../../distribution.json) 中的三个第三方目录排除项。以下路径位于 `vendor/beyond/node_modules/`。Git 源码保留原文件和摘要，运行检查按 [Beyond 清单](../../vendor/beyond/bundle.json) 核对保留文件。移出条目及原始摘要见 [PUBLIC_SOURCES.json](../../PUBLIC_SOURCES.json) 的 `distribution_changes`。

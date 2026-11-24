@@ -3,7 +3,7 @@ from pathlib import Path
 from collections import Counter
 import argparse,json
 from functools import lru_cache
-from level_inventory import fields,vals,unique,container,graph_summary,graph_records,entity_graph_ids,graph_component_field,graph_library_ids
+from level_inventory import calibrated_container,fields,vals,unique,container,graph_summary,graph_records,entity_graph_ids,graph_component_field,graph_library_ids
 from level_authoring import msg,integer,pack,set_section
 from authoring_io import PLUGIN,sha,read_json,schema,resolve,write_json
 
@@ -506,14 +506,15 @@ def require_mounts(m,contracts):
 def optimize(graph,pure_ids,fanout_cap):
     if type(fanout_cap)!=int or fanout_cap<1:raise ValueError('Positive fanout cap required')
     catalog,_=node_catalog()
-    pure_names={'Get_Custom_Variable','Get_List_Length','Get_Corresponding_Value_From_List'}
-    permitted={i for i,e in catalog.items() if e['Name'] in pure_names}
-    if set(pure_ids)-permitted:raise ValueError('Unproven pure node types')
+    permitted_names={'Get_Custom_Variable','Get_List_Length','Get_Corresponding_Value_From_List'}
+    permitted={i for i,e in catalog.items() if e['Name'] in permitted_names}
+    read_types=set(pure_ids)
+    if read_types-permitted:raise ValueError('Read node type outside serialized rewrite experiment')
     nodes=vals(fields(graph),3);aliases={};fan=Counter(get(c,1,0) for n in nodes for p in vals(fields(n),4) for c in vals(fields(p),5));seen={}
-    if any(fan[get(n,1,0)]>fanout_cap for n in nodes if ref(get(n,2,default=b''))in pure_ids):raise ValueError('Existing read-expression fanout exceeds budget')
+    if any(fan[get(n,1,0)]>fanout_cap for n in nodes if ref(get(n,2,default=b''))in read_types):raise ValueError('Existing read-expression fanout exceeds budget')
     for n in nodes:
         nid=get(n,1,0);typ=ref(get(n,2,default=b''));pins=vals(fields(n),4)
-        if typ not in pure_ids or any(slot(p)[0] not in (3,4) for p in pins):continue
+        if typ not in read_types or any(slot(p)[0] not in (3,4) for p in pins):continue
         shape=b''.join(raw for a,w,v,raw in fields(n) if a not in (1,5,6))
         keep=next((x for x in seen.get(shape,[]) if fan[x]+fan[nid]<=fanout_cap),None)
         if keep is None:seen.setdefault(shape,[]).append(nid)
@@ -540,7 +541,7 @@ def apply(data,spec,base,*,bindings=None):
     from native_hud import HUD_EDITS
     from native_variables import add_native_variables
 
-    allowed=spec['allowed_top_level_fields'];before=container(data)[1];logs=[]
+    allowed=spec['allowed_top_level_fields'];_,before=calibrated_container(data);logs=[]
     input_data=data
     scene_ops={op['op'] for op in spec['operations']}
     gameplay_edits=GAMEPLAY_EDITS | ECONOMY_EDITS | HUD_EDITS | {'add_native_variables':add_native_variables}
@@ -557,7 +558,7 @@ def apply(data,spec,base,*,bindings=None):
         if baseline['status']!='passed':
             raise write_audit_error(baseline, 'baseline', label+' baseline audit failed',
                                     code='native.baseline_audit_failed')
-    elif spec.get('strict_audit',True) and container(data)[0][3]==2:
+    elif spec.get('strict_audit',True):
         require_gameplay(build_gameplay(data),'baseline')
     authored_templates={}
     authored_entities={}
@@ -574,7 +575,6 @@ def apply(data,spec,base,*,bindings=None):
             op['entity_id']=ids[0]
             if kind in ('native_economy_binding','native_combat'):op['section']=5
         if gameplay_edit is not None:
-            if container(data)[0][1:4]!=(1,806,2):raise ValueError('Gameplay edits require a calibrated GIL baseline')
             if kind=='native_economy_binding' and 'drop_template_key'in op:
                 op=dict(op);key=op.pop('drop_template_key')
                 ids=authored_templates.get(key,[]) if isinstance(key,str) else []
@@ -595,7 +595,6 @@ def apply(data,spec,base,*,bindings=None):
             logs.append({'op':kind,**detail})
             continue
         if kind in OBJECT_CREATION:
-            if container(data)[0][1:4]!=(1,806,2):raise ValueError('Native authoring requires a calibrated GIL baseline')
             if kind=='instantiate_object_templates':
                 instances=[]
                 for row in op.get('instances',[]):
@@ -616,7 +615,6 @@ def apply(data,spec,base,*,bindings=None):
             logs.append({'op':kind,**detail})
             continue
         if scene_edit is not None or kind in ('place_static_scene','arrange_instances'):
-            if container(data)[0][1:4] != (1, 806, 2):raise ValueError('Scene edits require a calibrated GIL baseline')
             if kind=='arrange_instances':
                 data,detail=arrange_instances(data,op,base,baseline=input_data)
             elif kind=='place_static_scene':
@@ -655,7 +653,9 @@ def apply(data,spec,base,*,bindings=None):
             matches=[g for g in pool if g['id']==op.get('graph_id')]
             if kind!='append_graph' and len(matches)!=1:raise ValueError('Graph selector must match exactly once')
             if kind in ('replace_graph','append_graph'):
-                source=resolve(base,op['source']);raw=source.read_bytes();blobs=[b for k,b in graph_records(raw)if k==graph_kind]
+                source=resolve(base,op['source']);raw=source.read_bytes()
+                calibrated_container(raw,allow_gia=True)
+                blobs=[b for k,b in graph_records(raw)if k==graph_kind]
                 candidates=[b for b in blobs if op.get('source_graph_id') is None or ref(get(b,1,default=b''))==op['source_graph_id']]
                 if len(candidates)!=1:raise ValueError('Source graph selector must match exactly once')
                 graph=candidates[0]
@@ -684,7 +684,8 @@ def apply(data,spec,base,*,bindings=None):
                     if len(found)!=1:raise ValueError('Pin selector must match exactly once')
                 else:
                     # Pure declarations are caller supplied and hash-bound to this exact base.
-                    graph,aliases=optimize(graph,set(op['pure_node_types']),op['fanout_cap']);logs.append({'aliases':aliases})
+                    graph,aliases=optimize(graph,set(op['pure_node_types']),op['fanout_cap'])
+                    logs.append({'aliases':aliases,'scope':'serialized_graph_rewrite','editor':'not_checked','host':'not_checked'})
                     if graph_kind=='composite':graph=rewrite(graph,4,lambda p:put(p,2,aliases.get(get(p,2,0),get(p,2,0)),0))
             section=get(data[20:-4],10,default=b'')
             if kind=='append_graph':section+=msg(section_key,msg(1,graph))
@@ -724,7 +725,8 @@ def apply(data,spec,base,*,bindings=None):
             if len(registered)!=1:raise ValueError('Graph library entry missing')
             data=set_section(data,6,library)
         elif kind=='section_from':
-            raw=resolve(base,op['source']).read_bytes();value=get(raw[20:-4],op['field'])
+            _,source_root=calibrated_container(resolve(base,op['source']).read_bytes())
+            value=unique(source_root,op['field'])
             if value is None:raise ValueError('Source section absent')
             data=set_section(data,op['field'],value)
         else:raise ValueError('Unsupported native operation '+str(kind))
@@ -744,7 +746,7 @@ def apply(data,spec,base,*,bindings=None):
         if final['status']!='passed':
             raise write_audit_error(final, 'result', 'Final project references failed',
                                     code='native.result_reference_failed')
-    elif allowed and set(allowed) & {4,5,9,10,12,15} and spec.get('strict_audit',True) and container(data)[0][3]==2:
+    elif allowed and set(allowed) & {4,5,9,10,12,15} and spec.get('strict_audit',True):
         require_gameplay(build_gameplay(data),'result')
     result={'schema':2,'operations':logs,'audit':report,'protected_fields_unchanged':True,'sha256':sha(data)}
     if bindings.ids:result['bindings']=bindings.payload()

@@ -1,6 +1,6 @@
 # 客户端API检查
 
-能力名：client-api-check。使用包内固定版本luaparse 0.3.1解析Lua 5.3语法树，Python读取官方客户端API目录并检查词法作用域、宿主成员、字段权限、枚举、调用方式、参数数量和已确定类型。不执行Lua正文。依赖Node与最终语法检查所需的lupa.lua53；不自动安装。解析器原文、MIT许可证及来源摘要保存在vendor/luaparse。
+能力名：client-api-check。使用包内固定版本 luaparse 0.3.1 解析 Lua 5.3，按包内客户端 API 整理稿检查词法作用域、宿主成员、字段权限、枚举、调用方式、参数数量和已明确声明的类型。检查时只解析源码。依赖 Node 以及最终语法检查所需的 lupa.lua53。解析器原文、MIT 许可证及来源摘要保存在 `vendor/luaparse`。 [API 来源及核验范围](knowledge-reliability.md)
 
 ## 接口与合同
 
@@ -28,6 +28,8 @@ bindings可为局部变量或函数参数声明补充类型，例如`{"range":[6
 纯客户端制作的检查对象是build/client.lua；有最终level.gil时检查其全部映射。所有松散Lua仍执行语法检查，API合同只作用于明确的最终客户端。没有对应产物时拒绝。
 
 ## 报告与边界
+
+`parameter_basis`、`parameter_enforced` 和 `return_basis` 记录每次调用使用的类型依据。从相关属性或说明补出的参数类型仅用于提示，推导返回值在后续分析中仍为未知。使用了推导类型时 `derived_types` 为 `not_checked`。该报告的 `status` 对应实际完成的静态检查，运行状态另见 `runtime`。
 
 variable_references检查GetGlobalCustomVariableValue及注册/移除变量变化监听。API合同可声明`"variable_targets":{"Level":{"kind":"entity","id":123}}`，支持Level、PlayerSelf、AvatarSelf范围，kind为entity或template。绑定是项目提供的静态前提，必须依据当前工程配置填写，不能仅根据同名实体推断运行时身份。
 

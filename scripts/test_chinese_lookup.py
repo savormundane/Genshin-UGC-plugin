@@ -12,10 +12,14 @@ from unittest.mock import patch
 from mcp import Client, StdioServerParameters
 from PIL import Image, ImageDraw
 
-from authoring_io import PLUGIN, read_json, write_json
+from authoring_io import PLUGIN, read_json, sha, write_json
+from client_api import analyze
 import knowledge
+from native_scene import OBJECT_ID_START, read_gia, static_gia
 from node_build import catalog
-from platform_profiles import search
+from platform_profiles import search, show
+from resource_catalogue import catalogue, check as check_resources
+from scene_authoring import build as build_scene, capture_catalogue
 
 
 VISIBLE = 'ClientUIBaseControl.SetVisible'
@@ -149,6 +153,88 @@ class ChineseLookupTests(unittest.TestCase):
                 else:
                     self.assertEqual(result['matches'], 0)
                     self.assertIn('scope=all', result['hint'])
+
+    def test_compiler_calibration_and_document_provenance(self):
+        compiler = catalog('启动定时器', 'server', 1)['nodes'][0]
+        self.assertEqual(compiler['source']['source_kind'], 'bundled_graph_code_node_spec')
+        self.assertEqual(compiler['source']['sha256'], sha((PLUGIN / compiler['implementation']).read_bytes()))
+        self.assertIsNone(compiler['platform_version'])
+        self.assertEqual((compiler['editor'], compiler['host']), ('not_checked', 'not_checked'))
+        self.assertNotIn('port_evidence', compiler)
+
+        create = catalog('创建实体', 'server', 1)['nodes'][0]
+        ports = create['port_evidence']
+        self.assertEqual(ports['source_version'], '7.1')
+        self.assertEqual(ports['scope'], 'documented_value_ports')
+        self.assertEqual([port['name'] for port in ports['documented_inputs']], ['目标GUID', '单位标签索引列表'])
+        self.assertEqual(ports['documented_outputs'], [])
+        self.assertIsNone(create['platform_version'])
+        self.assertTrue(all(port[1] == '流程' for port in create['outputs']))
+
+        for version in ('7.1', '7.2'):
+            with self.subTest(version=version):
+                source = catalogue(version)['resources'][0]['source']
+                document = show(version, 'mh4imrrhzdzi')
+                for key in ('source_kind', 'source_version', 'inherited', 'applicability', 'mirror_url', 'commit'):
+                    self.assertEqual(source.get(key), document.get(key))
+
+    def test_lua_type_hints_remain_unverified(self):
+        navigation = ('local focused = game.GetControllerFocus(); '
+                      'local mode, target = focused:GetControllerNavigation(Enum.ControllerNavigationDir.Left); '
+                      'target:SetVisible(true)')
+        report = analyze(navigation)
+        self.assertEqual((report['status'], report['derived_types']), ('not_checked', 'not_checked'))
+        self.assertEqual(report['errors'], [])
+        self.assertIn('unknown_receiver_type', {row['reason'] for row in report['unresolved']})
+        self.assertTrue(any(call['return_basis'] == 'derived' for call in report['calls']))
+        self.assertFalse(any(call['name'] == 'SetVisible' for call in report['calls']))
+
+        advised = analyze('game.GetClientUIControl(1):SetVisible("false")')
+        self.assertEqual((advised['status'], advised['errors']), ('not_checked', []))
+        call = next(row for row in advised['calls'] if row['name'] == 'SetVisible')
+        self.assertEqual((call['parameter_basis'], call['parameter_enforced']), (['derived'], [False]))
+        self.assertEqual(analyze('script:EnableUpdate("false")')['status'], 'failed')
+        passed = analyze('game.GetClientUIControl(1):SetVisible(false)')
+        self.assertEqual((passed['status'], passed['derived_types']), ('passed', 'not_checked'))
+
+    def test_model_size_requires_measurement_bound_to_the_native_sample(self):
+        with tempfile.TemporaryDirectory(prefix='qianxing dimensions ') as temporary:
+            root = Path(temporary)
+            sample, models, measurement, layout, uses = (root / name for name in (
+                'sample.gia', 'models.json', 'measurement.json', 'layout.json', 'uses.json'))
+            template, dimensions = 20001038, [2, 4, 8]
+            witness = static_gia([{'record_id': OBJECT_ID_START, 'template_id': template, 'name': 'Fixture',
+                                   'position_m': [0, 0, 0], 'rotation_deg': [0, 0, 0], 'scale': [1, 1, 1]}])
+            sample.write_bytes(witness)
+            capture_catalogue(sample, models, '7.2', 'beyond')
+            model_data = read_json(models)
+            record = {'template_id': template, 'dimensions_m': dimensions}
+            target = {'version': '7.2', 'mode': 'beyond', 'catalogues': [models.name]}
+            write_json(layout, {**target, 'schema': 1, 'objects': [{
+                'key': 'sample', 'name': 'Fixture', 'template_id': template, 'position_m': [0, 0, 0], 'size_m': [6, 2, 12],
+            }]})
+            write_json(uses, {**target, 'schema': 2, 'uses': [{'type': 'model', 'id': template, 'dimensions': dimensions}]})
+
+            valid = {'sample_sha256': sha(witness), 'version': '7.2', 'mode': 'beyond', 'method': 'Synthetic fixture'}
+            for provenance in ({}, {**valid, 'sample_sha256': '0' * 64}, {**valid, 'version': '7.1'},
+                               {**valid, 'mode': 'classic'}, {**valid, 'method': ''}, valid):
+                with self.subTest(provenance=provenance):
+                    measurement.write_text(json.dumps({**record, **provenance}), encoding='utf-8')
+                    model_data['resources'][0].update(dimensions=dimensions, dimensions_source={
+                        'path': measurement.name, 'sha256': sha(measurement.read_bytes()),
+                    })
+                    models.write_text(json.dumps(model_data), encoding='utf-8')
+                    output = root / 'result'
+                    if provenance != valid:
+                        self.assertEqual(check_resources(uses)['status'], 'not_checked')
+                        with self.assertRaisesRegex(ValueError, 'bound to the native sample'):
+                            build_scene(layout, output)
+                        self.assertFalse(output.exists())
+                    else:
+                        self.assertEqual(check_resources(uses)['status'], 'passed')
+                        build_scene(layout, output)
+                        result, = read_gia((output / 'scene.gia').read_bytes(), static_only=True)
+                        self.assertEqual(result['scale'], [3, 0.5, 1.5])
 
     def test_mcp_matches_cli_and_routes_asset_questions(self):
         async def run(root):

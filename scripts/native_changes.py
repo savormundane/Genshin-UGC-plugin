@@ -4,7 +4,7 @@ from collections import Counter,defaultdict
 from copy import deepcopy
 import os
 from authoring_io import sha,sha_file,canonical,schema,resolve
-from level_inventory import container,fields,vals
+from level_inventory import calibrated_container,container,fields,vals
 from native_core import model,get,slot,ref,apply
 from project_index import build,key
 
@@ -169,7 +169,7 @@ def arrangements(report):
 
 
 def plan(data,spec,base,destination):
-    if container(data)[0][3]!=2:raise ValueError('Modification plans require a calibrated GIL baseline')
+    calibrated_container(data)
     operations=spec.get('operations') if isinstance(spec,dict) else None
     if not isinstance(operations,list) or any(not isinstance(op,dict) for op in operations):
         raise ValueError('Native patch must specify operations as a list of objects')
@@ -217,7 +217,7 @@ def plan_summary(record, destination='plan.json'):
 
 
 def apply_plan(data,record,base):
-    if container(data)[0][3]!=2:raise ValueError('Modification plans require a calibrated GIL baseline')
+    calibrated_container(data)
     required=('schema','kind','patch','inputs','result_sha256','difference','plan_sha256')
     schema(record,(*required,'arrangements'),required)
     if record['kind']!='native-change-plan':raise ValueError('Unknown native plan kind')

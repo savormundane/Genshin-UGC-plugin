@@ -8,11 +8,11 @@ python scripts/qianxing.py native audit CURRENT.gil
 python scripts/qianxing.py native apply CURRENT.gil --spec PATCH.json --out NEW.gil
 ```
 
-PATCH采用schema=2、base_sha256、allowed_top_level_fields及operations。基底摘要不符、目标重复、保护字段变化或最终类型错误均拒绝输出。operations支持replace_graph、append_graph、rewire、mount、section_from、optimize；图以graph_id定位，替换源以source及可选source_graph_id选择唯一图。replace_graph保留目标图标识和名称。section_from是显式授权的整段替换，不能用它隐藏游戏模板。
+PATCH 采用 `schema=2`、`base_sha256`、`allowed_top_level_fields` 及 `operations`。基底摘要不符、目标重复、保护字段变化或最终类型错误均拒绝输出。原生 GIL 写入须匹配样本校准的容器头 `(1, 806, 2)`，其中的数值只标识本工具接受的序列化格式。未知格式可先尝试只读结构检查。节点图来源还可使用校准的 GIA 容器头 `(1, 806, 3)`。图以 `graph_id` 定位，替换源以 `source` 及可选 `source_graph_id` 选择唯一图。`replace_graph` 保留目标图标识和名称。`section_from` 仅从另一份经校准的 GIL 读取唯一指定字段，执行显式授权的整段替换。
 
 需要先审阅变更时使用[原生差异与修改计划](native-changes.md)：native plan在内存执行补丁，绑定外部来源、预期结果和差异摘要；native apply --plan核对同一内容后写新文件。native diff比较已识别语义与完整原始字节变化，未知组件不被当作无变化。produce native.plan及portable复用同一合同。
 
-rewire字段为graph_id、node、input:[kind,index]、source_node及source_port。mount字段为section（4模板／5实例）、entity_id、graph_id及category；目标须有已校准图组件。optimize仅接受内置证明可合并的读取节点类型及明确fanout_cap，不根据调用方自报“纯函数”放行其他节点。
+`rewire` 使用 `graph_id`、`node`、`input:[kind,index]`、`source_node` 和 `source_port`。`mount` 使用 `section`（4 模板或 5 实例）、`entity_id`、`graph_id` 和 `category`，目标须有已校准图组件。`optimize` 是默认关闭的维护实验，用于在副本上比较内置读取节点类型的序列化结构，要求显式指定 `fanout_cap`。静态回读只核对节点与连线形状。读值时机、状态变化和宿主性能仍待实测，常规制作保留原图。
 
 build schema 2沿用现有图配置，新增replace_graphs:[{graph_id,graph_name}]。它在临时基底编译，保留现有挂载引用和无关图正文。struct_bindings:[{graph_name,struct_id}]用于明确只有一种结构体绑定的生成图，将通用拼装／拆分节点绑定到真实声明与端口UID；多结构体图应拆分绑定或使用明确的已有节点定义，不自动猜选。
 
@@ -64,7 +64,7 @@ build schema 2的required_mounts使用graph_name、entity_id及可选section（4
 
 修改字段、ID和结构体绑定必须来自当前文件或明确新建配置。原生字段规则和校准定义保留来源；不恢复完整游戏模板。验收覆盖两组图标识、错接结构体列表、保护字段、现有图替换及挂载，分别记录静态、编译回读和宿主状态。
 
-中性配置可分别选择一个整数读图和一个结构体列表读图，先inspect取得graph_id与基底摘要，再只允许字段10并执行rewire；追加消费者后会重新核对实际输出类型和结构体身份。replace_graph只替换图正文，不隐式携带依赖；新增声明须通过明确的section_from或完整build资源阶段处理。挂载还需允许实例／模板字段及图库字段6。错误摘要、重复ID、错接端口、动态端口UID不符或缺挂载均拒绝输出。optimize显式给出纯读取类型和fanout_cap，现有读表达式已超预算同样失败；默认不开启合并。
+中性配置可分别选择一个整数读图和一个结构体列表读图。先通过 `inspect` 取得图 ID 与基底摘要，再只允许字段 10 并执行 `rewire`。追加消费者后会重新核对实际输出类型和结构体身份。`replace_graph` 只替换图正文，新增声明须通过明确的 `section_from` 或完整构建资源阶段处理。挂载还需允许实例或模板字段及图库字段 6。错误摘要、重复 ID、错接端口、动态端口 UID 不符或缺挂载均拒绝输出。
 
 [节点图变量检查](native-graph-variables.md)在最终GIL/GIA图正文核对声明与VarBase默认值、列表/字典子类型及显式结构体依赖；不套用实体变量编码，不把读取通过当作运行模型通过。
 

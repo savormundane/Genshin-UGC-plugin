@@ -24,7 +24,7 @@ node_connection按使用者→提供者比较，忽略仅改变连线存储端�
 
 ## 内容绑定的计划
 
-PATCH使用现有schema 2、base_sha256、allowed_top_level_fields及operations合同。replace_graph仍保留目标图ID/名称及既有引用；section_from只在显式指定整段替换时使用，不扩大为任意安全字段迁移。计划要求strict_audit=true或省略该字段。
+PATCH 使用现有 schema 2、base_sha256、allowed_top_level_fields 及 operations 合同。写入 GIL 及 `section_from` 的来源均须匹配已用样本校准的容器头，且来源的目标字段须唯一。`replace_graph` 保留目标图 ID、名称和既有引用。`section_from` 仅用于显式整段替换。计划要求 `strict_audit=true` 或省略该字段。
 
 MCP 内联 `native_plan` 可省略 `patch.base_sha256`，服务用已验证的 `sha256` 填入计划。文件补丁保持原合同。预检或结果审计阻止写入时，`diagnostics` 给出阶段、已知对象键和名称、关系、字段与目标 ID。先按 `next_step` 找到并修复阻塞，再用变更后的摘要重新规划。
 

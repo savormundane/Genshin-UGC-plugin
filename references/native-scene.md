@@ -41,7 +41,7 @@ python scripts/qianxing.py resources search 围墙 --type model --version 7.2 --
 
 - `key` 在布局内唯一。调整物件时保留它，以便对照输出映射。
 - `position_m` 和 `offset_m` 采用原生世界 XYZ，Y 向上。位置加整体偏移后写入；`rotation_deg` 按编辑器原生 XYZ 角度写入。
-- `scale` 可省略，默认 `[1,1,1]`。要按实际尺寸摆放时，提供 `size_m` 并省略 `scale`。模型目录须包含 `dimensions` 及 `dimensions_source`。后者的 `path` 和 `sha256` 绑定尺寸记录 JSON，记录包含该 `template_id` 和原生单位尺寸 `dimensions_m`，三轴均须为正。常规建景可以直接使用缩放。
+- `scale` 可省略，默认 `[1,1,1]`。按记录中的实测尺寸摆放时，提供 `size_m` 并省略 `scale`。模型目录须包含 `dimensions` 和 `dimensions_source`。后者用 `path` 和 `sha256` 绑定 JSON 记录，内含 `template_id`、三轴正值 `dimensions_m`、原生样本摘要 `sample_sha256`、相同 `version` 和 `mode`，以及说明测量环境及方法的 `method`。只有模板 ID 和尺寸的旧记录仍可查看，使用此类记录布置时请直接指定 `scale`。导入时在目标编辑器中复核实际尺寸。
 
 ```text
 python scripts/qianxing.py scene build layout.json --out scene-output
@@ -109,13 +109,13 @@ python scripts/qianxing.py scene inspect scene-output/scene.gia
 
 白盒形状 ID 支持长方体 `10009001`、球体 `10009002`、圆柱 `10009008` 和圆锥 `10009009`。颜色为 `#RRGGBB`。新增装饰写到元件，场景已有实例的装饰列表独立保留。`scene preview LEVEL.gil --template-id ID --out PREVIEW` 用 Pillow 绘制俯视和侧视中零件的轴对齐近似。
 
-省略 `--template-id` 可预览整个 GIL。运行 `scene preview LEVEL.gil --before OLD.gil --out PREVIEW` 或 MCP `scene_preview` 可对照改动。结果包含共用范围的 `top.png`、`side.png` 和世界坐标清单 `layout.json`。按原生对象键对应新增、移动、旋转和移除。轮廓是按已知尺寸计算的包围盒代理，未校准的尺寸用原点标记。对象清单保留名称、模型、原始变换及解析覆盖。触发路线用[联合模拟](joint-simulation.md#盒形触发路线)验证。
+省略 `--template-id` 可预览 GIL 中读到的实体世界坐标。运行 `scene preview LEVEL.gil --before OLD.gil --out PREVIEW` 或 MCP `scene_preview` 可按原生对象键对照新增、移动、旋转和移除。共用比例的 `top.png` 和 `side.png` 以原点标记实体，符合条件的白盒另绘按缩放计算的单位包围盒近似。`layout.json` 与返回摘要的 `coverage` 分别统计当前和对照文件中的索引实体、有世界坐标的实体、仅有原点而无法绘制轮廓的实体、缺少世界坐标的实体与未解析记录。模型尺寸、编辑器导入和游戏运行需另行核对。触发路线可按[联合模拟](joint-simulation.md#盒形触发路线)检查离线模型。
 
 `scene export-whitebox LEVEL.gil --template-id ID --out OUTPUT` 将原点空模型元件的白盒零件另存为独立 `whitebox.gia`。它随包记录形状、局部变换、颜色和依赖索引。使用 `"scene":{"whitebox":{"source":"@level","template_id":ID}}` 可在制作任务最终 GIL 上执行相同导出。交互、组件和每个实例的修改由 GIL 版本承载。 [原生玩法制作](native-gameplay.md)
 
 查看地形栅格时用 `scene inspect LEVEL.gil --terrain-id ID`。每格 5 米，每层 2.5 米，可读取格心、顶部高度、水面、路径及斜坡。平格用顶部高度定位布景，斜坡的落点高度需要按落点复核。写入只改已有格。材质使用 `grass`、`tile`、`sand`、`stone_wall`、`snow`。地块 `layers` 加上 `water_layers` 的合计从 1 到 20。道路用 `path:true`，水体用 `water_layers`，直线斜坡用 `slope` 的 `+z`、`+x`、`-z`、`-x` 或 `flat`，方向对应下降的一侧。水体和道路、直线斜坡分格布设。先保存关卡副本，再按需要烘焙寻路。
 
-交互的图和 Lua 通过已有[制作链](production-v2.md)装配。用 `nodes_lookup` 确认“进入碰撞触发器时”和“获取角色归属的玩家实体”的端口。节点图挂到这只触发对象。需要只提示进入者时，声明 `server_to_client` 信号，以业务参数中的玩家实体做定向目标。用已有 HUD 控件的 Lua 映射注册和注销信号处理，参见[复杂类型协议](protocol-v2.md)与[客户端装配](client-assembly.md)。
+交互的图和 Lua 通过已有[制作链](production-v2.md)装配。用 `nodes_lookup` 查看“进入碰撞触发器时”和“获取角色归属的玩家实体”的编译器端口声明，再与目标版本资料或已有工程证据核对。节点图挂到这只触发对象。需要只提示进入者时，声明 `server_to_client` 信号，以业务参数中的玩家实体做定向目标。用已有 HUD 控件的 Lua 映射注册和注销信号处理，参见[复杂类型协议](protocol-v2.md)与[客户端装配](client-assembly.md)。
 
 ### 房间入口示例
 

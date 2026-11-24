@@ -35,10 +35,12 @@ def analyze(code,bindings=()):
     process=subprocess.run([node,'--preserve-symlinks','--preserve-symlinks-main',str(PLUGIN/'scripts/client_ast.cjs')],input=raw,capture_output=True)
     if process.returncode:raise ValueError('Lua AST parsing failed: '+process.stderr.decode('utf-8',errors='replace')[-1800:])
     analysis=Analysis(json.loads(process.stdout),api,bindings)
+    derived_types=any('derived' in call['parameter_basis'] or call['return_basis']=='derived' for call in analysis.calls)
     return {'status':'failed'if analysis.errors else'not_checked'if analysis.unresolved else'passed',
             'scope':'lexical_host_members_permissions_calls_and_declared_types','source_sha256':sha(raw),
             'api_sha256':api['sha256'],'knowledge_source':source,'parser':{'version':'0.3.1','files':PARSER_FILES},
             'calls':analysis.calls,'errors':analysis.errors,'unresolved':analysis.unresolved,
+            'derived_types':'not_checked' if derived_types else 'not_applicable',
             'bindings':list(bindings),'references':'not_checked','runtime':'not_checked'}
 
 
@@ -266,10 +268,9 @@ class Analysis:
         if target and target['type']=='Color':return [first]
         if not target or target['type']!='function':return None
         signature=self.api['methods'][target['owner']+'.'+target['name']]
-        if 'return_types'in signature:return [{'type':t}for t in signature['return_types']]
         result=signature['returns']
         if result=='—':return []
-        if ':'in result:
+        if signature['return_basis']=='declared' and ':'in result:
             names,typ=result.split(':',1);return [{'type':typ.strip()}for name in names.split(',')]
         if ','in result:return [None for name in result.split(',')]
         return [first]
@@ -369,12 +370,14 @@ class Analysis:
                     self.diagnostic(self.unresolved,node,'undocumented_parameter_type',owner=owner,name=name,parameter=parameter)
                 else:self.check_type(values[index],parameter.split(':',1)[1].strip(),node,'argument',index=index+1,knowledge_basis=signature['parameter_basis'][index],enforced=signature['parameter_enforced'][index],source_line=signature['line'],type_source_lines=signature.get('type_source_lines',[]))
             record={'line':node['loc']['start']['line'],'range':node['range'],'owner':owner,'name':name,'source_line':signature['line'],
-                    'type_source_lines':signature.get('type_source_lines',[]),'parameter_basis':signature['parameter_basis'],'return_basis':signature['return_basis'],'arguments':values,
+                    'type_source_lines':signature.get('type_source_lines',[]),'parameter_basis':signature['parameter_basis'],
+                    'parameter_enforced':signature['parameter_enforced'],'return_basis':signature['return_basis'],'arguments':values,
                     **self.contexts.get(tuple(node['range']),{'scope':'unknown','conditional':True})}
             if receiver and receiver['type']=='ServerSignal':record['signal_origin']=receiver.get('origin')
             if record not in self.calls:self.calls.append(record)
-            result=signature['return_types'][0]if 'return_types'in signature else signature['returns']
             if owner=='game'and name=='ServerSignal':return {'type':'ServerSignal','origin':node['range']}
+            if signature['return_basis']=='derived':return None
+            result=signature['returns']
             if result=='—':return {'type':'nil'}
             if ':'in result:result=result.split(':',1)[1].strip()
             return {'type':result}if re.fullmatch(r'[A-Za-z]\w*(?:\[\])?',result)and result!='any'else None

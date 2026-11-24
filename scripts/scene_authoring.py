@@ -61,7 +61,7 @@ def build(path, out):
         if 'size_m' in obj:
             dims = model['dimensions']
             if 'scale' in obj or dims is None or not model.get('dimensions_verified') or min(dims) <= 0:
-                raise ValueError('Measured positive model dimensions and no scale are required for size_m: ' + key)
+                raise ValueError('size_m requires positive model dimensions bound to the native sample and no scale: ' + key)
             size = vector(obj['size_m'], 'Size for ' + key, positive=True)
             scale = vector([value / basis for value, basis in zip(size, dims)], 'Scale for ' + key, positive=True)
         else:

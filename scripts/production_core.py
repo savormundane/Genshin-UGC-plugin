@@ -1,7 +1,7 @@
 """Plugin-owned contracts, animation, API lookup, protected Lua writeback and staged production."""
 from pathlib import Path
 import hashlib,json,math,os,re,shutil,struct,tempfile
-from level_inventory import fields,vals,unique,container
+from level_inventory import calibrated_container,fields,vals,unique,container
 from asset_core import ASSET_GENERATORS
 PLUGIN=Path(__file__).resolve().parents[1]
 def sha(data):return hashlib.sha256(data).hexdigest()
@@ -95,7 +95,7 @@ def animation(spec,base):
 
 def replace_lua(data,mapping,code):
     if not isinstance(code,bytes) or not code:raise ValueError('Empty Lua source')
-    _,root=container(data)
+    _,root=calibrated_container(data)
     def one(fs,n):
         matches=[f for f in fs if f[0]==n and f[1]==2]
         if len(matches)!=1:raise ValueError('Missing or ambiguous field '+str(n))

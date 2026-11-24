@@ -123,7 +123,14 @@ class ReleaseTests(unittest.TestCase):
                    '[bad]: missing.md\n')
         self.write('references/official/raw.md', '[raw](absent.md)')
         self.write('references/registered.md', '[raw](absent.md)')
-        self.write('PUBLIC_SOURCES.json', json.dumps({'permission_unverified_files': [{'path': 'references/registered.md'}]}))
+        self.write('PUBLIC_SOURCES.json', json.dumps({
+            'groups': {'fixture': {}},
+            'permission_unverified_files': [{
+                'path': 'references/registered.md', 'group': 'fixture',
+                'sha256': hashlib.sha256((self.root / 'references/registered.md').read_bytes()).hexdigest(),
+                'status': 'redistribution_permission_unverified',
+            }],
+        }))
         self.write("ROADMAP.md", "[bad](file:///C:/work/notes.md)")
         self.write("scripts/README.md", "[bad](C:/work/notes.md)")
         self.write(".github/PULL_REQUEST_TEMPLATE.md", "[bad](../missing.md)")
@@ -131,6 +138,8 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(len(errors), 4, errors)
         for path in ("skills/fixture/reference.md", "ROADMAP.md", "scripts/README.md", ".github/PULL_REQUEST_TEMPLATE.md"):
             self.assertTrue(any(error.startswith(f"{Path(path)}:") for error in errors), errors)
+        self.write('references/registered.md', '# Changed source')
+        self.assertIn('references/registered.md: file missing or differs from recorded source digest', check(self.root))
 
     def test_active_install_documentation_versions(self):
         self.fixture()

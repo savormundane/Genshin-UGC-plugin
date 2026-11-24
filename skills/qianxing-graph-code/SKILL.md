@@ -5,7 +5,7 @@ description: 编写和修复千星奇域客户端／服务端节点图及复合�
 
 # Qianxing Graph Code
 
-先用 MCP `nodes_lookup` 或 `qianxing.py nodes QUERY --scope server|client` 确认图作用域、调用签名与端口。编写后用 MCP `graph_check` 或 `graph check SOURCE.py --job JOB.json` 核对制作任务的信号与项目声明。需要交付图文件时，用 `qianxing.py build` 编译。客户端控件的 Lua API 见 [Qianxing Editor · Client Lua](../qianxing-editor/SKILL.md#client-lua)。
+先用 MCP `nodes_lookup` 或 `qianxing.py nodes QUERY --scope server|client` 查询包内编译器的图作用域、调用签名与端口。回答平台规则时查目标版本资料，引用 `port_evidence` 时只采用明确校准的端口范围。后续用 MCP `graph_check` 或 `graph check SOURCE.py --job JOB.json` 核对制作任务的信号与项目声明。交付图文件时用 `qianxing.py build` 编译。客户端控件的 Lua API 见 [Qianxing Editor · Client Lua](../qianxing-editor/SKILL.md#client-lua)。
 
 从中文问题提取节点动作和作用域，例如服务端「启动定时器」或「创建实体」。整句无命中时改查短词、别名或正式节点名，再核对候选的作用域与端口。仍无结果时说明已查范围，并提示可补充的版本、作用域或编辑器中的节点名。 [中文查询](../../references/knowledge-reliability.md#中文查询)
 

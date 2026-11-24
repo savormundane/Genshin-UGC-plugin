@@ -52,8 +52,8 @@ def catalogue(path, *, include_search_details=False):
             if key in methods and any(methods[key][k]!=record[k]for k in ('parameters','returns','indexer')):
                 raise ValueError('Conflicting signature '+key)
             methods.setdefault(key,record)
-    # The compact control tables omit annotations. Resolve their parameters from
-    # the same document's typed properties, event enums and callback descriptions.
+    # The compact control tables omit annotations. Keep hints from typed properties,
+    # event enums and callback descriptions separate from declared types.
     # Preserve the original spelling and all source lines used by each resolution.
     property_methods={
         'ClientUIBaseControl.SetActive':['active'],
@@ -97,7 +97,7 @@ def catalogue(path, *, include_search_details=False):
             field=props.get(prop[index]if prop and index<len(prop)else param)
             typ=field['type']if field else explicit.get(key,{}).get(param)
             typed.append(param+': '+typ if typ else param)
-            enforced.append(field is not None)
+            enforced.append(False)
             if field:source_lines.append(field['line'])
             elif typ:source_lines.append(method['line'])
         method['parameters']=typed

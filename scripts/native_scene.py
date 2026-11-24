@@ -2,14 +2,12 @@
 from collections import Counter
 import struct
 
-from level_inventory import container, fields, unique, vals
+from level_inventory import GIL_HEADER, STATIC_GIA_HEADER, container, fields, unique, vals
 from level_authoring import flt, integer, msg, pack, text
 
 OBJECT_ID_START = 0x40400001
 OBJECT_ID_END = 0x404FFFFF
 FLOAT32_MAX = 3.4028234663852886e38
-STATIC_GIA_HEADER = (1, 806, 3)
-GIL_HEADER = (1, 806, 2)
 TRS = ('position_m', 'rotation_deg', 'scale')
 
 

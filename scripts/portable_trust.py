@@ -2,7 +2,7 @@
 import os
 import re
 from pathlib import Path, PurePosixPath
-from authoring_io import PLUGIN, read_json, sha, canonical, inventory
+from authoring_io import DiagnosticError, PLUGIN, read_json, sha, canonical, inventory
 
 
 def listed_path(root, name, checked=None):
@@ -66,8 +66,18 @@ def trusted_execution(bundle, approval):
     if approval != token:
         raise ValueError('Project execution requires explicit trusted_inputs_sha256 from the static report')
     packaged = {name[len('workspace/toolchain/'):]: digest for name, digest in record['files'].items() if name.startswith('workspace/toolchain/')}
-    if packaged != inventory(PLUGIN):
-        raise ValueError('Portable toolchain differs from the current trusted plugin; static checks only')
+    current = inventory(PLUGIN)
+    if packaged != current:
+        raise DiagnosticError(
+            'portable.toolchain_mismatch',
+            'Portable toolchain differs from the current trusted plugin. '
+            '请使用与原交付完全一致的版本和安装包重建，或先执行静态核对。',
+            expected=sha(canonical(packaged).encode('utf-8')),
+            actual=sha(canonical(current).encode('utf-8')),
+            missing_files=len(packaged.keys() - current.keys()),
+            extra_files=len(current.keys() - packaged.keys()),
+            changed_files=sum(packaged[name] != current[name] for name in packaged.keys() & current.keys()),
+        )
     return record
 
 

@@ -7,7 +7,7 @@ from collections import Counter
 import math,struct
 from authoring_io import sha,schema
 from level_authoring import flt,integer,msg,set_section,text
-from level_inventory import container,fields,unique,vals
+from level_inventory import calibrated_container,container,fields,unique,vals
 from native_core import get,replace_message
 
 TYPES={1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,20,21,22,23,24,25,26,27}
@@ -130,7 +130,8 @@ def set_default(data,model,op):
     keys=('op','section','entity_id','name','value')
     schema(op,keys,keys)
     section,ident,name,value=(op[k] for k in keys[1:])
-    if (container(data)[0][3]!=2 or type(section)is not int or section not in (4,5)
+    calibrated_container(data)
+    if (type(section)is not int or section not in (4,5)
             or type(ident)is not int or ident<0 or not isinstance(name,str) or not name):
         raise ValueError('Custom variable target requires GIL, section 4 or 5, entity_id and name')
     records=[r for r in model['custom_variables']['records']

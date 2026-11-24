@@ -14,7 +14,7 @@ description: 查找千星奇域原生3D模型、选择白盒形状，生成、�
 | 位图、矩形、透明边缘与富文本 | [点阵指南](../../references/pixel-import-guide.md)、[富文本](../../references/rich-text-assets.md) |
 | 校准的GIA图元导入 | [原生素材](../../references/native-assets.md)；不支持的投影、变换与依赖拒绝 |
 | 合法性、转换保真与成本 | [素材检查](../../references/asset-inspection.md) |
-| 原生模型、白盒元件及预览 | [原生场景](../../references/native-scene.md)。使用 `resources_lookup` 选择模型。用 `scene preview --template-id` 核对元件几何，用 `scene export-whitebox` 导出白盒形状。 |
+| 原生模型、白盒元件及预览 | [原生场景](../../references/native-scene.md)。用 `resources_lookup` 查询模型及样本证据。`scene preview --template-id` 查看白盒几何代理，`scene export-whitebox` 导出白盒形状。实际外观与尺寸在目标编辑器中核对。 |
 | 资源目录及运行缓存 | [资源目录](../../references/resource-catalogue.md)、[容量缓存](../../references/runtime-assets.md) |
 | 生成目录补字段 | [目录合并](../../references/workflows/generated-lua-catalog-merge/README.md) |
 | 图片自动拟合与续算 | [通用拟合](../../references/asset-fit.md)：`assets fit`，透明轮廓、区域和分层输入 |

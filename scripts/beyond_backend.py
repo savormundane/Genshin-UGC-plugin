@@ -46,11 +46,12 @@ def run(path,backend,out,*,final_gil=None,preview=False):
     if not isinstance(spec['case'],dict):raise ValueError('Beyond case must be an object')
     if not preview and not spec['case'].get('asserts'):raise ValueError('Nonempty assertions required')
     inputs={str(path):sha(spec_bytes)};scripts=[]
-    gil=None;project_data=None
+    gil=None;gil_binding=None;project_data=None
     if 'gil'in spec:
         from beyond_gil import convert
         source=resolve(path.parent,spec['gil']['source']);raw=source.read_bytes();inputs[str(source)]=sha(raw)
         gil=convert(raw,spec['gil'])
+        gil_binding={'source':str(source),'sha256':inputs[str(source)],'root_guid':spec['gil']['root_guid']}
     else:
         project=resolve(path.parent,spec['project']);raw=project.read_bytes();inputs[str(project)]=sha(raw)
         project_data=json.loads(raw.decode('utf-8-sig'))
@@ -96,7 +97,7 @@ def run(path,backend,out,*,final_gil=None,preview=False):
         status='passed' if passed else 'failed'
         destination=Path(out).resolve()
         if not passed:destination=destination.with_name(destination.name+'.diagnostics')
-        report={'status':status,'backend_commit':revision,'final_gil_bindings':bound,'layer':'external_lua_model',
+        report={'status':status,'backend_commit':revision,'final_gil_bindings':bound,'gil_binding':gil_binding,'layer':'external_lua_model',
                 'report':result,'checks':result['checks'],'diagnostics':result['diagnostics'],'logs':result['logs'],
                 'editor':'not_checked','host':'not_checked',
                 'rendering':result['checks']['render_assertions']['status'],

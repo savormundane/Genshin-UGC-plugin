@@ -5,7 +5,7 @@ from level_authoring import flt,msg,set_section
 from native_core import model,get,ref,slot,replace_message
 from native_ports import reference_error
 from native_model import constant
-from level_inventory import fields,vals
+from level_inventory import calibrated_container,fields,vals
 
 
 def timer_context(native,binding,*,writing=False):
@@ -62,9 +62,9 @@ def check(raw,spec):
 
 
 def set_sequence(data,native,spec,timer_id):
-    from level_inventory import container
     from platform_profiles import CATALOGUE,check as check_configuration
-    if container(data)[0][3]!=2 or not isinstance(timer_id,str) or not timer_id:
+    calibrated_container(data)
+    if not isinstance(timer_id,str) or not timer_id:
         raise ValueError('Timer editing requires a GIL and a timer_id')
     declared=check_configuration(spec)
     bindings=spec.get('native_bindings',{})

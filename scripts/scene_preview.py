@@ -8,10 +8,10 @@ from native_scene_edits import WHITEBOX
 from project_index import build_scene
 
 
-def scene_rows(path, dimensions):
+def scene_rows(path):
     report = build_scene(path.read_bytes())
     if report['artifacts']['level']['format'] != 'gil':
-        raise ValueError('Full scene preview requires a GIL')
+        raise ValueError('Scene layout preview requires a GIL')
     rows = {}
     for obj in report['objects']:
         if obj['kind'] != 'entity':
@@ -27,17 +27,27 @@ def scene_rows(path, dimensions):
         transform = row['transform'] = spatial['transform']
         row['model'] = spatial['model']
         row['template'] = spatial['template']
-        model_id = spatial['model']['id']
-        dims = dimensions.get(model_id)
-        if dims is None and model_id in WHITEBOX:
-            dims = (1, 1, 1)
         rx, ry, rz = transform['rotation_deg']
-        if dims is not None and min(transform['scale']) > 0 and rx % 360 == rz % 360 == 0:
-            x, y, z = (size * scale for size, scale in zip(dims, transform['scale']))
+        if spatial['model']['id'] in WHITEBOX and min(transform['scale']) > 0 and rx % 360 == rz % 360 == 0:
+            x, y, z = transform['scale']
             theta = math.radians(ry % 360)
             s, c = abs(math.sin(theta)), abs(math.cos(theta))
             row['outline_m'] = [c * x + s * z, y, s * x + c * z]
+            row['outline_source'] = 'unit_whitebox_proxy'
     return rows, report
+
+
+def coverage(rows, report):
+    positioned = sum(bool(row['transform']) for row in rows.values())
+    outlines = sum('outline_m' in row for row in rows.values())
+    return {'scene_index': report['checks']['scene_index']['status'],
+            'spatial_coverage': (report['checks']['spatial_coverage']['status']
+                                 if positioned == len(rows) else 'not_checked'),
+            'indexed_entities': len(rows), 'positioned_entities': positioned,
+            'without_world_position': len(rows) - positioned,
+            'whitebox_outlines': outlines, 'position_markers_only': positioned - outlines,
+            'unresolved_records': len(report['unresolved']), 'issues': len(report['issues']),
+            'complete_reference_index': report['complete_reference_index']}
 
 
 def render(path, axes, current, previous, changes):
@@ -80,7 +90,7 @@ def render(path, axes, current, previous, changes):
                 draw.text((x+5, y-5), str(row['id']), fill=colour)
     view = 'Top | X right, Z up' if axes[1] == 2 else 'Side | X right, Y up'
     draw.text((24, 20), f'{view} | {scale:.4g} px per metre', fill='white')
-    draw.text((24, 42), 'Outline: scaled model bound proxy   Dot: native origin', fill='#B9CADF')
+    draw.text((24, 42), 'Outline: scaled unit whitebox proxy   Dot: indexed native origin', fill='#B9CADF')
     if previous:
         draw.text((24, size[1]-29), 'Green: added   Amber: changed   Rose: removed   Grey: previous', fill='#B9CADF')
     image.save(path)
@@ -89,20 +99,15 @@ def render(path, axes, current, previous, changes):
 
 
 def preview(path, out, *, before=None):
-    from resource_catalogue import catalogue
-
     path = Path(path).resolve()
-    resources = catalogue('7.2', include_model_candidates=True)
-    dimensions = {row['id']: row['dimensions'] for row in resources['resources']
-                  if row['type'] == 'model' and row.get('dimensions_verified') and row.get('dimensions')}
-    current, report = scene_rows(path, dimensions)
-    inputs = {**resources['inputs'], str(path): report['artifacts']['level']['sha256']}
+    current, report = scene_rows(path)
+    inputs = {str(path): report['artifacts']['level']['sha256']}
     previous = {}
     old_report = None
     changes = {}
     if before is not None:
         before = Path(before).resolve()
-        previous, old_report = scene_rows(before, dimensions)
+        previous, old_report = scene_rows(before)
         inputs[str(before)] = old_report['artifacts']['level']['sha256']
         for key in sorted(current.keys() | previous.keys()):
             old, new = previous.get(key), current.get(key)
@@ -125,6 +130,9 @@ def preview(path, out, *, before=None):
     if not any(r['transform'] for r in (*current.values(), *previous.values())):
         raise ValueError('Scene has no calibrated world placements to draw')
 
+    scope = 'indexed_world_positions_and_whitebox_bound_proxies'
+    coverage_report = {'current': coverage(current, report),
+                       'before': coverage(previous, old_report) if old_report else None}
     with output_directory(out) as stage:
         views = {name: render(stage / f'{name}.png', axes, current, previous, changes)
                  for name, axes in (('top', (0, 2)), ('side', (0, 1)))}
@@ -135,9 +143,9 @@ def preview(path, out, *, before=None):
             'before_issues': old_report['issues'] if old_report else [],
             'changes': [{'key': key, 'kinds': kinds, 'before': previous.get(key), 'after': current.get(key)}
                         for key, kinds in changes.items()],
-            'scope': 'world_positions_and_model_bound_proxies', 'editor': 'not_checked', 'host': 'not_checked',
+            'scope': scope, 'coverage': coverage_report, 'editor': 'not_checked', 'host': 'not_checked',
         })
         return finish(stage, inputs, kind='scene-preview', views=views,
-                      objects=sum(bool(row['transform']) for row in current.values()),
-                      changes=len(changes), scope='world_positions_and_model_bound_proxies',
+                      objects=coverage_report['current']['positioned_entities'],
+                      changes=len(changes), scope=scope, coverage=coverage_report,
                       editor='not_checked', host='not_checked')

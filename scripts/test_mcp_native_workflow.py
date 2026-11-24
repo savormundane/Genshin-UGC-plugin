@@ -378,6 +378,33 @@ class NativeWorkflowTests(unittest.TestCase):
 
         asyncio.run(run())
 
+    def test_unsupported_session_roots_preserve_runtime_config_results(self):
+        async def unsupported_roots(_):
+            return types.ErrorData(code=types.METHOD_NOT_FOUND, message="Roots unavailable")
+
+        config = self.root / "runtime.json"
+        write_json(config, {"schema": 1, "python": sys.executable,
+                            "project_root": str(self.project), "output_root": str(self.outputs)})
+        env = {**self.workspace_environment(), "UGC_RUNTIME_CONFIG": str(config)}
+
+        async def run():
+            params = StdioServerParameters(command=sys.executable, args=self.server.args[:-4], env=env)
+            async with Client(params, list_roots_callback=unsupported_roots, mode="legacy") as client:
+                context = (await self.call(client, "doctor", {}))["result"]["project_context"]
+                self.assertEqual(context["source"], "runtime_config")
+                self.assertIn("Roots unavailable", context["roots_error"])
+                original = await self.call(client, "project_inspect", {"input": "entrance.gil", "scope": "scene"})
+                plan = await self.call(client, "native_plan", {
+                    "input": "entrance.gil", "sha256": original["inputs_sha256"]["input"], "output": "review",
+                    "patch": {"schema": 2, "allowed_top_level_fields": [4],
+                              "operations": [{"op": "set_custom_variable_default", "section": 4,
+                                              "entity_id": TEMPLATE, "name": VARIABLE, "value": 12}]},
+                })
+                self.assertEqual(Path(plan["output"]), self.outputs / "review")
+                self.assertEqual(sha_file(self.outputs / "review/plan.json"), plan["outputs_sha256"]["plan.json"])
+
+        asyncio.run(run())
+
     @unittest.skipUnless(sys.platform == "win32" and shutil.which("node"), "Windows Node.js required")
     def test_launcher_reads_updated_runtime_workspace_without_restart(self):
         second = self.root / "second"

@@ -46,7 +46,7 @@ def server(bridge):
                                               phase=operation, detail=str(exc) or 'Roots request timed out') from exc
                     roots_error = str(exc) or 'Roots request timed out'
             response = await bridge.call(operation, args, ctx.report_progress, roots=roots)
-            if roots_error and 'result' in response:
+            if operation == 'doctor' and roots_error and 'result' in response:
                 response['result']['project_context']['roots_error'] = roots_error
             return response
         except DiagnosticError as exc:
@@ -76,7 +76,7 @@ def server(bridge):
         return await call('docs_search',ctx,version=version,query=query)
     @app.tool(structured_output=True)
     async def nodes_lookup(ctx:Context,query:str='',scope:str='all',limit:StrictInt=20)->dict[str,Any]:
-        """Find Graph Code nodes by name, invocation, or port metadata in all, client, or server scope."""
+        """Find bundled Graph Code definitions by name, invocation, or port. Use port_evidence for version-bound platform documentation."""
         return await call('nodes_lookup',ctx,query=query,scope=scope,limit=limit)
     @app.tool(structured_output=True)
     async def graph_check(input:str,ctx:Context,sha256:str|None=None,job:str|None=None,job_sha256:str|None=None,

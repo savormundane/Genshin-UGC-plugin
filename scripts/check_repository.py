@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from urllib.parse import unquote
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -148,8 +149,30 @@ def check(root: Path = ROOT) -> list[str]:
     provenance = root / "PUBLIC_SOURCES.json"
     raw_paths = set()
     if provenance.is_file():
-        registry = json.loads(provenance.read_text(encoding="utf-8-sig"))
-        raw_paths = {row["path"] for row in registry.get("permission_unverified_files", [])}
+        try:
+            registry = json.loads(provenance.read_text(encoding="utf-8-sig"))
+            rows = registry["permission_unverified_files"]
+            groups = registry["groups"]
+            if not isinstance(rows, list) or not isinstance(groups, dict):
+                raise ValueError("invalid source groups or permission records")
+            for row in rows:
+                relative = row["path"]
+                if (not isinstance(relative, str) or not relative or "\\" in relative or ":" in relative
+                        or relative.startswith("/") or ".." in PurePosixPath(relative).parts
+                        or PurePosixPath(relative).as_posix() != relative or relative in raw_paths):
+                    raise ValueError(f"invalid or duplicate recorded path {relative!r}")
+                raw_paths.add(relative)
+                digest = row["sha256"]
+                if (row.get("status") != "redistribution_permission_unverified" or row.get("group") not in groups
+                        or not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest)):
+                    errors.append(f"{relative}: incomplete source or permission record")
+                    continue
+                target = root / relative
+                if (not target.resolve().is_relative_to(root) or not target.is_file()
+                        or hashlib.sha256(target.read_bytes()).hexdigest() != digest):
+                    errors.append(f"{relative}: file missing or differs from recorded source digest")
+        except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
+            errors.append(f"PUBLIC_SOURCES.json: {exc}")
     for path in sorted(set(docs)):
         relative = path.relative_to(root).as_posix()
         if (relative in raw_paths or relative.startswith(("references/official/", "references/platform/"))

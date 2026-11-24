@@ -2,7 +2,7 @@
 from pathlib import Path
 import argparse,json,math,struct
 from authoring_io import schema,sha,read_json,output_directory,finish,write_json
-from level_inventory import fields,vals,container
+from level_inventory import calibrated_container,fields,vals,container
 from level_authoring import msg,flt,set_section,inspect_bindings
 from native_core import get,put
 
@@ -10,7 +10,7 @@ from native_core import get,put
 def layout(data,spec):
     schema(spec,('schema','base_sha256','canvas','controls'),('base_sha256','canvas','controls'))
     if sha(data)!=spec['base_sha256']:raise ValueError('UI base hash mismatch')
-    if container(data)[0][3]!=2:raise ValueError('UI layout requires GIL')
+    calibrated_container(data)
     def numbers(value,count,label):
         if not isinstance(value,list)or len(value)!=count or any(type(v)not in(int,float)or not math.isfinite(v)or abs(v)>1e9 for v in value):raise ValueError('Invalid '+label)
         return value

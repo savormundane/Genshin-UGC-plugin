@@ -15,7 +15,7 @@ Python 依赖在 `pyproject.toml` 声明，并用 `uv.lock` 锁定。需要创�
 
 ## 客户端接入
 
-已发布版本的验收基线是 V1.0.0 的[重发提交 `f80f8d8`](https://github.com/savormundane/miliastra-wonderland-plugin/commit/f80f8d83e7f22e20900c823d288b72da078beb20)。桌面安装步骤与当前源码验证见下方。
+V1.0.0 的客户端验收记录对应[重发提交 `f80f8d8`](https://github.com/savormundane/miliastra-wonderland-plugin/commit/f80f8d83e7f22e20900c823d288b72da078beb20)。下表同时注明了后续源码的桌面验证范围。各正式版本的结果以对应发行记录为准。
 
 | 入口 | 仓库提供的能力 | 验收状态与适用边界 |
 | --- | --- | --- |
@@ -31,7 +31,7 @@ Python 依赖在 `pyproject.toml` 声明，并用 `uv.lock` 锁定。需要创�
 
 平台资料、API、节点和内置资源查询无需工程目录。文件工具从客户端会话或[工程绑定](runtime-environment.md#连接-mcp-或切换工程)获取目录，写入时使用独立输出目录。可用 `doctor` 检查连接和目录来源。
 
-重发版的千星奇域编辑器导入和游戏内运行待对应产物实测，详见[验证分层](#验证分层)。
+千星奇域编辑器导入和游戏内运行须针对对应产物实测，详见[验证分层](#验证分层)。
 
 ## 平台与制作范围
 

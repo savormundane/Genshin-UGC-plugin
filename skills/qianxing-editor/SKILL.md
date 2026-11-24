@@ -33,7 +33,7 @@ description: 设计和检查千星奇域原生 3D 场景、实体、模板、组
 
 ## Client Lua
 
-先确认 Lua 5.3 脚本、绑定与调用环境。通过 MCP `api_lookup` 或 `qianxing.py knowledge api QUERY` 查正式符号、签名、原文行和推导项。复合任务按动作拆查，例如先查「按钮点击」，再查「隐藏控件」，使用查到的正式符号写代码。零结果按[中文查询](../../references/knowledge-reliability.md#中文查询)重试。编写后用 `client_check` 或 `client check` 检查源码，或通过 `mapping` 选定现有 GIL 中的单个脚本。提供 API 合同可同时核对调用和已声明引用。
+先确认 Lua 5.3 脚本、绑定与调用环境。通过 MCP `api_lookup` 或 `qianxing.py knowledge api QUERY` 查符号、签名和原文行。标为 `derived` 的类型只作查询提示，按所用版本核对实际参数、返回值及调用行为。复合任务按动作拆查，例如先查「按钮点击」，再查「隐藏控件」。零结果按[中文查询](../../references/knowledge-reliability.md#中文查询)重试。编写后用 `client_check` 或 `client check` 检查源码，或通过 `mapping` 选定现有 GIL 中的单个脚本。提供 API 合同可同时核对调用和已声明引用。
 
 用 `simulate check INPUT` 检查启动日志和第一条异常。看界面或验收联合场景时，选择[软件预览或场景检查](../../references/client-simulation.md)。
 

@@ -81,7 +81,10 @@ export function inspect(b) {
 }
 export function replaceLua(b, scriptName, code) {
   if (!Buffer.isBuffer(code) || !code.length) throw Error('Lua content must be a nonempty Buffer');
-  const c = container(b); const group = one(c.fields, 50, 2); const entries = parse(group.value);
+  const c = container(b);
+  if (c.header[1] !== 1 || c.header[2] !== 806 || c.header[3] !== 2)
+    throw Error('写入需要已校准的 GIL 容器头。实际=' + c.header.slice(1, 4).join(','));
+  const group = one(c.fields, 50, 2); const entries = parse(group.value);
   const matches = entries.filter(e => e.n === 1 && e.w === 2 && parse(e.value).some(f => f.n === 3 && f.w === 2 && f.value.toString('utf8') === scriptName));
   if (matches.length !== 1) {
     const names = entries.filter(e => e.n === 1 && e.w === 2).flatMap(e => parse(e.value).filter(f => f.n === 3 && f.w === 2).map(f => f.value.toString('utf8')));

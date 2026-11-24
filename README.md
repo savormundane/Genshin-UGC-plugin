@@ -4,6 +4,8 @@ Miliastra Wonderland 是面向原神「千星奇域」创作者的非官方 AI �
 
 在支持本地工具的 AI 客户端里安装插件，用中文对话查询资料、检查或生成工程文件，再按产物说明导入千星奇域编辑器或接入项目。
 
+千星奇域是封闭平台。平台规则按目标版本查原文，原生文件操作限于已校准的样本范围。编译、文件回读、软件预览、编辑器导入和游戏内运行分别核对。 [来源判断](references/knowledge-reliability.md) · [验证分层](docs/compatibility.md#验证分层)
+
 [安装](#安装) · [快速开始](#快速开始) · [使用产物](#使用产物)
 
 ## 可以做什么
@@ -75,7 +77,7 @@ git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
 本机实际调用 `nodes_lookup`，在服务端节点库中匹配到 1 条结果。
 
 - 输入为「流程入」「目标GUID（GUID）」和「单位标签索引列表（整数列表）」，输出只有「流程出」。
-- 用途是按 GUID 创建已预先布设在场景里的实体。查询结果附有节点定义路径，端口已对照随包的[官方《执行节点》](references/official/节点介绍/执行节点__mhw66orrrfkm.md#2-创建实体)。该次查询未返回游戏版本号。
+- 用途是按 GUID 创建已预先布设在场景里的实体。`source` 指向随包编译器定义。`port_evidence` 对应 7.1 版[官方《执行节点》](references/official/节点介绍/执行节点__mhw66orrrfkm.md#2-创建实体)的两项值输入，文档未列值输出。节点记录的 `platform_version` 仍为空，编辑器与游戏内行为待验。
 
 看到实际工具调用和上述端口结果，表示本地工具已连通。接着可以按任务跟做 [五个中文教程](samples/creator-demos/README.md)。如果助手无法调用插件，先[运行安装自检](docs/installation.md#安装自检)。
 
@@ -108,6 +110,8 @@ git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
 ## 其他安装方式
 
 **当前版本 `1.0.0`**
+
+本文按当前源码的工具编写。使用标签源码时请跟该标签内的安装说明和教程。可用工具见客户端列表，已安装版本及运行绑定可用 `doctor` 核对。
 
 [Agent Plugins 接入](docs/installation.md#agent-plugins) · [下载源码](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/v1.0.0) · [导入本地源码](docs/installation.md#从本地目录导入) · [自行打包 ZIP](docs/installation.md#自行打包-zip) · [旧版迁移](docs/installation.md#从-genshin-ugc-迁移) · [版本记录](CHANGELOG.md)
 

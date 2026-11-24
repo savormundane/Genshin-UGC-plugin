@@ -25,7 +25,7 @@ schema 2支持client、level、storage、native、assets、protocol、protocol_n
 
 存档可选择 `transport:"server"`、`host_section:4`，将存档图挂到玩家模板并输出服务端信号定义。纯原生图和原生存档任务按实际产物判断 Lua 依赖。 [服务端存档](storage-authoring.md#原生服务端存档)
 
-可选 beyond 阶段见[模拟器后端](beyond-backend.md)，以 spec 指定场景；支持 `@level` 绑定本轮最终GIL和默认随包后端的portable交付。外部Lua模型与软件预览独立报告，任一必需断言失败不提交输出。
+可选 `beyond` 阶段以 spec 指定场景，可用 `@level` 绑定本轮最终 GIL，随包后端支持可迁移交付。外部 Lua 模型和软件预览分别记录实际结果。GIL 摘要和选中的脚本挂载核对通过后，相关报告的 `artifact_scope` 为 `final_gil`，并记录 `final_gil_status`。使用独立项目预览时，仍可在外部证据中查看结果。任一必需断言失败不提交输出。 [模拟器后端](beyond-backend.md)
 
 最终GIL在模拟前自动执行[工程对象与引用检查](project-index.md)，核对已校准客户端层级、脚本及原生引用。project.spec可以声明其它GIL/GIA和必需关系；存在最终GIL时清单必须恰有一个@level输入，不能只验证无关参考文件。失败不提交；未索引引用仍在报告中列出，不证明任意ID迁移安全。
 
@@ -44,7 +44,7 @@ python scripts/qianxing.py verify NEW_DIRECTORY
 
 报告绑定源配置、Lua、工具、必要编译后端及产物摘要。普通交付可用同一 JOB 和新输出目录再次执行 `produce`，按清单中 `artifacts` 的交付角色核对摘要。只检查已归档产物时用 `verify NEW_DIRECTORY --artifacts-only`，结果中的来源与重建为 `not_checked`。可迁移交付先执行 `verify NEW_DIRECTORY --portable` 获取输入闭包摘要，再执行 `verify NEW_DIRECTORY --portable --rebuild --trusted-inputs-sha256 DIGEST`。重建使用随附输入闭包。路径和耗时属于当轮证据，模型、编译回读、软件预览与宿主结果各有状态。 [可迁移交付](portable-delivery.md)
 
-`environment.json` 记录生成前的依赖和各能力组指纹。`dependency-graph.json` schema 3 的 `external_and_tool_inputs` 集中登记输入和工具摘要。每阶段通过 `inputs_added` 引用新增输入，并记录依赖边及产物变化。资源先生成再创建／修改基底，随后严格构图与嵌入；最终client.lua须与指定GIL映射正文相同。模拟场景使用@level读取此最终产物。required阶段失败时输出目录不提交，已有输出路径拒绝覆盖；输入变化也拒绝提交。
+`environment.json` 记录生成前的依赖和各能力组指纹。`dependency-graph.json` schema 3 的 `external_and_tool_inputs` 集中登记输入和工具摘要。每阶段通过 `inputs_added` 引用新增输入，并记录依赖边和产物变化。最终 `client.lua` 须与指定 GIL 映射正文相同。模拟配置可用 `@level` 读取本轮最终 GIL。报告按客户端和服务端记录实际使用的文件摘要，Lua 另记录脚本映射。该类输入均与最终 GIL 绑定时，对应 `lua_model` 或 `native_graph_model` 才记录最终产物状态。外部或混合输入的实际模型结果保留在 `model_status` 与 `simulation.json` 中，最终产物状态为 `not_checked`。整个场景的 `simulation.artifact_scope` 需要所有参与者都绑定最终 GIL 才能标为 `final_gil`。必需阶段失败、已有输出路径或输入变化均拒绝提交。
 
 两种中性整合配置可以分别采用单整数槽与双槽布尔／列表布局，变化模板别名、记录版本、素材数量及开发／保留集。失败用例包括未知schema、缺环境、源变更、输出已存在、原生审计错误及最终场景断言失败。独立重建比对交付正文，运行报告中的路径和耗时分别保留。
 

@@ -82,7 +82,8 @@ def node_definitions(query='',scope='all'):
                         rank=2
                     items.append((rank,{'scope':folder,'call':func.name,'signature':ast.unparse(func.args),
                                        **{k:meta[k] for k in ['name','category','semantic_id','inputs','outputs','description','aliases','dynamic_port_type'] if k in meta},
-                                       'implementation':p.relative_to(PLUGIN).as_posix()}))
+                                       'implementation':p.relative_to(PLUGIN).as_posix(),
+                                       'implementation_line':dec.lineno}))
     items.sort(key=lambda match:match[0])
     return [item for _,item in items]
 
@@ -91,7 +92,33 @@ def catalog(query='',scope='all',limit=20):
     if not isinstance(query,str) or scope not in ('all','client','server') or type(limit)!=int or not 1<=limit<=100:
         raise ValueError('Node query requires a string, all/client/server scope and a limit from 1 to 100')
     items=node_definitions(query,scope)
-    result={'matches':len(items),'nodes':items[:limit]}
+    nodes=items[:limit]
+    for node in nodes:
+        source=node['implementation']
+        node.update(source={'source_kind':'bundled_graph_code_node_spec','path':source,
+                            'line':node['implementation_line'],'sha256':digest(PLUGIN/source)},
+                    platform_version=None, platform_applicability='not_checked',
+                    editor='not_checked', host='not_checked')
+        if (node['scope'],node.get('name'))==('server','创建实体'):
+            from platform_profiles import show
+
+            document=show('7.1','mhw66orrrfkm')
+            lines=document['content'].splitlines()
+            section=lines.index('## **2. 创建实体**')
+            end=next(index for index in range(section+1,len(lines)) if lines[index].startswith('## '))
+            ports=re.findall(r'^\|\s*(入参|出参)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|',
+                             '\n'.join(lines[section:end]),re.M)
+            if ports!=[
+                ('入参','目标GUID','GUID'),('入参','单位标签索引列表','整数列表'),
+            ]:
+                raise ValueError('7.1 创建实体 port evidence differs from the calibrated scope')
+            node['port_evidence']={
+                **{key:document[key] for key in ('id','path','sha256','source_kind','official_url','source_version')},
+                'line':section+1, 'scope':'documented_value_ports',
+                'documented_inputs':[{'name':name,'type':kind} for _,name,kind in ports],
+                'documented_outputs':[],
+            }
+    result={'matches':len(items),'nodes':nodes}
     if not items:
         result['hint']='Try a shorter node name, a catalog alias, or scope=all.'
     return result
@@ -114,7 +141,7 @@ def metadata(path, code=None):
         parents={child:parent for parent in ast.walk(tree)for child in ast.iter_child_nodes(parent)}
         for call in ast.walk(tree):
             if isinstance(call,ast.Call)and isinstance(call.func,ast.Name)and call.func.id=='创建实体'and not isinstance(parents.get(call),ast.Expr):
-                message='创建实体 has no official value output; call it as a statement and query the GUID separately'
+                message='创建实体 has no value output in the bundled 7.1 node reference; call it as a statement and query the GUID separately'
                 raise GraphBuildError(f'{message}: {path}:{call.lineno}',[
                     {'code':'graph_entity_create_output','severity':'error','message':message,'source':str(path),'line':call.lineno},
                 ])
@@ -185,7 +212,10 @@ def build(spec_path,out_dir,preserve_container_order=False,structure_bindings=()
     required_mounts=job.get('required_mounts',[])
     if required_mounts and 'gil' not in formats:raise ValueError('Mount verification requires a GIL output')
     baseline=resolve_input(job['base_gil'],base) if job.get('base_gil') else None
-    if 'gil' in formats and (not baseline or not baseline.is_file()):raise ValueError('GIL output requires an existing base_gil')
+    if 'gil' in formats:
+        from level_inventory import calibrated_container
+        if not baseline or not baseline.is_file():raise ValueError('GIL output requires an existing base_gil')
+        calibrated_container(baseline.read_bytes())
     output=Path(out_dir).resolve()
     if output.exists():raise ValueError('输出目录已存在，请指定新目录，避免覆盖已有产物')
     if output.is_relative_to(PLUGIN):raise ValueError('Build output must be outside the plugin')
@@ -315,7 +345,8 @@ def build(spec_path,out_dir,preserve_container_order=False,structure_bindings=()
             for section,flag in [('templates','templates'),('instances','instances'),('structs','structs'),('signals','signals'),('ui','ui-widget-templates')]:
                 if section not in sections:args+=['--skip-'+flag]
             newgil=up_out/'level.gil';args += [baseline,newgil];call('gil-writeback',args)
-            bound,changes=bind_skill_notifications(newgil.read_bytes(),names)
+            raw=newgil.read_bytes();calibrated_container(raw)
+            bound,changes=bind_skill_notifications(raw,names)
             if changes:newgil.write_bytes(bound)
             normalization=normalize_new_graph_variables(newgil,{g['name']:g for g in summaries})
             if preserve_container_order and structure_bindings:

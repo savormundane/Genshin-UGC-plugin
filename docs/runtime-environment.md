@@ -42,6 +42,23 @@ uv run --locked --no-build python -B .\scripts\qianxing.py --help
 
 客户端未提供目录时，从插件数据目录读取 `runtime.json`，也可用 `UGC_RUNTIME_CONFIG` 选定旧绑定文件。修改文件中的 `project_root` 或 `output_root` 后，下一次工具调用会读取新值。Python 路径在启动时选择。显式 `UGC_PROJECT_ROOT`、`UGC_OUTPUT_ROOT` 或对应 CLI 参数作为固定覆盖。只有读文件时可省略输出目录，写文件默认在插件数据目录内按工程分开保存。用 `doctor` 查看当前来源及缺失项。 [客户端适配](contributing/development.md#客户端适配)
 
+### 桌面端首次绑定本机工程
+
+如果能查询节点，但 `doctor` 显示 `project_context.project_root` 为空，可为本机启动器指定一份 `runtime.json`。例如在已创建的 `C:\千星配置` 目录用 UTF-8 保存下列 JSON，将三个路径换成你的绝对路径。输出目录需要预先创建，并与工程目录和插件源码互不包含。
+
+```json
+{
+  "schema": 1,
+  "python": "C:\\千星环境\\Scripts\\python.exe",
+  "project_root": "C:\\千星工程",
+  "output_root": "C:\\千星输出"
+}
+```
+
+可从连通后 `doctor` 的 `python_executable` 复制当前解释器路径。把文件保存到客户端实际提供的插件数据目录，或在启动桌面客户端的环境中将 `UGC_RUNTIME_CONFIG` 设为 `C:\千星配置\runtime.json`。用 Windows 用户环境变量设置时，完全退出客户端再重新打开，使新进程读取配置。然后调用 `doctor`，核对 `project_context.source`、`project_root` 和 `output_root`，再用自己的文件跑一次只读检查。已装好插件依赖的 Python 可通过[安装自检](installation.md#安装自检)验证。
+
+### 从终端启动客户端
+
 从终端启动客户端时，也可以先设定工程路径。以 Codex CLI 为例，把下面的路径换成实际包含输入文件的目录，再从同一个 PowerShell 窗口打开 Codex。
 
 ```powershell

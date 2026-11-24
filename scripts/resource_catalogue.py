@@ -53,7 +53,7 @@ def model_row(row, directory, version, inputs, samples):
         dims = vector(dims, 'Model dimensions')
         if min(dims) < 0:
             raise ValueError('Model dimensions must be nonnegative')
-    checked_dimensions = False
+    dimensions_evidence = 'not_checked'
     if 'dimensions_source' in row:
         from native_scene import vector
 
@@ -65,11 +65,17 @@ def model_row(row, directory, version, inputs, samples):
         if measurement_hash != evidence['sha256']:
             raise ValueError('Model dimension source digest mismatch')
         measurement = json.loads(measurement_raw.decode('utf-8-sig'))
-        if (not isinstance(measurement, dict) or measurement.get('template_id') != ident
+        if (not isinstance(measurement, dict) or type(measurement.get('template_id')) is not int
+                or measurement['template_id'] != ident
                 or vector(measurement.get('dimensions_m'), 'Measured model dimensions') != dims):
             raise ValueError('Model dimensions differ from their measurement record')
         inputs[str(measurement_path)] = measurement_hash
-        checked_dimensions = True
+        dimensions_evidence = 'matching_measurement_record_only'
+        method = measurement.get('method')
+        if (selection == 'native_verified' and measurement.get('sample_sha256') == digest
+                and measurement.get('version') == version and measurement.get('mode') == row['mode']
+                and isinstance(method, str) and method.strip()):
+            dimensions_evidence = 'sample_bound_measurement_record'
     deps = row.get('dependencies')
     if deps is not None and (not isinstance(deps, list) or any(
         not isinstance(d, dict) or set(d) != {'type', 'id'}
@@ -78,7 +84,8 @@ def model_row(row, directory, version, inputs, samples):
         raise ValueError('Invalid model dependencies')
     return {
         **row, 'id': ident, 'dimensions': dims, 'dependencies': deps, 'version': version,
-        'source': {**source, 'path': str(path)}, 'dimensions_verified': checked_dimensions,
+        'source': {**source, 'path': str(path)}, 'dimensions_evidence': dimensions_evidence,
+        'dimensions_verified': dimensions_evidence == 'sample_bound_measurement_record',
         'evidence': 'native_static_record' if selection == 'native_verified' else 'declared',
         'target_metadata': 'caller_declared' if selection == 'native_verified' else 'candidate',
     }
@@ -92,8 +99,9 @@ def catalogue(version, extensions=(), *, include_model_candidates=False):
         if match:
             rows.append({'type':'character','id':int(match[1]),'name':match[2],'version':version,'mode':'classic',
                          'dimensions':None,'dependencies':None,'evidence':'documented',
-                         'source':{'path':document['path'],'sha256':document['sha256'],'line':number,'url':document['official_url'],
-                                   'source_version':document['source_version'],'inherited':document['inherited']}})
+                         'source':{**{k:document[k] for k in ('path','sha256','source_kind','source_version',
+                                                            'inherited','applicability','mirror_url','commit') if k in document},
+                                   'line':number,'url':document['official_url']}})
     if not rows:raise ValueError('Character catalogue source table absent')
     for filename in extensions:
         path=Path(filename).resolve();raw=path.read_bytes();spec=json.loads(raw.decode('utf-8-sig'));inputs[str(path)]=sha(raw)
@@ -127,7 +135,7 @@ def catalogue(version, extensions=(), *, include_model_candidates=False):
                 rows.append({
                     **model, 'type': 'model', 'id': model.get('id'), 'mode': None,
                     'dimensions': None, 'dependencies': None, 'candidate_for_version': version,
-                    'evidence': 'declared', 'dimensions_verified': False,
+                    'evidence': 'declared', 'dimensions_evidence': 'not_checked', 'dimensions_verified': False,
                 })
     seen=set()
     for row in rows:
@@ -168,6 +176,8 @@ def check(path):
             if row['evidence']=='declared'and (row['type']=='model' or not use.get('accept_declared',False)):unknown.append({**record,'error':'resource metadata only declared'})
             if identity==(use['type'],use['id'])and 'dimensions'in use:
                 if row['dimensions']is None:unknown.append({**record,'error':'resource dimensions unknown'})
+                elif row['type']=='model' and not row['dimensions_verified']:
+                    unknown.append({**record,'error':'model dimensions lack a sample-bound measurement record'})
                 elif row['dimensions']!=use['dimensions']:errors.append({**record,'error':'resource dimensions mismatch'})
             if use.get('require_dependencies',False)and row['dependencies']is None:unknown.append({**record,'error':'dependency completeness unknown'})
             queue.extend((d['type'],d['id'])for d in row['dependencies']or[])

@@ -25,7 +25,7 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 | graph_check | input 指向一张 Graph Code 源文件。可给 job 载入制作任务，或给 bindings 提供具名绑定。sha256、job_sha256、bindings_sha256 可选，工具返回直接输入和实际读取的项目依赖摘要 |
 | resources_lookup | version、query、mode、limit。查模型候选和原生样本中的模板 ID。可选 catalogue 和 catalogue_sha256，未给摘要时由服务计算 |
 | native_inspect / native_audit | input，可选 sha256。读取或审计指定原生文件 |
-| scene_preview | input、output，可选 before、sha256、before_sha256。绘制全场布局及前后对照，输出 PNG 和 layout.json |
+| scene_preview | input、output，可选 before、sha256、before_sha256。绘制已解析的实体点位及白盒轮廓，输出 PNG、layout.json 和覆盖摘要 |
 | asset_preview | input、output，可选 sha256、max_controls、step。试算单张 PNG 的矩形图元方案，返回各方案的控件数、误差、预算结果及预览路径，附 `report.json` 的摘要 |
 | asset_generate | input、sha256、report、report_sha256、candidate、output。用已选候选生成矩形图元或试算报告指定的素材，返回参考 PNG、实际控件数和产物摘要 |
 | project_inspect | input，可选 sha256、scope。用 query、kind、limit 搜索对象，用 selector、transitive 查精确目标和关系，或用 summary 查看对象数。`scope="scene"` 查询 3D，`scope="gameplay"` 查询玩法资源 |

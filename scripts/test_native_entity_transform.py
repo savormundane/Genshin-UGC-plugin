@@ -6,7 +6,7 @@ import sys
 import tempfile
 import unittest
 
-from authoring_io import DiagnosticError, PLUGIN, sha
+from authoring_io import DiagnosticError, PLUGIN, read_json, sha
 from level_authoring import flt, initial_level, integer, msg, pack, set_section, text, vi
 from level_inventory import container, fields, unique, vals
 from native_changes import apply_plan, difference, fingerprint, plan
@@ -149,6 +149,82 @@ class EntityTransformTests(unittest.TestCase):
             del legacy['difference']['spatial_objects']
             legacy['plan_sha256'] = fingerprint(legacy)
             self.assertEqual(apply_plan(data, legacy, root)[0], variant)
+
+    def test_write_gate_rejects_uncalibrated_base_and_section_source(self):
+        data, gia = fixture()
+        unknown = pack(data[20:-4], (2, 806, 2))
+        self.assertEqual(container(unknown)[1], container(data)[1])
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with self.assertRaisesRegex(ValueError, 'calibrated GIL baseline'):
+                plan(unknown, patch(unknown, STATIC, position_m=[4, 4, -6]), root, root)
+            source = root / 'section.gil'
+            spec = {'schema': 2, 'base_sha256': sha(data), 'allowed_top_level_fields': [5],
+                    'operations': [{'op': 'section_from', 'field': 5, 'source': source.name}]}
+            for other in (unknown, gia):
+                source.write_bytes(other)
+                with self.assertRaisesRegex(ValueError, 'calibrated GIL baseline'):
+                    plan(data, spec, root, root)
+
+    def test_scene_preview_reports_positions_and_partial_coverage(self):
+        from scene_preview import preview
+
+        data, _ = fixture()
+        section = unique(container(data)[1], 5)
+        missing = integer(1, 0x40400003) + msg(2, integer(1, DYNAMIC)) + msg(5, label('Unpositioned'))
+        current = set_section(data, 5, section + msg(1, missing))
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'before.gil').write_bytes(data)
+            (root / 'current.gil').write_bytes(current)
+            result = preview(root / 'current.gil', root / 'output', before=root / 'before.gil')
+            layout = read_json(root / 'output/layout.json')
+            coverage = result['coverage']
+            self.assertEqual(layout['coverage'], coverage)
+            self.assertEqual(coverage['before']['without_world_position'], 0)
+            after = coverage['current']
+            self.assertEqual(after['positioned_entities'], 2)
+            self.assertEqual(after['without_world_position'], 1)
+            self.assertEqual(after['position_markers_only'], 1)
+            self.assertEqual(after['whitebox_outlines'], 1)
+            self.assertEqual(after['spatial_coverage'], 'not_checked')
+            self.assertFalse(after['complete_reference_index'])
+            self.assertEqual(result['editor'], 'not_checked')
+            self.assertEqual(result['host'], 'not_checked')
+
+    def test_production_model_evidence_requires_the_final_gil(self):
+        from authoring_io import write_json
+        from level_authoring import register_script
+        from production_core import produce
+
+        data, _ = fixture()
+        code = b'value = 7\n'
+        data, _ = register_script(data, 'main.lua', code)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'base.gil').write_bytes(data)
+            (root / 'outside.lua').write_bytes(code)
+            write_json(root / 'patch.json', {'schema': 2, 'base_sha256': sha(data),
+                                             'allowed_top_level_fields': [], 'operations': []})
+            write_json(root / 'job.json', {'schema': 2, 'native': {'base': 'base.gil', 'spec': 'patch.json'},
+                                           'simulation': {'spec': 'simulation.json'}})
+            for source, out in (('@level', 'bound'), ('outside.lua', 'external')):
+                write_json(root / 'simulation.json', {'schema': 2, 'clients': [{'id': 1, 'source': source}],
+                           'steps': [], 'assertions': [{'client': 1, 'path': 'value', 'equals': 7}]})
+                evidence = produce(root / 'job.json', root / out)['evidence']
+                self.assertEqual(evidence['simulation']['status'], 'passed')
+                model = evidence['lua_model']
+                self.assertEqual(model['model_status'], 'passed')
+                if source == '@level':
+                    self.assertEqual(model['status'], 'passed')
+                    self.assertEqual(evidence['simulation']['artifact_scope'], 'final_gil')
+                    self.assertEqual(model['artifact_sha256'], sha((root / out / 'level.gil').read_bytes()))
+                    self.assertEqual(model['bindings'][0]['mapping'], 'main.lua')
+                else:
+                    self.assertEqual(model['status'], 'not_checked')
+                    self.assertEqual(evidence['simulation']['artifact_scope'], 'external_or_mixed')
+                    self.assertEqual(model['artifact_scope'], 'external_or_mixed')
+                    self.assertEqual(model['bindings'][0]['sha256'], sha(code))
 
     def test_stdio_uses_existing_review_flow(self):
         from mcp import Client, StdioServerParameters

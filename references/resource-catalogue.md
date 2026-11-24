@@ -1,6 +1,6 @@
 # 平台资源目录
 
-提供版本化资源查询与声明使用合同检查。内置经典模式角色编号由包内已校验摘要的官方资料镜像表逐行读取，保留官方链接、资料版本、继承标记、行号及摘要。仓库镜像不是官方发布渠道，不将镜像状态视为宿主已验证。
+提供版本化资源查询与声明使用合同检查。内置经典模式角色编号来自包内摘要校验过的表格。来源保留官方页面、所用资料类型、版本、继承适用性、行号及摘要。若所用资料来自第三方镜像，还提供镜像链接与提交。宿主状态单独记录。
 
 ```text
 python scripts/qianxing.py resources search 神里 --version 7.2
@@ -56,6 +56,8 @@ produce在生成前检查合同，failed或not_checked均不提交输出。成�
 默认检查范围是显式uses清单，artifact_references_verified=false；它不证明最终Lua/GIL已经引用这些资源，也不证明没有未声明引用。可按下一节开启客户端SetImage子集检查。完整客户端/原生资源引用提取仍待补齐。complete_platform_catalogue=false，内置目录当前仅含经典角色编号；图片、音效等平台完整清单未凭空生成。角色尺寸与依赖未在表中给出，因此保留null，不猜测。
 
 ## 三维模型引用
+
+`dimensions_evidence` 为 `sample_bound_measurement_record` 时，尺寸记录的摘要、模板 ID、尺寸、原生样本摘要、版本和模式相符，记录附有测量方法。只有这种来源可用于 `size_m`。只核对了模板 ID 和尺寸的旧记录为 `matching_measurement_record_only`，仍可供查阅。工具核对的是记录关联，测量方法与编辑器和游戏内的尺寸应按项目另行验证。 [静态场景](native-scene.md#查找模型并搭建静态场景)
 
 `project inspect` 返回已识别物件的 `spatial.model`，身份沿用目录的 `type: "template"` 和 `id`。`spatial.template.scope: "project"` 表示工程内的元件身份。原生文件提供实际定位器，目录的版本、模式和来源按资源合同检查。[三维实体身份](native-entity-transform.md)
 

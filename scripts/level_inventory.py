@@ -2,6 +2,9 @@
 from pathlib import Path
 import argparse,collections,hashlib,json,struct
 
+GIL_HEADER = (1, 806, 2)
+STATIC_GIA_HEADER = (1, 806, 3)
+
 def fields(data):
     pos=0;result=[]
     def varint():
@@ -37,6 +40,17 @@ def container(data):
     h=struct.unpack('>5I',data[:20])
     if h[0]!=len(data)-4 or h[4]!=len(data)-24 or data[-4:]!=b'\0\0\x06\x79':raise ValueError('Unsupported framing')
     return h,fields(data[20:-4])
+
+
+def calibrated_container(data, *, allow_gia=False):
+    """Gate native writes on the recorded framing family."""
+    header, root = container(data)
+    expected = (GIL_HEADER, STATIC_GIA_HEADER) if allow_gia else (GIL_HEADER,)
+    if header[1:4] not in expected:
+        kind = 'GIL or GIA source container' if allow_gia else 'GIL baseline or source container'
+        raise ValueError(f'Native write requires a calibrated {kind}, found header {header[1:4]}')
+    return header, root
+
 
 def graph_summary(blob):
     fs=fields(blob);ident=fields(unique(fs,1,default=b''));gid=unique(ident,5,0)

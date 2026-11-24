@@ -1,7 +1,7 @@
 """Generate Qianxing structures from typed inputs; never clone a complete game."""
 from pathlib import Path
 import argparse,hashlib,json,math,re,struct
-from level_inventory import fields,vals,unique,container
+from level_inventory import GIL_HEADER,calibrated_container,fields,vals,unique,container
 import platform_schema as platform
 
 SCHEMA='qianxing-level-spec/v1'
@@ -18,11 +18,11 @@ def text(n,v):return msg(n,v.encode('utf-8'))
 def flt(n,v):return vi(n*8+5)+struct.pack('<f',v)
 def encode(rows):
  return b''.join(integer(n,v) if w==0 else msg(n,encode(v) if isinstance(v,list) else v) if w==2 else vi(n*8+w)+v for n,w,v in rows)
-def pack(payload,header=(1,806,2)):
+def pack(payload,header=GIL_HEADER):
  return struct.pack('>5I',len(payload)+20,*header,len(payload))+payload+b'\0\0\x06\x79'
 def repack(data,root):return pack(b''.join(r[3] for r in root),container(data)[0][1:4])
 def set_section(data,n,value):
- header,root=container(data);matches=[f for f in root if f[:2]==(n,2)]
+ header,root=calibrated_container(data);matches=[f for f in root if f[:2]==(n,2)]
  if len(matches)>1:raise ValueError('重复的顶层字段：'+str(n))
  payload=b''.join(msg(n,value) if f[:2]==(n,2) else f[3] for f in root)
  if not matches:payload+=msg(n,value)

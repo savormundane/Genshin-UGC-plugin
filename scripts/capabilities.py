@@ -155,7 +155,7 @@ def capabilities(evidence=None,tests_root=None,platform=None,mode=None):
     current=inventory(PLUGIN/'scripts');verified=False
     problems=[]
     if proof:
-        test_directory=Path(tests_root)if tests_root else PLUGIN.parent.parent/'development'
+        test_directory=Path(tests_root)if tests_root else PLUGIN.parent/'development'
         if proof.get('schema')!=3:problems.append('validation evidence schema 3 required')
         if proof.get('validation_dependencies')!=validation_dependencies(test_directory):problems.append('validation helpers, fixtures or rules changed')
         if proof.get('backends')!=backend_inventory():problems.append('execution backend changed or unavailable')
@@ -168,7 +168,7 @@ def capabilities(evidence=None,tests_root=None,platform=None,mode=None):
         names=[r.get('test')for r in results]
         if not selected or len(selected)!=len(set(selected))or len(names)!=len(set(names))or set(names)!=set(selected):problems.append('test selection/results mismatch or empty')
         if proof.get('source_unchanged')is not True:problems.append('source changed during validation or guard absent')
-        if proof.get('scope')!='self-use':problems.append('evidence scope is not self-use')
+        if proof.get('scope')!='public':problems.append('evidence scope is not public')
         for r in results:
             name=r.get('test','')
             if not isinstance(name,str)or Path(name).name!=name or not name.startswith('test_')or not name.endswith('.py'):
