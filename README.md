@@ -113,7 +113,7 @@ git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
 
 本文按当前源码的工具编写。使用标签源码时请跟该标签内的安装说明和教程。可用工具见客户端列表，已安装版本及运行绑定可用 `doctor` 核对。
 
-[Agent Plugins 接入](docs/installation.md#agent-plugins) · [下载源码](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/v1.1.0) · [导入本地源码](docs/installation.md#从本地目录导入) · [自行打包 ZIP](docs/installation.md#自行打包-zip) · [旧版迁移](docs/installation.md#从-genshin-ugc-迁移) · [版本记录](CHANGELOG.md)
+[Agent Plugins 接入](docs/installation.md#agent-plugins) · [下载源码](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/v1.1.0) · [导入本地源码](docs/installation.md#从本地目录导入) · [自行打包 ZIP](docs/installation.md#自行打包-zip) · [版本记录](CHANGELOG.md)
 
 ## 参与项目
 
