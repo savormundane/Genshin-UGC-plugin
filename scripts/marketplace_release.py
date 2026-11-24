@@ -31,6 +31,7 @@ def marketplace_files(root):
     if claude['displayName'] != display_name:
         raise ValueError('Codex and Claude display names differ')
     description = claude['description']
+    english_description = "Look up nodes and Lua APIs, inspect levels, and create node graphs and assets for Genshin Impact's Miliastra Wonderland."
     entry = {'name': identity, 'source': './', 'description': description}
     catalog = {'name': identity, 'owner': core['author'], 'plugins': [entry]}
     codex = {
@@ -46,7 +47,7 @@ def marketplace_files(root):
     bundle = {
         'name': identity,
         'version': version,
-        'description': description,
+        'description': english_description,
         'license': core['license'],
         'repository': {'type': 'git', 'url': f'git+{GITHUB}.git'},
         'engines': {'dsh': DSH_ENGINE},
@@ -56,12 +57,16 @@ def marketplace_files(root):
             'LICENSE', 'THIRD_PARTY_NOTICES.md', 'PUBLIC_SOURCES.json',
         ],
         'dsh': {'bundle': {'patch': './cordis.patch.yml'}},
-        'exports': {'./locale/en.json': './locale/en.json', './package.json': './package.json'},
+        'exports': {'./locale/*.json': './locale/*.json', './package.json': './package.json'},
     }
     claude_catalog = {**catalog, 'plugins': [{**entry, 'displayName': display_name}]}
     return {CLAUDE: json_text(claude_catalog), AGENT: json_text(catalog),
             CODEX: json_text(codex), 'package.json': json_text(bundle),
-            'locale/en.json': json_text({'meta': {'title': display_name, 'description': description}})}
+            'locale/en.json': json_text({'meta': {'title': display_name, 'description': english_description}}),
+            'locale/zh.json': json_text({'meta': {
+                'title': '千星奇域开发插件',
+                'description': '查询节点和 Lua API，检查关卡，编写节点图并制作图元素材。',
+            }})}
 
 
 def check_marketplace(root):

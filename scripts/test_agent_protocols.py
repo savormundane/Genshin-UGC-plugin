@@ -41,7 +41,15 @@ class ProtocolTests(unittest.TestCase):
             self.assertEqual((manifest['name'], manifest['version']), (core['name'], version))
         bundle = installer.read_json(ROOT / 'package.json')
         self.assertEqual((bundle['name'], bundle['version']), (core['name'], version))
-        self.assertEqual(installer.read_json(ROOT / 'locale/en.json')['meta']['title'], 'Miliastra Wonderland')
+        self.assertEqual(bundle['exports']['./locale/*.json'], './locale/*.json')
+        english = installer.read_json(ROOT / 'locale/en.json')['meta']
+        chinese = installer.read_json(ROOT / 'locale/zh.json')['meta']
+        self.assertEqual(set(english), set(chinese))
+        self.assertEqual(english['title'], 'Miliastra Wonderland')
+        self.assertEqual(chinese['title'], '千星奇域开发插件')
+        self.assertEqual(english['description'], bundle['description'])
+        self.assertNotRegex(english['description'], r'[\u3400-\u9fff]')
+        self.assertRegex(chinese['description'], r'[\u3400-\u9fff]')
         for relative, anchor, data in (
             ('mcp.json', '${PLUGIN_ROOT}', '${PLUGIN_DATA}'),
             ('.mcp.json', '${CLAUDE_PLUGIN_ROOT}', '${CLAUDE_PLUGIN_DATA}'),
