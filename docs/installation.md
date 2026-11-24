@@ -68,7 +68,7 @@ codex plugin marketplace add savormundane/miliastra-wonderland-plugin
 
 ## 从本地目录导入
 
-解压[仓库源码](https://github.com/savormundane/miliastra-wonderland-plugin/archive/refs/heads/main.zip)，或检出 GitHub 的 `main` 分支。选择包含插件清单的源码根目录。
+解压[本版源码](https://github.com/savormundane/miliastra-wonderland-plugin/archive/refs/tags/v1.1.0.zip)，或检出 GitHub 的 `main` 分支。选择包含插件清单的源码根目录。 [V1.1.0 发行说明](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/v1.1.0)
 
 | 客户端 | 导入入口 |
 | --- | --- |
@@ -79,13 +79,13 @@ codex plugin marketplace add savormundane/miliastra-wonderland-plugin
 将选定版本的源码解压到空目录，再进入解压后的源码根目录用 Python 打包。打包器按分发清单读取这个目录，Git 忽略规则不参与筛选。先确认目录中只有该版本的解压文件。命令把 Windows x64 ZIP 写到源码目录之外，并输出 SHA-256。正式发行从经确认的 Git 提交准备。 [发行流程](contributing/maintenance.md)
 
 ```powershell
-python -B scripts/package_release.py --source . --out ../Miliastra-Wonderland-1.0.0-windows-x64.zip --layout plugin --archive-root miliastra-wonderland
+python -B scripts/package_release.py --source . --out ../Miliastra-Wonderland-1.1.0-windows-x64.zip --layout plugin --archive-root miliastra-wonderland
 ```
 
 可解压后[导入插件目录](#从本地目录导入)。需要用 PowerShell 登记时，从同一份源码目录传入本地包和打包命令给出的摘要。Claude 可将 `-Agent codex` 改为 `-Agent claude-code`。
 
 ```powershell
-.\install.ps1 -Agent codex -Archive ..\Miliastra-Wonderland-1.0.0-windows-x64.zip -Sha256 '<打包输出的 SHA-256>'
+.\install.ps1 -Agent codex -Archive ..\Miliastra-Wonderland-1.1.0-windows-x64.zip -Sha256 '<打包输出的 SHA-256>'
 ```
 
 ## 回退与卸载
