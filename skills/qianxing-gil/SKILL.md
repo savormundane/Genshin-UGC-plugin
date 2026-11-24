@@ -24,3 +24,5 @@ description: 检查、比较和安全修改千星奇域GIL/GIA容器，处理脚
 使用 MCP 编辑现有工程时，以 `project_inspect` 的 `query` 查找对象，再用所选对象键精确定位。将 `inputs_sha256.input` 作为 `native_plan` 的 `sha256`，内联补丁可省略重复的基底摘要。验证受阻时从 `diagnostics` 定位引用。审阅后用 `outputs_sha256["plan.json"]` 调用 `native_apply`，再用 `native_diff` 核对允许范围。 [调用合同](../../references/local-mcp.md)
 
 已摆放物件也可按 [三维实体变换](../../references/native-entity-transform.md) 核对模型、坐标和保护范围。
+
+有文件输出时，最终回复包含产物与改动、保存位置、使用方法和本次检查结果。 [交付反馈](../../references/validation.md#交付反馈)

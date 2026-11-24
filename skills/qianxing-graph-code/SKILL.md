@@ -17,3 +17,5 @@ description: 编写和修复千星奇域客户端／服务端节点图及复合�
 - 文件挂载由 GIL 领域处理。相关模型与回读按[验证边界](../../references/validation.md)报告，普通图修复不自动触发完整制作。
 
 执行命令使用[专用Python](../../docs/runtime-environment.md)，不依赖系统默认解释器。
+
+有文件输出时，最终回复包含产物与改动、保存位置、使用方法和本次检查结果。 [交付反馈](../../references/validation.md#交付反馈)

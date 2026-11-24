@@ -19,3 +19,5 @@ description: 查找千星奇域原生3D模型、选择白盒形状，生成、�
 | 分层资料和历史附件 | [L2D参考](references/l2d-workflow.md)；案例编号、骨骼和预算不能直接套用 |
 
 输出数据、来源关系和重建预览；资源ID不能推导出本地PNG加载能力。图元数量不是设备FPS。播放、动作和生命周期交给 [Qianxing Editor · Client Lua](../qianxing-editor/SKILL.md#client-lua)。遵循[来源规则](../../references/knowledge-reliability.md)和[验证边界](../../references/validation.md)，不为单张素材转换运行全量回归。
+
+有文件输出时，最终回复包含产物与改动、保存位置、使用方法和本次检查结果。 [交付反馈](../../references/validation.md#交付反馈)

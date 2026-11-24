@@ -46,3 +46,5 @@ description: 设计和检查千星奇域原生 3D 场景、实体、模板、组
 | 失败或交付失配 | [只读诊断](../../references/project-diagnosis.md)、[交付排障](../../references/workflows/qianxing-release-integrity-triage/README.md) |
 
 运行模块局部内联，不要求宿主文件系统或require。最终交付检查内嵌正文；只修改源码时无需运行完整制作链。来源冲突和证据规则见[知识可信度](../../references/knowledge-reliability.md)与[验证边界](../../references/validation.md)。
+
+有文件输出时，最终回复包含产物与改动、保存位置、使用方法和本次检查结果。 [交付反馈](../../references/validation.md#交付反馈)

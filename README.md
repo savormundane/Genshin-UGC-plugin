@@ -1,68 +1,88 @@
 # 千星奇域开发插件
 
-Miliastra Wonderland 是面向原神「千星奇域」创作者的非官方 AI 辅助开发插件。它给 AI 助手提供带版本依据的平台资料和本地工程工具，覆盖原生 3D 场景、节点图、客户端 Lua 和界面素材。
+Miliastra Wonderland 是面向原神「千星奇域」创作者的非官方 AI 辅助开发插件。
 
-可以直接查询节点、API 和平台规则。有现成关卡时，可以搜索 GIL 中的实体、模板和挂载关系，审阅并另存局部修改。从创作需求开始时，可以搭建静态场景、编译节点图、编写控件脚本或生成图元，交付可继续编辑的文件。
+在支持本地工具的 AI 客户端里安装插件，用中文对话查询资料、检查或生成工程文件，再按产物说明导入千星奇域编辑器或接入项目。
 
-[安装](#安装) · [快速开始](#快速开始)
+[安装](#安装) · [快速开始](#快速开始) · [使用产物](#使用产物)
+
+## 可以做什么
+
+| 想做什么 | 需要提供什么 | 会得到什么 |
+| --- | --- | --- |
+| 查平台规则、节点或 Lua API | 问题，涉及版本差异时附目标版本 | 中文解释、参数和资料依据 |
+| 查看已有工程 | 导出的 `.gil` 文件、想找的对象 | 对象位置、已识别的引用和问题 |
+| 修改已有工程 | 基底文件、具体修改要求 | 另存的文件、修改摘要和差异 |
+| 制作界面或节点逻辑 | 需求、已有代码或工程（如有） | Lua 代码或节点图文件，以及相应检查结果 |
+| 转换图片素材 | PNG，已有的目标尺寸和控件预算 | 候选预览和控件数，选定后可生成图元数据 |
 
 ## 安装
 
 ### 运行要求
 
-完整工具目前仅支持 **Windows x64**。本地 MCP 需要 **Node.js 22+**，DeepSeek Harness 接入使用 **Node.js 24.9+**。启动器优先复用装好依赖的 **CPython 3.11–3.14** 环境，找不到时由 PATH 上的 `uv` 按锁文件准备。 [客户端验收状态](docs/compatibility.md#客户端接入) · [安装排障](docs/installation.md#失败后续装)
+在 **Windows x64** 上任选下面一个客户端。插件的本地工具需要 **Node.js 22+**（DeepSeek Harness 用 **24.9+**），以及装好依赖的 **CPython 3.11–3.14** 或 PATH 上的 `uv`。首次由 `uv` 准备依赖时可能需要联网。 [运行要求与验收状态](docs/compatibility.md) · [安装排障](docs/installation.md#失败后续装)
 
 ### Codex
+
+适用于 **Codex CLI**。先装好 CLI，再在 Windows PowerShell 执行下面两行。
 
 ```text
 codex plugin marketplace add savormundane/miliastra-wonderland-plugin
 codex plugin add miliastra-wonderland@miliastra-wonderland
 ```
 
+用 `codex plugin list` 确认 `miliastra-wonderland` 已安装并启用，再运行 `codex` 打开本机对话。
+
 ### Claude
+
+适用于 **Claude Code**。先装好 CLI，再在 Windows PowerShell 执行下面两行。
 
 ```text
 claude plugin marketplace add savormundane/miliastra-wonderland-plugin
 claude plugin install miliastra-wonderland@miliastra-wonderland
 ```
 
+打开本机 Claude Code 会话，用 `/plugin` 的已安装列表确认插件已启用。 [Claude Code 插件说明](https://code.claude.com/docs/en/plugins/install#manage-installed-plugins)
+
 ### DeepSeek Harness
 
-在 **插件 → 添加插件** 粘贴下方地址，直接安装 **Miliastra Wonderland**。
+安装清单面向 **DeepSeek Harness 0.2.2-rc.5**。在客户端的 **插件 → 添加插件** 粘贴下方地址，安装后确认插件列表里已启用 Miliastra Wonderland，再打开本机对话。
 
 ```text
 git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
 ```
 
-### 其他客户端
-
-支持 Agent Plugins 和本地 MCP 的客户端，可按客户端提供的方式添加仓库市场或导入完整插件目录。
-
-[Agent Plugins 安装说明](docs/installation.md#agent-plugins)
-
-### 源码下载
-
-**当前版本 `1.0.0`**
-
-[下载源码](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/v1.0.0) · [自行打包 ZIP](docs/installation.md#自行打包-zip) · [版本记录](CHANGELOG.md)
-
 ## 快速开始
 
 ### 查询第一个节点
 
-安装并启用插件后，打开一个新对话，复制这条指令。查询使用插件自带的节点库，空白会话也能试。
+在刚才启用插件的 AI 客户端里打开新对话，复制这条指令。节点查询无需准备工程文件。
 
-> 用千星奇域插件查询服务端节点「启动定时器」，列出参数，说明流程线和数据线怎么接，并附上来源。
+> 请使用千星奇域插件查询服务端「创建实体」节点，列出输入和输出端口，用中文解释它的用途，并注明资料依据。版本依据不明确的部分请直接说明。
 
-正常会看到「启动定时器」的参数、接线说明和节点定义来源。如果助手提示工具连不上，先按[安装排障](docs/installation.md#失败后续装)检查本地工具连接。
+本机实际调用 `nodes_lookup`，在服务端节点库中匹配到 1 条结果。
+
+- 输入为「流程入」「目标GUID（GUID）」和「单位标签索引列表（整数列表）」，输出只有「流程出」。
+- 用途是按 GUID 创建已预先布设在场景里的实体。查询结果附有节点定义路径，端口已对照随包的[官方《执行节点》](references/official/节点介绍/执行节点__mhw66orrrfkm.md#2-创建实体)。该次查询未返回游戏版本号。
+
+看到实际工具调用和上述端口结果，表示本地工具已连通。如果助手无法调用插件，先看[安装排障](docs/installation.md#失败后续装)。
 
 ### 只读查看已有的关卡
 
 在客户端打开包含关卡文件的工程目录，把下面的示例路径换成你的 `.gil` 文件路径。
 
-> 用千星奇域插件只读检查 `C:\我的关卡\练习 01.gil`。告诉我实际读取的是哪个文件，列出前 5 个场景实体和能识别的节点图挂载。
+> 请用千星奇域插件只读检查 `C:\我的关卡\练习 01.gil`，列出主要对象，找到名称含「出生点」的对象，并列出已识别的引用关系。有多个匹配时先列出候选。
 
 确认返回的文件路径与所选关卡一致。若工具找不到工程目录，按[工程目录设置](docs/runtime-environment.md#连接-mcp-或切换工程)绑定 `project_root` 后重试。只读查看可以省略输出目录。
+
+## 使用产物
+
+有文件输出时，从助手回复里的路径或文件链接打开。使用插件默认位置时，文件按工程保存在本机插件数据目录。需要固定保存位置时，可[绑定独立输出目录](docs/runtime-environment.md#连接-mcp-或切换工程)。
+
+- **关卡和节点图**。使用另存的 GIL 副本，按交付说明在编辑器中导入并核对改动。GIA 节点图或资源按相应类型导入，再挂载到目标对象。 [关卡复核](references/native-changes.md#人工再导出核对)
+- **Lua 和图元素材**。按交付说明将 Lua 接到目标客户端控件。比较 PNG 转图元时，先看预览、控件数和 `report.json`，选定方案后生成数据并接入界面。 [Lua 接入](references/client-assembly.md) · [素材生成](references/asset-generation.md)
+
+回复还会说明生成了什么、改了哪里，以及本次完成了哪些检查。打开编辑器导入、到游戏里运行时，分别核对对应结果。 [验证分层](docs/compatibility.md#验证分层)
 
 ## Skills
 
@@ -72,6 +92,12 @@ git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
 | [Qianxing Graph Code](skills/qianxing-graph-code/SKILL.md) | 确认节点签名，编写并检查节点图。 |
 | [Qianxing GIL](skills/qianxing-gil/SKILL.md) | 审阅局部修改计划，另存 GIL 并核对差异。 |
 | [Qianxing Assets](skills/qianxing-assets/SKILL.md) | 将 PNG 转成图元，比较候选方案的效果和控件预算。 |
+
+## 其他安装方式
+
+**当前版本 `1.0.0`**
+
+[Agent Plugins 接入](docs/installation.md#agent-plugins) · [下载源码](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/v1.0.0) · [导入本地源码](docs/installation.md#从本地目录导入) · [自行打包 ZIP](docs/installation.md#自行打包-zip) · [旧版迁移](docs/installation.md#从-genshin-ugc-迁移) · [版本记录](CHANGELOG.md)
 
 ## 参与项目
 
