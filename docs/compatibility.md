@@ -15,17 +15,21 @@ Python 依赖在 `pyproject.toml` 声明，并用 `uv.lock` 锁定。需要创�
 
 ## 客户端接入
 
-| 入口 | 仓库提供的能力 | 适用边界 |
+下表的验收状态对应 V1.0.0 的[重发提交 `f80f8d8`](https://github.com/savormundane/miliastra-wonderland-plugin/commit/f80f8d83e7f22e20900c823d288b72da078beb20)。
+
+| 入口 | 仓库提供的能力 | 验收状态与适用边界 |
 | --- | --- | --- |
-| Codex | 从终端添加市场并安装插件。 | 已验证 Codex CLI 从本地市场发现并安装条目。 |
-| Claude | 从终端添加市场并安装插件。 | 已验证 Claude Code 本地市场安装与 MCP 连通。工具调用需要可启动本地 stdio MCP 的会话。 |
-| DeepSeek Harness | 从 GitHub 直接安装 Cordis Bundle。 | 已在 `0.2.2-rc.5` 验证 GitHub 直装、Bundle 加载和节点查询。 |
+| Codex | 从终端添加市场并安装插件。 | 已验证 Windows x64 本地市场安装和 MCP 工具调用。 |
+| Claude Code | 从终端添加市场并安装插件。 | 安装清单已检查。客户端安装和 MCP 工具调用待验。 |
+| DeepSeek Harness | 从 GitHub 直接安装 Cordis Bundle。 | 安装清单已检查。GitHub 直装、Bundle 加载和节点查询待验。 |
 | Agent Plugins | 提供通用插件清单、Skills 和本地 stdio MCP 配置。 | 导入方式和本地工具可用性取决于客户端的实现。 |
 | 独立 CLI | 使用专用 Python 运行 `scripts/qianxing.py`。 | 不依赖 AI 客户端；具体命令仍需相应运行依赖和有效输入。 |
 
 具体安装和导入操作集中在[安装指南](installation.md)，无需为同一个任务同时安装多个客户端。
 
-平台资料、API、节点和内置资源查询无需工程目录。文件工具使用显式的工程与输出目录，连接情况可用 `doctor` 核对。
+平台资料、API、节点和内置资源查询无需工程目录。文件工具从客户端会话或[工程绑定](runtime-environment.md#连接-mcp-或切换工程)获取目录，写入时使用独立输出目录。可用 `doctor` 检查连接和目录来源。
+
+重发版的千星奇域编辑器导入和游戏内运行待对应产物实测，详见[验证分层](#验证分层)。
 
 ## 平台与制作范围
 

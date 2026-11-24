@@ -11,7 +11,7 @@
     "displayName": "Miliastra Wonderland",
     "shortDescription": "工程配置、节点图、Lua、GIL与素材",
     "defaultPrompt": [
-      "根据需求选择实现层，制作千星奇域玩法与所需文件",
+      "用千星奇域插件查找服务端节点「启动定时器」，列出节点签名、输入端口和来源。",
       "直接编写节点图并交付GIA/GIL，核对当前基底与挂载",
       "检查客户端、信号协议、素材动画及存档的协作"
     ],

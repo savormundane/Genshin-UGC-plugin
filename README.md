@@ -4,20 +4,13 @@ Miliastra Wonderland 是面向原神「千星奇域」创作者的非官方 AI �
 
 可以直接查询节点、API 和平台规则。有现成关卡时，可以搜索 GIL 中的实体、模板和挂载关系，审阅并另存局部修改。从创作需求开始时，可以搭建静态场景、编译节点图、编写控件脚本或生成图元，交付可继续编辑的文件。
 
-## Skills
-
-| Skill | 适用任务 |
-| --- | --- |
-| [Qianxing Editor](skills/qianxing-editor/SKILL.md) | 查看关卡对象、对照 3D 布设并配置原生界面，查询 API、编写和检查 [Client Lua](skills/qianxing-editor/SKILL.md#client-lua)。 |
-| [Qianxing Graph Code](skills/qianxing-graph-code/SKILL.md) | 确认节点签名，编写并检查节点图。 |
-| [Qianxing GIL](skills/qianxing-gil/SKILL.md) | 审阅局部修改计划，另存 GIL 并核对差异。 |
-| [Qianxing Assets](skills/qianxing-assets/SKILL.md) | 将 PNG 转成图元，比较候选方案的效果和控件预算。 |
+[安装](#安装) · [快速开始](#快速开始)
 
 ## 安装
 
 ### 运行要求
 
-完整工具目前仅支持 **Windows x64**。本地 MCP 需要 **Node.js 22+**，DeepSeek Harness 接入使用 **Node.js 24.9+**。启动器优先复用装好依赖的 **CPython 3.11–3.14** 环境，找不到时由 PATH 上的 `uv` 按锁文件准备。 [运行要求与支持范围](docs/compatibility.md#运行要求)
+完整工具目前仅支持 **Windows x64**。本地 MCP 需要 **Node.js 22+**，DeepSeek Harness 接入使用 **Node.js 24.9+**。启动器优先复用装好依赖的 **CPython 3.11–3.14** 环境，找不到时由 PATH 上的 `uv` 按锁文件准备。 [客户端验收状态](docs/compatibility.md#客户端接入) · [安装排障](docs/installation.md#失败后续装)
 
 ### Codex
 
@@ -52,6 +45,33 @@ git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
 **当前版本 `1.0.0`**
 
 [下载源码](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/v1.0.0) · [自行打包 ZIP](docs/installation.md#自行打包-zip) · [版本记录](CHANGELOG.md)
+
+## 快速开始
+
+### 查询第一个节点
+
+安装并启用插件后，打开一个新对话，复制这条指令。查询使用插件自带的节点库，空白会话也能试。
+
+> 用千星奇域插件查找服务端节点「启动定时器」，列出节点签名、输入端口和来源。
+
+正常会返回「启动定时器」的服务端签名、输入端口和节点定义的来源。如果助手提示工具连不上，先按[安装排障](docs/installation.md#失败后续装)检查本地工具连接。
+
+### 只读查看已有的关卡
+
+在客户端打开包含关卡文件的工程目录，把下面的示例路径换成你的 `.gil` 文件路径。
+
+> 用千星奇域插件只读检查 `C:\我的关卡\练习 01.gil`。告诉我实际读取的是哪个文件，列出前 5 个场景实体和能识别的节点图挂载。
+
+确认返回的文件路径与所选关卡一致。若工具找不到工程目录，按[工程目录设置](docs/runtime-environment.md#连接-mcp-或切换工程)绑定 `project_root` 后重试。只读查看可以省略输出目录。
+
+## Skills
+
+| Skill | 适用任务 |
+| --- | --- |
+| [Qianxing Editor](skills/qianxing-editor/SKILL.md) | 查看关卡对象、对照 3D 布设并配置原生界面，查询 API、编写和检查 [Client Lua](skills/qianxing-editor/SKILL.md#client-lua)。 |
+| [Qianxing Graph Code](skills/qianxing-graph-code/SKILL.md) | 确认节点签名，编写并检查节点图。 |
+| [Qianxing GIL](skills/qianxing-gil/SKILL.md) | 审阅局部修改计划，另存 GIL 并核对差异。 |
+| [Qianxing Assets](skills/qianxing-assets/SKILL.md) | 将 PNG 转成图元，比较候选方案的效果和控件预算。 |
 
 ## 参与项目
 
