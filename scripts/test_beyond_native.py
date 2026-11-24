@@ -43,7 +43,7 @@ class BeyondNativeTests(unittest.TestCase):
                 archive.writestr(name, contents)
 
     def test_first_use_caches_verified_files_then_refuses_tampered_cache(self):
-        with patch.dict('os.environ', {'UGC_PLUGIN_DATA': str(self.data), 'UGC_BEYOND_NATIVE_ROOT': ''}):
+        with patch('os.environ', {'UGC_PLUGIN_DATA': str(self.data)}):
             with patch('beyond_native.download_native_archive',
                        side_effect=lambda _lock, path: shutil.copyfile(self.archive, path)) as download:
                 binding = native_library_path(self.backend)
