@@ -21,7 +21,7 @@ if ($Action -ne 'install') {
     $recordName = $Agent + '.json'
     if (!$explicitRoot -and !(Test-Path -LiteralPath (Join-Path $Root $recordName)) -and
         (Test-Path -LiteralPath (Join-Path $legacyRoot $recordName))) { $Root = $legacyRoot }
-    $state = Get-Content -Raw -LiteralPath (Join-Path $Root $recordName) | ConvertFrom-Json
+    $state = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $Root $recordName) | ConvertFrom-Json
     if ($state.schema -ne 1) { throw 'Unknown installation state version.' }
     $owned = $state.current
     if (!$owned -and $state.history.Count) { $owned = $state.history[-1] }
