@@ -1,12 +1,56 @@
 """Manual release check: actual ZIP structure, extraction and content identity."""
 from pathlib import Path
-import hashlib,json,tempfile,unittest,zipfile
+import hashlib,json,shutil,subprocess,sys,tempfile,unittest,zipfile
 from check_repository import check, MANIFESTS, REPO, REQUIRED_FILES
+from marketplace_release import marketplace_files
 from package_release import build_release, validate_windows_names
 from install_plugin import extract,read_json
 
 
 class ReleaseTests(unittest.TestCase):
+    def test_shared_zip_and_cordis_exclusions(self):
+        npm = shutil.which('npm.cmd' if sys.platform == 'win32' else 'npm')
+        if not npm:
+            self.skipTest('npm required to check the Cordis pack list')
+        with tempfile.TemporaryDirectory(prefix='ugc distribution ') as temporary:
+            root = Path(temporary)
+            source = root / 'source'
+            plugin = {'name': 'fixture', 'version': '1.2.3', 'license': 'GPL-3.0-only',
+                      'author': {'name': 'Distribution fixture'}}
+            policy = {'schema': 1, 'exclude_prefixes': ['samples/seeds/', 'vendor/tool/demo/'],
+                      'exclude_files': ['assets/private.txt']}
+            omitted = {'samples/seeds/input.txt', 'vendor/tool/demo/index.js', 'assets/private.txt'}
+            retained = {'samples/seeds-guide.txt', 'vendor/tool/index.js', 'assets/private-example.txt'}
+            inputs = {
+                'plugin.json': json.dumps(plugin),
+                '.codex-plugin/plugin.json': json.dumps({**plugin, 'interface': {'displayName': 'Fixture'}}),
+                '.claude-plugin/plugin.json': json.dumps({'displayName': 'Fixture', 'description': 'Test plugin'}),
+                'distribution.json': json.dumps(policy),
+                'skills/fixture/SKILL.md': '---\nname: fixture\ndescription: Distribution fixture\n---\n',
+                **dict.fromkeys(omitted | retained, 'Test content'),
+            }
+            for name, content in inputs.items():
+                path = source / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(content, encoding='utf-8')
+            (source / 'package.json').write_text(marketplace_files(source)['package.json'], encoding='utf-8')
+            zip_path = root / 'fixture.zip'
+            build_release(source, zip_path, archive_root='fixture')
+            with zipfile.ZipFile(zip_path) as archive:
+                zip_paths = {name.removeprefix('fixture/') for name in archive.namelist()}
+            packed = subprocess.run([npm, 'pack', '--dry-run', '--offline', '--ignore-scripts', '--json',
+                                     '--cache', str(root / 'npm-cache')],
+                                    cwd=source, check=True, capture_output=True, encoding='utf-8', timeout=60)
+            cordis_paths = {entry['path'] for entry in json.loads(packed.stdout)[0]['files']}
+            for paths in (zip_paths, cordis_paths):
+                self.assertTrue(retained <= paths)
+                self.assertFalse(omitted & paths)
+
+            policy['exclude_files'] = ['assets/private[1].txt']
+            (source / 'distribution.json').write_text(json.dumps(policy), encoding='utf-8')
+            with self.assertRaisesRegex(ValueError, 'literal paths'):
+                marketplace_files(source)
+
     def test_windows_archive_names_and_roundtrip(self):
         for names in (
                 ['Bundle/ /file'], ['Bundle/ leading/file'], ['Bundle/file '],

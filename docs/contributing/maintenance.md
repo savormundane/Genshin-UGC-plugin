@@ -11,7 +11,9 @@ Python 依赖有变更时运行 `uv lock`，并用 `uv export --locked --no-dev 
 
 ## 分发内容核对
 
-Windows ZIP 与 Cordis 包共用 [distribution.json](../../distribution.json) 中的三个第三方目录排除项。以下路径位于 `vendor/beyond/node_modules/`。Git 源码保留原文件和摘要，运行检查按 [Beyond 清单](../../vendor/beyond/bundle.json) 核对保留文件。移出条目及原始摘要见 [PUBLIC_SOURCES.json](../../PUBLIC_SOURCES.json) 的 `distribution_changes`。
+分发排除项统一在 [distribution.json](../../distribution.json) 维护。Windows ZIP 直接读取目录前缀和文件路径，`scripts/marketplace_release.py` 将两类规则写入 Cordis 使用的 `package.json`。改动规则后重新生成清单，`scripts/check_repository.py` 会检查生成结果。npm 仍按自己的规则收录 `package.json`、README 和许可证等必含文件。 [npm 文件清单规则](https://docs.npmjs.com/files/package.json/#files)
+
+当前排除的三个第三方目录位于 `vendor/beyond/node_modules/`。Git 源码保留原文件和摘要，运行检查按 [Beyond 清单](../../vendor/beyond/bundle.json) 核对保留文件。移出条目及原始摘要见 [PUBLIC_SOURCES.json](../../PUBLIC_SOURCES.json) 的 `distribution_changes`。
 
 | 排除路径 | 核对依据 | 文件数 | 原始字节 | ZIP 压缩数据字节 |
 | --- | --- | ---: | ---: | ---: |

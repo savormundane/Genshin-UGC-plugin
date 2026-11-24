@@ -5,6 +5,7 @@ import json
 import re
 
 from check_repository import REPO, ROOT, SEMVER
+from package_release import distribution_exclusions
 
 DSH_ENGINE = '0.2.2-rc.5'
 GITHUB = f'https://github.com/{REPO}'
@@ -44,9 +45,12 @@ def marketplace_files(root):
             'category': 'Productivity',
         }],
     }
-    distribution = read_json(root, 'distribution.json')
-    vendor_exclusions = ['!' + prefix + '**' for prefix in distribution['exclude_prefixes']
-                         if prefix.startswith('vendor/')]
+    excluded_prefixes, excluded_files = distribution_exclusions(root, required=True)
+    for path in excluded_prefixes + excluded_files:
+        if path.startswith(('!', '#')) or any(char in path for char in '*?[]{}()'):
+            raise ValueError(f'Cordis distribution exclusions must use literal paths: {path!r}')
+    exclusions = [f'!{prefix}**' for prefix in excluded_prefixes]
+    exclusions.extend(f'!{path}' for path in excluded_files)
     bundle = {
         'name': identity,
         'version': version,
@@ -58,7 +62,7 @@ def marketplace_files(root):
             'cordis.patch.yml', 'plugin.json', 'locale/', 'assets/', 'docs/', 'references/',
             'skills/', 'scripts/', 'runtime/', 'samples/', 'vendor/', 'pyproject.toml', 'uv.lock',
             'LICENSE', 'THIRD_PARTY_NOTICES.md', 'PUBLIC_SOURCES.json',
-        ] + vendor_exclusions,
+        ] + exclusions,
         'dsh': {'bundle': {'patch': './cordis.patch.yml'}},
         'exports': {'./locale/*.json': './locale/*.json', './package.json': './package.json'},
     }

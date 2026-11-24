@@ -27,9 +27,14 @@
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
     "PUBLIC_SOURCES.json",
+    "!samples/seeds/**",
+    "!.github/**",
     "!vendor/beyond/node_modules/gifuct-js/demo/**",
     "!vendor/beyond/node_modules/js-binary-schema-parser/example/**",
-    "!vendor/beyond/node_modules/fengari/test/**"
+    "!vendor/beyond/node_modules/fengari/test/**",
+    "!runtime.json",
+    "!.agents/plugins/marketplace.json",
+    "!.claude-plugin/marketplace.json"
   ],
   "dsh": {
     "bundle": {

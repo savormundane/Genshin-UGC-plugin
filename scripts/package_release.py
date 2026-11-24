@@ -40,6 +40,26 @@ def validate_windows_names(names):
                 raise ValueError(f'Windows archive path collision: {prior[0]!r} and {name!r}')
 
 
+def distribution_exclusions(source, *, required=False):
+    policy_path = source / 'distribution.json'
+    if not required and not policy_path.exists():
+        return [], []
+    policy = json.loads(policy_path.read_text(encoding='utf-8'))
+    if (not isinstance(policy, dict) or policy.get('schema') != 1
+            or policy.keys() - {'schema', 'exclude_prefixes', 'exclude_files'}
+            or not isinstance(policy.get('exclude_prefixes'), list)
+            or not isinstance(policy.get('exclude_files', []), list)):
+        raise ValueError('Invalid distribution policy')
+    prefixes = policy['exclude_prefixes']
+    files = policy.get('exclude_files', [])
+    if any(not isinstance(p, str) or not p.endswith('/') or p.startswith('/') or ':' in p or '\\' in p or '..' in p.split('/') for p in prefixes):
+        raise ValueError('Unsafe distribution exclusion')
+    if any(not isinstance(p, str) or ':' in p or '\\' in p
+           or any(part in ('', '.', '..') for part in p.split('/')) for p in files):
+        raise ValueError('Unsafe distribution file exclusion')
+    return prefixes, files
+
+
 def build_release(source, output, layout='auto', archive_root=None):
     source, output = Path(source).resolve(), Path(output).absolute()
     if os.path.lexists(output):
@@ -49,20 +69,7 @@ def build_release(source, output, layout='auto', archive_root=None):
         raise ValueError('Source must be a directory')
     if output.is_relative_to(source):
         raise ValueError('Output must be outside the source directory')
-    policy_path = source / 'distribution.json'
-    policy = json.loads(policy_path.read_text(encoding='utf-8')) if policy_path.exists() else {'schema': 1, 'exclude_prefixes': []}
-    if (not isinstance(policy, dict) or policy.get('schema') != 1
-            or policy.keys() - {'schema', 'exclude_prefixes', 'exclude_files'}
-            or not isinstance(policy.get('exclude_prefixes'), list)
-            or not isinstance(policy.get('exclude_files', []), list)):
-        raise ValueError('Invalid distribution policy')
-    excluded = policy['exclude_prefixes']
-    excluded_files = policy.get('exclude_files', [])
-    if any(not isinstance(p, str) or not p.endswith('/') or p.startswith('/') or ':' in p or '\\' in p or '..' in p.split('/') for p in excluded):
-        raise ValueError('Unsafe distribution exclusion')
-    if any(not isinstance(p, str) or ':' in p or '\\' in p
-           or any(part in ('', '.', '..') for part in p.split('/')) for p in excluded_files):
-        raise ValueError('Unsafe distribution file exclusion')
+    excluded, excluded_files = distribution_exclusions(source)
     archive_root = archive_root or source.name
     if not re.fullmatch(r'[A-Za-z0-9_.-]+', archive_root) or archive_root in ('.', '..'):
         raise ValueError('Invalid archive root')
