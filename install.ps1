@@ -44,7 +44,8 @@ function Find-SupportedPython([string]$Executable, [string[]]$Selector = @()) {
     # An unavailable launcher version can write to stderr and return nonzero.
     $ErrorActionPreference = 'Continue'
     $PSNativeCommandUseErrorActionPreference = $false
-    $probe = 'import json,sys; sys.exit(1) if not ((3, int(sys.argv[1])) <= sys.version_info[:2] < (3, int(sys.argv[2]))) or sys.implementation.name != "cpython" or sys.maxsize < 2**32 else print(json.dumps(sys.executable))'
+    # Windows PowerShell strips embedded double quotes from native command arguments.
+    $probe = 'import json,sys; sys.exit(1) if not ((3, int(sys.argv[1])) <= sys.version_info[:2] < (3, int(sys.argv[2]))) or sys.implementation.name != ''cpython'' or sys.maxsize < 2**32 else print(json.dumps(sys.executable))'
     $answer = @(& $Executable @Selector -I -B -c $probe $minMinor $maxMinor 2>$null)
     if ($LASTEXITCODE -eq 0 -and $answer.Count -eq 1) {
         $resolved = ConvertFrom-Json -InputObject $answer[0] -ErrorAction SilentlyContinue
