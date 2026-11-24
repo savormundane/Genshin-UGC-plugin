@@ -104,6 +104,11 @@ def extract_native_archive(lock, archive, destination):
         stage.rename(destination)
 
 
+def native_cache_root():
+    data = data_directory()
+    return data.resolve() / 'beyond-native' if data is not None else None
+
+
 def native_library_path(backend, *, lock=None):
     """Return a verified bundled or lazily hydrated binding."""
     if lock is None:
@@ -118,10 +123,10 @@ def native_library_path(backend, *, lock=None):
         if not path.is_absolute() or not verify_native_files(path, lock):
             raise ValueError('Invalid staged Beyond native Canvas payload')
         return path / NATIVE_BINARY
-    data = data_directory()
-    if data is None:
+    root = native_cache_root()
+    if root is None:
         raise ValueError('请设置绝对路径 UGC_PLUGIN_DATA 或 LOCALAPPDATA，以缓存 Beyond 原生渲染依赖。')
-    cache = data.resolve() / 'beyond-native' / lock['sha256']
+    cache = root / lock['sha256']
     if (cache.resolve() != cache or cache.is_relative_to(PLUGIN.resolve())
             or cache.is_relative_to(backend.resolve())):
         raise ValueError('Beyond native Canvas cache must be outside the plugin source')

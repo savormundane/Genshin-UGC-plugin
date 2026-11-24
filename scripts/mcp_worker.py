@@ -19,17 +19,24 @@ def main():
     request=read_json(sys.argv[1]);result_path=Path(sys.argv[2]);args=request['arguments'];op=request['operation']
     scratch=Path(request['scratch']).resolve()
     project=Path(request['project']) if request['project'] else None
-    roots=[scratch,PLUGIN.resolve(),Path(sys.base_prefix).resolve()]
-    roots.extend(Path(request[k]).resolve() for k in ('project','output_root') if request[k])
+    mounted=[Path(request[k]).resolve() for k in ('project','output_root') if request[k]]
+    roots=[scratch,PLUGIN.resolve(),Path(sys.base_prefix).resolve(),*mounted]
     roots.extend(Path(p).resolve() for p in sys.path if p and Path(p).is_dir()
                  and (project is None or not Path(p).resolve().is_relative_to(project)))
+    native_cache=None
+    if op=='produce':
+        from beyond_native import native_cache_root
+        cache=native_cache_root()
+        if cache and cache.resolve()==cache and not any(
+                cache.is_relative_to(owner) or owner.is_relative_to(cache) for owner in roots):
+            native_cache=cache
     # A dependency boundary for trusted project builds, not an OS security sandbox.
     def boundary(event,values):
         if event not in('open','os.listdir','os.scandir'):return
         value=values[0]
         if value is None or isinstance(value,int):return
         path=Path(os.fsdecode(value)).resolve()
-        if str(path).casefold()==os.devnull.casefold():return
+        if str(path).casefold()==os.devnull.casefold() or native_cache and path.is_relative_to(native_cache):return
         write=event=='open'and values[2]&(os.O_WRONLY|os.O_RDWR|os.O_CREAT|os.O_TRUNC|os.O_APPEND)
         if write and not path.is_relative_to(scratch):raise ValueError('MCP write outside request output')
         if not any(path.is_relative_to(r)for r in roots):raise ValueError('MCP dependency outside allowed roots')

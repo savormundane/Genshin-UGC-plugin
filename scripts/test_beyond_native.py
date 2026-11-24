@@ -1,6 +1,9 @@
 import json
 from pathlib import Path
+import os
 import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -82,6 +85,52 @@ class BeyondNativeTests(unittest.TestCase):
         (self.backend / 'bundle.json').write_text('{"files":{}}', encoding='utf-8')
         with self.assertRaisesRegex(ValueError, 'differs from the bundled file manifest'):
             read_native_lock(self.backend)
+
+    def test_worker_hydrates_only_in_its_native_cache(self):
+        project = self.backend.parents[1]
+        archive = self.archive.rename(project / self.archive.name)
+        scratch = self.root / 'scratch'
+        scratch.mkdir()
+        request = scratch / 'request.json'
+        request.write_text(json.dumps({
+            'operation': 'produce', 'scratch': str(scratch), 'project': str(project),
+            'output_root': str(scratch), 'arguments': {'spec': str(self.backend), 'output': str(archive)},
+            'inputs': {},
+        }), encoding='utf-8')
+        probe = """
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
+import shutil, sys
+
+sys.path.insert(0, sys.argv.pop(1))
+from beyond_native import native_library_path
+import mcp_worker
+
+def produce(backend, archive):
+    with patch('beyond_native.download_native_archive',
+               side_effect=lambda _lock, path: shutil.copyfile(archive, path)):
+        binding = native_library_path(Path(backend))
+    try:
+        Path(archive).with_suffix('.forbidden').write_text('refuse')
+    except ValueError as error:
+        assert 'MCP write outside request output' in str(error)
+    else:
+        raise AssertionError('Project write was accepted')
+    return {'binding': str(binding)}
+
+sys.modules['production_core'] = SimpleNamespace(produce=produce, produce_summary=None, ProductionError=RuntimeError)
+mcp_worker.main()
+"""
+        result = scratch / 'result.json'
+        child = subprocess.run([sys.executable, '-B', '-c', probe, str(Path(__file__).resolve().parent),
+                                str(request), str(result)], capture_output=True, text=True,
+                               env={**os.environ, 'UGC_PLUGIN_DATA': str(self.data), 'UGC_BEYOND_NATIVE_ROOT': ''})
+        self.assertEqual(child.returncode, 0, child.stderr)
+        binding = Path(json.loads(result.read_text(encoding='utf-8'))['binding'])
+        self.assertEqual(binding, self.data / 'beyond-native' / self.lock['sha256'] / NATIVE_BINARY)
+        self.assertEqual(sha_file(binding), self.lock['files'][NATIVE_BINARY])
+        self.assertFalse(archive.with_suffix('.forbidden').exists())
 
 
 if __name__ == '__main__':
