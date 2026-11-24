@@ -59,13 +59,6 @@ codex plugin marketplace add savormundane/miliastra-wonderland-plugin
 - 用 `UGC_PYTHON` 指定已有 Python 的绝对路径。旧安装位于自选位置时，用 `MILIASTRA_WONDERLAND_INSTALL_ROOT` 指明原安装根。也可用 `UGC_RUNTIME_CONFIG` 直接选择旧的 `runtime.json`。
 - 节点、API 与公开资料查询可直接使用。文件工具优先使用显式工程路径，其次使用客户端通过 MCP Roots 提供的会话目录。客户端未提供目录时，可沿用 `runtime.json`。只读查询只需要工程目录。写入默认按工程归档到本机插件数据目录，也可指定独立的输出目录。参见[切换工程](runtime-environment.md#连接-mcp-或切换工程)。
 
-## 从 Genshin-UGC 迁移
-
-从[首页](../README.md#安装)登记 Miliastra Wonderland 并安装。新插件 ID 为 `miliastra-wonderland`。确认新入口可用后，在客户端移除旧插件和市场。已有 Python、工程目录和输出可以继续使用。将 `UGC_RUNTIME_CONFIG` 指向原有的 `runtime.json` 即可复用配置。
-
-- **DSH 旧安装**可按[当前直装地址](../README.md#deepseek-harness)重新登记。
-- **旧 ZIP 或 PowerShell 登记**可保留本地副本供回退。需要重新安装时，使用当前市场、直装或[自行打包](#自行打包-zip)。
-
 ## 从本地目录导入
 
 解压[本版源码](https://github.com/savormundane/miliastra-wonderland-plugin/archive/refs/tags/v1.1.0.zip)，或检出 GitHub 的 `main` 分支。选择包含插件清单的源码根目录。 [V1.1.0 发行说明](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/v1.1.0)
