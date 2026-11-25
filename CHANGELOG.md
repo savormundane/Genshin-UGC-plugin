@@ -4,7 +4,7 @@
 
 ## Unreleased
 
-- DeepSeek Harness 安装指南改用可直接添加的版本源码地址。新增对 DSH 0.2.3-alpha.2 的支持。
+- DeepSeek Harness 可通过 GitHub 仓库地址安装。新增对 DSH 0.2.3-alpha.2 的支持。
 
 ## 1.2.0
 
