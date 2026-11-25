@@ -197,7 +197,7 @@ def initial_level(identifier,map_size=(20,20)):
 LUA_KEYWORDS=set('and break do else elseif end false for function goto if in local nil not or repeat return then true until while'.split())
 def with_template_alias(code,alias,indices):
  if not isinstance(alias,str) or not re.fullmatch(r'[A-Za-z_]\w*',alias) or alias in LUA_KEYWORDS:raise ValueError('templates_as需要有效Lua变量名，不能是关键字')
- from asset_pipeline import lua
+ from miliastra.assets.pipeline import lua
  prefix=('-- qianxing-template-alias: '+alias+'\nlocal '+alias+' = '+lua(indices)+'\n').encode('utf-8')
  if code.startswith(prefix):return code
  if code.startswith(b'-- qianxing-template-alias:'):raise ValueError('源码含不同或过期模板前缀，请使用未生成的原始Lua输入')

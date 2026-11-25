@@ -1,19 +1,20 @@
 """Unified Qianxing task routing, node discovery, input inventory and graph build CLI."""
 from pathlib import Path
 import argparse,json,os,subprocess,sys
+from importlib import import_module
 from authoring_io import PLUGIN, missing_input, read_json
 from node_build import route,catalog,build
 from level_inventory import inspect_file
 
 DELEGATED = {
-    'assets': ('asset_pipeline', 'Preview, generate, fit, inspect, or import assets'),
+    'assets': ('miliastra.assets.pipeline', 'Preview, generate, fit, inspect, or import assets'),
     'graph': ('graph_validation', 'Check one Graph Code source before building'),
     'workflow': ('qianxing_workflow', 'Select a development workflow'),
     'level': ('level_authoring', 'Create levels and bind client scripts'),
     'simulate': ('client_simulator', 'Check startup, preview UI, or run a scenario'),
-    'native': ('native_core', 'Inspect, diff, plan, or apply native changes'),
-    'storage': ('storage_authoring', 'Generate storage contracts'),
-    'client': ('client_assembly', 'Assemble or check Lua'),
+    'native': ('miliastra.native.core', 'Inspect, diff, plan, or apply native changes'),
+    'storage': ('miliastra.storage', 'Generate storage contracts'),
+    'client': ('miliastra.client.assembly', 'Assemble or check Lua'),
     'experiment': ('experiments', 'Run or compare experiments'),
     'verify': ('delivery_verify', 'Verify a delivery'),
     'docs': ('platform_profiles', 'Query platform documents'),
@@ -21,9 +22,9 @@ DELEGATED = {
     'project': ('project_index', 'Search and inspect project objects and references'),
     'logs': ('log_diagnostics', 'Diagnose logs'),
     'ids': ('id_registry', 'Check registered IDs'),
-    'ui': ('native_ui', 'Check or update native UI layout'),
+    'ui': ('miliastra.native.ui', 'Check or update native UI layout'),
     'resources': ('resource_catalogue', 'Find or verify resources'),
-    'mcp': ('mcp_bridge', 'Run the local MCP service or make a fixed-operation call'),
+    'mcp': ('miliastra.mcp.bridge', 'Run the local MCP service or make a fixed-operation call'),
     'beyond': ('beyond_backend', 'Run a Beyond software scenario'),
     'knowledge': ('knowledge', 'Query pinned API and documentation sources'),
     'diagnose': ('project_diagnosis', 'Run explicit read-only checks'),
@@ -58,7 +59,7 @@ def main(argv=None):
     try:
         if argv and argv[0] in DELEGATED:
             module, _ = DELEGATED[argv[0]]
-            value = __import__(module).main(argv[1:])
+            value = import_module(module).main(argv[1:])
             if isinstance(value, dict):
                 print(json.dumps(value, ensure_ascii=False, indent=2))
                 return 0

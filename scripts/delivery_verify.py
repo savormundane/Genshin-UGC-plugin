@@ -1,7 +1,7 @@
 """Read-only source/artifact guards, impact selection and isolated production rebuild."""
 from pathlib import Path
 import argparse,json,tempfile,shutil
-from authoring_io import *
+from authoring_io import read_json, sha_file
 
 def verify(root,rebuild=False,portable=False,trusted_inputs_sha256=None,*,artifacts_only=False):
     from portable_trust import listed_path, closure, trusted_execution

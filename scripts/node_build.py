@@ -191,11 +191,11 @@ def normalize_new_graph_variables(path,expected):
 def build(spec_path,out_dir,preserve_container_order=False,structure_bindings=(),*,resolved_bindings=None):
     spec_path=Path(spec_path).resolve();base=spec_path.parent
     from authoring_io import sha
-    from native_bindings import Bindings, bindings_for_gil, expand_graph, read_bindings
+    from miliastra.native.bindings import Bindings, bindings_for_gil, expand_graph, read_bindings
     spec_bytes=spec_path.read_bytes()
     job=json.loads(spec_bytes.decode('utf-8-sig'))
     if job.get('schema')==2:
-        from native_build import build as build_native
+        from miliastra.native.build import build as build_native
         return build_native(spec_path,out_dir)
     if job.get('schema')!=SCHEMA:raise ValueError('Expected build schema 1')
     allowed={'schema','graphs','formats','base_gil','project_resources','include_sections','allowed_top_level_fields','required_mounts','max_stored_nodes','bindings'}
@@ -293,28 +293,28 @@ def build(spec_path,out_dir,preserve_container_order=False,structure_bindings=()
         exported=list((up_out/'build_gia').rglob('*.gia'))
         if not exported:raise ValueError('No GIA was generated')
         summaries=[];composite_summaries={};signal_audits=[];gia_structures=[];gia_variable_types=[]
-        from native_gia import bind_skill_notifications
+        from miliastra.native.gia import bind_skill_notifications
         for index,gia in enumerate(exported):
             bound,changes=bind_skill_notifications(gia.read_bytes(),names)
             if changes:gia.write_bytes(bound)
             signal_versions=[]
             if preserve_container_order:
-                from native_gia import bind_generated_variable_types
+                from miliastra.native.gia import bind_generated_variable_types
                 bound,changes=bind_generated_variable_types(gia.read_bytes())
                 if changes:gia.write_bytes(bound);gia_variable_types.extend(changes)
                 if structure_bindings:
-                    from native_gia import bind_generated_structures
+                    from miliastra.native.gia import bind_generated_structures
                     bound,changes=bind_generated_structures(gia.read_bytes(),baseline.read_bytes(),structure_bindings)
                     if changes:gia.write_bytes(bound);gia_structures.extend(changes)
-                from native_signals import bind_generated_versions
+                from miliastra.native.signals import bind_generated_versions
                 bound,signal_versions=bind_generated_versions(gia.read_bytes())
                 if signal_versions:gia.write_bytes(bound)
             summary=inspect_file(gia);summaries.extend(summary['graphs'])
             if not summary['graphs']:raise ValueError('Generated GIA contains no readable graphs')
             if any(g['dangling_node_refs'] or not g['node_indices_unique'] for g in summary['graphs']+summary['composite_graphs']):raise ValueError('Generated GIA has invalid node references')
             if preserve_container_order:
-                from native_core import model,audit
-                from native_signals import audit_gia_signals
+                from miliastra.native.core import model,audit
+                from miliastra.native.signals import audit_gia_signals
                 signal_issues,signal_unknown,signal_declarations=audit_gia_signals(model(gia.read_bytes()))
                 if signal_issues or signal_unknown:raise ValueError('Generated GIA signal audit failed: '+json.dumps({'issues':signal_issues,'unresolved':signal_unknown},ensure_ascii=False))
                 if signal_declarations:
@@ -323,7 +323,7 @@ def build(spec_path,out_dir,preserve_container_order=False,structure_bindings=()
                 signal_audits.append({'file':str(index)+'_'+gia.name,'status':'passed','layer':'static','declarations':len(signal_declarations),
                                       'bound_versions':signal_versions})
             if summary['composite_graphs']:
-                from native_core import audit
+                from miliastra.native.core import audit
                 checked=audit(gia.read_bytes())
                 if checked['status']!='passed':raise ValueError('Generated composite GIA audit failed: '+json.dumps(checked,ensure_ascii=False))
             for g in summary['composite_graphs']:
@@ -350,7 +350,7 @@ def build(spec_path,out_dir,preserve_container_order=False,structure_bindings=()
             if changes:newgil.write_bytes(bound)
             normalization=normalize_new_graph_variables(newgil,{g['name']:g for g in summaries})
             if preserve_container_order and structure_bindings:
-                from native_core import bind_structures
+                from miliastra.native.core import bind_structures
                 newgil.write_bytes(bind_structures(newgil.read_bytes(),structure_bindings))
             if preserve_container_order:
                 from level_authoring import pack
@@ -368,8 +368,8 @@ def build(spec_path,out_dir,preserve_container_order=False,structure_bindings=()
             inv=inspect_file(newgil)
             original_inventory=inspect_file(baseline)
             if composite_summaries or inv['composite_graphs']or original_inventory['composite_graphs']:
-                from native_core import model
-                from native_resources import composite_contracts
+                from miliastra.native.core import model
+                from miliastra.native.resources import composite_contracts
                 actual=composite_contracts(model(newgil.read_bytes()))
                 previous=composite_contracts(model(baseline.read_bytes()));expected_names=set()
                 for file in exported:
@@ -393,8 +393,8 @@ def build(spec_path,out_dir,preserve_container_order=False,structure_bindings=()
                 compared=['stored_nodes','connections','variables','literal_values' if preserve_container_order else 'pin_values']
                 mismatch={key:{'gil':found[0][key],'gia':expect[key]} for key in compared if found[0][key]!=expect[key]}
                 if preserve_container_order and 'literal_values' in mismatch:
-                    from native_core import model,get,ref,slot
-                    from native_model import constant
+                    from miliastra.native.core import model,get,ref,slot
+                    from miliastra.native.model import constant
                     from level_inventory import vals
                     actual_graph=next(g for g in model(newgil.read_bytes())['graphs']if g['name']==name)
                     candidates=[g for file in exported for g in model(file.read_bytes())['graphs']if g['name']==name]

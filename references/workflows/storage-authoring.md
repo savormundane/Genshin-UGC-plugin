@@ -1,6 +1,6 @@
 # 存储与成就生成
 
-能力名：storage-authoring。使用qianxing.py storage build|inspect|diagnose；生成器为scripts/storage_authoring.py，客户端事务与编码为scripts/runtime_storage.lua。依赖Python标准库；实际编译依赖包内Ayaya，Lua模型依赖lupa.lua53。
+能力名：storage-authoring。使用qianxing.py storage build|inspect|diagnose；生成器为scripts/miliastra/storage.py，客户端事务与编码为scripts/runtime_storage.lua。依赖Python标准库；实际编译依赖包内Ayaya，Lua模型依赖lupa.lua53。
 
 ```text
 python scripts/qianxing.py storage build STORAGE.json --out NEW_DIRECTORY

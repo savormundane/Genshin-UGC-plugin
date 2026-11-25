@@ -7,7 +7,7 @@ import base64
 from authoring_io import schema,sha
 from level_inventory import container,fields,vals,unique
 from level_authoring import msg,integer,pack,stream,inspect_bindings,text
-from native_core import get
+from miliastra.native.core import get
 
 def convert(data,config):
     schema(config,('source','sha256','root_guid','canvas'),('source','sha256','root_guid','canvas'))

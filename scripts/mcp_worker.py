@@ -86,19 +86,19 @@ def main():
                     result=consumers(result,args['selector'],args.get('transitive',False))
                 if args.get('summary'):result=inspect_summary(result)
             else:
-                import native_core
+                from miliastra.native import core as native_core
                 result=(native_core.inspect if op=='native_inspect'else native_core.audit)(path.read_bytes())
         elif op=='client_check':
-            from client_check import inspect
+            from miliastra.client.check import inspect
             result=inspect(args['input'],mapping=args.get('mapping'),contract=read_json(args['contract'])if 'contract'in args else None)
         elif op=='native_diff':
-            from native_changes import difference
+            from miliastra.native.changes import difference
             result=difference(Path(args['input']).read_bytes(),Path(args['other']).read_bytes(),args.get('allowed_top_level_fields'))
         elif op == 'scene_preview':
             from scene_preview import preview
             result = preview(args['input'], args['output'], before=args.get('before'))
         elif op == 'asset_preview':
-            from asset_pipeline import preview
+            from miliastra.assets.pipeline import preview
             output = Path(args['output'])
             try:
                 result = preview(args['input'], output, image_format='PNG', explore=True,
@@ -116,7 +116,7 @@ def main():
                 for candidate in selected
             ]
         elif op == 'asset_generate':
-            from asset_pipeline import generate
+            from miliastra.assets.pipeline import generate
             try:
                 result = generate(args['input'], args['output'], from_preview=args['report'], candidate=args['candidate'])
             except (OSError, ValueError, TypeError, KeyError) as exc:
@@ -128,7 +128,7 @@ def main():
                 _asset_thumbnail(Path(args['output']) / 'preview.png', args['candidate'], result['controls'])
             ]
         elif op=='native_plan':
-            from native_changes import plan,plan_summary
+            from miliastra.native.changes import plan,plan_summary
             from authoring_io import output_directory,finish
             if 'patch' in args:
                 patch=args['patch']
@@ -179,7 +179,7 @@ def main():
                 result={'status':'failed','error':str(exc),'evidence':exc.production_evidence,
                         'diagnostics':getattr(exc,'diagnostics',[])}
         elif op=='native_apply':
-            from native_changes import apply_plan
+            from miliastra.native.changes import apply_plan
             from authoring_io import output_directory,finish
             raw,result=apply_plan(Path(args['input']).read_bytes(),read_json(args['plan']),Path(args['plan']).parent)
             with output_directory(args['output'])as stage:

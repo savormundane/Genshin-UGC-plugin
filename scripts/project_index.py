@@ -6,7 +6,7 @@ import argparse,json
 from authoring_io import DiagnosticError,sha,read_json,schema,resolve
 from level_inventory import container,fields,vals,unique,graph_records,entity_graph_ids,graph_library_ids
 from level_authoring import inspect_bindings,ui_records,stream
-from native_core import model,audit,get,ref,slot,definition_id,node_catalog
+from miliastra.native.core import model,audit,get,ref,slot,definition_id,node_catalog
 
 
 def key(*parts):return '/'.join(quote(str(p),safe='')for p in parts)
@@ -83,8 +83,8 @@ def build(data,namespace='level',*,include_scene=True,include_gameplay=True,vali
         references.append({'source':source,'target':target,'relation':relation,'location':location})
     document=obj('document','root',m['format'],sha256=sha(data))
     definitions=m['definitions'];builtin,_=node_catalog();builtin_used=set()
-    from native_signals import declarations,legacy_client_senders
-    from native_ports import client_contract,declared_kernel_matches,resolve_dynamic
+    from miliastra.native.signals import declarations,legacy_client_senders
+    from miliastra.native.ports import client_contract,declared_kernel_matches,resolve_dynamic
     signal_records=declarations(m)
     legacy_senders=legacy_client_senders(m,signal_records) if m['format']=='gil' else set()
     roles={i:(r['name'],r['role'])for i,r in signal_records.items()} if m['format']=='gia' else {}
@@ -153,7 +153,7 @@ def build(data,namespace='level',*,include_scene=True,include_gameplay=True,vali
                     if recorded in location['serialized_at']:
                         issues.append({'error':'duplicate node connection record','source':consumer,'target':provider,**recorded})
                     location['serialized_at'].append(recorded)
-        from native_graph_variables import read as graph_variables,summary as graph_variable_summary,accesses as graph_variable_accesses
+        from miliastra.native.graph_variables import read as graph_variables,summary as graph_variable_summary,accesses as graph_variable_accesses
         for record in graph_variables({'graphs':[g],'composite_graphs':[]}):
             name=record['name']
             variable=obj('graph_variable',name,name,scope,**{k:v for k,v in graph_variable_summary(record).items()if k!='name'})
@@ -167,7 +167,7 @@ def build(data,namespace='level',*,include_scene=True,include_gameplay=True,vali
         if g['kind']=='composite':
             for mapping in vals(fields(g['raw']),4):
                 link(owner,key(namespace,'node',*scope,get(mapping,2,0)),'composite_interface',port=list(slot(mapping)))
-    from native_scene import ordinary_object,spatial_objects
+    from miliastra.native.scene import ordinary_object,spatial_objects
 
     placed = {}
     spatial = spatial_objects(header, root) if include_scene else {}
@@ -187,7 +187,7 @@ def build(data,namespace='level',*,include_scene=True,include_gameplay=True,vali
         details = spatial.get((kind, entity['entity_id']))
         obj(kind, entity['entity_id'], name=(details or scene or {}).get('name',''),
             **({'scene': scene} if scene else {}), **({'spatial': details} if details else {}))
-    from native_variables import summary,audit as audit_variables
+    from miliastra.native.variables import summary,audit as audit_variables
     variables=defaultdict(dict)
     for record in m['custom_variables']['records']:
         kind='template'if record['section']==4 else'entity';ident=record['entity_id'];name=record['name']
@@ -222,11 +222,11 @@ def build(data,namespace='level',*,include_scene=True,include_gameplay=True,vali
         ident=get(t,1,0);source=obj('storage_template',ident)
         for raw in vals(fields(get(t,2,default=b'')),2):
             target=obj('storage_slot',get(raw,1,0),'',(ident,));link(source,target,'storage_slot')
-    from native_structures import audit_references
+    from miliastra.native.structures import audit_references
     traced=[];resolved_model={**m,**{group:[{**g,'nodes':resolved_graphs[(g['kind'],g['id'])]}for g in m[group]]for group in('graphs','composite_graphs')}}
     audit_references(resolved_model,traced)
     audit_variables(m,traced)
-    from native_graph_variables import audit as audit_graph_variables
+    from miliastra.native.graph_variables import audit as audit_graph_variables
     audit_graph_variables(m,traced)
     for item in traced:
         c=item['context']
@@ -338,7 +338,7 @@ def build(data,namespace='level',*,include_scene=True,include_gameplay=True,vali
         count=counts[r['target']];r['resolution']='resolved'if count==1 else'ambiguous'if count else'missing'
         if count!=1:issues.append({'error':'ambiguous reference'if count else'dangling reference',**r})
     if include_gameplay and m['format']=='gil':
-        from native_gameplay_index import build_gameplay
+        from miliastra.native.gameplay_index import build_gameplay
         gameplay=build_gameplay(data,namespace)
         objects.extend(o for o in gameplay['objects'] if o['key'] not in counts)
         references.extend(gameplay['references'])
@@ -355,7 +355,7 @@ def build(data,namespace='level',*,include_scene=True,include_gameplay=True,vali
 
 def build_scene(data, namespace='level'):
     """Index the scene and serialized mounts without interpreting graph ports."""
-    from native_scene import GIL_HEADER, STATIC_GIA_HEADER, identified_records, spatial_objects, typed_record
+    from miliastra.native.scene import GIL_HEADER, STATIC_GIA_HEADER, identified_records, spatial_objects, typed_record
 
     header, root = container(data)
     if header[1:4] not in (GIL_HEADER, STATIC_GIA_HEADER):
@@ -455,7 +455,7 @@ def inspect(path,level=None,*,scope=None):
     if path.suffix.lower()in('.gil','.gia'):
         reader = build_scene if scope == 'scene' else build
         if scope == 'gameplay':
-            from native_gameplay_index import build_gameplay
+            from miliastra.native.gameplay_index import build_gameplay
             reader = build_gameplay
         report=reader(path.read_bytes());report['inputs']={str(path):report['artifacts']['level']['sha256']};return report
     if scope:

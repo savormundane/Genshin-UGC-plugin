@@ -4,7 +4,7 @@ import math
 from pathlib import Path
 
 from authoring_io import finish, output_directory, write_json
-from native_scene_edits import WHITEBOX
+from miliastra.native.scene_edits import WHITEBOX
 from project_index import build_scene
 
 

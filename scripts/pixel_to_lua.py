@@ -11,7 +11,7 @@ from pathlib import Path
 from PIL import Image
 
 
-from asset_core import harden, compile_image
+from miliastra.assets.core import harden, compile_image
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)

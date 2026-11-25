@@ -8,7 +8,7 @@ def wire(signal):
     if any(f['name'] in {x['name'] for x in ENVELOPE} for f in signal['fields']):raise ValueError('Parameter conflicts with transport envelope')
     return ENVELOPE+signal['fields']
 def generate(contract,dest):
-    from asset_pipeline import lua
+    from miliastra.assets.pipeline import lua
     dest=Path(dest);resources=dest/'resources/管理配置/信号';resources.mkdir(parents=True)
     layout=[]
     for s in contract['signals']:

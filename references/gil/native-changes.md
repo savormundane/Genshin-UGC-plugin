@@ -1,6 +1,6 @@
 # 原生差异与修改计划
 
-能力名：native-changes。入口为qianxing.py native diff/plan及apply --plan，核心位于scripts/native_changes.py，依赖Python标准库及包内原生定义。diff支持同格式GIL或GIA比较；修改计划复用[原生维护](native-maintenance.md)已校准的GIL补丁操作，不扩展未知格式写入。
+能力名：native-changes。入口为qianxing.py native diff/plan及apply --plan，核心位于scripts/miliastra/native/changes.py，依赖Python标准库及包内原生定义。diff支持同格式GIL或GIA比较；修改计划复用[原生维护](native-maintenance.md)已校准的GIL补丁操作，不扩展未知格式写入。
 
 ```text
 python scripts/qianxing.py native diff BEFORE.gil AFTER.gil --allow-fields 10 --out DIFF.json

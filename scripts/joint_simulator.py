@@ -2,8 +2,8 @@
 from copy import deepcopy
 from pathlib import Path
 import hashlib,json,re,heapq,subprocess,sys,os
-from authoring_io import *
-from native_core import get
+from authoring_io import PLUGIN, DiagnosticError, canonical, read_json, resolve, schema, sha, sha_file
+from miliastra.native.core import get
 from level_inventory import container,fields,vals
 
 class Client:
@@ -132,7 +132,7 @@ def execute(spec,base,trace=None,*,expected_inputs=None):
         if type(clock)not in(int,float)or not 0<=clock<1e12:raise ValueError('Finite nonnegative model clock required')
     server=None
     if 'server'in spec:
-        from native_model import NativeModel
+        from miliastra.native.model import NativeModel
         s=spec['server'];schema(s,('source','initial','graph_ids','instances','entity_guids','required_timers','level_entity','timer_index_base'),('source',))
         graph_ids=s.get('graph_ids')
         if native_only and (not isinstance(graph_ids,list) or not graph_ids or
@@ -380,7 +380,7 @@ def evaluate(spec,base,*,expected_inputs=None):
         return execute(spec,base,trace,expected_inputs=expected_inputs)
     except Exception as exc:
         import traceback
-        from native_model import UncalibratedRoute, UncalibratedVariable
+        from miliastra.native.model import UncalibratedRoute, UncalibratedVariable
         diagnostic=trace.pop('diagnostic',None)
         replay = {}
         declared = trace.pop('declared_sources', None)

@@ -34,7 +34,7 @@ def layouts(path):
     return {'layouts':result,'sha256':hashlib.sha256(path.read_bytes()).hexdigest(),
             'schema':'bundled Ayaya UI root records without parent field 504','read_only':True}
 
-from asset_core import compile_tiles
+from miliastra.assets.core import compile_tiles
 
 
 def convert(source, output, **options):

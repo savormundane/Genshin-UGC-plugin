@@ -9,7 +9,7 @@ from urllib.request import Request, urlopen
 import zipfile
 
 from authoring_io import PLUGIN, read_json, sha_file
-from mcp_workspace import data_directory
+from miliastra.mcp.workspace import data_directory
 
 
 LOCK_NAME = 'native-canvas.json'

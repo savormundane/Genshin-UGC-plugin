@@ -35,7 +35,7 @@ def sources():
     return result
 
 def client_catalogue(source=None, *, include_search_details=False):
-    from client_api_catalogue import catalogue
+    from miliastra.client.api_catalogue import catalogue
     if source is None:source=sources()['client_api']
     if source['integrity']!='passed':raise ValueError('Client API source changed; review source registry before use')
     parsed=catalogue(PLUGIN/source['path'], include_search_details=include_search_details)

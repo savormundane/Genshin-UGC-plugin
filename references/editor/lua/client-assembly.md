@@ -1,6 +1,6 @@
 # Lua源码装配
 
-能力名：client-assembly。scripts/client_assembly.py使用Python标准库，输出单文件Lua、source-map.json和输入摘要；不要求宿主文件系统或require。
+能力名：client-assembly。scripts/miliastra/client/assembly.py使用Python标准库，输出单文件Lua、source-map.json和输入摘要；不要求宿主文件系统或require。
 
 ```text
 python scripts/qianxing.py client assemble CLIENT.json --out NEW_DIRECTORY

@@ -101,7 +101,7 @@ def collect(path,options,*,snapshot_root=None,inputs=None):
         elif kind=='asset_batch':
             for item in value['assets']:reference(source,item,'source')
         elif kind=='native':
-            from native_changes import operation_sources
+            from miliastra.native.changes import operation_sources
             for item in value['operations']:
                 for field in operation_sources(item):
                     if field=='source' and item.get('op')=='place_static_scene' and item[field]=='@scene':continue

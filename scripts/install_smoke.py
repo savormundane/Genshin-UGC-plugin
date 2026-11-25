@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 from mcp import Client, StdioServerParameters
 from beyond_native import NATIVE_BINARY, native_canvas_environment, read_native_lock, verify_native_files
-from mcp_bridge import OPERATIONS
+from miliastra.mcp.bridge import OPERATIONS
 
 
 async def check(config, node, adapter=None):

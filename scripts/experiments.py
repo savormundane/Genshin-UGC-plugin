@@ -1,7 +1,7 @@
 """Lua model experiments with immutable seed splits, paired observations and failures."""
 from pathlib import Path
 import argparse,json,time
-from authoring_io import *
+from authoring_io import canonical, finish, output_directory, read_json, resolve, schema, sha, write_json
 from joint_simulator import run as simulate
 
 def execute(spec,base):

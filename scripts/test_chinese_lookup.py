@@ -13,9 +13,9 @@ from mcp import Client, StdioServerParameters
 from PIL import Image, ImageDraw
 
 from authoring_io import PLUGIN, read_json, sha, write_json
-from client_api import analyze
+from miliastra.client.api import analyze
 import knowledge
-from native_scene import OBJECT_ID_START, read_gia, static_gia
+from miliastra.native.scene import OBJECT_ID_START, read_gia, static_gia
 from node_build import catalog
 from platform_profiles import search, show
 from resource_catalogue import catalogue, check as check_resources

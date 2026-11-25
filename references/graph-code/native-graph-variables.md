@@ -1,6 +1,6 @@
 # 节点图变量声明、默认值与访问
 
-能力名：native-graph-variables。scripts/native_graph_variables.py读取普通/复合图已校准的变量表及内建读写节点，检查声明、server VarBase默认值和静态访问类型，接入native inspect/audit、project索引、native diff和produce最终审计。仅使用包内读取器和Python标准库，原始输入只读。
+能力名：native-graph-variables。scripts/miliastra/native/graph_variables.py读取普通/复合图已校准的变量表及内建读写节点，检查声明、server VarBase默认值和静态访问类型，接入native inspect/audit、project索引、native diff和produce最终审计。仅使用包内读取器和Python标准库，原始输入只读。
 
 ## 使用与作用域
 

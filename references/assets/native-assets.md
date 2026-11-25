@@ -1,6 +1,6 @@
 # 原生GIA素材导入
 
-能力名：native-assets。scripts/native_assets.py读取已校准矩形装饰结构，依赖Python与Pillow，不启动GE或外部进程。
+能力名：native-assets。scripts/miliastra/native/assets.py读取已校准矩形装饰结构，依赖Python与Pillow，不启动GE或外部进程。
 
 ```text
 python scripts/qianxing.py assets import-gia SOURCE.gia --spec IMPORT.json --out NEW_DIRECTORY

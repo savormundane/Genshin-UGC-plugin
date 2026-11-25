@@ -119,7 +119,7 @@ def prepare_check_context(job_path, workspace, inputs):
         if graph.get('project_resources'):
             roots.append(resolve(graph_path.parent, graph['project_resources']))
     if 'storage' in job:
-        from storage_authoring import generate
+        from miliastra.storage import generate
 
         storage = job['storage']
         spec = configuration(resolve(job_path.parent, storage['spec']))

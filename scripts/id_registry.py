@@ -63,7 +63,7 @@ def plan(data,spec):
             'reservations':reservations,'complete_reference_index':False,'unresolved':index['unresolved'],
             'scope':'allocate_against_indexed_native_identities','native_modified':False}
     if spec.get('remap'):
-        from native_changes import plan as native_plan
+        from miliastra.native.changes import plan as native_plan
         operations=[];selected=set();used_allocations=set()
         for item in spec['remap']:
             schema(item,('graph_kind','graph_id','nodes'),('graph_kind','graph_id','nodes'))
@@ -112,7 +112,7 @@ def main(argv=None):
         if 'native_plan'in record:
             write_json(stage/'native-plan.json',record['native_plan'])
             if args.operation=='apply':
-                from native_changes import apply_plan
+                from miliastra.native.changes import apply_plan
                 changed,applied=apply_plan(raw,record['native_plan'],config.parent)
                 (stage/'level.gil').write_bytes(changed);write_json(stage/'native-report.json',applied)
         report=finish(stage,inputs,kind='native-ids-'+args.operation,native_modified=args.operation=='apply'and record['native_modified'])

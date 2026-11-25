@@ -1,6 +1,6 @@
 # 原生自定义变量索引
 
-能力名：native-variables。scripts/native_variables.py读取GIL中已校准的模板默认变量与实例覆盖，接入native inspect/audit、project inspect/check/consumers、native diff/plan及produce最终审计。依赖Python标准库、包内字段读取与结构体定义，不需要宿主文件系统或require。
+能力名：native-variables。scripts/miliastra/native/variables.py读取GIL中已校准的模板默认变量与实例覆盖，接入native inspect/audit、project inspect/check/consumers、native diff/plan及produce最终审计。依赖Python标准库、包内字段读取与结构体定义，不需要宿主文件系统或require。
 
 ## 读取与查询
 

@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 
 from authoring_io import finish, output_directory, resolve, schema, sha, write_json
-from native_scene import OBJECT_ID_END, OBJECT_ID_START, read_gia, static_gia, static_objects, vector
+from miliastra.native.scene import OBJECT_ID_END, OBJECT_ID_START, read_gia, static_gia, static_objects, vector
 
 VERSION = '7.2'
 MODE = 'beyond'
@@ -145,10 +145,10 @@ def capture_catalogue(source, out, version, mode):
 
 def inspect(path, terrain_id=None):
     from level_inventory import container, fields, unique, vals
-    from native_core import get
-    from native_scene import ordinary_object, typed_record
-    from native_scene_edits import describe_decoration
-    from native_scene_settings import inspect_settings
+    from miliastra.native.core import get
+    from miliastra.native.scene import ordinary_object, typed_record
+    from miliastra.native.scene_edits import describe_decoration
+    from miliastra.native.scene_settings import inspect_settings
     from project_index import build_scene
 
     data = Path(path).read_bytes()
@@ -200,7 +200,7 @@ def inspect(path, terrain_id=None):
 def preview(path, template_id, out):
     """Draw scale and local position as orthographic whitebox proxies."""
     from PIL import Image, ImageDraw
-    from native_scene_edits import WHITEBOX
+    from miliastra.native.scene_edits import WHITEBOX
 
     report = inspect(path)
     if report['format'] != 'gil':
@@ -238,10 +238,10 @@ def preview(path, template_id, out):
 def export_whitebox(path, template_id, out):
     """Export the shape dependencies of an empty-model GIL template."""
     from level_inventory import container, fields, unique, vals
-    from native_assets import primitive_group_gia
-    from native_core import get
-    from native_scene import GIL_HEADER, read_templates, typed_record
-    from native_scene_edits import WHITEBOX, decoration_links, describe_decoration, select_record
+    from miliastra.native.assets import primitive_group_gia
+    from miliastra.native.core import get
+    from miliastra.native.scene import GIL_HEADER, read_templates, typed_record
+    from miliastra.native.scene_edits import WHITEBOX, decoration_links, describe_decoration, select_record
 
     source=Path(path).resolve()
     raw=source.read_bytes()

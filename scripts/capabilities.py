@@ -1,19 +1,20 @@
 """Actual execution prerequisites and source-bound capability evidence."""
 import importlib.util,importlib.metadata,json,os,shutil,sys,subprocess
-from authoring_io import *
-from mcp_bridge import BUILTIN_OPERATIONS,OPERATIONS,project_context
+from pathlib import Path
+from authoring_io import PLUGIN, canonical, inventory, read_json, sha, sha_file
+from miliastra.mcp.bridge import BUILTIN_OPERATIONS,OPERATIONS,project_context
 from runtime_policy import REQUIREMENTS,supported_python
 from validation_evidence import execution_inventory,validation_dependencies,backend_inventory,case_coverage
 CAPABILITIES={
- 'knowledge':('knowledge.py','references/platform/knowledge-reliability.md'),'diagnosis':('project_diagnosis.py','references/workflows/project-diagnosis.md'),'asset_inspection':('asset_inspection.py','references/assets/asset-inspection.md'),
- 'mcp':('mcp_service.py','docs/mcp.md'), 'asset_batch':('asset_batch.py','references/assets/image-to-primitives.md'),
- 'native':('native_core.py','references/gil/native-maintenance.md'), 'storage':('storage_authoring.py','references/workflows/storage-authoring.md'),
+ 'knowledge':('knowledge.py','references/platform/knowledge-reliability.md'),'diagnosis':('project_diagnosis.py','references/workflows/project-diagnosis.md'),'asset_inspection':('miliastra/assets/inspection.py','references/assets/asset-inspection.md'),
+ 'mcp':('miliastra/mcp/service.py','docs/mcp.md'), 'asset_batch':('miliastra/assets/batch.py','references/assets/image-to-primitives.md'),
+ 'native':('miliastra/native/core.py','references/gil/native-maintenance.md'), 'storage':('miliastra/storage.py','references/workflows/storage-authoring.md'),
  'protocol':('protocol_codegen.py','references/workflows/protocol-v2.md'), 'ui':('runtime_ui.lua','references/editor/lua/runtime-ui.md'),
- 'assembly':('client_assembly.py','references/editor/lua/client-assembly.md'), 'simulation':('joint_simulator.py','references/workflows/joint-simulation.md'),
- 'algorithms':('runtime_algorithms.lua','references/workflows/algorithms-experiments.md'), 'asset_fit':('asset_fit.py','references/assets/asset-fit.md'),
- 'native_assets':('native_assets.py','references/assets/native-assets.md'),
- 'production':('production_v2.py','references/workflows/produce.md'),'platform':('platform_profiles.py','references/platform/platform-profiles.md'),
- 'project':('project_index.py','references/editor/project-index.md'),'native_changes':('native_changes.py','references/gil/native-changes.md'),
+ 'assembly':('miliastra/client/assembly.py','references/editor/lua/client-assembly.md'), 'simulation':('joint_simulator.py','references/workflows/joint-simulation.md'),
+ 'algorithms':('runtime_algorithms.lua','references/workflows/algorithms-experiments.md'), 'asset_fit':('miliastra/assets/fit.py','references/assets/asset-fit.md'),
+ 'native_assets':('miliastra/native/assets.py','references/assets/native-assets.md'),
+ 'production':('miliastra/production.py','references/workflows/produce.md'),'platform':('platform_profiles.py','references/platform/platform-profiles.md'),
+ 'project':('project_index.py','references/editor/project-index.md'),'native_changes':('miliastra/native/changes.py','references/gil/native-changes.md'),
  'scene':('scene_authoring.py','references/editor/native-scene.md')}
 SUPPORT={
  'knowledge':{'operations':['api_lookup','source_integrity','declared_derived_unknown','conflict_notes','versioned_document_selection'],'authority':'bundled document provenance; no inferred host success'},
@@ -48,41 +49,41 @@ SUPPORT={
 CAPABILITY_GROUPS = {
     'entrypoints': (
         'plugin.json', '.codex-plugin/plugin.json', 'mcp.json',
-        'scripts/qianxing.py', 'scripts/mcp_launcher.cjs', 'scripts/mcp_service.py', 'scripts/mcp_bridge.py', 'scripts/mcp_workspace.py',
+        'scripts/qianxing.py', 'scripts/mcp_launcher.cjs', 'scripts/miliastra/mcp/service.py', 'scripts/miliastra/mcp/bridge.py', 'scripts/miliastra/mcp/workspace.py',
         'scripts/mcp_worker.py', 'scripts/capability_index.py', 'scripts/capability-layers.json', 'scripts/capabilities.py',
         'pyproject.toml', 'uv.lock', 'scripts/runtime_policy.py',
     ),
     'editor': (
         'scripts/platform-sources.json', 'scripts/platform_profiles.py', 'scripts/platform_rules72.py',
         'scripts/platform_schema.py', 'scripts/platform_native.py', 'scripts/project_index.py',
-        'scripts/native_gameplay_index.py', 'scripts/native_scene.py', 'scripts/native_scene_edits.py',
-        'scripts/native_scene_settings.py',
+        'scripts/miliastra/native/gameplay_index.py', 'scripts/miliastra/native/scene.py', 'scripts/miliastra/native/scene_edits.py',
+        'scripts/miliastra/native/scene_settings.py',
     ),
     'graph': (
         'scripts/node_build.py', 'scripts/graph_validation.py', 'scripts/graph_resources.py',
-        'scripts/native_bindings.py', 'scripts/native_build.py', 'scripts/protocol_codegen.py',
-        'scripts/native_model.py', 'scripts/native_timers.py', 'vendor/ayaya/VENDORED.json',
+        'scripts/miliastra/native/bindings.py', 'scripts/miliastra/native/build.py', 'scripts/protocol_codegen.py',
+        'scripts/miliastra/native/model.py', 'scripts/miliastra/native/timers.py', 'vendor/ayaya/VENDORED.json',
     ),
     'client': (
-        'scripts/knowledge-sources.json', 'scripts/knowledge.py', 'scripts/client_api_catalogue.py',
-        'scripts/client_api.py', 'scripts/client_ast.cjs', 'scripts/client_check.py', 'scripts/client_references.py',
-        'scripts/client_assembly.py', 'scripts/client_variables.py', 'scripts/client_signal_binding.py',
+        'scripts/knowledge-sources.json', 'scripts/knowledge.py', 'scripts/miliastra/client/api_catalogue.py',
+        'scripts/miliastra/client/api.py', 'scripts/client_ast.cjs', 'scripts/miliastra/client/check.py', 'scripts/miliastra/client/references.py',
+        'scripts/miliastra/client/assembly.py', 'scripts/miliastra/client/variables.py', 'scripts/miliastra/client/signal_binding.py',
         'references/platform/community/client-controls-api.md', 'scripts/client_simulator.py',
         'scripts/client_simulator.lua', 'scripts/joint_simulator.py', 'scripts/beyond_backend.py',
         'scripts/beyond_gil.py', 'scripts/beyond_worker.mjs', 'vendor/beyond/bundle.json',
     ),
     'gil': (
-        'scripts/level_inventory.py', 'scripts/level_authoring.py', 'scripts/native_core.py', 'scripts/native_changes.py',
-        'scripts/native_ports.py', 'scripts/native-client-ports.json', 'scripts/native_resources.py', 'scripts/native_signals.py',
-        'scripts/native_structures.py', 'scripts/native_variables.py', 'scripts/native_prefabs.py', 'scripts/native_gameplay.py',
-        'scripts/native_economy.py', 'scripts/native_hud.py', 'scripts/native_client_ui.py', 'scripts/native_gia.py', 'scripts/storage_authoring.py',
-        'scripts/storage_v3.py', 'scripts/authoring_io.py', 'scripts/production_core.py', 'scripts/production_v2.py',
+        'scripts/level_inventory.py', 'scripts/level_authoring.py', 'scripts/miliastra/native/core.py', 'scripts/miliastra/native/changes.py',
+        'scripts/miliastra/native/ports.py', 'scripts/native-client-ports.json', 'scripts/miliastra/native/resources.py', 'scripts/miliastra/native/signals.py',
+        'scripts/miliastra/native/structures.py', 'scripts/miliastra/native/variables.py', 'scripts/miliastra/native/prefabs.py', 'scripts/miliastra/native/gameplay.py',
+        'scripts/miliastra/native/economy.py', 'scripts/miliastra/native/hud.py', 'scripts/miliastra/native/client_ui.py', 'scripts/miliastra/native/gia.py', 'scripts/miliastra/storage.py',
+        'scripts/miliastra/storage_v3.py', 'scripts/authoring_io.py', 'scripts/production_core.py', 'scripts/miliastra/production.py',
         'scripts/delivery_verify.py', 'scripts/portable_trust.py', 'scripts/portable_delivery.py',
     ),
     'assets': (
         'scripts/resource_catalogue.py', 'scripts/scene-model-candidates.json', 'scripts/scene_authoring.py', 'scripts/scene_preview.py',
-        'scripts/asset_pipeline.py', 'scripts/asset_batch.py', 'scripts/asset_core.py', 'scripts/asset_inspection.py',
-        'scripts/asset_fit.py', 'scripts/asset_fit_v2.py', 'scripts/native_assets.py',
+        'scripts/miliastra/assets/pipeline.py', 'scripts/miliastra/assets/batch.py', 'scripts/miliastra/assets/core.py', 'scripts/miliastra/assets/inspection.py',
+        'scripts/miliastra/assets/fit.py', 'scripts/miliastra/assets/fit_residual.py', 'scripts/miliastra/native/assets.py',
     ),
 }
 
@@ -128,19 +129,19 @@ def doctor(compare=None):
     status='failed' if not supported or not node_supported or imports.returncode or any(r['status']=='failed' for r in dependencies.values()) else 'not_checked' if any(r['status']=='not_checked' for r in dependencies.values()) else 'passed'
     fingerprint_files = (
         'plugin.json', 'mcp.json', '.codex-plugin/plugin.json', 'scripts/qianxing.py',
-        'scripts/mcp_launcher.cjs', 'scripts/mcp_service.py', 'scripts/mcp_bridge.py', 'scripts/mcp_workspace.py',
+        'scripts/mcp_launcher.cjs', 'scripts/miliastra/mcp/service.py', 'scripts/miliastra/mcp/bridge.py', 'scripts/miliastra/mcp/workspace.py',
         'scripts/mcp_worker.py', 'scripts/capability_index.py', 'scripts/capabilities.py',
-        'scripts/project_index.py', 'scripts/native_gameplay_index.py', 'scripts/native_bindings.py', 'scripts/authoring_io.py',
-        'scripts/native_core.py', 'scripts/native_changes.py', 'scripts/native_ports.py',
-        'scripts/native-client-ports.json', 'scripts/native_resources.py', 'scripts/native_signals.py', 'scripts/native_structures.py',
-        'scripts/native_scene.py', 'scripts/native_scene_edits.py', 'scripts/native_scene_settings.py', 'scripts/scene_preview.py', 'scripts/level_inventory.py',
-        'scripts/native_prefabs.py', 'scripts/native_gameplay.py', 'scripts/native_economy.py', 'scripts/native_hud.py',
-        'scripts/native_gia.py', 'scripts/storage_authoring.py', 'scripts/storage_v3.py',
-        'scripts/asset_pipeline.py', 'scripts/asset_core.py', 'scripts/asset_fit.py', 'scripts/asset_fit_v2.py',
-        'scripts/client_check.py', 'scripts/client_simulator.py', 'scripts/client_simulator.lua',
-        'scripts/joint_simulator.py', 'scripts/native_model.py', 'scripts/native_timers.py', 'scripts/beyond_gil.py',
+        'scripts/project_index.py', 'scripts/miliastra/native/gameplay_index.py', 'scripts/miliastra/native/bindings.py', 'scripts/authoring_io.py',
+        'scripts/miliastra/native/core.py', 'scripts/miliastra/native/changes.py', 'scripts/miliastra/native/ports.py',
+        'scripts/native-client-ports.json', 'scripts/miliastra/native/resources.py', 'scripts/miliastra/native/signals.py', 'scripts/miliastra/native/structures.py',
+        'scripts/miliastra/native/scene.py', 'scripts/miliastra/native/scene_edits.py', 'scripts/miliastra/native/scene_settings.py', 'scripts/scene_preview.py', 'scripts/level_inventory.py',
+        'scripts/miliastra/native/prefabs.py', 'scripts/miliastra/native/gameplay.py', 'scripts/miliastra/native/economy.py', 'scripts/miliastra/native/hud.py',
+        'scripts/miliastra/native/gia.py', 'scripts/miliastra/storage.py', 'scripts/miliastra/storage_v3.py',
+        'scripts/miliastra/assets/pipeline.py', 'scripts/miliastra/assets/core.py', 'scripts/miliastra/assets/fit.py', 'scripts/miliastra/assets/fit_residual.py',
+        'scripts/miliastra/client/check.py', 'scripts/client_simulator.py', 'scripts/client_simulator.lua',
+        'scripts/joint_simulator.py', 'scripts/miliastra/native/model.py', 'scripts/miliastra/native/timers.py', 'scripts/beyond_gil.py',
         'scripts/beyond_backend.py', 'scripts/beyond_worker.mjs', 'scripts/node_build.py', 'scripts/graph_validation.py',
-        'scripts/native_build.py', 'scripts/production_core.py', 'scripts/production_v2.py',
+        'scripts/miliastra/native/build.py', 'scripts/production_core.py', 'scripts/miliastra/production.py',
         'vendor/ayaya/VENDORED.json', 'vendor/beyond/bundle.json',
     )
     return {'schema':2,'status':status,

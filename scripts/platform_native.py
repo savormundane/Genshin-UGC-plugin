@@ -2,9 +2,9 @@
 import math,struct
 from authoring_io import PLUGIN,sha
 from level_authoring import flt,msg,set_section
-from native_core import model,get,ref,slot,replace_message
-from native_ports import reference_error
-from native_model import constant
+from miliastra.native.core import model,get,ref,slot,replace_message
+from miliastra.native.ports import reference_error
+from miliastra.native.model import constant
 from level_inventory import calibrated_container,fields,vals
 
 

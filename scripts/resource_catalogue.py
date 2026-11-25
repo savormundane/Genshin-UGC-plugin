@@ -36,7 +36,7 @@ def model_row(row, directory, version, inputs, samples):
         raise ValueError('Model source digest mismatch')
     inputs[str(path)] = digest
     if selection == 'native_verified':
-        from native_scene import static_objects
+        from miliastra.native.scene import static_objects
 
         key = (path, digest)
         if key not in samples:
@@ -48,14 +48,14 @@ def model_row(row, directory, version, inputs, samples):
         raise ValueError('Model source line absent')
     dims = row.get('dimensions')
     if dims is not None:
-        from native_scene import vector
+        from miliastra.native.scene import vector
 
         dims = vector(dims, 'Model dimensions')
         if min(dims) < 0:
             raise ValueError('Model dimensions must be nonnegative')
     dimensions_evidence = 'not_checked'
     if 'dimensions_source' in row:
-        from native_scene import vector
+        from miliastra.native.scene import vector
 
         evidence = row['dimensions_source']
         schema(evidence, ('path', 'sha256'), ('path', 'sha256'))

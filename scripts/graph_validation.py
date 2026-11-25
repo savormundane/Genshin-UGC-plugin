@@ -125,7 +125,7 @@ def validate_rules(source, runtime, cache=None, workspace=None):
 
 def check(source, bindings_path=None, job_path=None):
     from node_build import RUNTIME, metadata
-    from native_bindings import Bindings, expand_graph, read_bindings
+    from miliastra.native.bindings import Bindings, expand_graph, read_bindings
 
     source = Path(source).resolve()
     inputs = ProductionInputs()
@@ -235,7 +235,7 @@ def main(argv=None):
     bind.add_argument('--out',required=True)
     args = parser.parse_args(argv)
     if args.operation=='bind':
-        from native_bindings import bind_selectors, rebase_bindings
+        from miliastra.native.bindings import bind_selectors, rebase_bindings
 
         if bool(args.old_gil)!=bool(args.bindings) or not (args.old_gil or args.spec):
             bind.error('Provide --spec, or --from and --bindings with optional --spec selections')

@@ -73,7 +73,7 @@ function start() {
     'plugin.json', 'pyproject.toml', 'uv.lock', 'scripts/runtime_policy.py', 'scripts/qianxing.py',
     'scripts/runtime-env-renames.json',
     'scripts/node_build.py', 'scripts/level_inventory.py', 'scripts/graph_validation.py', 'scripts/authoring_io.py',
-    'scripts/mcp_service.py', 'scripts/mcp_bridge.py', 'scripts/mcp_workspace.py', 'scripts/mcp_worker.py',
+    'scripts/miliastra/mcp/service.py', 'scripts/miliastra/mcp/bridge.py', 'scripts/miliastra/mcp/workspace.py', 'scripts/mcp_worker.py',
   ];
   const missing = startupFiles.filter(file => !fs.statSync(path.join(plugin, file), {throwIfNoEntry: false})?.isFile());
   if (missing.length) {

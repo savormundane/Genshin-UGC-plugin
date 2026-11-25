@@ -9,8 +9,8 @@ from unittest.mock import patch
 
 from PIL import Image, PngImagePlugin
 
-from asset_fit import build, fit, parameters
-from asset_fit_v2 import residual_index
+from miliastra.assets.fit import build, fit, parameters
+from miliastra.assets.fit_residual import residual_index
 from authoring_io import inventory, write_json
 from delivery_verify import verify
 

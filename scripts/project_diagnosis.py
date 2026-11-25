@@ -19,12 +19,12 @@ def diagnose(path):
             from capabilities import doctor
             result=doctor();status=result['status']
         elif kind=='lua':
-            from client_check import inspect
+            from miliastra.client.check import inspect
             contract=None
             if 'contract'in check:
                 c=resolve(path.parent,check['contract']);inputs[str(c)]=sha(c.read_bytes());contract=read_json(c)
             result=inspect(source,contract=contract);status=result['status']
-            from client_api import analyze
+            from miliastra.client.api import analyze
             if source.suffix.lower()=='.lua' and result['checks']['syntax']=='passed':
                 # The contract-aware inspector already resolved and verified bindings.
                 analysis=result['scripts'][0]['api'] if contract is not None else analyze(source.read_text(encoding='utf-8-sig'))
@@ -50,10 +50,10 @@ def diagnose(path):
                     if any(a<=call['range'][0]<b for a,b in update_ranges) and any(token in call['name'] for token in ('Create','Instantiate','Set','Refresh')):
                         rows.append(finding('ui_update_work','warning','not_checked','static',source,call,scope='possible per-frame cost; execution frequency and device performance not measured'))
         elif kind=='native':
-            from native_core import audit
+            from miliastra.native.core import audit
             result=audit(source.read_bytes());status=result['status']
         else:
-            from asset_inspection import inspect
+            from miliastra.assets.inspection import inspect
             result=inspect(source);status=result['status']
         if 'budget'in check:
             schema(check['budget'],('controls',),('controls',));budget=check['budget']['controls']

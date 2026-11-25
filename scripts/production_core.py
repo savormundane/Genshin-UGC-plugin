@@ -2,7 +2,7 @@
 from pathlib import Path
 import hashlib,json,math,os,re,shutil,struct,tempfile
 from level_inventory import calibrated_container,fields,vals,unique,container
-from asset_core import ASSET_GENERATORS
+from miliastra.assets.core import ASSET_GENERATORS
 PLUGIN=Path(__file__).resolve().parents[1]
 def sha(data):return hashlib.sha256(data).hexdigest()
 def load(path):return json.loads(Path(path).read_text(encoding='utf-8-sig'))
@@ -122,12 +122,12 @@ def replace_lua(data,mapping,code):
     return result
 
 def _produce(spec_path,out,evidence,*,include_runtime=True,fallback_gil=None):
-    from asset_pipeline import lua
+    from miliastra.assets.pipeline import lua
     from authoring_io import ProductionInputs, require_active_baseline
     path=Path(spec_path).resolve();base=path.parent
     job_bytes=path.read_bytes();job=json.loads(job_bytes.decode('utf-8-sig'))
     if job.get('schema')==2:
-        from production_v2 import produce as produce_v2
+        from miliastra.production import produce as produce_v2
         evidence['v3_pipeline']={'status':'not_checked','reason':'in_progress'}
         return produce_v2(path,out,evidence,job=job,job_digest=sha(job_bytes))
     keys(job,('schema','client','protocol','protocol_native','assets','animation','graphs','gil','level'),('schema',))
@@ -161,7 +161,7 @@ def _produce(spec_path,out,evidence,*,include_runtime=True,fallback_gil=None):
             stages.append('native_level_generation');state('level_generation','passed');state('client_bindings','passed')
         if 'assets' in job:
             state('assets','not_checked','in_progress')
-            from asset_pipeline import generate
+            from miliastra.assets.pipeline import generate
             if not isinstance(job['assets'],list):raise ValueError('assets must be a list')
             for item in job['assets']:
                 keys(item,('name','source','options'),('name','source'))

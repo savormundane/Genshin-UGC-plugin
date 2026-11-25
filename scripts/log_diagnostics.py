@@ -2,8 +2,8 @@
 from pathlib import Path
 import argparse,json,re
 from authoring_io import schema,read_json,resolve,sha
-from client_check import inspect
-from client_assembly import locate
+from miliastra.client.check import inspect
+from miliastra.client.assembly import locate
 
 
 def diagnose(path):

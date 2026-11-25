@@ -9,8 +9,8 @@ import unittest
 from authoring_io import DiagnosticError, PLUGIN, read_json, sha
 from level_authoring import flt, initial_level, integer, msg, pack, set_section, text, vi
 from level_inventory import container, fields, unique, vals
-from native_changes import apply_plan, difference, fingerprint, plan
-from native_core import get
+from miliastra.native.changes import apply_plan, difference, fingerprint, plan
+from miliastra.native.core import get
 from project_index import build, consumers
 
 STATIC = 0x40400002
