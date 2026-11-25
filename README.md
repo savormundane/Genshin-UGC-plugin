@@ -67,6 +67,7 @@ Miliastra Wonderland 是面向原神「千星奇域」创作者的非官方 AI �
 - 感谢 8itlab 及贡献者整理音效、特效资料和场景样例。[genshin-miliastra-mcp](https://github.com/8itlab/genshin-miliastra-mcp)
 - 感谢 XingGou 分享静态 GIA 和坐标转换的研究，Miliastra-Tools 分享白盒枢轴的做法。[XingGou](https://github.com/Crazyfourrrrrrrrrrr/XingGou) · [Miliastra-Tools](https://github.com/Ayn1631/Miliastra-Tools)
 - 感谢社区分享千星奇域文件格式和生成工具的研究。[genshin-miliastra-file-format](https://github.com/script-1024/genshin-miliastra-file-format) · [UGC-File-Generate-Utils](https://github.com/luern0313/UGC-File-Generate-Utils) 
+
 [第三方声明](THIRD_PARTY_NOTICES.md)
 
 ## 许可证
