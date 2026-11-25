@@ -16,7 +16,7 @@ NativeModel读取GIL中的Start_Timer(79)、Pause_Timer(80)、Resume_Timer(81)�
 
 客户端tick接收各边界间隔，不主动提取客户端内部Tween/任务的到期时间，未实现完整宿主帧调度。暂停时钟仅属于该计时器，未实现完整宿主暂停、实体销毁或持久化生命周期。
 
-依据为references/official/概念介绍/定时器__mhufb90zbnts.md、包内plugins/nodes/server对应五个节点签名及node_data/index.json。序列事件、循环和暂停恢复来自官方文档，编号和同帧排序作为明确模型约定。完整平台计时器UI绑定、全局计时器及隐藏引擎行为不在此模型范围。
+依据为[官方《定时器》](../platform/official/概念介绍/定时器__mhufb90zbnts.md)、包内 plugins/nodes/server 对应的五个节点签名和 node_data/index.json。序列事件、循环和暂停恢复来自官方文档。编号和同帧排序属于模型约定。完整平台计时器 UI 绑定、全局计时器及隐藏引擎行为不在此模型范围。
 
 test_native_timers覆盖两套时间序列、同名不同实体、暂停恢复、替换、循环、终止及非法序列；两套序列化GIL通过实际节点触发事件，再由独立Lua客户端收到Reply并断言。该证据是受限原生图和Lua联合模型，不是本批重新编译Graph Code、编辑器导入或实机计时验收。
 
