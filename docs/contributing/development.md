@@ -31,6 +31,35 @@ $ugcPython = (Resolve-Path .\.venv\Scripts\python.exe).Path
 
 使用已有专用 Python 时，将 `$ugcPython` 设为该解释器的绝对路径。公开测试会生成自己的输入。本地检查即可用于 PR，编辑器导入和游戏运行按任务记录。[验证分层](../compatibility.md#验证分层)
 
+## Python 格式化
+
+使用 Ruff 0.15.0 逐批格式化维护中的 Python 文件。首批覆盖制作、原生核心、拟合和相关输入边界。从仓库根检查或格式化时指定文件路径。
+
+```powershell
+$paths = @(
+    'scripts/authoring_io.py'
+    'scripts/production_core.py'
+    'scripts/miliastra/production.py'
+    'scripts/miliastra/native/core.py'
+    'scripts/miliastra/assets/fit.py'
+    'scripts/miliastra/assets/fit_residual.py'
+    'scripts/miliastra/storage.py'
+    'scripts/miliastra/storage_v3.py'
+    'scripts/miliastra/client/check.py'
+    'scripts/miliastra/mcp/workspace.py'
+)
+ruff format --check @paths
+```
+
+## 旧配置的退出版本
+
+| 从 V1.2.0 起列为弃用的入口 | 计划移除 | 现有配置如何处理 |
+| --- | --- | --- |
+| `produce` 顶层 schema 1 任务 | V2.0.0 | 按 schema 2 改写任务并核对 GIL 映射和交付摘要。[制作指南](../../references/workflows/produce.md) |
+| `assets fit` 的 schema 1 配置和续跑 | V2.0.0 | 使用 schema 2 参数，可通过 `--initial` 导入旧检查点中的图元。[拟合指南](../../references/assets/asset-fit.md) |
+
+制作的 schema 2 流程也调用当前的资源、图编译和 Lua 写回阶段。退出顶层 schema 1 前先保留这些阶段的复用路径，按现有样例复测。存储的 schema 3 图和适配器由 `storage_v3.py` 生成，`runtime_migration.lua` 负责旧记录的候选生成，提交存档仍走存储适配器的确认流程。[存储迁移](../../references/workflows/storage-migration.md)
+
 ## 复现已有工程的修改流程
 
 ```powershell

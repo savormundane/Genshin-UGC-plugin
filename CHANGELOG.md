@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- 整理原生、Lua、素材及 MCP 的 Python 实现目录，保持现有命令和工程工具入口。计划在 V2.0.0 移除 `produce` 顶层 schema 1 和 `assets fit` schema 1 的执行入口。
+
 - 将插件环境变量统一为 `MILIASTRA_WONDERLAND_*`。启动时遇到此前的配置键，会提示对应的新名称。
 - PowerShell 安装、回退和 MCP 只使用 Miliastra Wonderland 的安装布局。
 - 四个 Skill 更名为 Miliastra Editor、Miliastra Graph Code、Miliastra GIL 和 Miliastra Assets。

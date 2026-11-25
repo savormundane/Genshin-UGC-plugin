@@ -1,5 +1,7 @@
 # Schema 1 制作配置
 
+顶层 `produce` schema 1 任务从 V1.2.0 起列为弃用，计划在 V2.0.0 移除该入口。迁移时按 [Schema 2 制作指南](produce.md)调整任务和 GIL 映射。任务内的协议、动画和关卡配置各自使用对应指南的 schema。
+
 schema 2的装配、原生修改、存储、联合模型与独立重建见 [可执行制作](produce.md)。下文保留schema 1的接口与兼容行为，新增复杂协议见 [协议schema 2](protocol-v2.md)。
 
 Schema 1 配置通过 `qianxing.py produce` 执行。下列示例使用随包的 Lua 装配、素材和原生文件工具。

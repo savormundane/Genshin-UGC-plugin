@@ -9,16 +9,17 @@ from urllib.request import url2pathname
 from authoring_io import PLUGIN, read_json, sha
 
 
-def linked(path):
+def linked(path: Path) -> bool:
     try:
         info = path.lstat()
     except FileNotFoundError:
         return False
     return stat.S_ISLNK(info.st_mode) or bool(
-        getattr(info, 'st_file_attributes', 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT)
+        getattr(info, 'st_file_attributes', 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
+    )
 
 
-def directory(value, *, create=False):
+def directory(value: str | Path, *, create: bool = False) -> Path:
     path = Path(os.path.abspath(value))
     if any(linked(part) for part in (path, *path.parents)):
         raise ValueError('Linked workspace or output directory refused')
@@ -27,7 +28,7 @@ def directory(value, *, create=False):
     return path.resolve()
 
 
-def data_directory():
+def data_directory() -> Path | None:
     value = os.environ.get('MILIASTRA_WONDERLAND_PLUGIN_DATA')
     if value and Path(value).is_absolute():
         return Path(value)
@@ -46,7 +47,11 @@ def runtime_workspace(data):
     if not path.is_absolute():
         raise ValueError('MILIASTRA_WONDERLAND_RUNTIME_CONFIG must be an absolute path')
     record = read_json(path)
-    if not isinstance(record, dict) or type(record.get('schema')) is not int or record['schema'] != 1:
+    if (
+        not isinstance(record, dict)
+        or type(record.get('schema')) is not int
+        or record['schema'] != 1
+    ):
         raise ValueError('Invalid runtime binding')
     for field in ('project_root', 'output_root'):
         value = record.get(field)
@@ -64,9 +69,15 @@ def workspace(project, output, roots=(), arguments=None):
             record = runtime_workspace(data)
     except (OSError, ValueError, RuntimeError) as exc:
         config_error = str(exc)
-    context = {'status': 'unconfigured', 'project_root': None, 'output_root': None,
-               'source': None, 'output_source': None, 'candidates': [],
-               'missing': ['project_root', 'output_root']}
+    context = {
+        'status': 'unconfigured',
+        'project_root': None,
+        'output_root': None,
+        'source': None,
+        'output_source': None,
+        'candidates': [],
+        'missing': ['project_root', 'output_root'],
+    }
     try:
         candidates = []
         if project:
@@ -76,7 +87,12 @@ def workspace(project, output, roots=(), arguments=None):
             for uri in roots:
                 try:
                     location = urlsplit(uri)
-                    if location.scheme != 'file' or location.netloc or location.query or location.fragment:
+                    if (
+                        location.scheme != 'file'
+                        or location.netloc
+                        or location.query
+                        or location.fragment
+                    ):
                         continue
                     path = Path(url2pathname(location.path))
                     if not path.is_absolute():
@@ -91,20 +107,38 @@ def workspace(project, output, roots=(), arguments=None):
                 raise ValueError('MCP client supplied no usable local workspace directory')
             if len(candidates) > 1:
                 arguments = arguments or {}
-                value = next((arguments[key] for key in ('input', 'spec', 'other', 'before', 'catalogue')
-                              if isinstance(arguments.get(key), str) and Path(arguments[key]).is_absolute()), None)
+                value = next(
+                    (
+                        arguments[key]
+                        for key in ('input', 'spec', 'other', 'before', 'catalogue')
+                        if isinstance(arguments.get(key), str)
+                        and Path(arguments[key]).is_absolute()
+                    ),
+                    None,
+                )
                 path = Path(os.path.abspath(value)) if value else None
                 # A previous output may itself be the primary input of the next request.
-                matches = [candidate for candidate in candidates if path and (
-                    path.is_relative_to(candidate) or data and
-                    path.is_relative_to(workspace_outputs(data, candidate)))]
+                matches = [
+                    candidate
+                    for candidate in candidates
+                    if path
+                    and (
+                        path.is_relative_to(candidate)
+                        or data
+                        and path.is_relative_to(workspace_outputs(data, candidate))
+                    )
+                ]
                 if len(matches) != 1:
-                    return {**context, 'status': 'ambiguous', 'source': 'mcp_roots',
-                            'message': '会话中有多个工程目录。请提供能定位到其中一个已授权工程的输入文件绝对路径后重试。',
-                            'detail': 'Use an absolute input path identifying one authorized workspace'}
-                selected, = matches
+                    return {
+                        **context,
+                        'status': 'ambiguous',
+                        'source': 'mcp_roots',
+                        'message': '会话中有多个工程目录。请提供能定位到其中一个已授权工程的输入文件绝对路径后重试。',
+                        'detail': 'Use an absolute input path identifying one authorized workspace',
+                    }
+                (selected,) = matches
             else:
-                selected, = candidates
+                (selected,) = candidates
             source = 'mcp_roots'
         elif record.get('project_root'):
             selected = directory(record['project_root'])
@@ -112,32 +146,50 @@ def workspace(project, output, roots=(), arguments=None):
         else:
             if config_error:
                 raise ValueError(config_error)
-            return {**context,
-                    'message': '尚未绑定工程目录。请在客户端打开并授权工程目录，或在启动客户端的终端将 MILIASTRA_WONDERLAND_PROJECT_ROOT 设为工程的绝对路径。已有 runtime.json 时可填写 project_root 后重试。',
-                    'detail': 'Open a workspace in an MCP client that provides Roots, or set a project in runtime.json or MILIASTRA_WONDERLAND_PROJECT_ROOT'}
+            return {
+                **context,
+                'message': '尚未绑定工程目录。请在客户端打开并授权工程目录，或在启动客户端的终端将 MILIASTRA_WONDERLAND_PROJECT_ROOT 设为工程的绝对路径。已有 runtime.json 时可填写 project_root 后重试。',
+                'detail': 'Open a workspace in an MCP client that provides Roots, or set a project in runtime.json or MILIASTRA_WONDERLAND_PROJECT_ROOT',
+            }
         if selected == Path(selected.anchor):
             raise ValueError('Project root must be a specific directory')
     except (OSError, ValueError, RuntimeError) as exc:
-        return {**context, 'status': 'invalid',
-                'message': '无法使用当前工程目录。请确认目录存在并已在客户端授权，或检查 MILIASTRA_WONDERLAND_PROJECT_ROOT 与 runtime.json 中的 project_root。修正后重试。',
-                'detail': str(exc)}
+        return {
+            **context,
+            'status': 'invalid',
+            'message': '无法使用当前工程目录。请确认目录存在并已在客户端授权，或检查 MILIASTRA_WONDERLAND_PROJECT_ROOT 与 runtime.json 中的 project_root。修正后重试。',
+            'detail': str(exc),
+        }
 
-    context.update(status='ready', project_root=str(selected), source=source, missing=['output_root'])
+    context.update(
+        status='ready', project_root=str(selected), source=source, missing=['output_root']
+    )
     runtime_project = record.get('project_root')
-    configured = output or (record.get('output_root') if not runtime_project or Path(runtime_project) == selected else None)
+    configured = output or (
+        record.get('output_root')
+        if not runtime_project or Path(runtime_project) == selected
+        else None
+    )
     if not configured and data is None:
-        context['output_message'] = 'Set MILIASTRA_WONDERLAND_OUTPUT_ROOT or use a local plugin data directory'
+        context['output_message'] = (
+            'Set MILIASTRA_WONDERLAND_OUTPUT_ROOT or use a local plugin data directory'
+        )
         return context
     try:
         target = directory(configured or workspace_outputs(data, selected), create=not configured)
-        if any(target.is_relative_to(owner) or owner.is_relative_to(target)
-               for owner in [selected, PLUGIN, *candidates]):
+        if any(
+            target.is_relative_to(owner) or owner.is_relative_to(target)
+            for owner in [selected, PLUGIN, *candidates]
+        ):
             raise ValueError('Output directory must be separate from workspace and plugin source')
     except (OSError, ValueError, RuntimeError) as exc:
         context['output_message'] = str(exc)
         return context
-    context.update(output_root=str(target), missing=[],
-                   output_source='explicit' if output else 'runtime_config' if configured else 'plugin_data')
+    context.update(
+        output_root=str(target),
+        missing=[],
+        output_source='explicit' if output else 'runtime_config' if configured else 'plugin_data',
+    )
     return context
 
 

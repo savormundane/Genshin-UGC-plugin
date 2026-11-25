@@ -11,7 +11,7 @@ python scripts/qianxing.py assets fit icon.png --spec fit.json --resume PARTIAL/
 配置示例：
 
 ```json
-{"schema":1,"shapes":["circle","ellipse","line","rect"],"budget":80,"max_controls":1000,"alpha_min":1,"work":4000,"seed":7,"target_error":0.001,"anchor":[0,0],"gia":true}
+{"schema":2,"shapes":["circle","ellipse","line","rect"],"budget":80,"max_controls":1000,"alpha_min":1,"work":4000,"seed":7,"target_error":0.001,"anchor":[0,0],"gia":true}
 ```
 
 圆与椭圆轴对齐；线限水平或垂直一像素线。坐标为图像左上原点，box右／下端不包含；anchor为像素锚点。旋转、投影及未知配置拒绝。budget限制拟合图元数，max_controls限制转换后的矩形控件数。work为最多评估的候选数，steps仅控制当前运行的工作量，不改变全局预算。
@@ -32,7 +32,7 @@ gia=true使用相同矩形数据与已校准XY平面封装；空图拒绝GIA输�
 
 ## Schema 2：交付预算与残差搜索
 
-显式使用schema 2启用新算法；schema 1保持旧搜索与检查点行为，不自动迁移。
+新任务使用 schema 2。Schema 1 拟合配置的启动和恢复从 V1.2.0 起列为弃用，计划在 V2.0.0 移除。旧检查点可用 `--initial` 将已有图元作为 schema 2 搜索的起点。
 
 ```json
 {"schema":2,"shapes":["rect","ellipse","circle","line"],"budget":80,"max_controls":1000,"max_total_controls":1500,"work":4000,"seed":7,"target_error":0.001,"gia":true}

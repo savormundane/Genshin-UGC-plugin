@@ -10,7 +10,7 @@
 
 ## 制作配置
 
-制作配置使用 schema 2，工具按所选阶段检查依赖。[Schema 1 兼容配置](produce-schema1.md)也可独立执行。
+新制作配置使用 schema 2，工具按所选阶段检查依赖。已有 [Schema 1 制作配置](produce-schema1.md)在 1.x 仍可独立执行，计划在 V2.0.0 移除该入口。
 
 schema 2支持client、level、storage、native、assets、protocol、protocol_native、animation、graphs、gil、simulation、experiment、platform、project，至少一项；可增加portable配置启用[可迁移制作与重建](portable-delivery.md)。client选择source或assembly；其余阶段以spec路径引用同名指南中的配置。native选择base，以及spec或[摘要绑定plan](../gil/native-changes.md)其中之一；与level新建互斥。所有配置相对各自文件解析，输出必须是新目录。
 

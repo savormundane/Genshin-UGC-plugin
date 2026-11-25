@@ -11,3 +11,11 @@ dependencies = [
 [tool.uv]
 package = false
 environments = ["sys_platform == 'win32' and platform_machine == 'AMD64' and implementation_name == 'cpython'"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = ["vendor", "references"]
+
+[tool.ruff.format]
+quote-style = "preserve"
