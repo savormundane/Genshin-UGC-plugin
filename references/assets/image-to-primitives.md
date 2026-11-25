@@ -1,23 +1,13 @@
 # 图片转图元
 
-单张 PNG 可以直接比较图元预览和控件数，然后按选中的候选生成矩形数据及 Lua。先确认目标尺寸和当前工程的控件预算。需要为多张图共用预算，或为分层素材做续算时，使用本页对应的命令行入口。
-
-## 素材任务与客户端能力
-
-| 任务 | 所需客户端能力 |
-| --- | --- |
-| 查找原生模型和模板 ID | 本地 MCP 的 `resources_lookup`，或终端的 `resources search`。 |
-| 单张 PNG 转矩形图元 | 本地 MCP 先用 `asset_preview` 比较候选，再用 `asset_generate` 生成所选方案。终端可用 `assets preview/generate`。 |
-| 自定网格、富文本和参数化图形 | 用终端运行 `assets preview/generate`，指定相应参数或图形 JSON。 |
-| 多素材共用控件预算 | 用终端执行 `assets batch preview/generate`。已有预算报告和制作配置时，可通过 MCP 的 `produce` 执行 `kind: "batch"` 生成步骤。 |
-| 分层拟合和续算 | 用 MCP `asset_fit` 或终端 `assets fit`。配置 `mount` 可生成可挂载 Lua 和 Beyond 预览配置。 [拟合配置](asset-fit.md) |
+先确定目标尺寸和控件预算。单张 PNG 可走本地 MCP。自定网格、富文本、参数化图形或共用多图预算可用下面的终端命令。分层拟合及续算见[拟合配置](asset-fit.md)。
 
 ## 单张 PNG 试算与生成
 
 1. 将 PNG 放入客户端已授权的工程目录。调用 `asset_preview`，传入 `input`、新目录 `output` 和任务需要的 `max_controls`。例如将 `checkpoint-marker.png` 试算到 `marker-review`，设定 20 个控件的预算。
 2. 工具依次展示参考方案、首选推荐以及更省控件的可用方案，标签注明控件数与预算状态。参考方案采用原尺寸或指定采样网格。同一候选只展示一次。没有可用候选时，查看参考方案和报告诊断。还可以在 `result.candidates` 查看全部试算结果，打开各候选的 `display_preview`。路径相对于返回的 `output`。
 3. 调用 `asset_generate`。继续使用同一 `input`，以 `inputs_sha256.input` 为 `sha256`。把试算输出目录下 `report.json` 的绝对路径作为 `report`，从 `outputs_sha256["report.json"]` 取 `report_sha256`。填入确切的 `candidate` 名称和新的 `output`，例如 `marker-material`。源图或报告改变后，重新试算再选方案。
-4. 核对 `result.controls` 和最终参考图。生成目录含 `asset.json`、`data.lua`、`preview.png`、`report.json` 和 `manifest.json`。文件摘要见 `outputs_sha256`。按数据中的坐标及格式接入客户端界面，在目标宿主检查显示。
+4. 核对 `result.controls` 和最终参考图。文件摘要见 `outputs_sha256`。按[输出格式](#共同处理与输出)接入客户端界面，在目标宿主检查显示。
 
 [跟做 PNG 样例](../../samples/creator-demos/png/README.md) · [MCP 工具与路径规则](../../docs/mcp.md) · [已有制作配置](../workflows/produce.md)
 
@@ -65,7 +55,7 @@ python scripts/qianxing.py assets batch generate REVIEW/report.json --out GENERA
 
 每项可给 `display`、`min_grid`、`max_error` 和生成 `options`。预览先为每项选满足约束且消耗最低的候选，再按单位控件带来的加权误差改善分配余额。预算不足时查看 `minimum_controls`。缺少可用候选时按报告给出的素材键调整输入或约束。
 
-生成时核对源摘要、实际控件数和参考图摘要。交付目录中的 `catalog.json` 给出各项资源，`data.json` 汇集 Lua 可用的数据。制作链 `assets` 可加 `{"name":"hud","kind":"batch","source":"REVIEW/report.json"}`。已有 GIL 的 Lua 脚本可通过 [`append_client_ui`](../gil/native-authoring.md#追加客户端界面模块) 直接使用这份数据。
+生成时核对源摘要、实际控件数和参考图摘要。`catalog.json` 给出各项资源，`data.json` 汇集 Lua 可用的数据。已有试算报告也可通过 MCP `produce` 生成，在配置的 `assets` 中加 `{"name":"hud","kind":"batch","source":"REVIEW/report.json"}`。已有 GIL 的 Lua 脚本可通过 [`append_client_ui`](../gil/native-authoring.md#追加客户端界面模块) 使用这份数据。
 
 ## 分层拟合与续算
 

@@ -35,12 +35,12 @@ OWNERS={
     'simulation':('graph','client'),'algorithms':('client',),'native_assets':('assets','gil'),
     'production':(), 'platform':('editor',),'project':('editor',),'native_changes':('gil',),'scene':('editor','gil','assets')}
 WORKFLOWS={
-    'multiplayer':{'domains':['graph','client'],'capabilities':['protocol','simulation'],'guide':'references/workflows/qianxing-multiplayer/README.md'},
+    'multiplayer':{'domains':['graph','client'],'capabilities':['protocol','simulation'],'guide':'references/workflows/protocol-v2.md'},
     'animation':{'domains':['client','assets'],'capabilities':['ui','assembly'],'guide':'references/assets/animation.md'},
     'storage':{'domains':['editor','graph','client','gil'],'capabilities':['storage'],'guide':'references/workflows/storage-authoring.md'},
-    'gil-assembly':{'domains':['gil','graph','client'],'capabilities':['native','production'],'guide':'references/workflows/qianxing-gil-assembly-pipeline/README.md'},
-    'catalog-merge':{'domains':['client','assets'],'capabilities':['assembly','native_assets'],'guide':'references/workflows/generated-lua-catalog-merge/README.md'},
-    'diagnosis':{'domains':list(DOMAINS),'capabilities':['diagnosis','project','native_changes'],'guide':'references/workflows/qianxing-release-integrity-triage/README.md'}}
+    'gil-assembly':{'domains':['gil','graph','client'],'capabilities':['native','production'],'guide':'references/gil/native-authoring.md'},
+    'catalog-merge':{'domains':['client','assets'],'capabilities':['assembly','native_assets'],'guide':'references/editor/lua/client-assembly.md'},
+    'diagnosis':{'domains':list(DOMAINS),'capabilities':['diagnosis','project','native_changes'],'guide':'references/workflows/project-diagnosis.md'}}
 LEGACY_OWNERS={
     'qianxing-multiplayer':'multiplayer','qianxing-animation':'animation',
     'qianxing-gil-assembly-pipeline':'gil-assembly','generated-lua-catalog-merge':'catalog-merge',

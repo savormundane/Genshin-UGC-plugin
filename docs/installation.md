@@ -81,22 +81,9 @@ python -B scripts/package_release.py --source . --out ../miliastra-wonderland-ag
 
 ## 首次工具验证
 
-在 Claude 的 Chat 中可以使用 Skill。要验证本地 MCP，请在 Cowork 或 Claude Code 开启任务并允许本地工具。 [Claude 本地工具支持](https://support.claude.com/en/articles/13837440-use-plugins-in-claude)
+启用插件后，在支持本地工具的会话里[查询第一个节点](../README.md#查询第一个节点)。看到 `nodes_lookup` 和端口结果即可确认本地 MCP 已启动。Claude 的 Chat 可使用 Skill，本地 MCP 在 Cowork 或 Claude Code 中验证。 [Claude 本地工具支持](https://support.claude.com/en/articles/13837440-use-plugins-in-claude)
 
-在可运行本地工具的会话中，发送下面的请求。首次查询可直接用随包节点资料。
-
-> 请用千星奇域插件查询服务端「创建实体」节点，列出输入和输出端口。
-
-打开工具调用记录，确认有 `nodes_lookup` 并返回端口。看到插件卡片或 Skill 表示客户端已经读到插件，看到这次调用才表示本地 MCP 已启动。失败时按具体现象查[失败后续装](#失败后续装)。
-
-## 运行依赖与工程目录
-
-完整工具需要 Windows x64、Node.js 22+（DeepSeek Harness 24.9+），以及具备锁定依赖的 CPython 3.11–3.14 或 PATH 上的 uv。安装前在终端用 `node --version` 和 `uv --version` 检查对应依赖。
-
-客户端启用插件后，通过 Node 启动本地 MCP。启动器依次查找运行绑定指定的 Python、当前虚拟环境、Miliastra Wonderland 安装根内的解释器和 PATH 上的 Python。显式设置 `MILIASTRA_WONDERLAND_PYTHON` 时，使用该路径。找不到具备完整依赖的环境时，可由 PATH 上的 uv 按 `uv.lock` 准备环境，需要时也会获取受支持的 Python。首次缺少缓存时，uv 需要联网。 [uv 安装说明](https://docs.astral.sh/uv/getting-started/installation/)
-
-- 用 `MILIASTRA_WONDERLAND_PYTHON` 指定已有 Python 的绝对路径。安装位于自选位置时，用 `MILIASTRA_WONDERLAND_INSTALL_ROOT` 指明安装根。也可用 `MILIASTRA_WONDERLAND_RUNTIME_CONFIG` 直接指定 `runtime.json`。
-- 节点、API 与公开资料查询可直接使用。文件工具优先使用显式工程路径，其次使用客户端通过 MCP Roots 提供的会话目录。客户端未提供目录时，可沿用 `runtime.json`。只读查询只需要工程目录。写入默认按工程归档到本机插件数据目录，也可指定独立的输出目录。参见[切换工程](runtime-environment.md#连接-mcp-或切换工程)。
+节点查询无需工程文件。处理关卡或素材时，在客户端打开并授权工程目录。 [工程绑定](runtime-environment.md#连接-mcp-或切换工程)
 
 ## 回退与卸载
 
@@ -128,7 +115,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-install.
 
 能运行 Node 时，也可以直接执行 `node .\scripts\mcp_launcher.cjs --check`。
 
-自检检查启动文件、Node.js、已有 Python 的版本与依赖，以及 PATH 上的 uv。启动器会查找 PATH 上的 `python.exe`，也会通过 Windows 的 `py.exe` 查找兼容版本。根据报告修正后，再[查询第一个节点](../README.md#查询第一个节点)。工具连通后，用 `doctor` 查看实际使用的工程目录和依赖。
+自检检查启动文件、Node.js、已有 Python 的版本与依赖，以及 PATH 上的 uv。根据报告修正后，重启客户端并[验证工具](#首次工具验证)。 [解释器选择](runtime-environment.md#启动时选择-python)
 
 自检读取当前终端的 PATH、`MILIASTRA_WONDERLAND_PYTHON` 和 `MILIASTRA_WONDERLAND_RUNTIME_CONFIG` 等环境变量。客户端单独配置了解释器或绑定文件时，把同样的值设置到自检终端。使用 WinGet 的用户可运行 `winget install --id=astral-sh.uv -e` 安装 uv，再打开新终端检查 `uv --version`。 [uv 的 WinGet 安装说明](https://docs.astral.sh/uv/getting-started/installation/#winget)
 
@@ -138,10 +125,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-install.
 | --- | --- | --- |
 | 市场中找不到插件 | ChatGPT/Codex 或 Claude | 核对仓库名和插件 ID，确认市场已导入。 [市场安装](#市场安装) |
 | 添加市场时 Claude 报错 | Claude 或 Claude Code | 用仓库根地址重试。若看到组织限制提示，核对允许的市场来源。Claude Code 可对同一份已解压源码运行 `claude plugin validate .`，定位具体清单或路径。 |
-| Claude 提示 `Unrecognized key: "displayName"` | Claude Code 读取了 V1.1.0 的旧清单 | 同步包含修复的市场版本后再安装。 |
 | 搜不到 `miliastra-wonderland` | DeepSeek Harness | 核对 npm 包的发布状态及客户端选用的注册表。 [安装说明](#deepseek-harness) |
 | Claude Chat 里有 Skill，调用不到节点查询 | Claude | 在 Cowork 新建任务并允许本地工具，再做[首次工具验证](#首次工具验证)。 |
-| 能看到 Skill，工具未连通 | 所有安装方式 | 先[运行安装自检](#安装自检)。修复后重启客户端，确认插件已启用并允许本地 MCP。使用自选安装根目录时，核对 `MILIASTRA_WONDERLAND_INSTALL_ROOT`。 |
+| 能看到 Skill，工具未连通 | 所有安装方式 | 确认插件已启用并允许本地 MCP，运行[安装自检](#安装自检)。 |
 | MCP 启动时缺少 Python 或依赖 | 所有安装方式 | 安装 uv 并确认新终端能运行 `uv --version`，或让 `MILIASTRA_WONDERLAND_PYTHON` 指向已配置依赖的解释器。修正旧绑定后重新打开客户端。 |
 | 安装器找不到 Python，或提示工程与输出路径冲突 | 用 `install.ps1` 准备本地 ZIP | 缺少 Python 时，给原安装命令加 `-Python '<解释器绝对路径>'`。目录冲突时，为 `-Project` 和 `-Outputs` 选择互不包含的目录。 |
 | 安装准备中断 | 用 `install.ps1` 准备本地 ZIP | 保留未完成的安装目录。按报错修复后，用同一安装命令加 `-Resume` 重跑。已进入 Claude 登记时，按错误提示核对客户端中的条目。 |
@@ -150,4 +136,4 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-install.
 | 无法识别千星奇域版本 | 所有安装方式 | 核对游戏内版本和报错列出的已收录版本。目标版本尚未收录时，可附版本号和资料来源反馈。 |
 | CLI 正常，客户端无法调用工具 | 所有安装方式 | 确认插件已启用，并核对 MCP 配置是否指向自检通过的插件目录。 [连接 MCP](runtime-environment.md#连接-mcp-或切换工程) |
 
-仍无法解决时，提供插件版本、客户端、执行命令、自检失败环节和原始错误。可先删去路径、日志和截图中无需公开的内容。 [提交 Bug 反馈](https://github.com/savormundane/miliastra-wonderland-plugin/issues/new?template=bug_report.yml)
+仍无法解决时，附上自检失败环节和原始错误。 [提交 Bug 反馈](https://github.com/savormundane/miliastra-wonderland-plugin/issues/new?template=bug_report.yml) · [报告问题指引](../CONTRIBUTING.md)

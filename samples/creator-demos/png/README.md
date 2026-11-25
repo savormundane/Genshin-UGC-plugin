@@ -12,17 +12,15 @@
 
 ## 用本地 MCP 复现
 
-客户端需具备 `asset_preview` 和 `asset_generate`。在已授权的工程目录放入样图，准备独立输出位置，再发送上面的提示。助手用 `asset_preview` 比较预算与预览，随后把原图和报告摘要、候选名传给 `asset_generate`，写入新目录。 [MCP 调用顺序](../../../docs/mcp.md#单张-png-试算与生成)
+在已授权的工程目录放入样图，准备独立输出位置，再发送上面的提示。助手调用 `asset_preview` 比较预算和预览，选择方案后用 `asset_generate` 写入新目录。 [MCP 参数与摘要](../../../references/assets/image-to-primitives.md#单张-png-试算与生成)
 
 工具依次返回「原尺寸参考」`original`（155 个控件，超预算）、「首选推荐」`grid-25`（11 个控件，预算内）和「更省控件」`grid-12.5`（5 个控件，预算内）。
 
 关闭终端工具的 Codex 会话实跑了这两步。选中的 `grid-25` 在 Lua 中读回 11 个矩形。用同一份试算报告走命令行生成，五个交付文件逐字节一致。
 
-## 首发版终端复现
+## 用终端复现
 
-实跑时，Codex 通过临时测试入口依次调用了下方两条首发版命令。该入口只转发本样图的试算和生成。日常复现可让有终端权限的助手运行同样的命令。
-
-从 [v1.0.0](https://github.com/savormundane/miliastra-wonderland-plugin/tree/v1.0.0) 源码根目录用装好依赖的 Python 运行。示例中的输入和输出路径请换成自己的路径，并使用新的输出目录。
+下方对照图和交付文件来自 [v1.0.0](https://github.com/savormundane/miliastra-wonderland-plugin/tree/v1.0.0) 的 CLI 实测。从对应版本的源码根目录运行，替换输入和输出路径，并使用新的输出目录。
 
 ```powershell
 $markerPng = 'C:\我的关卡\checkpoint-marker.png'

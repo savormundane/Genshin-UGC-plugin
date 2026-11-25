@@ -1,6 +1,8 @@
 {
   "schema": 1,
   "exclude_prefixes": [
+    ".ruff_cache/",
+    "node_modules/",
     "samples/seeds/",
     ".github/",
     "vendor/beyond/node_modules/gifuct-js/demo/",

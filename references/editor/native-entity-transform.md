@@ -48,7 +48,7 @@ python scripts/qianxing.py native apply LEVEL.gil --plan PLAN.json --out EDITED.
 python scripts/qianxing.py native diff LEVEL.gil EDITED.gil --allow-fields 5
 ```
 
-MCP 可用 `project_inspect` 返回的 `inputs_sha256.input` 调用 `native_plan`，把补丁直接作为 `patch`。审阅 `result.difference.spatial_objects` 后，用输出目录中的 `plan.json` 与 `outputs_sha256["plan.json"]` 调用 `native_apply`。应用报告返回目标前后值，`native_diff` 可用 `allowed_top_level_fields: [5]` 检查保护范围。[MCP 操作顺序](../../docs/mcp.md#审阅并另存已有工程)
+使用[审阅并另存流程](../gil/native-changes.md#审阅并另存已有工程)。对变换操作，审阅 `result.difference.spatial_objects`，写入后用 `native_diff` 的 `allowed_top_level_fields: [5]` 检查保护范围。
 
 ## 格式依据与范围
 

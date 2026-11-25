@@ -1,14 +1,8 @@
 # GIL 二进制结构诊断
 
-## WARNING: 禁止跨 GIL 字段合并
+## 跨 GIL 关联
 
-解析 GIL 的 protobuf 字段后，**不要**将一个 GIL 的字段复制到另一个 GIL。UI 控件字段（field 9/11/15 等）包含的模板 ID 和实体引用只在其原始 GIL 上下文中有效，合并后游戏无法加载主界面。此方法已在步步为营多人版项目中验证失败。
-
-正确组装 GIL 的方式：
-
-- 信号定义：由 [GIL 组装流水线](../workflows/qianxing-gil-assembly-pipeline/README.md) 编排（add_signal_definition_to_gil + bootstrap 模板）
-- 节点图写回：同一组装流水线的节点图步骤
-- 完整组装：从项目 base GIL 出发，使用项目写回或编辑器导入流程
+UI 控件字段（在已观察的样本中包括字段 9、11、15）可能引用原 GIL 的模板和实体。复制字段会保留这些原引用。需要组合图、信号和 Lua 时，从当前项目基底开始，按[GIL 写回流程](native-authoring.md#将图信号和-lua-写入同一份-gil)处理关联并回读。
 
 ## GIL 文件格式
 
@@ -40,10 +34,10 @@ payload 之后可能有尾部数据，保持原样复制即可。
 
 ## 诊断脚本
 
-使用 `scripts/diagnose_gil.py` 解析 GIL 结构（从本技能目录执行）：
+从插件根目录运行只读结构诊断：
 
 ```bash
-python scripts/diagnose_gil.py <path-to-gil>
+python skills/miliastra-gil/scripts/diagnose_gil.py <path-to-gil>
 ```
 
 输出示例：

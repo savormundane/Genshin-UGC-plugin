@@ -9,14 +9,12 @@
 | [Miliastra GIL](../../skills/miliastra-gil/SKILL.md) | 容器、身份、挂载、保护字节和回读 |
 | [Miliastra Assets](../../skills/miliastra-assets/SKILL.md) | 图像、图元、颜色、转换、成本与预览 |
 
-[多人](qianxing-multiplayer/README.md)、[动画](../assets/animation.md)、[存储](storage-authoring.md)、[组装](qianxing-gil-assembly-pipeline/README.md)、[目录合并](generated-lua-catalog-merge/README.md)、[诊断](qianxing-release-integrity-triage/README.md)是按需组合的流程或工具，不新增平台领域。
+[多人协议](protocol-v2.md)、[动画](../assets/animation.md)、[存储](storage-authoring.md)、[GIL 组装](../gil/native-authoring.md#将图信号和-lua-写入同一份-gil)、[项目数据目录](../editor/lua/client-assembly.md#项目生成的-lua-数据目录)和[工程诊断](project-diagnosis.md)可按实际任务组合。
 
 使用 `plan --kind nodes|lua|gil|assets|editor` 选择直接领域；game、animation及--multiplayer旧参数保留，storage、protocol、diagnosis选择共享流程。support仅列可选协作方，不要求全部加载、运行或读取所有官方资料。节点任务进入 Miliastra Graph Code，动画运行进入 Miliastra Editor 的 Client Lua；未知故障先diagnose，按发现对象进入领域。完整制作继续复用produce。
 
 `plan.entrypoints` 与 `capabilities.architecture.task_entrypoints` 提供同一套 CLI 和 MCP 入口。查平台资料可直接使用内置查询。已有工程先按名称定位对象，随后按对象键核对关系并准备修改。交付多个关联产物时用 `produce`。
 
 诊断对象已知时使用 `plan --kind diagnosis --target-domain editor|graph|client|gil|assets`。`--task-mode ui|assets|delivery` 也可提供已有工作流线索。新调用方读取 `diagnosis.entrypoint` 与 `diagnosis.target_domain`。对象未定时运行共享 `diagnose`，根据发现的输入再选领域。为保留 schema 2，顶层 `primary` 在对象未定时仍保留历史值。
-
-旧版 schema 1 工作流照常读取，原记录不重写。旧 owner client-controls-lua 在 resolved_owners 中保留 client 技术域，并路由到 miliastra-editor。手动调用 Skill 时使用 miliastra-editor。更早的退役 Skill 名仍可解析到共享工作流。
 
 新增节点、控件、组件规则通常只扩展现有资料、工具和验证。只有独立且稳定的平台工作对象无法归入现有入口时才考虑新Skill。工程玩法、协议编号和文案留在项目。

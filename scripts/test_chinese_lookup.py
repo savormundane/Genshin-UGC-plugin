@@ -281,10 +281,16 @@ class ChineseLookupTests(unittest.TestCase):
                     response = await client.call_tool('api_lookup', {'symbol': question})
                     self.assertFalse(response.is_error, response)
                     self.assertEqual(response.structured_content['result'], cli('knowledge', 'api', question))
-                response = await client.call_tool('docs_search', {'version': '7.2', 'query': '控件 可见性'})
-                self.assertFalse(response.is_error, response)
-                self.assertEqual(response.structured_content['result']['matches'],
-                                 cli('docs', 'search', '控件 可见性', '--version', '7.2'))
+                missing_query = '无匹配内容的测试词zzz'
+                for query in ('控件 可见性', missing_query):
+                    response = await client.call_tool('docs_search', {'version': '7.2', 'query': query})
+                    self.assertFalse(response.is_error, response)
+                    docs = response.structured_content['result']['matches']
+                    self.assertEqual(docs, cli('docs', 'search', query, '--version', '7.2'))
+                    if query == missing_query:
+                        self.assertEqual(docs['matches'], 0)
+                        self.assertEqual(docs['documents'], [])
+                        self.assertIn('平台术语', docs['retry_hint'])
                 response = await client.call_tool('nodes_lookup', {'query': '创建实体', 'scope': 'server'})
                 self.assertFalse(response.is_error, response)
                 self.assertEqual(response.structured_content['result'], cli('nodes', '创建实体', '--scope', 'server'))

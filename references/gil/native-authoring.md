@@ -78,6 +78,14 @@ replace-lua / produce.gil.mapping均按完整字符串相等匹配，含.lua后�
 
 inspect单文件返回schema=qianxing-inspect/v2、file/graphs/client_bindings等顶层字段；目录返回同一schema及files数组。统一CLI的--collection可显式保留单文件files数组结构。绑定报告schema为qianxing-client-bindings/v1，含scripts、controls、templates、script_bindings和diagnostics。
 
+## 将图、信号和 Lua 写入同一份 GIL
+
+用 [produce](../workflows/produce.md) 从同一配置连接基底、图、信号、Lua 和最终回读。单独增补节点图时，用 [build](../graph-code/node-graph-workflow.md#构建描述-schema-1) 指定基底和允许写入的顶层字段。已有项目资源可用 [Ayaya 项目写回](../graph-code/ayaya-offline-toolchain.md#项目写回-gil)，并明确选择需要的资源范围。
+
+在已校准的 Ayaya 写回链中，信号定义先于依赖它的节点图写入，以便把通用信号节点类型映射到该文件内的信号定义。信号参数名、顺序、类型及关联图的实际端口须一起回读；找不到模板或信号定义时，先核对项目基底、当前声明和模板来源。GraphModel JSON 的中间诊断用 [离线工具链](../graph-code/ayaya-offline-toolchain.md#graph-code-到节点图)。
+
+回读最终文件的脚本映射、实体挂载以及[图数据流](../graph-code/native-dataflow-validation.md)。对 GIL 中同号的普通图、复合图、模板或实例，使用[对象索引](../editor/project-index.md)读取完整对象键，按目标范围核对引用。
+
 ## 安全重跑与验证层级
 
 ```text

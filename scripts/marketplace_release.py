@@ -63,7 +63,7 @@ def marketplace_files(root):
         'engines': {'dsh': DSH_ENGINE},
         'files': [
             'cordis.patch.yml', 'plugin.json', 'locale/', 'assets/', 'docs/', 'references/',
-            'skills/', 'scripts/', 'runtime/', 'samples/', 'vendor/', 'pyproject.toml', 'uv.lock',
+            'skills/', 'scripts/', 'samples/', 'vendor/', 'pyproject.toml', 'uv.lock',
             'LICENSE', 'THIRD_PARTY_NOTICES.md', 'PUBLIC_SOURCES.json',
         ] + exclusions,
         'dsh': {'bundle': {'patch': './cordis.patch.yml'}},

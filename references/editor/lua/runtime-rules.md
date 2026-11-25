@@ -27,27 +27,11 @@
 
 运行环境与生命周期：三、运行环境，1–2；全局函数、Color、Script、game：3–6；Tween、TweenSequence、ServerSignal：7–9；枚举：10–11；控件继承与基类：12–13；具体控件及光标事件数据：14–25；按键输入：26。
 
-审查脚本时优先指出可复现的接口、权限、生命周期和参数错误，给出最小修复及文档依据。文档存在矛盾或缺失时明确说明，避免补造 API。
+审查脚本时优先指出可复现的接口、权限、生命周期和参数错误，给出最小修复和文档依据。编辑器配置和点阵绘制另查[平台资料](../../platform/README.md)和[像素指南](../../assets/pixel-import-guide.md)。
 
+## 调试和交付
 
-## 核心文档与制作经验
-
-以 [完整API](../../platform/community/client-controls-api.md) 核对代码签名和权限，以 [官方文档](../../platform/README.md) 查编辑器配置。点阵工作读取 [像素指南](../../assets/pixel-import-guide.md)。资料有冲突时查阅[来源说明](../../platform/sources-and-conflicts.md)。
-
-## 共享参考的读取时机
-
-接口查询直接走 `api_lookup`，单文件检查直接走 `client_check`。多个阶段共用同一交付时，按 [制作流程](../../workflows/produce.md) 确认已有输入、装配顺序和最终产物。
-
-排查报错、无响应、不同步或显示异常时，先读 [调试方法](../../workflows/debugging-workflow.md)，再按本技能负责的部分定位。修改后的检查按 [验收标准](../../workflows/validation.md) 选择有意义的范围；只报告本次执行的验证，不自动扩大成全面审计。
-
-
-与其他制作阶段协作时按 [统一能力合同](../../workflows/capability-contract.md) 传递本技能的输入、输出及验证状态；完整玩法由 miliastra-editor 协调。
-
-新功能需要原生事件、服务器状态或结算时，与编辑器/协议能力在同一任务内实现图和通信；本技能继续完成实际Lua调用与回包处理，不因缺少现成信号名停在占位代码。
-
-工程接口见[平台接口与工程合同](../../workflows/implementation-policy.md)。
-
-同一交付需要绑定 Lua、资源或 GIL 时，按制作配置声明相关阶段和实际挂载。
+单文件检查用 `client_check`。涉及原生事件、服务器状态或结算时，按[工程合同](../../workflows/implementation-policy.md)核对定义、两端调用和回包。Lua、素材和 GIL 需要落到同一份产物时，用 [produce](../../workflows/produce.md) 声明相关阶段和实际挂载。
 
 将规则状态与控件表现分开，集中映射玩家动作；核对菜单、隐藏、切页、重开和销毁时的输入与监听恢复，按PC/手机实际条件检查可读性和命中。 具体方法见 [体验制作与游玩检查](../../workflows/playability-workflow.md)。
 

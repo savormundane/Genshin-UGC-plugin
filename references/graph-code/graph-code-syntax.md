@@ -243,3 +243,76 @@ STRUCT_PAYLOAD = {
     "description": "结构体描述",
 }
 ```
+
+## 完整文件示例
+
+### 节点图文件结构
+
+```python
+"""
+graph_id: server_项目名_功能描述
+graph_name: 显示名称
+graph_type: server
+description: 功能说明
+"""
+
+from app.runtime.engine.graph_prelude_server import *
+
+GRAPH_VARIABLES: list[GraphVariableConfig] = [
+    GraphVariableConfig(name="变量名", variable_type="整数", default_value=0),
+]
+
+class 节点图类名:
+    def __init__(self, game, owner_entity):
+        self.game = game
+        self.owner_entity = owner_entity
+
+    def on_实体创建时(self, 事件源实体, 事件源GUID):
+        结果: "整数" = 加法运算(self.game, 左值=1, 右值=1)
+        设置自定义变量(self.game, 目标实体=self.owner_entity,
+            变量名="变量名", 变量值=结果)
+
+    def register_handlers(self):
+        self.game.register_event_handler("实体创建时", self.on_实体创建时, owner=self.owner_entity)
+```
+
+### 复合节点文件结构
+
+```python
+"""
+composite_id: composite_功能名
+node_name: 显示名称
+node_description: 功能说明
+scope: server
+"""
+
+from app.runtime.engine.graph_prelude_server import *
+from engine.nodes.composite_spec import composite_class, flow_entry
+
+@composite_class
+class 功能名:
+    def __init__(self, game, owner_entity):
+        self.game = game
+        self.owner_entity = owner_entity
+
+    @flow_entry()
+    def 方法名(self, 参数1: "整数", 参数2: "整数"):
+        数据入("参数1", pin_type="整数")
+        数据入("参数2", pin_type="整数")
+        数据出("结果", pin_type="整数", variable="结果")
+        结果: "整数" = 加法运算(self.game, 左值=参数1, 右值=参数2)
+        return 结果
+```
+
+## Ayaya 项目资源目录
+
+| 类型 | 路径 |
+|------|------|
+| 共享节点图 | `assets/资源库/共享/节点图/<server\|client>/` |
+| 共享复合节点 | `assets/资源库/共享/复合节点库/` |
+| 项目节点图 | `assets/资源库/项目存档/<项目名>/节点图/<server\|client>/` |
+| 项目复合节点 | `assets/资源库/项目存档/<项目名>/复合节点库/` |
+| 信号定义 | `assets/资源库/项目存档/<项目名>/管理配置/信号/` |
+| 结构体定义 | `assets/资源库/共享/管理配置/结构体定义/` |
+
+校验、编译和回读见 [节点图制作流程](node-graph-workflow.md)。

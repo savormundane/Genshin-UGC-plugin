@@ -14,7 +14,7 @@ description: 查询千星奇域节点签名和端口，编写、检查和编译�
 
 整句无命中时，改查中文短词、别名或正式名称，再核对节点作用域。结果以编译器定义为依据，`port_evidence` 只支持已校准的版本和端口。涉及平台规则时查目标版本。 [中文查询](../../references/platform/knowledge-reliability.md#中文查询)
 
-编写时按实际类型、端口和事件连接，检查图变量、结构体与复合引脚。 [编写规则](../../references/graph-code/graph-authoring.md) · [语法](../../references/graph-code/graph-code-syntax.md) · [编译错误](../../references/graph-code/validation-fixes.md)
+编写时按实际类型、端口和事件连接，检查图变量、结构体与复合引脚。 [编写规则](../../references/graph-code/graph-authoring.md) · [语法与完整文件示例](../../references/graph-code/graph-code-syntax.md#完整文件示例) · [编译错误](../../references/graph-code/validation-fixes.md)
 
 独立交付图或只检查源码时走上表。需要引用本轮新建对象并与 Lua、GIL 一起交付时，按 [produce 的具名绑定](../../references/workflows/produce.md#按名称连接制作阶段) 协作。文件挂载交给 [Miliastra GIL](../miliastra-gil/SKILL.md)，客户端控件和脚本交给 [Miliastra Editor](../miliastra-editor/SKILL.md#client-lua)。
 

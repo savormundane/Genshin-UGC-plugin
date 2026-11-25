@@ -69,7 +69,10 @@ def search(version,query,limit=20):
             lines=[line for line in body.splitlines()if any(t in line.casefold()for t in terms)]
             matches.append({**record,'excerpts':[line[:500]for line in lines[:3]]})
     matches.sort(key=lambda r:(query.casefold()not in r['title'].casefold(),r['title'],r['id']))
-    return {'schema':2,'version':version,'query':query,'matches':len(matches),'documents':matches[:limit]}
+    result = {'schema':2,'version':version,'query':query,'matches':len(matches),'documents':matches[:limit]}
+    if not matches:
+        result['retry_hint'] = '当前版本的随包资料未找到匹配项。请拆成短关键词，或改用平台术语和正式名称重查。'
+    return result
 
 
 def difference(before,after,ident=None):

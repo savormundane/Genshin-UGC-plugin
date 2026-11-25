@@ -76,10 +76,13 @@ class ReleaseTests(unittest.TestCase):
             source = root / 'source'
             plugin = {'name': 'fixture', 'version': '1.2.3', 'license': 'GPL-3.0-only',
                       'author': {'name': 'Distribution fixture'}}
-            policy = {'schema': 1, 'exclude_prefixes': ['samples/seeds/', 'vendor/tool/demo/'],
+            policy = {'schema': 1, 'exclude_prefixes': ['.ruff_cache/', 'node_modules/',
+                                                       'samples/seeds/', 'vendor/tool/demo/'],
                       'exclude_files': ['assets/private.txt']}
-            omitted = {'samples/seeds/input.txt', 'vendor/tool/demo/index.js', 'assets/private.txt'}
-            retained = {'samples/seeds-guide.txt', 'vendor/tool/index.js', 'assets/private-example.txt'}
+            omitted = {'.ruff_cache/fixture', 'node_modules/local/index.js', 'samples/seeds/input.txt',
+                       'vendor/tool/demo/index.js', 'assets/private.txt'}
+            retained = {'samples/seeds-guide.txt', 'vendor/tool/index.js', 'assets/private-example.txt',
+                        'vendor/beyond/node_modules/runtime/index.js'}
             inputs = {
                 'plugin.json': json.dumps(plugin),
                 '.codex-plugin/plugin.json': json.dumps({**plugin, 'interface': {'displayName': 'Fixture'}}),
