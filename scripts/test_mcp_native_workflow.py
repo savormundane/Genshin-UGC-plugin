@@ -3,13 +3,16 @@
 import asyncio
 from base64 import b64decode
 from io import BytesIO
+import json
 import os
 from pathlib import Path
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
 
+from lupa.lua53 import LuaRuntime
 from mcp import Client, StdioServerParameters, types
 from PIL import Image
 
@@ -65,11 +68,7 @@ class NativeWorkflowTests(unittest.TestCase):
 
     def test_asset_preview_returns_images_and_counts(self):
         source = self.project / "练习 图标.png"
-        with Image.new("RGBA", (16, 16)) as image:
-            for y in range(1, 15):
-                for x in range(1, 15):
-                    image.putpixel((x, y), (255, 48, 64, 255) if (x + y) % 2 else (0, 80, 255, 255))
-            image.save(source)
+        shutil.copyfile(PLUGIN / "samples/creator-demos/png/checkpoint-marker.png", source)
         digest = sha_file(source)
         args = {"input": source.name, "output": "素材对比", "max_controls": 20}
 
@@ -91,12 +90,24 @@ class NativeWorkflowTests(unittest.TestCase):
                 for candidate in candidates:
                     with Image.open(output / candidate["display_preview"]) as image:
                         image.verify()
-                thumbnails = [item for item in outcome.content if item.type == "image"]
-                self.assertEqual(len(thumbnails), 2)
-                for thumbnail in thumbnails:
+                expected = (
+                    ("原尺寸参考 · original · 155 个控件 · 超预算", "original"),
+                    ("首选推荐 · grid-25 · 11 个控件 · 预算内", "grid-25"),
+                    ("更省控件 · grid-12.5 · 5 个控件 · 预算内", "grid-12.5"),
+                )
+                self.assertEqual(response["result"]["recommendations"][0], expected[1][1])
+                self.assertEqual([item.type for item in outcome.content], ["text"] + ["text", "image"] * 3)
+                by_name = {candidate["name"]: candidate for candidate in candidates}
+                for index, (caption, name) in enumerate(expected, start=1):
+                    label, thumbnail = outcome.content[2 * index - 1:2 * index + 1]
+                    self.assertEqual(label.text, caption)
                     self.assertEqual(thumbnail.mime_type, "image/png")
-                    with Image.open(BytesIO(b64decode(thumbnail.data))) as image:
-                        image.verify()
+                    with (
+                        Image.open(BytesIO(b64decode(thumbnail.data))) as image,
+                        Image.open(output / by_name[name]["display_preview"]) as rendered,
+                    ):
+                        self.assertEqual(image.size, rendered.size)
+                        self.assertEqual(image.tobytes(), rendered.tobytes())
                 self.assertEqual(sha_file(source), digest)
 
                 retry = await client.call_tool("asset_preview", args)
@@ -151,6 +162,8 @@ class NativeWorkflowTests(unittest.TestCase):
                 self.assertEqual(digests, {name: sha_file(output / name) for name in files})
                 asset = read_json(output / "asset.json")
                 self.assertEqual(len(asset["data"]["rects"]), 11)
+                lua = LuaRuntime().execute((output / "data.lua").read_text(encoding="utf-8"))
+                self.assertEqual((lua.maxRects, len(lua.rects)), (11, 11))
                 image, = [item for item in delivered.content if item.type == "image"]
                 with Image.open(BytesIO(b64decode(image.data))) as thumbnail:
                     self.assertEqual(thumbnail.size, (6, 6))
@@ -162,6 +175,14 @@ class NativeWorkflowTests(unittest.TestCase):
                 self.assertEqual(digests, {name: sha_file(output / name) for name in files})
                 self.assertEqual(sha_file(report), report_digest)
                 self.assertEqual(source.read_bytes(), original)
+
+                other = "grid-12.5-fewer-colors"
+                self.assertNotIn(other, preview["result"]["recommendations"])
+                alternative = await self.call(client, "asset_generate", {
+                    **args, "candidate": other, "output": "其他候选",
+                })
+                self.assertEqual(alternative["result"]["controls"], 5)
+                self.assertEqual(alternative["result"]["preview_selection"]["candidate"], other)
 
                 for name, detail in (("original", "exceeds a declared constraint"),
                                      ("unknown-candidate", "Expected an exact preview candidate name")):
@@ -196,6 +217,102 @@ class NativeWorkflowTests(unittest.TestCase):
                 self.assertTrue(stale_report.is_error)
                 self.assertIn("Input digest mismatch: report", stale_report.content[0].text)
                 self.assertFalse((self.outputs / "stale-report").exists())
+
+        asyncio.run(run())
+
+    def test_asset_preview_labels_original_only_once_when_it_is_recommended(self):
+        source = self.project / "灰阶.png"
+        with Image.new("RGBA", (8, 8)) as image:
+            for index in range(64):
+                shade = 4 * index
+                image.putpixel((index % 8, index // 8), (shade, shade, shade, 255))
+            image.save(source)
+
+        async def run():
+            async with Client(self.server) as client:
+                outcome = await client.call_tool("asset_preview", {
+                    "input": source.name, "output": "灰阶试算",
+                })
+                self.assertFalse(outcome.is_error, outcome)
+                self.assertEqual(outcome.structured_content["result"]["recommendations"][0], "original")
+                self.assertEqual([item.type for item in outcome.content], ["text", "text", "image", "text", "image"])
+                self.assertEqual(outcome.content[1].text, "原尺寸参考／首选推荐 · original · 64 个控件 · 未设预算")
+                self.assertTrue(outcome.content[3].text.startswith("更省控件 · "))
+
+        asyncio.run(run())
+
+    def test_asset_generate_rejects_lost_foreground_and_preserves_transparent_input(self):
+        sparse = self.project / "单像素.png"
+        transparent = self.project / "全透明.png"
+        with Image.new("RGBA", (32, 32)) as image:
+            image.save(transparent)
+            image.putpixel((16, 16), (255, 0, 0, 255))
+            image.save(sparse)
+
+        async def run():
+            async with Client(self.server) as client:
+                source_digest = sha_file(sparse)
+                sparse_preview = await self.call(client, "asset_preview", {
+                    "input": sparse.name, "output": "单像素试算", "max_controls": 20,
+                })
+                self.assertTrue(sparse_preview["result"]["has_foreground"])
+                candidate = "smaller-grid"
+                row = next(row for row in sparse_preview["result"]["candidates"] if row["name"] == candidate)
+                self.assertEqual(row["controls"], 0)
+                self.assertTrue(row["within_budget"])
+                self.assertNotIn(candidate, sparse_preview["result"]["recommendations"])
+                sparse_report = Path(sparse_preview["output"]) / "report.json"
+                report_digest = sparse_preview["outputs_sha256"]["report.json"]
+                rejected = await client.call_tool("asset_generate", {
+                    "input": sparse.name, "sha256": source_digest, "report": str(sparse_report),
+                    "report_sha256": report_digest, "candidate": candidate, "output": "无效交付",
+                })
+                self.assertTrue(rejected.is_error)
+                diagnostic, = rejected.structured_content["diagnostics"]
+                self.assertEqual(diagnostic["code"], "asset.foreground_lost")
+                self.assertIn("丢失全部可见内容", diagnostic["message"])
+                self.assertFalse((self.outputs / "无效交付").exists())
+
+                cli_output = self.outputs / "无效终端交付"
+                cli = await asyncio.to_thread(subprocess.run, [
+                    sys.executable, "-X", "utf8", "-B", str(PLUGIN / "scripts/qianxing.py"), "assets", "generate",
+                    "--from-preview", str(sparse_report), "--candidate", candidate, "--out", str(cli_output),
+                ], capture_output=True, encoding="utf-8", timeout=30)
+                self.assertEqual(cli.returncode, 2, cli.stderr)
+                self.assertEqual(json.loads(cli.stderr)["diagnostics"], [diagnostic])
+                self.assertFalse(cli_output.exists())
+                self.assertEqual(sha_file(sparse), source_digest)
+                self.assertEqual(sha_file(sparse_report), report_digest)
+
+                no_candidate = await client.call_tool("asset_preview", {
+                    "input": sparse.name, "output": "单像素粗网格试算", "max_controls": 20, "step": 2,
+                })
+                self.assertFalse(no_candidate.is_error, no_candidate)
+                self.assertEqual(no_candidate.structured_content["result"]["recommendations"], [])
+                self.assertIn("asset_search_no_candidate", no_candidate.content[0].text)
+                self.assertEqual([item.type for item in no_candidate.content], ["text", "text", "image"])
+                self.assertEqual(no_candidate.content[1].text, "指定网格参考 · original · 0 个控件 · 预算内 · 未保留前景")
+
+                blank_preview = await client.call_tool("asset_preview", {
+                    "input": transparent.name, "output": "全透明试算", "max_controls": 20,
+                })
+                self.assertFalse(blank_preview.is_error, blank_preview)
+                preview = blank_preview.structured_content
+                self.assertFalse(preview["result"]["has_foreground"])
+                self.assertTrue(all("全透明" in item.text for item in blank_preview.content[1::2]))
+                blank = await client.call_tool("asset_generate", {
+                    "input": transparent.name, "sha256": preview["inputs_sha256"]["input"],
+                    "report": str(Path(preview["output"]) / "report.json"),
+                    "report_sha256": preview["outputs_sha256"]["report.json"],
+                    "candidate": preview["result"]["recommendations"][0], "output": "全透明交付",
+                })
+                self.assertFalse(blank.is_error, blank)
+                self.assertIn("0 个控件 · 预算内 · 全透明", blank.content[1].text)
+                self.assertEqual(blank.structured_content["result"]["controls"], 0)
+                self.assertFalse(blank.structured_content["result"]["has_foreground"])
+                data = self.outputs / "全透明交付" / "data.lua"
+                lua = LuaRuntime().execute(data.read_text(encoding="utf-8"))
+                self.assertEqual((lua.maxRects, len(lua.palette), len(lua.rects)), (0, 0, 0))
 
         asyncio.run(run())
 

@@ -4,15 +4,21 @@ import contextlib,json,os,sys
 from authoring_io import DiagnosticError,PLUGIN,sha_file,read_json,write_json,resolve
 
 
-def _asset_thumbnail(path, name, controls):
+def _asset_thumbnail(path, name, controls, *, role, within_budget, has_foreground):
     from base64 import b64encode
     from io import BytesIO
     from PIL import Image
 
+    budget = {True: '预算内', False: '超预算', None: '未设预算'}[within_budget]
+    caption = f'{role} · {name} · {controls} 个控件 · {budget}'
+    if not has_foreground:
+        caption += ' · 全透明'
+    elif controls == 0:
+        caption += ' · 未保留前景'
     with Image.open(path) as image, BytesIO() as thumbnail:
         image.thumbnail((256, 256), Image.Resampling.NEAREST)
         image.save(thumbnail, format='PNG')
-        return {'name': name, 'controls': controls, 'data': b64encode(thumbnail.getvalue()).decode('ascii')}
+        return {'caption': caption, 'data': b64encode(thumbnail.getvalue()).decode('ascii')}
 
 
 def main():
@@ -98,34 +104,58 @@ def main():
             from scene_preview import preview
             result = preview(args['input'], args['output'], before=args.get('before'))
         elif op == 'asset_preview':
-            from miliastra.assets.pipeline import preview
+            from miliastra.assets.pipeline import candidate_is_usable, preview
             output = Path(args['output'])
             try:
                 result = preview(args['input'], output, image_format='PNG', explore=True,
                                  max_controls=args.get('max_controls'), step=args.get('step', 1))
             except (OSError, ValueError) as exc:
                 raise DiagnosticError('asset.preview_invalid', str(exc), phase=op, source=args['input']) from exc
-            original, *alternatives = result['candidates']
-            selected = [original]
-            if alternatives:
-                visible = [candidate for candidate in alternatives if candidate['controls']]
-                selected.append(min(visible or alternatives, key=lambda candidate: (
-                    candidate['within_budget'] is False, candidate['controls'], candidate['error'])))
+            candidates = result['candidates']
+            original = candidates[0]
+            has_foreground = result['has_foreground']
+            reference = '原尺寸参考' if original['grid_size'] == result['source_size'] else '指定网格参考'
+            selected = [(original, reference)]
+            if result['recommendations']:
+                first_name = result['recommendations'][0]
+                first = next(row for row in candidates if row['name'] == first_name)
+                if first_name == original['name']:
+                    selected[0] = (original, f'{reference}／首选推荐')
+                else:
+                    selected.append((first, '首选推荐'))
+                cheaper = min(
+                    (row for row in candidates if row['name'] != original['name']
+                     and row['controls'] < first['controls'] and candidate_is_usable(row, has_foreground)),
+                    key=lambda row: (row['controls'], row['error'], row['name']),
+                    default=None,
+                )
+                if cheaper is not None:
+                    selected.append((cheaper, '更省控件'))
             result['_inline_previews'] = [
-                _asset_thumbnail(output / candidate['display_preview'], candidate['name'], candidate['controls'])
-                for candidate in selected
+                _asset_thumbnail(
+                    output / row['display_preview'], row['name'], row['controls'],
+                    role=role, within_budget=row['within_budget'], has_foreground=has_foreground,
+                )
+                for row, role in selected
             ]
         elif op == 'asset_generate':
             from miliastra.assets.pipeline import generate
             try:
                 result = generate(args['input'], args['output'], from_preview=args['report'], candidate=args['candidate'])
+            except DiagnosticError:
+                raise
             except (OSError, ValueError, TypeError, KeyError) as exc:
                 raise DiagnosticError(
                     'asset.generate_invalid', '素材生成失败。请核对源图对应的试算报告、候选名称和预算后重试。',
                     phase=op, source=args['input'], report=args['report'], candidate=args['candidate'], detail=str(exc),
                 ) from exc
             result['_inline_previews'] = [
-                _asset_thumbnail(Path(args['output']) / 'preview.png', args['candidate'], result['controls'])
+                _asset_thumbnail(
+                    Path(args['output']) / 'preview.png', args['candidate'], result['controls'],
+                    role='生成结果',
+                    within_budget=True if result['parameters']['max_controls'] is not None else None,
+                    has_foreground=result.get('has_foreground', True),
+                )
             ]
         elif op=='native_plan':
             from miliastra.native.changes import plan,plan_summary

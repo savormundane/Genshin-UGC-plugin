@@ -5,7 +5,7 @@ from pathlib import Path
 import re
 import sys
 
-from miliastra.assets.pipeline import generate as generate_asset, lua_payload, positive, preview as preview_asset
+from miliastra.assets.pipeline import candidate_is_usable, generate as generate_asset, lua_payload, positive, preview as preview_asset
 from authoring_io import DiagnosticError, ProductionInputs, finish, output_directory, read_json, resolve, schema, sha, sha_file, write_json
 
 
@@ -54,8 +54,7 @@ def preview(path, output):
                            'max_error': item.get('max_error'), 'tested': len(measured['candidates']),
                            'diagnostics': measured['diagnostics']})
             viable = [row for row in measured['candidates']
-                      if row['within_budget'] is not False and row['within_quality'] is not False
-                      and (row['controls'] or not measured['has_foreground'])]
+                      if candidate_is_usable(row, measured['has_foreground'])]
             frontier = []
             for row in sorted(viable, key=lambda row: (row['controls'], row['error'], row['name'])):
                 if not frontier or row['error'] < frontier[-1]['error']:

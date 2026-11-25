@@ -19,7 +19,7 @@ def _asset_result(response):
     content = [types.TextContent(type='text', text=json.dumps(response, ensure_ascii=False))]
     for preview in previews:
         content.extend([
-            types.TextContent(type='text', text=f"{preview['name']} · {preview['controls']} 个控件"),
+            types.TextContent(type='text', text=preview['caption']),
             types.ImageContent(type='image', mime_type='image/png', data=preview['data']),
         ])
     return types.CallToolResult(content=content, structured_content=response, is_error=response['status'] == 'failed')
@@ -105,7 +105,7 @@ def server(bridge):
     @app.tool(structured_output=True)
     async def asset_preview(input:str,output:str,ctx:Context,sha256:str|None=None,
                             max_controls:StrictInt|None=None,step:StrictInt|None=None)->types.CallToolResult:
-        """Compare PNG rectangle conversions. Return control counts, previews and digests for asset_generate."""
+        """Compare PNG conversions. Show the original, recommended and cheaper viable previews when available, with counts and digests for asset_generate."""
         response = await call('asset_preview', ctx, input=input, output=output, sha256=sha256,
                               max_controls=max_controls, step=step)
         return _asset_result(response)

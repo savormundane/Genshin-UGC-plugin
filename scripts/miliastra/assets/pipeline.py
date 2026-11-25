@@ -103,6 +103,16 @@ def compile_grid(image, size, target, parameters):
                             parameters['columns'], parameters['max_bytes'], parameters['cell'], parameters['fit'])
 
 
+def _loses_all_foreground(has_foreground: bool, controls: int) -> bool:
+    return has_foreground and controls == 0
+
+
+def candidate_is_usable(candidate, has_foreground: bool) -> bool:
+    return (candidate['within_budget'] is not False
+            and candidate['within_quality'] is not False
+            and not _loses_all_foreground(has_foreground, candidate['controls']))
+
+
 def generate(source, output, *, from_preview=None, candidate=None, **options):
     from miliastra.assets.core import harden
     output=Path(output).resolve()
@@ -132,8 +142,15 @@ def generate(source, output, *, from_preview=None, candidate=None, **options):
         raise ValueError('Preview source digest differs; preview this input before generating')
     source_size = list(image.size)
     source_kind = 'shapes' if raw is not None else 'image'
+    has_foreground = image.getchannel(3).getbbox() is not None
     image = harden(image, parameters['alpha_min'])
     preview, data, count = compile_grid(image, size, target, parameters)
+    if _loses_all_foreground(has_foreground, count):
+        raise DiagnosticError(
+            'asset.foreground_lost',
+            '所选参数会丢失全部可见内容。请选择保留前景的候选，或检查采样网格和透明度阈值后重新试算。',
+            phase='asset_generate', source=str(source), candidate=candidate, grid_size=list(size),
+        )
     max_controls = parameters['max_controls']
     if max_controls is not None and count>max_controls:
         adjust='use a smaller grid or fewer colors' if target=='rectangles' else 'use a smaller grid or review --columns and --max-bytes'
@@ -142,6 +159,8 @@ def generate(source, output, *, from_preview=None, candidate=None, **options):
     report={'schema':1,'generator':ASSET_GENERATOR,'source_kind':source_kind,'source_sha256':original,'source_size':source_size,'grid_size':list(size),'target':target,'controls':count,'coordinate_space':coordinate,
             'parameters':parameters,
             'preview_kind':'quantized reference raster; not host rendering','external_process_started':False,'gil_written':False,'host_tested':False}
+    if not has_foreground:
+        report['has_foreground'] = False
     if selection is not None:
         report['preview_selection']=selection
     asset={**report,'data':data}
@@ -254,12 +273,11 @@ def preview(source, output, *, display=None, min_grid=None, max_error=None, expl
         if quality_status=='failed':
             diagnostics.append({'code':'asset_quality_unmet','message':'None of the tested settings meets the error limit.',
                                 'expected':max_error,'actual':min(row['error'] for row in rows)})
-        viable=[row for row in rows if row['within_budget'] is not False and row['within_quality'] is not False
-                and (row['controls'] or not has_foreground)]
+        viable = [row for row in rows if candidate_is_usable(row, has_foreground)]
         viable.sort(key=lambda row:(row['error'],row['alpha']['became_transparent']+row['alpha']['became_visible'],row['controls'],row['name']))
         if not viable:
             diagnostics.append({'code':'asset_search_no_candidate',
-                                'message':'The tested grids and palettes produced no usable candidate that meets all declared limits.'})
+                                'message':'没有找到可用方案。请检查原图透明度、采样网格和预算后重新试算。'})
         report = {
             'schema':1, 'kind':'asset-preview', 'status':'passed',
             'source':str(source), 'source_sha256':digest, 'source_size':source_size, 'display_size':list(display_size),

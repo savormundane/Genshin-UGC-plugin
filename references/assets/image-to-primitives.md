@@ -15,7 +15,7 @@
 ## 单张 PNG 试算与生成
 
 1. 将 PNG 放入客户端已授权的工程目录。调用 `asset_preview`，传入 `input`、新目录 `output` 和任务需要的 `max_controls`。例如将 `checkpoint-marker.png` 试算到 `marker-review`，设定 20 个控件的预算。
-2. 在 `result.candidates` 比较 `controls`、`error`、`within_budget` 和候选名，结合 `result.recommendations` 选方案。工具返回原方案以及可用备选的缩略图。每个候选的 `display_preview` 相对于返回的 `output`，可打开完整预览。
+2. 工具依次展示参考方案、首选推荐以及更省控件的可用方案，标签注明控件数与预算状态。参考方案采用原尺寸或指定采样网格。同一候选只展示一次。没有可用候选时，查看参考方案和报告诊断。还可以在 `result.candidates` 查看全部试算结果，打开各候选的 `display_preview`。路径相对于返回的 `output`。
 3. 调用 `asset_generate`。继续使用同一 `input`，以 `inputs_sha256.input` 为 `sha256`。把试算输出目录下 `report.json` 的绝对路径作为 `report`，从 `outputs_sha256["report.json"]` 取 `report_sha256`。填入确切的 `candidate` 名称和新的 `output`，例如 `marker-material`。源图或报告改变后，重新试算再选方案。
 4. 核对 `result.controls` 和最终参考图。生成目录含 `asset.json`、`data.lua`、`preview.png`、`report.json` 和 `manifest.json`。文件摘要见 `outputs_sha256`。按数据中的坐标及格式接入客户端界面，在目标宿主检查显示。
 
@@ -31,7 +31,7 @@ python scripts/qianxing.py assets preview SOURCE.png --max-controls 900 --min-gr
 
 `preview` 接受与 `generate` 相同的生成参数。超预算时按宽高比逐档缩小网格，并在每档比较原色数和减半色数。最多试算 14 组，可用 `--min-grid` 保留最低分辨率。`report.json` 给出各组控件数、预算和误差达成情况、透明边缘变化以及最多三个可用建议。只推荐同时满足声明约束的候选。默认按原参数的网格比较，也可指定目标显示尺寸。误差是归一化的预乘 RGBA MSE，富文本以量化网格作为参考。
 
-从 `recommendations` 或 `candidates` 取候选名称。原文件移动后可显式传入新路径。生成时核对源摘要并重算实际控件预算。
+从 `recommendations` 或 `candidates` 取满足约束且保留可见内容的候选名称。原文件移动后可显式传入新路径。生成时核对源摘要并重算实际控件预算。有可见内容的原图若在转换后得到零控件，工具会提示调整参数，并在写入前停止。全透明原图可以生成零控件数据，报告标明 `has_foreground: false`。
 
 ```text
 python scripts/qianxing.py assets generate --from-preview NEW_PREVIEW/report.json --candidate NAME --out NEW_DIRECTORY
