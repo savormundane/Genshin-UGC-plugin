@@ -28,7 +28,7 @@ SEMVER = r"\d+\.\d+\.\d+"
 REPO = "savormundane/miliastra-wonderland-plugin"
 SOURCE_ARCHIVE = f"https://github.com/{REPO}/archive/refs/heads/main.zip"
 INSTALL_TAG = rf"https://raw\.githubusercontent\.com/{REPO}/v({SEMVER})/install\.ps1\b"
-ZIP_VERSION = rf"\bMiliastra-Wonderland-({SEMVER})-windows-x64\.zip\b"
+ZIP_VERSION = rf"\bMiliastra-Wonderland-({SEMVER})-(?:agent-plugins-)?windows-x64\.zip\b"
 INSTALLER_VERSION = r"\[string\]\$Version\s*=\s*'([^']+)'"
 CHANGELOG_VERSION = rf"^##[ \t]+v?({SEMVER})(?=\s|$)"
 DOC_VERSIONS = {
@@ -49,7 +49,7 @@ SOURCE_DOC_VERSIONS = {
     "README.md": {"current version": DOC_VERSIONS["README.md"]["current version"], "release tag": RELEASE_TAG},
     "docs/installation.md": {"release tag": RELEASE_TAG,
                              "source archive tag": SOURCE_ARCHIVE_TAG,
-                             "local ZIP filename": rf"\bMiliastra-Wonderland-({SEMVER})-windows-x64\.zip\b"},
+                             "local ZIP filename": ZIP_VERSION},
 }
 DESTINATION = r'(<[^\n<>]+>|(?:[^()\s]|\([^()\n]*\))+)'
 LINK_RE = re.compile(r'(?<!\\)\]\(\s*' + DESTINATION + r'''(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*\)''')

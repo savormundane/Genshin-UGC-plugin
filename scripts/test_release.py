@@ -47,7 +47,16 @@ class ReleaseTests(unittest.TestCase):
                                            f"Install from {asset}\nRollback -Version 0.1.0\n```\n")
         self.write("CHANGELOG.md", f"# Fixture\n\n## {version}\n")
         for name in MANIFESTS:
-            self.write(name, json.dumps({"name": "fixture", "version": version, "skills": "./skills/"}))
+            metadata = {"name": "fixture", "version": version}
+            if name == "plugin.json":
+                metadata["$schema"] = "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
+            else:
+                metadata["skills"] = "./skills/"
+            self.write(name, json.dumps(metadata))
+        self.write("mcp.json", json.dumps({
+            "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+            "mcpServers": {"fixture": {"type": "stdio", "command": "node"}},
+        }))
         self.write("install.ps1", f"param([string]$Version = '{version}')\n")
         self.write("skills/fixture/SKILL.md", "---\nname: fixture\ndescription: Neutral fixture\n---\n")
         self.write("vendor/beyond/node_modules/fixture/index.js", "export const value = 1;\n")
@@ -72,16 +81,17 @@ class ReleaseTests(unittest.TestCase):
                 for name, sha in report["assets"].items():
                     self.assertEqual(hashlib.sha256((first / name).read_bytes()).hexdigest(), sha)
                     self.assertEqual((first / name).read_bytes(), (second / name).read_bytes())
-                filename = f"Miliastra-Wonderland-{version}-windows-x64.zip"
+                filename = f"Miliastra-Wonderland-{version}-agent-plugins-windows-x64.zip"
                 self.assertEqual(set(report["assets"]), {filename})
+                self.assertEqual(report["package"]["layout"], "agent-plugins")
                 self.assertEqual({p.name for p in first.iterdir()}, {filename, "release-notes.md", "release-review.json"})
                 with zipfile.ZipFile(first / filename) as archive:
                     names = archive.namelist()
-                    self.assertIn("miliastra-wonderland/vendor/beyond/node_modules/fixture/index.js", names)
-                    self.assertIn("miliastra-wonderland/runtime/fixture.bin", names)
-                    self.assertIn("miliastra-wonderland/references/中文 文件.txt", names)
+                    expected = {"plugin.json", "mcp.json", "skills/fixture/SKILL.md", "runtime/fixture.bin",
+                                "vendor/beyond/node_modules/fixture/index.js", "references/中文 文件.txt"}
+                    self.assertTrue(expected.issubset(names))
                     self.assertFalse(any("/.git/" in n or "/.venv/" in n for n in names))
-                    self.assertEqual(archive.read("miliastra-wonderland/install.ps1"), (self.root / "install.ps1").read_bytes())
+                    self.assertEqual(archive.read("install.ps1"), (self.root / "install.ps1").read_bytes())
                 with self.assertRaisesRegex(ValueError, "new directory"):
                     prepare(self.root, first, self.notes)
 
@@ -173,7 +183,9 @@ class ReleaseTests(unittest.TestCase):
                 self.assertEqual(check(self.root), [])
                 self.write('docs/installation.md', f'[Source]({source})\n`miliastra-wonderland-windows-x64.zip`\n')
                 self.assertEqual(check(self.root), [])
-        self.write('docs/installation.md', f'[Source]({release})\n`Miliastra-Wonderland-4.1.2-windows-x64.zip`\n')
+                self.write('docs/installation.md', f'[Source]({source})\n`Miliastra-Wonderland-1.0.0-agent-plugins-windows-x64.zip`\n')
+                self.assertEqual(check(self.root), [])
+        self.write('docs/installation.md', f'[Source]({release})\n`Miliastra-Wonderland-4.1.2-agent-plugins-windows-x64.zip`\n')
         self.assertTrue(any('local ZIP filename' in error for error in check(self.root)))
         archive = f'https://github.com/{REPO}/archive/refs/tags/v4.1.2.zip'
         self.write('docs/installation.md', f'[Release]({release})\n[Source]({archive})\n')

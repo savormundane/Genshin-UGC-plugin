@@ -13,7 +13,7 @@ import zipfile
 from check_repository import (
     CHANGELOG_VERSION, DOC_VERSIONS, INSTALLER_VERSION, SEMVER, SOURCE_DOC_VERSIONS, check,
 )
-from package_release import build_release, sha256_file, validate_windows_names
+from package_release import agent_plugins_zip_name, build_release, sha256_file, validate_windows_names
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -99,8 +99,8 @@ def prepare(source: Path, output: Path, notes: Path) -> dict:
         version = json.loads((tree / "plugin.json").read_text(encoding="utf-8-sig"))["version"]
         staged = temporary / "assets"
         staged.mkdir()
-        filename = f"Miliastra-Wonderland-{version}-windows-x64.zip"
-        package = build_release(tree, staged / filename, "plugin", "miliastra-wonderland")
+        filename = agent_plugins_zip_name(version)
+        package = build_release(tree, staged / filename, "agent-plugins")
         assets = {filename: package["sha256"]}
         (staged / "release-notes.md").write_text(release_notes, encoding="utf-8")
         report = {"schema": 1, "version": version, "tag": "v" + version,

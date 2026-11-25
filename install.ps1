@@ -177,12 +177,12 @@ try {
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     $zip = [IO.Compression.ZipFile]::OpenRead((Resolve-Path -LiteralPath $Archive).Path)
     try {
-        $archiveRoot = 'miliastra-wonderland'
+        $archivePrefix = if ($zip.GetEntry('plugin.json')) { '' } else { 'miliastra-wonderland/' }
         $bootstrap = 'scripts/install_plugin.py'
         $entries = @($bootstrap, 'pyproject.toml', 'scripts/runtime_policy.py')
         New-Item -ItemType Directory -Path (Join-Path $taskTemp 'scripts') | Out-Null
         foreach ($file in $entries) {
-            $entry = @($zip.Entries | Where-Object { $_.FullName -ceq "$archiveRoot/$file" })
+            $entry = @($zip.Entries | Where-Object { $_.FullName -ceq ($archivePrefix + $file) })
             if ($entry.Count -ne 1) { throw "[install.files] ZIP 中的安装文件 $file 缺失或重复。请重新打包。" }
             [IO.Compression.ZipFileExtensions]::ExtractToFile($entry[0], (Join-Path $taskTemp $file))
         }

@@ -2,8 +2,16 @@
 
 1. 从待发行提交准备候选。以根 `plugin.json` 为候选版本来源，同步宿主清单、PowerShell 安装器、文档定版链接和 CHANGELOG 标题。
 2. 从候选运行 `python -B scripts/marketplace_release.py` 生成市场及 DSH 包清单。DSH 从仓库根目录读取 Bundle 清单。
-3. 从候选提交运行 `python -B scripts/check_repository.py` 和[相关本地检查](development.md)。打包验证可按[自行打包](../installation.md#自行打包-zip)操作。
-4. 正式发布时快进推送候选提交，以该提交建立新标签并发布源码 Release。核对 Latest、标签和各客户端入口。ZIP 自行打包。
+3. 从候选提交运行 `python -B scripts/check_repository.py` 和[相关本地检查](development.md)。从同一提交运行 `npm pack` 核对 DSH 包清单。获准发布到 npm 后，再查询公开注册表确认 `miliastra-wonderland` 的版本可用。
+4. 正式发布时快进推送候选提交，以该提交建立新标签并发布 Release。核对 Latest、标签和各客户端入口。下一次发行随附一个 Agent Plugins ZIP。
+
+Windows x64 离线包可从干净的候选提交生成。将 `NOTES` 和 `NEW_DIRECTORY` 换成发行说明文件和源码目录外的新输出路径。
+
+```powershell
+python -B scripts/prepare_release.py --notes NOTES --output NEW_DIRECTORY
+```
+
+附件名为 `Miliastra-Wonderland-<version>-agent-plugins-windows-x64.zip`。ZIP 根目录包含 `plugin.json`、`mcp.json` 和 `skills/`。核对 Windows x64 Canvas 文件，以及下载后 ZIP 的 SHA-256。
 
 Python 依赖有变更时运行 `uv lock`，并用 `uv export --locked --no-dev --no-emit-project --no-header --format requirements-txt --output-file scripts/runtime-requirements.lock` 同步本地安装器的依赖锁。
 

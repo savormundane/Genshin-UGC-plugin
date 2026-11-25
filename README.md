@@ -26,13 +26,16 @@ Miliastra Wonderland 是面向原神「千星奇域」创作者的非官方 AI �
 
 ## 安装
 
-插件支持 **Agent Plugins、Claude、DSH** 三种协议。按下表选择安装方式。 [协议与客户端](docs/compatibility.md#安装协议与客户端)
+插件支持 **Agent Plugins、Claude、DSH** 三种协议。 [协议与客户端](docs/compatibility.md#安装协议与客户端)
 
-| 安装方式 | 从哪里开始 |
+| 客户端 | 市场安装 |
 | --- | --- |
-| [本地](docs/installation.md#本地安装) | 用已有的插件目录或完整 Windows ZIP 安装。 |
-| [CLI](docs/installation.md#cli-安装) | 在终端用 Codex CLI、Claude Code 或 `dsh` 从市场或仓库安装。 |
-| [原生](docs/installation.md#原生安装) | 在提供插件管理入口的桌面端、移动端或 Web 界面安装。 [ChatGPT/Codex](docs/installation.md#chatgptcodex) · [Claude](docs/installation.md#claude) · [DeepSeek Harness](docs/installation.md#deepseek-harness) |
+| ChatGPT/Codex | 打开「插件」，从工作区市场安装 **Miliastra Wonderland**。 [导入工作区市场](docs/installation.md#chatgptcodex) |
+| Claude | 在「自定义 → 插件 → 添加市场」输入 `savormundane/miliastra-wonderland-plugin`，然后安装 **Miliastra Wonderland**。 |
+| DeepSeek Harness | npm 包发布后，在「插件 → 添加插件」输入 `miliastra-wonderland`。 |
+| Agent Plugins | 在支持 GitHub 市场的客户端添加 `savormundane/miliastra-wonderland-plugin`，安装 `miliastra-wonderland`。 |
+
+**本地安装**。下一版将在 [GitHub Releases](https://github.com/savormundane/miliastra-wonderland-plugin/releases) 提供 Agent Plugins ZIP。客户端支持时可直接上传，或解压后导入插件目录。终端用户可查看 [CLI 安装](docs/installation.md#cli-安装)。
 
 完整本地工具面向 Windows x64，需要 Node.js 22+（DSH 用 24.9+）以及具备依赖的 CPython 3.11–3.14 或 PATH 上的 `uv`。 [运行要求](docs/compatibility.md#运行要求) · [安装自检](docs/installation.md#安装自检)
 

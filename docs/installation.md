@@ -1,39 +1,28 @@
 # 安装、更新与卸载
 
-选择[本地安装](#本地安装)、[CLI 安装](#cli-安装)或[原生安装](#原生安装)。插件支持 [Agent Plugins、Claude、DSH 三种协议](compatibility.md#安装协议与客户端)。
-
-完整工具支持 Windows x64。客户端从同一个插件目录加载 Skills 和 MCP。见[运行要求](compatibility.md#运行要求)。
+选择[市场安装](#市场安装)、[CLI 安装](#cli-安装)或[本地安装](#本地安装)。 [支持的协议](compatibility.md#安装协议与客户端) · [运行要求](compatibility.md#运行要求)
 
 [返回首页](../README.md)
 
-## 本地安装
+## 市场安装
 
-### 从本地目录导入
+### ChatGPT/Codex
 
-解压本版源码，或检出 GitHub 的 `main` 分支。选择包含插件清单的源码根目录。 [本版源码](https://github.com/savormundane/miliastra-wonderland-plugin/archive/refs/tags/v1.1.0.zip) · [发行说明](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/v1.1.0)
+打开「插件」，从工作区市场选择 **Miliastra Wonderland** 并安装。 [ChatGPT/Codex 插件目录](https://learn.chatgpt.com/docs/plugins)
 
-| 客户端 | 导入入口 |
-| --- | --- |
-| Agent Plugins | 在支持目录导入的客户端选择包含 `plugin.json` 的根目录。 |
-| Claude Code | 在自己的工程目录运行 `claude --plugin-dir '<插件源码根目录的绝对路径>'`，在当前会话加载本地插件。 |
+工作区尚未添加该市场时，管理员可在「管理 → 插件 → 添加 → 导入市场」输入 `https://github.com/savormundane/miliastra-wonderland-plugin`，路径留空。导入完成后，成员可从工作区市场安装。 [导入 GitHub 市场](https://learn.chatgpt.com/docs/enterprise/plugin-management)
 
-### 自行打包 ZIP
+### Claude
 
-将选定版本的源码解压到空目录，再进入解压后的源码根目录用 Python 打包。打包器按分发清单读取这个目录，Git 忽略规则不参与筛选。先确认目录中只有该版本的解压文件。命令把 Windows x64 ZIP 写到源码目录之外，并输出 SHA-256。正式发行从经确认的 Git 提交准备。 [发行流程](contributing/maintenance.md)
+在「自定义 → 插件 → 添加市场」选择从仓库添加，输入 `savormundane/miliastra-wonderland-plugin`，然后安装 **Miliastra Wonderland**。 [Claude 插件市场](https://support.claude.com/en/articles/13837440-use-plugins-in-claude)
 
-源码缺少 Beyond 的 Canvas 原生文件时，打包器会按摘要下载锁定版本并把校验后的文件放入 ZIP。已有本地资产时可在命令末尾加 `--beyond-native-archive <资产 ZIP 路径>`，在离线环境打包。完整 ZIP 内含 Beyond 原生文件，已有可用的插件运行环境时可以离线运行。Git 市场及 Cordis 安装在首次使用 Beyond 时单独准备这两个文件。 [Beyond 运行要求](../references/workflows/beyond-backend.md)
+### DeepSeek Harness
 
-```powershell
-python -B scripts/package_release.py --source . --out ../miliastra-wonderland-windows-x64.zip --layout plugin --archive-root miliastra-wonderland
-```
+npm 包发布后，在「插件 → 添加插件」输入 `miliastra-wonderland`。 [DeepSeek Harness 插件管理](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/boot/plugin-manager/README.md)
 
-可解压后[导入插件目录](#从本地目录导入)。需要用 PowerShell 登记时，从同一份源码目录传入本地包和打包命令给出的摘要。Claude Code 可将 `-Agent codex` 改为 `-Agent claude-code`。
+### Agent Plugins
 
-```powershell
-.\install.ps1 -Agent codex -Archive ..\miliastra-wonderland-windows-x64.zip -Sha256 '<打包输出的 SHA-256>'
-```
-
-DeepSeek Harness 的本地安装可把同一命令改为 `-Agent deepseek-harness`。准备完成后，在选定的 DSH 配置里添加返回的 `bundle_directory`。该目录带有中英文详情和图标，并引用已准备的本地运行目录。
+在支持 GitHub 市场的客户端添加 `savormundane/miliastra-wonderland-plugin`，安装 `miliastra-wonderland`。也可使用[本地安装](#本地安装)。
 
 ## CLI 安装
 
@@ -68,49 +57,27 @@ claude plugin install miliastra-wonderland@miliastra-wonderland
 
 ### DeepSeek Harness 命令行
 
-终端可以运行 `dsh` 时，可向 Web 配置安装，然后打开同一配置的界面。
+npm 包发布后，使用 `dsh` 安装到 Web 配置。
 
 ```powershell
-dsh plugin --profile web add 'github:savormundane/miliastra-wonderland-plugin'
-dsh web
+dsh plugin --profile web add miliastra-wonderland
 ```
 
-## 原生安装
+发布前可用 `dsh plugin --profile web add github:savormundane/miliastra-wonderland-plugin` 从仓库安装。
 
-在提供插件管理入口的桌面端、移动端或 Web 界面安装。可选来源取决于客户端和工作区。
+## 本地安装
 
-### ChatGPT/Codex
+### 从本地目录导入
 
-如果工作区已提供 Miliastra Wonderland，在插件目录打开它并安装。从本仓库自行登记市场时，在终端运行下面一行。
+在 [GitHub Releases](https://github.com/savormundane/miliastra-wonderland-plugin/releases) 选择附有 Agent Plugins ZIP 的版本。客户端支持导入 Agent Plugins ZIP 时直接上传，支持目录导入时解压到独立目录并选择包含 `plugin.json` 的目录。只有源码附件的版本也可解压后导入目录。 [Agent Plugins 规范](https://agent-plugins.org/specification) · [本版发行说明](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/v1.1.0)
+
+### 自行打包 ZIP
+
+从干净解压的源码目录运行以下命令。打包器写出 ZIP 和 SHA-256，缺少 Beyond 原生文件时会下载并校验锁定资产。已有资产可传 `--beyond-native-archive <路径>`。 [正式发行流程](contributing/maintenance.md)
 
 ```powershell
-codex plugin marketplace add savormundane/miliastra-wonderland-plugin
+python -B scripts/package_release.py --source . --out ../miliastra-wonderland-agent-plugins-windows-x64.zip --layout agent-plugins
 ```
-
-登记完成后，在 ChatGPT 桌面应用的 Work 或 Codex 中打开插件目录，选择 **Miliastra Wonderland** 市场并安装。市场未出现时，确认应用和终端使用同一份 Codex 配置，再重新打开应用。 [ChatGPT/Codex 插件目录](https://learn.chatgpt.com/docs/plugins) · [自定义市场](https://developers.openai.com/plugins/build/plugins)
-
-### Claude
-
-1. 在 Claude 的「自定义 → 插件」选择「添加 → 添加市场 → 从仓库添加」。
-2. 粘贴 `https://github.com/savormundane/miliastra-wonderland-plugin`，等待市场出现后，打开 **Miliastra Wonderland** 并添加。
-
-Claude 的插件安装跟随账户。组织管理的账户取决于允许的仓库来源。 [Claude 插件与市场说明](https://support.claude.com/en/articles/13837440-use-plugins-in-claude)
-
-### DeepSeek Harness
-
-打开「插件 → 添加插件」，粘贴以下地址并安装。
-
-```text
-git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
-```
-
-在插件列表打开「千星奇域开发插件」的详情，根据页面上的查询示例验证本地工具。英语界面名称为 **Miliastra Wonderland**。查看 `.gil` 等本地文件时，切换到包含该文件的工程再开启会话。 [工程绑定](runtime-environment.md#连接-mcp-或切换工程)
-
-直接安装仍从 Git 仓库取得 Bundle。安装后的标题、摘要和详情由安装包内的语言资源提供。若仍出现仓库的长 README，先在插件列表核对已安装来源，再刷新到含新详情页的版本。 [DeepSeek Harness 插件元数据](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/cookbook/adding-a-package.md)
-
-### Agent Plugins
-
-其他支持 Agent Plugins 和本地 stdio MCP 的客户端，可通过其市场入口添加 `savormundane/miliastra-wonderland-plugin`，再安装 `miliastra-wonderland`。如果客户端提供的是本地目录导入，按[从本地目录导入](#从本地目录导入)操作。
 
 ## 首次工具验证
 
@@ -133,7 +100,7 @@ git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
 
 ## 回退与卸载
 
-- **原生安装**在 ChatGPT/Codex 的插件目录、Claude 的「自定义 → 插件」或 DeepSeek Harness 的插件页管理。更新后开启新会话复验工具。
+- **市场安装**在各客户端的插件页管理。更新后开启新会话复验工具。
 - **CLI 安装**使用同一客户端的插件命令管理。Codex CLI 可用 `codex plugin marketplace upgrade miliastra-wonderland` 刷新已登记的市场。
 - **同版本重发**后，若客户端仍加载旧缓存，请从原入口卸载并重新安装。保留现有运行配置或通过 `MILIASTRA_WONDERLAND_RUNTIME_CONFIG` 指回原文件，便可继续使用原工程和解释器。
 - **PowerShell 登记的 Codex 和 Claude**可从新版安装器升级。回退或卸载可用完整 ZIP 内的命令。改用 `-Agent claude-code` 即可操作 Claude，使用过 `-Root` 的用户应传入原值。
@@ -161,7 +128,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-install.
 
 能运行 Node 时，也可以直接执行 `node .\scripts\mcp_launcher.cjs --check`。
 
-自检适用于市场、GitHub 直装、本地导入和 PowerShell 登记。它检查启动文件、Node.js、已有 Python 的版本与依赖，以及 PATH 上的 uv。自动查找 Python 时会检查 PATH 上的 `python.exe`，并通过 Windows 的 `py.exe` 查找已安装的兼容版本。自检显示选择的解释器，遇到阻塞项会列出失败原因和下一步。如果报告会由 uv 准备环境，请在依赖源可访问时重启客户端，再[查询第一个节点](../README.md#查询第一个节点)确认工具连通。MCP 连通后，可用 `doctor` 查看客户端实际采用的工程目录和依赖。
+自检检查启动文件、Node.js、已有 Python 的版本与依赖，以及 PATH 上的 uv。启动器会查找 PATH 上的 `python.exe`，也会通过 Windows 的 `py.exe` 查找兼容版本。根据报告修正后，再[查询第一个节点](../README.md#查询第一个节点)。工具连通后，用 `doctor` 查看实际使用的工程目录和依赖。
 
 自检读取当前终端的 PATH、`MILIASTRA_WONDERLAND_PYTHON` 和 `MILIASTRA_WONDERLAND_RUNTIME_CONFIG` 等环境变量。客户端单独配置了解释器或绑定文件时，把同样的值设置到自检终端。使用 WinGet 的用户可运行 `winget install --id=astral-sh.uv -e` 安装 uv，再打开新终端检查 `uv --version`。 [uv 的 WinGet 安装说明](https://docs.astral.sh/uv/getting-started/installation/#winget)
 
@@ -169,10 +136,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-install.
 
 | 遇到的问题 | 适用安装方式 | 下一步 |
 | --- | --- | --- |
-| 市场中找不到插件 | ChatGPT/Codex 或 Claude 的原生安装，以及 CLI 市场安装 | 按对应的[原生入口](#原生安装)或 [CLI 入口](#cli-安装)核对仓库名和插件 ID，确认市场已登记或同步。 |
+| 市场中找不到插件 | ChatGPT/Codex 或 Claude | 核对仓库名和插件 ID，确认市场已导入。 [市场安装](#市场安装) |
 | 添加市场时 Claude 报错 | Claude 或 Claude Code | 用仓库根地址重试。若看到组织限制提示，核对允许的市场来源。Claude Code 可对同一份已解压源码运行 `claude plugin validate .`，定位具体清单或路径。 |
-| Claude 提示 `Unrecognized key: "displayName"` | Claude Code 读取了 V1.1.0 的旧清单 | 更新市场源后再安装。若仍加载旧版本，可按[本地目录导入](#从本地目录导入)使用修复后的插件目录。 |
-| 直装地址无法加载 | DeepSeek Harness 的原生安装 | 核对直装地址和客户端版本，再到「插件 → 添加插件」重试。 [直装说明](#deepseek-harness) |
+| Claude 提示 `Unrecognized key: "displayName"` | Claude Code 读取了 V1.1.0 的旧清单 | 同步包含修复的市场版本后再安装。 |
+| 搜不到 `miliastra-wonderland` | DeepSeek Harness | 核对 npm 包的发布状态及客户端选用的注册表。 [安装说明](#deepseek-harness) |
 | Claude Chat 里有 Skill，调用不到节点查询 | Claude | 在 Cowork 新建任务并允许本地工具，再做[首次工具验证](#首次工具验证)。 |
 | 能看到 Skill，工具未连通 | 所有安装方式 | 先[运行安装自检](#安装自检)。修复后重启客户端，确认插件已启用并允许本地 MCP。使用自选安装根目录时，核对 `MILIASTRA_WONDERLAND_INSTALL_ROOT`。 |
 | MCP 启动时缺少 Python 或依赖 | 所有安装方式 | 安装 uv 并确认新终端能运行 `uv --version`，或让 `MILIASTRA_WONDERLAND_PYTHON` 指向已配置依赖的解释器。修正旧绑定后重新打开客户端。 |

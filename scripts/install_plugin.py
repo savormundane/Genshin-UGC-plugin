@@ -75,11 +75,13 @@ def archive_sha256(path):
 def extract(archive, expected, destination, version):
     if archive_sha256(archive) != expected.lower():
         raise ValueError('ZIP 的 SHA-256 校验失败。请核对安装包和打包输出的摘要。')
+    bundle = destination / 'miliastra-wonderland'
     with zipfile.ZipFile(archive) as z:
+        wrapped = 'plugin.json' not in z.namelist()
         seen = set()
         for item in z.infolist():
             path = PurePosixPath(item.filename)
-            if (not path.parts or path.parts[0] != 'miliastra-wonderland' or '..' in path.parts
+            if (not path.parts or (wrapped and path.parts[0] != 'miliastra-wonderland') or '..' in path.parts
                     or '\\' in item.filename or ':' in item.filename or path.is_absolute()
                     or (item.external_attr >> 16) & 0o170000 == 0o120000):
                 raise ValueError('ZIP 包含不安全的路径 ' + item.filename)
@@ -87,8 +89,7 @@ def extract(archive, expected, destination, version):
             if key in seen or any(p in ('.git', '.venv', '__pycache__') for p in path.parts):
                 raise ValueError('ZIP 包含重复或不应随包分发的文件 ' + item.filename)
             seen.add(key)
-        z.extractall(destination)
-    bundle = destination / 'miliastra-wonderland'
+        z.extractall(destination if wrapped else bundle)
     for name in ('plugin.json', '.codex-plugin/plugin.json', '.claude-plugin/plugin.json'):
         meta = read_json(bundle / name)
         if meta['name'] != 'miliastra-wonderland' or meta['version'] != version:

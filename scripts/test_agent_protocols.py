@@ -95,21 +95,24 @@ class Probe {
                    'PYLAUNCHER_ALLOW_INSTALL': '1', 'PYLAUNCHER_ALWAYS_INSTALL': '1',
                    'PYTHON_MANAGER_AUTOMATIC_INSTALL': 'true'}
 
-            archive = root / 'bootstrap.zip'
-            with zipfile.ZipFile(archive, 'w') as zip_file:
-                zip_file.writestr('miliastra-wonderland/scripts/install_plugin.py',
-                                  'import json, sys\nprint(json.dumps(sys.executable))\n')
-                for name in ('pyproject.toml', 'scripts/runtime_policy.py'):
-                    zip_file.write(ROOT / name, 'miliastra-wonderland/' + name)
-            setup = powershell_install(
-                env, Archive=str(archive), Sha256=installer.archive_sha256(archive),
-                Project=str(root), Outputs=str(root / 'outputs'), Root=str(root / 'installed'),
-            )
-            self.assertEqual(setup.returncode, 0, setup.stderr)
-            self.assertEqual(setup.stderr, '')
-            self.assertEqual(Path(json.loads(setup.stdout)), Path(sys.executable))
             selectors = [f'-3.{highest}', f'-3.{highest - 1}']
-            self.assertEqual(log.read_text(encoding='utf-8').splitlines(), selectors)
+            for prefix in ('miliastra-wonderland/', ''):
+                with self.subTest(wrapped=bool(prefix)):
+                    archive = root / 'bootstrap.zip'
+                    log.write_text('', encoding='utf-8')
+                    with zipfile.ZipFile(archive, 'w') as zip_file:
+                        zip_file.writestr(prefix + 'scripts/install_plugin.py',
+                                          'import json, sys\nprint(json.dumps(sys.executable))\n')
+                        for name in ('plugin.json', 'pyproject.toml', 'scripts/runtime_policy.py'):
+                            zip_file.write(ROOT / name, prefix + name)
+                    setup = powershell_install(
+                        env, Archive=str(archive), Sha256=installer.archive_sha256(archive),
+                        Project=str(root), Outputs=str(root / 'outputs'), Root=str(root / 'installed'),
+                    )
+                    self.assertEqual(setup.returncode, 0, setup.stderr)
+                    self.assertEqual(setup.stderr, '')
+                    self.assertEqual(Path(json.loads(setup.stdout)), Path(sys.executable))
+                    self.assertEqual(log.read_text(encoding='utf-8').splitlines(), selectors)
 
             # Give the first selector a real CPython environment without the locked dependencies.
             incomplete = root / 'incomplete'

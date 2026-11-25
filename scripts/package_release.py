@@ -9,6 +9,10 @@ import tempfile
 import zipfile
 
 
+def agent_plugins_zip_name(version):
+    return f'Miliastra-Wonderland-{version}-agent-plugins-windows-x64.zip'
+
+
 def sha256_file(path):
     digest = hashlib.sha256()
     with Path(path).open('rb') as stream:
@@ -70,9 +74,15 @@ def build_release(source, output, layout='auto', archive_root=None, *, beyond_na
     if output.is_relative_to(source):
         raise ValueError('Output must be outside the source directory')
     excluded, excluded_files = distribution_exclusions(source)
-    archive_root = archive_root or source.name
-    if not re.fullmatch(r'[A-Za-z0-9_.-]+', archive_root) or archive_root in ('.', '..'):
-        raise ValueError('Invalid archive root')
+    prefix = ''
+    if layout == 'agent-plugins':
+        if archive_root is not None:
+            raise ValueError('Agent Plugins ZIP entries must be at the archive root')
+    else:
+        archive_root = archive_root or source.name
+        if not re.fullmatch(r'[A-Za-z0-9_.-]+', archive_root) or archive_root in ('.', '..'):
+            raise ValueError('Invalid archive root')
+        prefix = archive_root + '/'
     files = []
     for f in sorted(source.rglob('*')):
         if f.is_symlink():
@@ -95,16 +105,21 @@ def build_release(source, output, layout='auto', archive_root=None, *, beyond_na
     root_skill = source / 'SKILL.md'
     if layout == 'auto':
         layout = 'skill' if root_skill.is_file() else 'plugin'
-    if layout == 'plugin':
-        manifest = source / '.codex-plugin/plugin.json'
-        if not manifest.exists():manifest = source / 'plugin.json'
+    if layout in ('plugin', 'agent-plugins'):
+        manifest = source / 'plugin.json'
+        if layout == 'plugin' and (source / '.codex-plugin/plugin.json').is_file():
+            manifest = source / '.codex-plugin/plugin.json'
         m = json.loads(manifest.read_text(encoding='utf-8-sig'))
-        declared = m.get('skills', './skills/')
+        if not isinstance(m, dict):
+            raise ValueError('Plugin manifest must be a JSON object')
+        declared = './skills/' if layout == 'agent-plugins' else m.get('skills', './skills/')
         if not isinstance(declared,str) or not declared.startswith('./') or '..' in Path(declared).parts:
             raise ValueError('Invalid declared skill directory')
         skill_root=(source/declared).resolve()
         if not skill_root.is_relative_to(source) or not skill_root.is_dir():raise ValueError('Declared skill directory missing or outside package')
         entries = [f for f in entries if f.is_relative_to(skill_root)]
+        if layout == 'agent-plugins':
+            entries = [f for f in entries if f.name == 'SKILL.md' and f.parent.parent == skill_root]
     for f in entries:
         text = f.read_text(encoding='utf-8-sig')
         front = re.match(r'\A---\r?\n(.*?)\r?\n---(?:\r?\n|$)', text, re.S)
@@ -117,16 +132,26 @@ def build_release(source, output, layout='auto', archive_root=None, *, beyond_na
     if layout == 'skill':
         if entries != [root_skill]:
             raise ValueError('Single Skill layout requires exactly one root SKILL.md')
-    elif layout == 'plugin':
-        manifest = source / '.codex-plugin/plugin.json'
-        if not manifest.exists():
-            manifest = source / 'plugin.json'
-        m = json.loads(manifest.read_text(encoding='utf-8-sig'))
+    elif layout in ('plugin', 'agent-plugins'):
         if not m.get('name') or not entries:
             raise ValueError('Plugin identity and skills required')
     else:
         raise ValueError('Unknown layout')
     members = {f.relative_to(source): f for f in files}
+    if layout == 'agent-plugins':
+        portable_schema = 'https://agent-plugins.org/schemas/1.0.0/'
+        if (Path('plugin.json') not in members or m.get('$schema') != portable_schema + 'plugin.schema.json'
+                or m.keys() - {'$schema', 'name', 'version', 'description', 'author', 'homepage',
+                               'repository', 'license', 'keywords', 'extensions'}):
+            raise ValueError('Agent Plugins ZIP requires a portable root plugin.json')
+        mcp = members.get(Path('mcp.json'))
+        if mcp is None:
+            raise ValueError('Agent Plugins ZIP requires a root mcp.json')
+        config = json.loads(mcp.read_text(encoding='utf-8-sig'))
+        if (not isinstance(config, dict) or config.keys() != {'$schema', 'mcpServers'}
+                or config['$schema'] != portable_schema + 'mcp.schema.json'
+                or not isinstance(config['mcpServers'], dict) or not config['mcpServers']):
+            raise ValueError('Invalid Agent Plugins MCP configuration')
     beyond = Path('vendor/beyond')
     native_lock = beyond / 'native-canvas.json'
     locked_members = {}
@@ -145,7 +170,7 @@ def build_release(source, output, layout='auto', archive_root=None, *, beyond_na
             if any(path.as_posix() in excluded_files or path.as_posix().startswith(tuple(excluded))
                    for path in native_files):
                 raise ValueError('The full Windows ZIP must include the locked Beyond native files')
-            locked_members = {f'{archive_root}/{path.as_posix()}': lock['files'][relative]
+            locked_members = {prefix + path.as_posix(): lock['files'][relative]
                               for path, relative in native_files.items()}
             bundled = verify_native_files(source / beyond, lock)
             if beyond_native_archive is not None or not bundled:
@@ -155,7 +180,7 @@ def build_release(source, output, layout='auto', archive_root=None, *, beyond_na
                 hydrated = staging / 'native-canvas'
                 extract_native_archive(lock, archive, hydrated)
                 members.update({path: hydrated / relative for path, relative in native_files.items()})
-        members = {archive_root + '/' + path.as_posix(): members[path] for path in sorted(members)}
+        members = {prefix + path.as_posix(): members[path] for path in sorted(members)}
         validate_windows_names(members)
         staged = staging / 'package.zip'
         with zipfile.ZipFile(staged, 'x', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
@@ -206,7 +231,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source', type=Path, required=True)
     parser.add_argument('--out', type=Path, required=True)
-    parser.add_argument('--layout', choices=['auto', 'skill', 'plugin'], default='auto')
+    parser.add_argument('--layout', choices=['auto', 'skill', 'plugin', 'agent-plugins'], default='auto')
     parser.add_argument('--archive-root')
     parser.add_argument('--beyond-native-archive', type=Path,
                         help='Use a local Beyond Windows x64 release asset verified against the source lock')
