@@ -1,6 +1,6 @@
 # 原生UI矩形布局
 
-为已有GIL或level阶段新生成的控件写入固定锚点RectTransform，配置按设备状态独立声明。不携带页面、主题、布局模板或玩家文案。输入只读，输出新目录；根GIL的字段9以外原始字节保持。
+为已有GIL或level阶段新生成的控件写入固定锚点RectTransform，配置按设备状态独立声明。不携带页面、主题、布局模板或玩家文案。输入只读，输出新目录；GIL 根级字段 9 之外的原始字节保持不变。
 
 ```text
 python scripts/qianxing.py ui apply base.gil ui.json --out new-layout
@@ -24,7 +24,7 @@ canvas必须明确给出四个状态的尺寸，不推断状态编号对应的�
 
 目标可用唯一template名称，或用guid直接选定一个真实记录，不能同时提供两者。template选择同时写入模板记录与其库入口，避免只改库入口而实例化原模板。重复选择同一GUID、歧义模板名、缺失控件、缺失或重复状态、未校准RectTransform组件布局均拒绝。
 
-第二种中性配置可使用area或text模板，anchor改为[1,0]，各状态使用不同矩形。container、area、text、image复用已校准矩形组件；本入口不创建输入监听、图片资产或文字内容，模板创建继续通过level阶段完成。
+另一个示例可使用 `area` 或 `text` 模板，anchor改为[1,0]，各状态使用不同矩形。container、area、text、image复用已校准矩形组件；本入口不创建输入监听、图片资产或文字内容，模板创建继续通过level阶段完成。
 
 ## 接入制作链
 
@@ -38,11 +38,11 @@ canvas必须明确给出四个状态的尺寸，不推断状态编号对应的�
 
 ## 已校准范围与待验项
 
-字段依据为包内Ayaya的ui_patchers/web_ui/web_ui_import_rect.py与layout/layout_templates_parts/shared_parts/rect_transform.py：状态值中502/503为固定锚点、504为锚定位置、505为尺寸、506为轴心。工具复用该坐标换算并独立解码实际写入浮点数，不按控件组件的数组序号猜测目标。其它组件、脚本挂载及未选中记录保持。
+字段依据为包内Ayaya的ui_patchers/web_ui/web_ui_import_rect.py与layout/layout_templates_parts/shared_parts/rect_transform.py：状态值中502/503为固定锚点、504为锚定位置、505为尺寸、506为轴心。工具复用该坐标换算并独立解码实际写入浮点数，不按控件组件的数组序号猜测目标。其他组件、脚本挂载和未选中记录均保持原样。
 
 每个state可选scale:[sx,sy]，显式声明二维正缩放；省略时维持旧合同，只接受原单位缩放。rect仍是缩放前矩形，缩放绕pivot发生；报告visible_rect为缩放后的可见矩形，越界检查使用它。例如rect=[100,100,100,50]、pivot=[0.5,0.5]、scale=[2,0.5]得到visible_rect=[50,112.5,200,25]。scale字段使用包内ui/readable_dump.py的RectTransform 501→Vec3(1,2,3)定义，仅写X/Y，保留Z=1；实际float32回读与请求核对。零/负缩放、非有限值、深度缩放、旋转仍拒绝。
 
-拉伸锚点、父子布局生成、原生画布缩放模式、导航和输入配置仍需后续校准及实现。声明canvas不能证明实际父容器尺寸，parent_geometry_verified保持false。本页不是整个C档UI能力完成声明。
+拉伸锚点、父子布局生成、原生画布缩放模式、导航和输入配置仍需后续校准及实现。`canvas` 由调用方声明，实际父容器尺寸仍需核对。`parent_geometry_verified` 保持 `false`。
 
 canvas是调用者声明的几何边界，工具不写入实际画布设置，亦不证明目标运行时父容器尺寸、缩放和坐标关系。报告明确给出parent_geometry_verified=false、canvas_configuration_written=false。binary_readback通过仅证明写入字段回读；编辑器导入及实机始终not_checked。
 
@@ -56,6 +56,6 @@ canvas是调用者声明的几何边界，工具不写入实际画布设置，�
 
 读取最终UI记录的504父引用，核对显式关系、祖先存在且唯一、无循环，并读取父RectTransform对应状态的固定锚点尺寸。canvas四状态尺寸必须与父本地尺寸一致；两者不符拒绝输出。父容器同时在controls中修改时，核对最终修改后的尺寸，不依据处理顺序使用旧数据。拉伸父容器没有独立校准时拒绝，不套用其他引擎公式。
 
-逐项报告parent、parent_size、parent_frame_verified。只有所有选中控件均声明并通过父框架检查时，总parent_frame_verified才为true；未声明的控件保持原有声明画布行为。该标记仅说明立即父容器的本地固定锚点尺寸，不证明祖先缩放/旋转后的屏幕边界、裁剪或真实宿主画布，parent_geometry_verified仍为false。父关系字段依据包内ui/guid_resolution.py，矩形读取依据readable_dump及现有RectTransform校准。
+逐项报告parent、parent_size、parent_frame_verified。只有所有选中控件均声明并通过父框架检查时，总parent_frame_verified才为true；未声明的控件保持原有声明画布行为。该标记只确认直接父容器在自身坐标系下的固定锚点尺寸，不证明祖先缩放/旋转后的屏幕边界、裁剪或真实宿主画布，parent_geometry_verified仍为false。父关系字段依据包内ui/guid_resolution.py，矩形读取依据readable_dump及现有RectTransform校准。
 
 test_native_ui_parent覆盖两套控件、父引用/尺寸错误、父链循环、拉伸拒绝、同次父子修改的最终回读，以及produce失败回滚和输入不变。没有引入默认页面、布局或图片组件依赖。

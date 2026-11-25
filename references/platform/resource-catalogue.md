@@ -1,6 +1,6 @@
 # 平台资源目录
 
-提供版本化资源查询与声明使用合同检查。内置经典模式角色编号来自包内摘要校验过的表格。来源保留官方页面、所用资料类型、版本、继承适用性、行号及摘要。若所用资料来自第三方镜像，还提供镜像链接与提交。宿主状态单独记录。
+可按平台版本查询资源，也可检查项目声明的资源用法。内置的经典模式角色编号来自已核对摘要的随包表格。查询结果附上官方页面、资料类型、版本、是否沿用旧版资料、行号和摘要。使用第三方镜像时，也会记录镜像链接和提交。游戏内验证状态单独记录。
 
 ```text
 python scripts/qianxing.py resources search 神里 --version 7.2
@@ -29,7 +29,7 @@ python scripts/qianxing.py resources search 10019173 --type effect --version 7.2
 {"schema":2,"version":"7.2","mode":"classic","uses":[{"type":"character","id":10000002}]}
 ```
 
-另一种中性配置使用独立图片目录：
+以下配置使用单独的图片资源目录。
 
 ```json
 {
@@ -39,7 +39,7 @@ python scripts/qianxing.py resources search 10019173 --type effect --version 7.2
 }
 ```
 
-900仅为合成测试ID，不是已确认的平台图片编号。自定义resources.json格式如下；真实项目须填真实资料和摘要，不将此示例当作平台资源。
+`900` 是测试用的示例 ID。实际项目请在自定义的 `resources.json` 中填写已核实的资源编号、资料和来源摘要。
 
 ```json
 {
@@ -78,12 +78,12 @@ produce在生成前检查合同，failed或not_checked均不提交输出。成�
 
 在uses.json中设置`"check_client":true`，制作任务同时声明`client_check:{"spec":"client-check.json"}`，使用[客户端API检查](../editor/lua/client-api-check.md)的源码摘要及类型绑定合同。缺少合同即拒绝，不能通过扫描文本猜测某个对象是图片控件。
 
-produce从最终GIL或最终单文件Lua的API分析结果读取ClientUIImageControl.SetImage调用，输出client-resource-report.json。Enum.ImageSource依次映射：StaticReference→image，Item→item，Equipment→equipment，Skill→skill，UnitStatus→unit_status，Faction→faction，Currency→currency，Prefab→template。外部目录同时接受这些类型，但没有凭空附带其平台ID清单。
+`produce` 从最终 GIL 或最终单文件 Lua 的 API 分析结果中读取 `ClientUIImageControl.SetImage` 调用，并输出 `client-resource-report.json`。`Enum.ImageSource` 的映射为 `StaticReference` → `image`、`Item` → `item`、`Equipment` → `equipment`、`Skill` → `skill`、`UnitStatus` → `unit_status`、`Faction` → `faction`、`Currency` → `currency`、`Prefab` → `template`。外部目录接受这些类型，具体资源 ID 由项目提供。
 
 已解析的来源和整数ID必须在uses中明确声明并已通过目录合同，未声明则失败并撤销正式输出。依赖闭包中的条目不自动成为可直接使用的资源。十进制/十六进制整数及一元负号、按位取反按Lua 5.3整数事实解释；尚未求值的表达式和动态ID保持not_checked，不把负ID误认为其正数文字。动态对象或不完整API分析同样不能通过。
 
 此检查仅覆盖可解析的SetImage调用，不覆盖原生图片组件、其它资源API、间接项目函数或完整宿主资源加载；complete_reference_index仍为false。没有SetImage调用仅表示该检查范围内未发现引用，不能宣称所有资源引用通过。通过报告不改变外部资料的declared性质，也不改变编辑器/实机状态。
 
-目录结果用于核对资源身份与依赖。外观、适用模式和实际出现行为以目标版本编辑器和游戏内结果为准。
+目录结果用于核对资源身份和依赖。资源的外观、适用模式和实际表现，以目标版本的编辑器检查和游戏内实测为准。
 
 客户端专项使用StaticReference和Item两种来源，覆盖已声明资源、十六进制、负数、缺失ID、动态ID、未求值表达式、最终单文件Lua制作链和失败回滚。新增内嵌GIL专项使用StaticReference和Prefab两种来源，核对报告绑定最终GIL摘要、映射名称和资源类型，并拒绝正文改变后仍使用旧摘要合同。原生图片组件字段仍缺校准，不在此范围。

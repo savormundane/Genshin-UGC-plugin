@@ -48,7 +48,7 @@ scope: server                           # server 或 client
 
 ## 节点调用语法
 
-所有节点调用以 `self.game` 为第一参数：
+调用节点时，第一个参数传入 `self.game`。
 
 ```python
 # 算术运算
@@ -73,7 +73,7 @@ scope: server                           # server 或 client
 
 ## 语法糖映射
 
-Python 原生表达式会被自动转换为对应复合节点：
+编译器会将支持的 Python 表达式转换为对应节点。
 
 ```python
 # 算术运算符
@@ -86,7 +86,7 @@ a % b       → 模运算(self.game, 被模数=a, 模数=b)
 
 # 比较运算符（返回布尔值）
 a == b      → 等于判断(self.game, 左值=a, 右值=b)
-a != b      → 不等于判断(self.game, 左值=a, 右值=b)
+a != b      → 对“是否相等”的结果取反
 a > b       → 大于判断(self.game, 左值=a, 右值=b)
 a >= b      → 大于等于判断(self.game, 左值=a, 右值=b)
 a < b       → 小于判断(self.game, 左值=a, 右值=b)
@@ -146,7 +146,9 @@ match 值:
 break
 ```
 
-包内编译后端将range上下界直接写为原生有限循环的闭区间，并不自动采用Python的右开区间语义。遍历长度为n的列表时先用节点计算last=n-1，再写range(0,last)；上下界必须是简单变量或常量。以最终原生循环端口和空列表／末项测试核对，不能仅运行Python源码判断遍历范围。
+`if` 的条件不能直接使用 `!=`，因为改写后的逻辑非运算会触发 `CODE_IF_DIRECT_LOGIC_NOT_CALL`。用 `==` 比较，并将不相等时的处理写进 `else`。详见 [Graph Code 常见验证错误修复](validation-fixes.md)。
+
+包内编译后端把 `range` 的两个边界直接写入原生有限循环，两端均包含。遍历长度为 `n` 的列表时，先用节点计算 `last=n-1`，再写 `range(0,last)`。上下界必须是简单变量或常量。检查最终原生循环的端口，并用空列表和列表末项验证遍历范围。
 
 ## 事件系统
 

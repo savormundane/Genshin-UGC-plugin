@@ -13,7 +13,7 @@ Look for a `nodes_lookup` call that lists Target GUID as an input and Flow out a
 - **Inspect a level.** Give the assistant a GIL or GIA file and the object you want to find. Review any edit plan before saving a separate copy.
 - **Build gameplay and interfaces.** Check node ports and Lua, create static scenes, or fit an image to primitives and preview the generated script in Beyond.
 
-Native writes use samples calibrated for the target version. Confirm in-game behavior in the game itself.
+Native writes use samples calibrated for the target version. Test the exported files in the game to confirm their behavior.
 
 ## Local requirements
 

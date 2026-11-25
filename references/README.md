@@ -9,8 +9,8 @@
 | 查、写或编译节点图 | [节点图制作](graph-code/node-graph-workflow.md)、[语法](graph-code/graph-code-syntax.md)、[常见编译问题](graph-code/validation-fixes.md) |
 | 审阅并另存 GIL，或挂载已有产物 | [GIL 工具](gil/gil-tooling.md)、[修改计划](gil/native-changes.md)、[原生维护](gil/native-maintenance.md) |
 | 把 PNG 做成图元或分层动画 | [图片转图元](assets/image-to-primitives.md)、[分层拟合](assets/asset-fit.md)、[动画接入](assets/animation.md) |
-| 按同一配置制作、交付或复跑 | [组合制作](workflows/produce.md)、[可迁移交付](workflows/portable-delivery.md)、[验证等级](workflows/validation.md) |
+| 按同一配置制作、交付或重新运行 | [组合制作](workflows/produce.md)、[可迁移交付](workflows/portable-delivery.md)、[验证等级](workflows/validation.md) |
 
 [四个 Skill 的分工](workflows/skill-map.md) · [工程排障](workflows/debugging-workflow.md) · [工具源码导航](../scripts/README.md)
 
-查询结果按相应版本追溯到[来源与证据](platform/knowledge-reliability.md)。多个产物要装到同一份关卡时，用 `produce` 绑定输入和最终文件摘要。
+查询结果可按版本追溯到[来源与证据](platform/knowledge-reliability.md)。需要将多个产物组装到同一份关卡时，用 `produce` 记录对应的输入和最终文件摘要。

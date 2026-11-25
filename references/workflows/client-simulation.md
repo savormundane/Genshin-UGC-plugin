@@ -25,7 +25,7 @@ python scripts/qianxing.py simulate client.lua --scenario SCENE.json --level LEV
 python scripts/qianxing.py simulate LEVEL.gil --mapping main.lua --scenario SCENE.json --timeout 10
 ```
 
-GIL作为源码时，工具直接提取精确匹配的内嵌正文和模板索引；另给--level会拒绝，避免来源冲突。源码Lua配--level只借用绑定数据，报告source_matches_embedded_mapping明确其是否与内嵌脚本同源；false不能作为该GIL已通过逻辑回归的证据。模板的container/text/image/area类型来自绑定回读。
+直接以 GIL 为输入时，从指定映射提取脚本正文和模板索引，此时不能再传 `--level`。以 Lua 源文件为输入时，`--level` 只提供绑定数据。报告的 `source_matches_embedded_mapping` 标明源文件正文是否与内嵌脚本一致。为 `false` 时，结果只适用于外部 Lua。`container`、`text`、`image` 和 `area` 模板类型均来自绑定回读。
 
 SCENE.json包含整数schema=1、可选canvas（默认1600×900）、params对象、steps与assertions。模型启动顺序为OnInit→OnStart→启用时OnEnable；这是当前模型的确定性约定，不代表已复现完整宿主时序。根控件SetActive、script.enabled会触发模型启停转换；SetVisible只影响输入和表现，不停止OnUpdate。EnableUpdate控制两种更新，时停仅阻止OnLevelUpdate。OnInit/OnStart不能通过lifecycle重复触发，重开应invoke真实重置函数。
 
@@ -39,11 +39,11 @@ SCENE.json包含整数schema=1、可选canvas（默认1600×900）、params对�
 
 断言读取全局标量或点分字段，不执行表达式，boolean与number严格区分。已支持文本内容、字号、字色和常用图片颜色字段的存储与类型检查，不证明排版、裁剪或颜色视觉正确。字段默认值仅是模型初态，不等于从任意GIL完整重建所有控件参数。未知或只读字段不能随意写入；string.dump不可用，math.isnan/isinf可用，os仅模型化clock。
 
-每次模拟运行于独立进程，默认10秒超时，可用--timeout指定0.05..120秒；超时终止该子进程，不能被Lua里的pcall无限吞掉。另保留回调指令预算和64MiB Lua内存限制。输入须为有限JSON，错误schema、NaN、失败断言和未实现API均失败，不生成通过报告。报告含layer=simulation、源码摘要、是否匹配内嵌正文、sent_signals及已通过断言。
+每次模拟在独立进程中运行，默认 10 秒超时。可用 `--timeout` 设置 0.05 至 120 秒。超时会终止子进程，Lua 的 `pcall` 无法拦截。模型还限制回调指令数和 Lua 内存（64 MiB）。JSON 中的数值须为有限数。schema 错误、断言失败或调用未实现的 API 均会失败。报告包含 `layer=simulation`、源码摘要、与内嵌正文的匹配结果、`sent_signals` 及通过的断言。
 
 本模型不支持真实渲染、Tween、完整宿主调度、全部控件字段、平台存档和原生服务端执行。遇到未实现API先区分模型缺项与业务错误，再扩展相应合同与回归；不将模型通过当编辑器或实机验收。
 
-项目测试与预览应复用其明确版本的宿主模型，不从别的测试截取零散mock或为通过而放行未知API。双端模型测试覆盖适用于当前协议的状态转换与迟到回复，另对最终原生数据边做 [类型回读](../graph-code/native-dataflow-validation.md)；模拟回包不能证明原生处理已运行。窗口失焦和系统离场须有独立宿主证据，不能以生命周期注入代替。
+项目测试与预览应复用版本明确的宿主模型。未知 API 应报告覆盖缺口。双端模型测试检查当前协议的状态转换和迟到回复，最终 GIL 的数据连线另做[类型回读](../graph-code/native-dataflow-validation.md)。原生服务端处理、窗口失焦和系统离场仍需对应的宿主证据。
 
 ## 游戏内环境自检
 
@@ -55,7 +55,7 @@ API没有枚举整个编辑器模板库的方法，因此完整候选来自离�
 
 在千星沙箱的日志窗口中勾选“客户端脚本”，确认选择后发起试玩；脚本错误可双击对应日志条目查看。用print记录阶段和ID，printerr不会抛异常，debug.traceback只生成文本。卡死/循环而普通日志不能报告时，检查客户端脚本储存目录中的ErrorLog.txt；它只在相应错误出现时创建，不保证每次都有。
 
-官方操作依据：[客户端控件和客户端脚本，第8节](../platform/official/概念介绍/客户端控件和客户端脚本__mhbgxf0nynww.md)。客户端节点图日志是另一套筛选对象，不能用其已勾选代替脚本日志开启。排障时绑定当前交付摘要、日志、触发步骤和设备，不靠多轮无版本猜测。
+官方操作依据：[客户端控件和客户端脚本，第8节](../platform/official/概念介绍/客户端控件和客户端脚本__mhbgxf0nynww.md)。客户端节点图日志是另一套筛选对象，不能用其已勾选代替脚本日志开启。排障时记录当前交付文件的摘要、日志、触发步骤和设备。
 
 ## 读取编辑器调试日志
 

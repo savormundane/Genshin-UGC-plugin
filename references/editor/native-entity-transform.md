@@ -1,6 +1,6 @@
 # 读取与修改三维实体
 
-插件支持读取 GIL 中已摆放的普通三维物件，区分直接引用平台模板的物件和由自定义元件实例化的物件。已有实例的世界变换可经修改计划另存为新 GIL。
+插件支持读取 GIL 中已摆放的普通三维物件，区分直接引用平台模板的物件和由自定义元件实例化的物件。可通过修改计划更新已有实例的世界变换，并另存为新的 GIL。
 
 ## 定位对象与模型
 
@@ -14,7 +14,7 @@ python scripts/qianxing.py project consumers LEVEL.gil --kind entity --id 107793
 | 数据 | 解释 |
 | --- | --- |
 | `template.scope` 与 `template.id` | `platform` 指向平台模板，`project` 指向当前工程的自定义元件。 |
-| `model` | `type: "template"` 与 `id` 是原生资源身份。直接摆放取实例定位器，元件实例取已确认模板的模型定位器。文件本身只证明引用，目录可用性仍显示 `resource_verified: false`。 |
+| `model` | `type: "template"` 与 `id` 是原生资源身份。直接摆放的物件使用实例定位器，自定义元件的实例使用已确认的模板模型定位器。文件本身只证明引用，目录可用性仍显示 `resource_verified: false`。 |
 | `static` 与 `component_types` | 物件的静态标记及原生组件类型编号。图挂载和模板关系由工程索引提供。 |
 | `transform.space` | `world` 是实例世界坐标，`template_default` 是模板记录，`owner_local` 是装饰物相对所属实体或模板的坐标。独立物件 GIA 用 `asset_world` 表示包内位置，导入后的身份以 GIL 为准。 |
 | `transform_editable` | 是否识别到可按当前合同修改的实例变换。 |
@@ -52,8 +52,8 @@ python scripts/qianxing.py native diff LEVEL.gil EDITED.gil --allow-fields 5
 
 ## 格式依据与范围
 
-GIL 放置实例位于章节 5，变换读写 kind 1 组件的三个向量。模板默认变换位于章节 4，装饰物位于章节 27。独立普通物件 GIA 核对资源、实例和平台模板定位器的一致性。当前物件身份范围为 `0x40400001` 至 `0x404fffff`。模板、装饰物和 GIA 在这一阶段提供读取。其他单位类型、父子布设组、资源替换和运行时运动保留现有通用索引或上层工具。
+GIL 放置实例位于章节 5，变换读写 kind 1 组件的三个向量。模板默认变换位于章节 4，装饰物位于章节 27。独立普通物件 GIA 核对资源、实例和平台模板定位器的一致性。当前物件身份范围为 `0x40400001` 至 `0x404fffff`。当前仅支持读取模板、装饰物和 GIA。其他单位类型、父子布设组、资源替换和运行时运动保留现有通用索引或上层工具。
 
-本地检查涵盖文件回读与字节保护。编辑器导入和游戏内效果需要实际验证。后续静态场景可复用这里的模型身份和世界变换，从独立静态物件 GIA 封装开始。
+本地检查涵盖文件回读与字节保护。编辑器导入和游戏内效果需要实际验证。制作静态场景时可复用这里的模型身份和世界变换，用于封装独立静态物件 GIA。
 
 [官方实体摆放指南](https://act.mihoyo.com/ys/ugc/tutorial/detail/mhnffmieeqbg) · [8itlab 物件与元件](https://github.com/8itlab/genshin-miliastra-mcp/blob/70470757d6fcb319c5afec13b178c87f2d8d54b3/src/scene-save.mjs) · [XingGou 静态 GIA](https://github.com/Crazyfourrrrrrrrrrr/XingGou/blob/5e05593e1c392c2a65885317111a1fa8425f7854/core/static_gia.py) · [XingGou 坐标转换](https://github.com/Crazyfourrrrrrrrrrr/XingGou/blob/5e05593e1c392c2a65885317111a1fa8425f7854/core/coordinates.py)

@@ -10,7 +10,7 @@
 
 ## 审阅并另存
 
-下面的预存计划、另存文件和差异来自 [v1.0.0](https://github.com/savormundane/miliastra-wonderland-plugin/tree/v1.0.0) 的实跑。
+下面的修改计划、另存文件和差异报告来自 [v1.0.0](https://github.com/savormundane/miliastra-wonderland-plugin/tree/v1.0.0) 的实测。
 
 > 请查看当前工程的 entrance.gil。我想把入口机关模板的 ActivationDelay 默认值改为 12。先定位变量、所属模板和继承它的场景实例，再做待审计划。告诉我现在的值、拟改值和保护范围。等我确认后再另存。
 
@@ -31,7 +31,7 @@
 | [前后差异](diff.json) | 顶层只变动字段 `4`，保护范围内的字节一致 |
 | 新文件回读 | 变量值摘要与差异报告一致，继承实例仍指向该模板变量 |
 
-计划文件的 SHA-256 从 `native_plan.outputs_sha256["plan.json"]` 取得，供 `native_apply` 绑定文件。计划内部也有一个 `plan_sha256`，它是内容摘要，与应用报告里的内容摘要核对。本例两项各自通过校验。
+从 `native_plan.outputs_sha256["plan.json"]` 取得计划文件的 SHA-256，供 `native_apply` 核对文件。计划内部的 `plan_sha256` 是计划内容的摘要，需与应用报告中的内容摘要核对。本例的文件摘要和内容摘要均通过校验。
 
 ## 接下来怎么用
 

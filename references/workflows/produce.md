@@ -12,17 +12,17 @@
 
 新制作配置使用 schema 2，工具按所选阶段检查依赖。已有 [Schema 1 制作配置](produce-schema1.md)在 1.x 仍可独立执行，计划在 V2.0.0 移除该入口。
 
-schema 2支持client、level、storage、native、assets、protocol、protocol_native、animation、graphs、gil、simulation、experiment、platform、project，至少一项；可增加portable配置启用[可迁移制作与重建](portable-delivery.md)。client选择source或assembly；其余阶段以spec路径引用同名指南中的配置。native选择base，以及spec或[摘要绑定plan](../gil/native-changes.md)其中之一；与level新建互斥。所有配置相对各自文件解析，输出必须是新目录。
+schema 2 配置至少包含 `client`、`level`、`storage`、`native`、`assets`、`protocol`、`protocol_native`、`animation`、`graphs`、`gil`、`simulation`、`experiment`、`platform`、`project` 中的一项。可添加 `portable` 启用[可迁移制作与重建](portable-delivery.md)。`client` 选择 `source` 或 `assembly`。其他阶段的 `spec` 路径指向相应指南中的配置。`native` 需要 `base`，并在 `spec` 与[摘要绑定的 `plan`](../gil/native-changes.md) 中择一使用。`native` 与新建关卡的 `level` 互斥。相对路径以各自配置文件为基准，输出必须是新目录。
 
 可选 `scene` 阶段见[原生 3D 场景](../editor/native-scene.md)，以 `spec` 引用布局并生成独立 GIA。制作清单记录布局、目录、原生样本和产物摘要。
 
 原生创作可在 `native.spec` 使用 `place_static_scene` 和 `"source":"@scene"` 把本次布局写到 GIL。用 `graphs.include_sources:true` 保留可编辑图源码。挂载使用图名、`section` 和 `entity_id`。实例也可用 `entity_key` 定位，或用 `"entity_id":{"ref":"entity:gate"}` 引用本轮布设的对象。
 
-对于需要多次调整的布局，`native.spec` 或 `native.plan` 可使用 [`arrange_instances`](../editor/native-scene.md#重复布设)。后续图挂载沿用布局的 `entity:` 键。交付中的 `layout-bindings.json` 只包含布局实例，绑定完成挂图和后续编辑的最终 `level.gil`。下一轮将这两个文件作为基底和上一轮映射。布局与旧映射都进入交付输入记录和可迁移闭包。
+对于需要多次调整的布局，`native.spec` 或 `native.plan` 可使用 [`arrange_instances`](../editor/native-scene.md#重复布设)。后续图挂载沿用布局的 `entity:` 键。交付中的 `layout-bindings.json` 只记录布局实例，并关联挂图和后续编辑完成后的 `level.gil`。下轮用 `level.gil` 作基底，用 `layout-bindings.json` 作上一轮的实例映射。布局和上一轮映射都会列入交付输入记录，也会收入可迁移交付目录。
 
 `assets` 中的 `kind:"batch"` 从[预算试算报告](../assets/image-to-primitives.md#多素材共用控件预算)生成 `asset-batches/<name>/`。要将已生成的批量数据写进已有 GIL，用 [`append_client_ui`](../gil/native-authoring.md#追加客户端界面模块) 的 `asset_data` 引用该目录中的 `data.json`。
 
-已有 GIL 的拟合交付可在同一配置中接续挂载。声明一个具名 `kind:"fit"` 素材，拟合配置的 `mount` 绑定 `native.base` 的实际摘要、图片模板和目标容器。在 `native.spec` 的 `bind_client_lua` 操作中用 `"source":"@asset:NAME"` 引用该拟合素材，指定新增的 `mapping`，并允许顶层字段 `9` 和 `50`。制作链取用生成的 Lua、拟合目录和已绑定的目标控件，回读新映射和挂载。 [拟合挂载合同](../assets/asset-fit.md#生成可挂载的-lua-和软件预览)
+已有 GIL 的拟合交付可在同一配置中接续挂载。声明一个具名 `kind:"fit"` 素材，拟合配置的 `mount` 绑定 `native.base` 的实际摘要、图片模板和目标容器。在 `native.spec` 的 `bind_client_lua` 操作中用 `"source":"@asset:NAME"` 引用该拟合素材，指定新增的 `mapping`，并允许顶层字段 `9` 和 `50`。制作链从拟合目录读取生成的 Lua，将它挂到已绑定的目标控件。随后回读新增的脚本映射和挂载。 [拟合挂载合同](../assets/asset-fit.md#生成可挂载的-lua-和软件预览)
 
 ### 按名称连接制作阶段
 
@@ -45,7 +45,7 @@ schema 2支持client、level、storage、native、assets、protocol、protocol_n
 
 platform通过spec执行[平台版本与配置检查](../platform/platform-profiles.md)，未通过或未检查阻止生成提交。通过仅证明显式配置规则，报告artifact_verified=false，不代替最终GIL的平台配置回读；配置、目录和原文摘要纳入依赖，portable支持独立迁移。
 
-执行顺序为输入核对→源码与资源→原生基底→严格图构建／替换→Lua嵌入→最终原生审计→声明的模拟／实验→清单。生成存储时将同源图和资源纳入图构建；已有图替换通过build schema 2声明。gil 指定精确的 mapping，自动消费最近产出的 GIL。仅产生 GIA 的图阶段继续传递进入该阶段的 GIL。图、存档或 Lua 阶段给出显式基底时，其 SHA-256 必须与当前 GIL 一致。基底冲突和输入变化会报告阶段、路径及两份摘要，失败时正式输出目录保留为空缺。
+执行顺序为输入核对→源码与资源→原生基底→严格图构建／替换→Lua嵌入→最终原生审计→声明的模拟／实验→清单。生成存储时将同源图和资源纳入图构建；已有图替换通过build schema 2声明。`gil` 使用 `mapping` 精确选择映射，读取最近产出的 GIL。如果图阶段只输出 GIA，后续继续使用这个阶段的输入 GIL。图、存档或 Lua 阶段显式指定基底时，其 SHA-256 必须与当前 GIL 一致。基底冲突或输入变化时，报告失败阶段、路径和两份摘要，并且不创建正式输出目录。
 
 ```text
 python scripts/qianxing.py doctor --compare PLUGIN_ROOT
@@ -60,10 +60,10 @@ python scripts/qianxing.py verify NEW_DIRECTORY
 
 内置联合模拟可用 `@level` 读取本轮最终 GIL。`simulation.json` 的 `inputs` 及客户端、服务端模型证据的 `source` 中，`level.gil` 相对于交付目录解析。外部输入仍使用实际绝对路径。报告记录所用文件的 SHA-256，Lua 另记录脚本映射。该类输入均与最终 GIL 绑定时，对应 `lua_model` 或 `native_graph_model` 才记录最终产物状态。外部或混合输入的实际模型结果保留在 `model_status` 与 `simulation.json` 中，最终产物状态为 `not_checked`。整个场景的 `simulation.artifact_scope` 需要所有参与者都绑定最终 GIL 才能标为 `final_gil`。必需阶段失败、已有输出路径或输入变化均拒绝提交。
 
-两种中性整合配置可以分别采用单整数槽与双槽布尔／列表布局，变化模板别名、记录版本、素材数量及开发／保留集。失败用例包括未知schema、缺环境、源变更、输出已存在、原生审计错误及最终场景断言失败。独立重建比对交付正文，运行报告中的路径和耗时分别保留。
+两套集成测试配置分别使用单整数槽与双槽布尔／列表布局，并按用例调整模板别名、记录版本、素材数量、开发集和保留集。失败用例包括未知schema、缺环境、源变更、输出已存在、原生审计错误及最终场景断言失败。独立重建比对交付正文，运行报告中的路径和耗时分别保留。
 
-capabilities默认只报告可用源码和支持范围；通过--evidence指定checks.json时，只有源码、规则、测试支撑文件、后端及实际必需用例全部匹配才显示对应离线证据。证据schema 3及失败规则见[验证证据闭环](validation-evidence.md)。doctor 的 `plugin.path`、`plugin.version` 和 `plugin.capability_sha256` 可确认当前源码或安装缓存的执行身份。依赖检查覆盖当前 Python、Node、Pillow、Lua 和后端入口。
+`capabilities` 默认报告可用实现和适用范围。用 `--evidence` 指定 `checks.json` 时，只有源码、规则、测试支撑文件、后端及实际执行的必需用例全部匹配，才显示相应的离线证据。证据schema 3及失败规则见[验证证据闭环](validation-evidence.md)。doctor 的 `plugin.path`、`plugin.version` 和 `plugin.capability_sha256` 可确认当前源码或安装缓存的执行身份。依赖检查覆盖当前 Python、Node、Pillow、Lua 和后端入口。
 
 开发侧run_validation.py默认检查自用并执行完整相关套件，--changed接受改动路径，按Python导入关系与公共边界选择受影响检查。最终版本验收仍运行全套。新增输出、日志和失败记录进入development，不写冻结releases或已安装缓存。
 
-人工验收：在千星奇域导入本轮最终GIL，核对图及UI挂载；启用客户端日志，执行首次操作、重开与关闭；有存储时按同玩家、同发布关卡完成首次读、实际进度、写入回读、结算及重进读取。保留文件摘要、设备和实际结果，未执行项保持not_checked。
+人工验收时，在千星奇域导入本轮最终 GIL，核对节点图和 UI 的挂载。启用客户端日志，检查首次操作、重开与关闭。涉及存档时，使用同一玩家和同一发布关卡，核对首次读取、实际进度、写入回读、结算与重进后的读取。记录文件摘要、设备及实际结果，未执行项标为 `not_checked`。

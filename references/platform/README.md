@@ -1,6 +1,6 @@
 # 千星奇域平台资料
 
-按目标版本用 MCP `docs_search` 查平台文档，用 `api_lookup` 查 Lua 签名，用 `resources_lookup` 查资源与模型样本。文件名相同的节点页按节点类别、章节标题和正文确认。 [版本和平台配置](platform-profiles.md) · [资源目录](resource-catalogue.md)
+用 MCP 的 `docs_search` 按目标版本查平台文档，用 `api_lookup` 查 Lua 签名，用 `resources_lookup` 查资源和模型样本。遇到同名的节点文档时，按节点类别、章节标题和正文确认所需页面。 [版本和平台配置](platform-profiles.md) · [资源目录](resource-catalogue.md)
 
 客户端 API 整理稿可按符号查阅，同主题的奇匠学院原文用于核对已明确记载的规则。 [社区整理稿](community/client-controls-api.md) · [来源与冲突处理](sources-and-conflicts.md) · [知识查询](knowledge-reliability.md)
 

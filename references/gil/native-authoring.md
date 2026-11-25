@@ -2,7 +2,7 @@
 
 ## 从结构化输入生成
 
-使用平台字段类型、默认玩家/队伍/环境配置和创建算法构建新载荷，不读取完整游戏GIL，不继承旧玩法的节点图、脚本或挂载。平台校准默认值在platform_schema.py，是类型和平台配置；地图、UI、脚本与关联由level_authoring.py生成。它不是任意版本格式的完整实现，也没有通过编辑器或实机证明生成关卡可玩。
+使用平台字段类型、默认玩家/队伍/环境配置和创建算法构建新载荷，不读取完整游戏GIL，不继承旧玩法的节点图、脚本或挂载。`platform_schema.py` 保存经校准的字段类型和平台默认配置。地图、UI、脚本及其关联由 `level_authoring.py` 生成。它不是任意版本格式的完整实现，也没有通过编辑器或实机证明生成关卡可玩。
 
 ```text
 python scripts/qianxing.py level create LEVEL.json --out NEW.gil
@@ -36,11 +36,11 @@ source相对配置文件。地图当前只允许已校准的1..20格范围，固
 
 脚本项可增加 `"templates_as": "UI_TEMPLATES"`。生成器会按本次实际分配的GUID，在该脚本正文前创建同名局部表，使源码直接使用 `game.InstantiateClientUIControl(UI_TEMPLATES.Rect, script.object)`。别名须为有效Lua变量名，不能是关键字；不要求用户手抄大数索引，也不在原始源码中写死ID。
 
-回读报告template_indices提供本次声明的模板名→GUID，template_aliases记录每个脚本的别名。produce含level阶段时还输出template_indices.lua；后续gil写回按相同表补齐前缀，不会把绑定在最后一步覆盖掉。遇到不同或过期生成前缀明确拒绝，使用原始Lua输入重新生成；不叠加多个旧表。原始源码不修改，内嵌正文摘要按实际生成内容记录。
+回读报告template_indices提供本次声明的模板名→GUID，template_aliases记录每个脚本的别名。produce含level阶段时还输出template_indices.lua；后续gil写回按相同表补齐前缀，不会把绑定在最后一步覆盖掉。发现不同或已过期的生成前缀时，工具会拒绝写入。此时用原始 Lua 重新生成，避免叠加旧表。原始源码不修改，内嵌正文摘要按实际生成内容记录。
 
 ## 模板GUID与相互关联
 
-InstantiateClientUIControl传入的模板索引是模板记录GUID，不是列表第几个。实际存档可能出现1073743580这一数量级，具体值由当前文件决定；禁止把示例数值固定给其他文件。
+调用 `InstantiateClientUIControl` 时，用模板记录的 GUID 作为模板索引。实际存档可能出现1073743580这一数量级，具体值由当前文件决定；禁止把示例数值固定给其他文件。
 
 在已核验的UI section9中，502是记录集合，记录501为GUID；带种类标记的组/库记录通过meta13的501指向模板记录GUID，模板记录通过meta14的501 packed-ID列表反向关联组。meta13也可能表示其他链表引用；解析器只在明确的501=3、502=3元信息形态中将它视为模板指针。回读输出templates里的instantiation_index及reciprocal_reference_verified。
 
@@ -80,7 +80,7 @@ python scripts/qianxing.py level bind CURRENT.gil --control CONTROL_GUID --scrip
 {"op":"bind_client_lua","control_guid":1073745924,"source":"fitted/mounted.lua","mapping":"marker.lua","fit_catalog":"fitted/catalog.json"}
 ```
 
-应用计划时会重验关卡、目标控件、图片模板和 Lua 的摘要。已有同名映射时拒绝新增。申请独立的 Lua 挂载时可省略 `fit_catalog`，仍需确认唯一客户端容器和完整的 `.lua` 映射名。应用后检查另存的 `level.gil` 和报告里的控件、脚本标识及正文摘要。
+应用计划时会重验关卡、目标控件、图片模板和 Lua 的摘要。已有同名映射时拒绝新增。单独挂载 Lua 时可省略 `fit_catalog`，仍需确认唯一客户端容器和完整的 `.lua` 映射名。应用后检查另存的 `level.gil` 和报告里的控件、脚本标识及正文摘要。
 
 ## 精确替换与错误定位
 
@@ -104,4 +104,4 @@ python scripts/qianxing.py produce JOB.json --out OUTPUT --next
 
 默认输出已存在即拒绝并显示解决方法。--next自动选择OUTPUT-2、OUTPUT-3等新目录，不删除或覆盖原输出，实际目录写入production-report的output_directory。失败仍回滚本次临时目录。
 
-生成确定性、字段关联闭合、脚本回读与Lua模型断言是离线证据；是否可导入、宿主启动是否加载脚本、素材显示与真机性能必须分别验收。平台固定配置取自已核验格式校准，未知版本/宿主规则不靠虚构字段补齐。完整游戏模板不参与生成，也不进入发布包。
+生成结果的确定性、字段引用完整性、脚本回读和 Lua 模型断言均为离线证据。编辑器能否导入、宿主启动时能否加载脚本、素材显示和真机性能须分别验收。平台固定配置取自已核验格式校准，未知版本/宿主规则不靠虚构字段补齐。完整游戏模板不参与生成，也不进入发布包。

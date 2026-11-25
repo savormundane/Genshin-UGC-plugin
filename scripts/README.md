@@ -15,7 +15,7 @@
 | 整合与核验交付 | `produce`、`verify` | [制作阶段](miliastra/production.py)、[制作入口与共享阶段](production_core.py)、[交付验证](delivery_verify.py) |
 | 排障与本地模拟 | `diagnose`、`logs`、`simulate`、`beyond` | [project_diagnosis.py](project_diagnosis.py)、[joint_simulator.py](joint_simulator.py)、[beyond_backend.py](beyond_backend.py) |
 
-`capabilities` 查看实现范围及验证层，`doctor` 检查当前依赖。[能力与验证结果](../references/workflows/validation-evidence.md)
+用 `capabilities` 查看功能及各层验证状态，用 `doctor` 检查当前依赖。[能力与验证结果](../references/workflows/validation-evidence.md)
 
 已有工程工具可继续通过 `asset_pipeline.py`、`asset_core.py` 和 `client_check.py` 调用对应实现。插件内部直接从 `miliastra` 导入。
 

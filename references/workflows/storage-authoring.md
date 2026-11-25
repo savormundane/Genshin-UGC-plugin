@@ -1,6 +1,6 @@
 # 存储与成就生成
 
-能力名：storage-authoring。使用qianxing.py storage build|inspect|diagnose；生成器为scripts/miliastra/storage.py，客户端事务与编码为scripts/runtime_storage.lua。依赖Python标准库；实际编译依赖包内Ayaya，Lua模型依赖lupa.lua53。
+`storage-authoring` 提供 `qianxing.py storage build|inspect|diagnose`。生成器位于 `scripts/miliastra/storage.py`，客户端事务和编码位于 `scripts/runtime_storage.lua`。生成器使用 Python 标准库，节点图编译依赖随包 Ayaya，Lua 模型依赖 `lupa.lua53`。
 
 ```text
 python scripts/qianxing.py storage build STORAGE.json --out NEW_DIRECTORY
@@ -10,7 +10,7 @@ python scripts/qianxing.py storage diagnose EVENTS.json
 
 STORAGE使用schema=2，字段为name（ASCII标识符）、struct_id、template_id、graph_id、slots、capacity_bytes、fields，可选dictionary、previous_dictionary、achievements。三个ID是显式应用ID，生成前核对当前命名空间；slots为1..32，每槽一条结构体记录。fields为有序{name,type,default,confirm}；当前原生布局校准integer、boolean、integer_list。confirm为equal、min、max、contains_bits，后面三种只用于整数。容量由当前布局配置确定，不沿用其他游戏数字。
 
-输出storage.py、resources、contract.lua、runtime.lua、client_adapter.lua和storage.json，附输入／产物清单。resources包含编译器使用的同源字段形状与局内存档定义；原生持久化种类由局内存档写回设置，不由DSL展示分类推断。produce schema 2通过storage:{spec:路径}接入；可消费本轮level或storage.base。原生声明、槽位、信号和生成图一起写回，最终回读检查。
+输出storage.py、resources、contract.lua、runtime.lua、client_adapter.lua和storage.json，附输入／产物清单。`resources` 包含从同一份配置生成的编译器字段结构及局内存档定义。原生持久化类型以局内存档的写入配置为准。schema 2 的 `produce` 通过 `storage:{spec:路径}` 接入，基底可取本轮 `level` 或指定的 `storage.base`。原生声明、槽位、信号和生成图一并写入，再回读最终文件。
 
 原生请求按真实信号来源实体读写。信号名称为name_read_槽号、name_write_槽号及对应_reply；回复由最终原生图中的定向客户端信号节点发送，不能把全局广播当作Lua回包。client_adapter.lua返回function(game,script,slot,timeout,retries)，构建事务对象。调用read、write(values,exitIntent)、tick、cancel_exit和close；成功读取后才允许写入。旧读取不清除待确认写入；内容不符合确认策略保持等待；重试使用同一请求号。取消退出不取消在途保存。
 
@@ -36,7 +36,7 @@ record_version可显式设为1..65535，默认1；原生记录增加保留的qx_
 
 信号使用name_v3_read_槽号、name_v3_open_槽号、name_v3_write_槽号及对应_reply。read请求为[request]，open为[request,session,revision]，write为[request,session,revision,业务字段...]；回复为[request,ok,session,revision,业务字段...]。revision在请求中是预期当前修订，在成功open/write回复中是更新后的修订。
 
-客户端read成功后自动申请当前会话加一的open。服务端仅在预期修订和会话前驱匹配时接纳，保留业务内容并将修订加一；客户端ready=true后才能write。写入要求会话匹配、请求号大于已接纳请求、预期修订匹配；成功后修订加一。完全相同的重复写请求返回现存结果，不重复写入；相同请求号但内容不同、旧会话、旧修订拒绝。列表内容逐项精确比较，包含空列表。确认策略仍只决定客户端如何确认回读，不改变服务端的业务合并策略。
+客户端read成功后自动申请当前会话加一的open。服务端只在预期修订和前一会话与当前记录匹配时接受 `open`，保留业务内容并将修订加一。客户端进入 `ready=true` 后才能 `write`。写入要求会话匹配、请求号大于已接纳请求、预期修订匹配；成功后修订加一。完全相同的重复写请求返回现存结果，不重复写入；相同请求号但内容不同、旧会话、旧修订拒绝。列表内容逐项精确比较，包含空列表。确认策略仍只决定客户端如何确认回读，不改变服务端的业务合并策略。
 
 超时重试沿用相同请求、会话和预期修订。旧回复或修订不符不会确认当前写入；失败或超时后重新read/open才能继续写。取消退出意图不取消在途保存。应用通过tick推进超时，close注销read/open/write及成就监听。新会话会使旧会话的后续写入失效，不提供多个同时活跃写入者的自动合并。
 
@@ -52,4 +52,4 @@ schema 3 可声明 `compatible_record_version` 指定一个较低版本，用于
 
 diagnose可额外接收slot、session、expected_revision、revision。使用任一新字段时必须同时提供slot和session；按玩家、槽位、会话、请求和交付摘要分组，避免重连后请求号复用混淆日志。旧日志格式继续可读，日志内容不会作为命令执行。
 
-开发验证入口为development/test_storage_v3.py：两种中性配置实际编译到最终GIL，验证防重放、重复幂等、异常旧档保护、容量、回读失败和模型重进，并连接两个独立Lua实例注入丢包、重复与迟到回复。该证据仅属于编译回读和离线模型。
+开发验证入口为development/test_storage_v3.py：用两套测试配置编译生成最终 GIL，验证防重放、重复幂等、异常旧档保护、容量、回读失败和模型重进，并连接两个独立Lua实例注入丢包、重复与迟到回复。这项证据覆盖编译回读和离线模型。

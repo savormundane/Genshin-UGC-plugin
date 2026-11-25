@@ -46,7 +46,7 @@ ruff format --check '<本次修改的 Python 文件>'
 | `produce` 顶层 schema 1 任务 | V2.0.0 | 按 schema 2 改写任务并核对 GIL 映射和交付摘要。[制作指南](../../references/workflows/produce.md) |
 | `assets fit` 的 schema 1 配置和续跑 | V2.0.0 | 使用 schema 2 参数，可通过 `--initial` 导入旧检查点中的图元。[拟合指南](../../references/assets/asset-fit.md) |
 
-制作的 schema 2 流程复用资源、图编译和 Lua 写回阶段。移除顶层 schema 1 前先核对这些阶段的调用并用现有样例复测。
+schema 2 的制作流程复用资源、图编译和 Lua 写回阶段。移除顶层 schema 1 前，先核对这些阶段的调用，再用现有样例复测。
 
 ## 复现已有工程的修改流程
 
@@ -54,7 +54,7 @@ ruff format --check '<本次修改的 Python 文件>'
 & $miliastraPython -B scripts/test_mcp_native_workflow.py -v
 ```
 
-脚本生成继承模板参数 `ActivationDelay=7` 的最小工程，通过 stdio 查询引用、生成计划并另存为 `12`。校验包括保护字段原始字节、过期输入拒绝和来源变更。 [输入与断言](../../scripts/test_mcp_native_workflow.py) · [工具调用顺序](../../references/gil/native-changes.md#审阅并另存已有工程)
+脚本生成一个继承模板参数 `ActivationDelay=7` 的最小工程。它通过 stdio 查询引用、生成修改计划，将参数值改为 `12` 后另存关卡。测试核对受保护字段的原始字节，并检查过期输入或来源变化时是否会拒绝写入。 [输入与断言](../../scripts/test_mcp_native_workflow.py) · [工具调用顺序](../../references/gil/native-changes.md#审阅并另存已有工程)
 
 ## Windows 长路径
 

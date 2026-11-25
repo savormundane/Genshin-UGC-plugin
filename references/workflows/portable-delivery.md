@@ -4,11 +4,11 @@
 
 从精简的 Git 安装制作 Beyond 交付时，经校验的 Canvas 原生文件收入 `portable/native-canvas/`。重建时按当前插件锁定的摘要核对这两份文件，并在隔离目录中离线加载。完整 Windows ZIP 已包含原生文件，随工具链一同保存。
 
-能力名：portable-delivery。入口produce schema 2的portable配置与qianxing.py verify --portable。适用于独立交付源码和工具后，在原工程目录不可用时重建；依赖相同指纹的Python、Node、Lua/Pillow环境，不安装或修改全局环境。
+`portable-delivery` 用于交付源码和工具，并在原工程目录不可用时重建。制作时使用 schema 2 的 `portable` 配置，检查时使用 `qianxing.py verify --portable`。重建要求 Python、Node、Lua 和 Pillow 环境的指纹匹配。工具不会安装或修改全局环境。
 
 ## 配置与使用
 
-在现有制作配置中增加portable对象即可启用；空对象使用配置所在目录为project根。工程以外的输入根显式命名，额外数据文件或目录列在dependencies中。这些路径相对制作配置解析。
+在现有制作配置中增加 `portable` 对象。空对象以配置所在目录为 `project` 根。工程之外的输入根须明确命名，额外数据文件或目录列在 `dependencies` 中。路径相对制作配置解析。
 
 ```json
 {
@@ -26,7 +26,7 @@ python scripts/qianxing.py produce JOB.json --out NEW_DIRECTORY
 python scripts/qianxing.py verify MOVED_DIRECTORY --portable --out NEW_REPORT.json
 ```
 
-project与toolchain是保留根名称。目录依赖收集其非缓存文件；配置引用的脚本、图、GIL/GIA、素材、模拟、实验及图资源目录自动收集。目录外文件必须有明确的roots归属；缺失、链接或未声明输入拒绝。自用插件完整随附，保留官方资料、校准、第三方与许可证；这会增加交付目录体积，不生成ZIP。
+project与toolchain是保留根名称。目录依赖收集其非缓存文件；配置引用的脚本、图、GIL/GIA、素材、模拟、实验及图资源目录自动收集。目录外文件必须有明确的roots归属；缺失、链接或未声明输入拒绝。交付包含所用插件的副本，包括官方资料、校准文件、第三方依赖及许可证。它们会增大交付目录体积。交付格式为目录。
 
 portable/original保留工程输入原始字节；portable/workspace保存构建副本和独立toolchain。仅配置中已定义的路径字段改为副本间相对引用；不重写Lua/Python正文、业务文本或协议。portable/portable.json记录原始摘要、路径调整、后端指纹与文件清单。首次制作和显式重建只执行当前受信任插件的制作链，包内 toolchain 是历史材料，不参与执行和依赖搜索。
 
@@ -44,8 +44,8 @@ python scripts/qianxing.py verify MOVED_DIRECTORY --portable --rebuild --trusted
 
 重建以整套工具链文件清单为准。Git 市场、Windows ZIP 和 Cordis 包的文件范围可能不同。同版本切换分发形态时，使用原交付的匹配工具链重建，或用 `--portable` 保留静态核对。遇到 `portable.toolchain_mismatch` 可核对两份工具链摘要和文件差异数量。
 
-Python制作进程和Ayaya编译子进程检查实际文件读取范围，禁止把原路径当作隐含依赖；输入副本不可写，生成与编译临时目录可写。该检查服务于可信本地工程的依赖完整性，不是运行不可信源码的操作系统沙箱。Python、Node和外部包由环境提供并核对指纹；不承诺任意机器或后端版本均兼容。
+Python 制作进程和 Ayaya 编译子进程核对文件读取范围，拒绝依赖未声明的原路径。输入副本只读，生成和编译的临时目录可写。这套检查用于核对可信本地工程的依赖，范围限于文件访问。Python、Node和外部包由环境提供并核对指纹；不承诺任意机器或后端版本均兼容。
 
 manifest的artifacts为所有文件登记delivery、evidence、intermediate或input_snapshot。delivery按字节比较，包括JSON目录、协议定义、生成源码和其他格式；不以扩展名决定是否检查。重建必须具有相同文件集合与角色。证据与中间报告保留实际路径/耗时并由各轮清单校验，不要求跨轮字节相同；输入闭包单独校验。无角色清单的历史报告保留原有限比较范围，结果标记legacy_suffixes。
 
-两套中性配置分别验证新建关卡和修改已有基底：装配Lua、真实图编译、素材、最终嵌入、模型断言，随后让原输入路径不可用并移动交付目录重建。独立检查test_delivery_portable.py还覆盖缺失/越界依赖、未声明读取、输入写入拒绝、无效Lua回滚、JSON产物变化和新增产物。编辑器导入、真实保存重进及实机表现保持单独待验。
+两套测试配置分别验证新建关卡和修改已有基底，覆盖 Lua 装配、实际图编译、素材、最终嵌入和模型断言。随后隔离原输入路径，移动交付目录并重建。独立检查test_delivery_portable.py还覆盖缺失/越界依赖、未声明读取、输入写入拒绝、无效Lua回滚、JSON产物变化和新增产物。编辑器导入、真实保存重进及实机表现保持单独待验。

@@ -13,7 +13,7 @@
 
 ## 单张素材的命令行
 
-素材由插件自有asset_core与asset_pipeline实现，共用图像处理、预算检查、预览及交付。Agent根据目标选择输出类型，用户无需选择框架。默认生成矩形控件数据；需要文本控件时选text。auto固定选择rectangles，不在预算超限时静默换路线或降低质量。
+`asset_core` 和 `asset_pipeline` 负责图像处理、预算检查、预览和输出。默认生成矩形控件数据，需要文本控件时选 `text`。`auto` 固定选择 `rectangles`，超预算时会报告原因，由调用方决定是否调整参数。
 
 ```text
 python scripts/qianxing.py assets preview SOURCE.png --max-controls 900 --min-grid 32 18 --max-error 0.04 --display 1600 900 --out NEW_PREVIEW
@@ -53,7 +53,7 @@ python scripts/qianxing.py assets batch generate REVIEW/report.json --out GENERA
 }
 ```
 
-每项可给 `display`、`min_grid`、`max_error` 和生成 `options`。预览先为每项选满足约束且消耗最低的候选，再按单位控件带来的加权误差改善分配余额。预算不足时查看 `minimum_controls`。缺少可用候选时按报告给出的素材键调整输入或约束。
+每项可指定 `display`、`min_grid`、`max_error` 和生成选项 `options`。预览先为每项选择满足约束且控件最少的候选，再比较每增加一个控件能让加权误差降低多少，据此分配剩余预算。预算不足时查看 `minimum_controls`。找不到可用候选时，按报告中的素材键调整输入或约束。
 
 生成时核对源摘要、实际控件数和参考图摘要。`catalog.json` 给出各项资源，`data.json` 汇集 Lua 可用的数据。已有试算报告也可通过 MCP `produce` 生成，在配置的 `assets` 中加 `{"name":"hud","kind":"batch","source":"REVIEW/report.json"}`。已有 GIL 的 Lua 脚本可通过 [`append_client_ui`](../gil/native-authoring.md#追加客户端界面模块) 使用这份数据。
 
@@ -63,9 +63,9 @@ python scripts/qianxing.py assets batch generate REVIEW/report.json --out GENERA
 
 ## 共同处理与输出
 
-先按 alpha 阈值硬化，经预乘 BOX 缩放后再次硬化，再量化不透明前景。矩形与富文本共用量化参考网格。矩形采用行程和纵向合并。富文本按不透明行分块，受列数和 UTF-8 字节双重限制。max-controls 限制实际生成数量。超限会报告当前网格和控件数量，可缩小网格或减少矩形颜色，富文本可按控件容量调整分块限制。需要误差目标、分层配额或恢复检查点时用 [assets fit](asset-fit.md)。
+先按 Alpha 阈值将像素分为透明和不透明两类。对预乘 Alpha 的像素做 BOX 缩放后再次二值化，最后量化不透明前景的颜色。矩形与富文本共用这份量化网格。矩形先按行合并同色连续像素，再纵向合并。富文本逐行分块，同时受列数和 UTF-8 字节数限制。`max-controls` 限制实际生成的控件数。超限时，报告会给出当前网格和控件数。可缩小网格或减少矩形色数，也可根据文本控件的容量调整分块上限。需要指定误差目标、分层配额或从检查点恢复时用 [assets fit](asset-fit.md)。
 
-交付统一为asset.json（源摘要、坐标、格式和数据）、data.lua（当前格式运行数据）、preview.png（参考网格）、report.json（参数/预算/证据）和manifest.json（各产物摘要）。参数化源另保留source.json。采用临时生成后提交新目录，拒绝覆盖；不启动外部进程、不联网、不修改安装目录。
+结果包括 `asset.json`（源摘要、坐标、格式和数据）、`data.lua`（运行数据）、`preview.png`（参考网格）、`report.json`（参数、预算和证据）和 `manifest.json`（各产物摘要）。参数化输入还会保留 `source.json`。工具在临时目录生成文件，完成后保存到新目录。整个流程可离线执行，无需启动外部进程，也不会修改安装目录。
 
 矩形坐标以左上网格像素为原点，Lua保留w/h/maxRects/palette/rects结构；富文本坐标为左上设计单位，Lua含tiles的坐标、尺寸、fontSize和text。cell是设计单位与建议字号，fit=auto按实际列数设置宽度，fixed按指定列数保留框宽。富文本字形、行距和内边距需按宿主校准，参考图不是实际文字渲染。
 
@@ -89,6 +89,6 @@ python scripts/qianxing.py assets batch generate REVIEW/report.json --out GENERA
 
 ## 接入与兼容
 
-客户端能力负责真实模板创建、坐标缩放及数据接入；动画能力消费帧/分层数据；文件能力负责有真实结构依据的GIA/GIL封装与挂载。当前生成器不直接写GIL。布局清点仍可用 `qianxing.py assets layouts SOURCE.gil`。
+客户端负责创建实际模板、换算坐标并接入数据，动画使用帧或分层数据。GIA/GIL 封装和挂载需按已确认的文件结构另行处理。查看布局可用 `qianxing.py assets layouts SOURCE.gil`。
 
 旧pixel_to_lua.py以及assets text/info/layouts继续兼容，矩形和文本算法已共用asset_core；旧入口保留各自既有参数与产物，不作为新任务的首选流程。格式细节见 [富文本数据](rich-text-assets.md)，动画见 [点阵运行时](../editor/lua/pixel-runtime.md)。

@@ -1,6 +1,6 @@
 # 客户端与原生图联合模型
 
-`simulate run SCENE.json` 在独立进程中创建 Lua 5.3 实例，并可连接最终 GIL 的受限原生图执行器。使用[专用 Python 环境](../../docs/runtime-environment.md)，执行有进程超时和回调指令预算。断言失败报告包含第一处失败的索引、字段、预期值和实际值。
+`simulate run SCENE.json` 在独立进程中创建 Lua 5.3 实例，并可连接最终 GIL 的受限原生图执行器。使用[专用 Python 环境](../../docs/runtime-environment.md)。执行时受进程超时和回调指令预算限制。断言失败报告包含第一处失败的索引、字段、预期值和实际值。
 
 场景schema=2，clients为{id,source,mapping?,canvas?,params?}数组，source可以是Lua或GIL。GIL直接提取精确匹配的内嵌脚本与模板绑定。server可声明source、graph_ids及initial，后者按玩家字符串ID保存变量。steps支持tick、invoke、cursor、key、lifecycle、signal、settle、reenter。signal明确source、target、name、params；客户端请求与原生输出共用确定性队列。
 
@@ -10,7 +10,7 @@
 python scripts/qianxing.py simulate run SCENE.json --timeout 30 --out NEW_REPORT.json
 ```
 
-produce场景中的@level引用本轮最终GIL。原生模型支持已实现的信号、条件、局部变量、自定义变量、列表、结构体和成就计数子集；遇到未实现节点或常量形状失败，不以成功桩放行。settle复制当前模型数据库到模型持久层，reenter从该层重建；它们不是平台保存和重进证据。
+`produce` 场景中的 `@level` 引用本轮最终 GIL。原生模型只执行已支持的信号、条件、局部变量、自定义变量、列表、结构体和成就计数。遇到未实现的节点或常量结构会报错。`settle` 将当前模型数据库复制到模型持久层，`reenter` 从该层重建。平台保存和重进需要游戏内实测。
 
 ## 复跑失败场景
 
@@ -20,7 +20,7 @@ produce场景中的@level引用本轮最终GIL。原生模型支持已实现的�
 python scripts/qianxing.py simulate replay NEW_REPORT.json --out REPLAY_REPORT.json
 ```
 
-MCP `simulate` 的 `spec` 也接受包含 `replay` 的报告，或单独保存的 `replay` 对象。仍需提供报告文件 SHA-256。输入字节变化时会在执行前拒绝。Beyond 软件预览可渲染的失败会写入原有诊断目录，`artifacts.screenshot` 指向目录中的截图。
+MCP `simulate` 的 `spec` 也接受包含 `replay` 的报告，或单独保存的 `replay` 对象。仍需提供报告文件 SHA-256。输入字节变化时会在执行前拒绝。Beyond 软件预览失败时，已生成的画面仍写入诊断目录。`artifacts.screenshot` 指向其中的截图。
 
 ## 纯原生场景
 
@@ -52,9 +52,9 @@ MCP `simulate` 的 `spec` 也接受包含 `replay` 的报告，或单独保存�
 
 不模拟真实渲染、完整调度、所有Tween或平台权限。输入通过指定控件投递，不自动完成像素命中；原有schema 1模型接口继续使用。验证覆盖两种客户端数量、真实最终图信号投递、独立状态、延迟与重复、错误节点和超时。
 
-clock可给{start:0}明确初始模型时刻；时间仅由tick推进。中性配置为2客户端与3客户端的定向回包，分别注入重复和延迟；延迟包未等到就断言会失败，追加足够tick后通过。未知执行节点、目标缺失、处理器缺失、预算或超时均失败，失败结果保留最后步骤、时钟、信号队列轨迹及错误栈，不替换为成功桩。
+可设置 `clock` 为 `{start:0}`，显式指定模型的起始时间。时间只由 `tick` 推进。示例分别用 2 个和 3 个客户端测试定向回包，并注入重复和延迟。断言需安排在足够的 `tick` 之后，让延迟包先送达。未知执行节点、目标缺失、处理器缺失、预算或超时均失败，失败结果保留最后步骤、时钟、信号队列轨迹及错误栈，不替换为成功桩。
 
-列表构造／局部变量在单次事件中保留对象身份。自定义变量读取、列表取项、结构体拆分、局部变量及赋值保留容器引用；清除、插入、移除、修改和连接列表直接作用于该对象。负索引、越界索引与非列表输入失败。传输投递时复制调用方数据，已发出的回包保留发送时的数据快照，不随后续容器操作改变。原生图没有实际执行时报告native_graph_model=not_checked；未命中的传输故障也单独标为not_checked，不因场景完成而宣称已覆盖。
+列表构造／局部变量在单次事件中保留对象身份。自定义变量读取、列表取项、结构体拆分、局部变量及赋值保留容器引用；清除、插入、移除、修改和连接列表直接作用于该对象。负索引、越界索引与非列表输入失败。传输时复制调用方的数据。已发出的回包保留发送时的数据快照。原生图没有实际执行时报告native_graph_model=not_checked；未命中的传输故障也单独标为not_checked，不因场景完成而宣称已覆盖。
 
 自身实体由最终 GIL 的实例挂载与实例引用的本地模板确定。同一图在两个玩家实例上执行时各取该玩家的变量。使用 `server.instances` 选择真实实例，`mounts` 记录直接挂载和模板来源，`executed_instances` 记录实际执行的图与实体。混合模型的显式实例配置继续支持独立图测试。
 
@@ -74,9 +74,9 @@ clock可给{start:0}明确初始模型时刻；时间仅由tick推进。中性�
 
 `execution_status` 报告模型运行状态，`acceptance` 报告验收状态。无断言、服务端图未覆盖或必需故障的投递证据不足时，结果为 `not_checked`。场景结束默认要求待投递数为零。需要在延迟包送达前采样时，把该规则设为 `required:false`，并用 `expected_pending_packets` 声明预期数量。produce要求声明的模拟acceptance=passed，否则回滚，不提交正式输出。观察实验可读取未验收的观察结果，但不得以此声称场景通过。
 
-原生实体创建使用显式entity_created步骤，规则及边界见[native-lifecycle](native-lifecycle.md)。只对已配置图实例派发创建事件，不默认自动初始化所有图。报告新增lifecycle_events，其他生命周期未实现时不作通过声明。
+原生实体创建使用显式entity_created步骤，规则和适用范围见[原生实体生命周期](native-lifecycle.md)。只对已配置图实例派发创建事件，不默认自动初始化所有图。报告新增lifecycle_events，其他生命周期未实现时不作通过声明。
 
-客户端条目可增加variables，例如`[{"scope":"PlayerSelf","entity":42,"name":"Score"}]`，将官方Level/PlayerSelf/AvatarSelf范围明确绑定到原生模型实体。相同客户端的同一scope只能对应一个实体，scope/name不得重复。server.initial必须包含所有选定变量；这些初值在客户端OnInit前可读，不会因初始化而发送变化通知。变量缺失时拒绝，不能用nil假装宿主默认值。
+客户端条目可增加variables，例如`[{"scope":"PlayerSelf","entity":42,"name":"Score"}]`，将官方Level/PlayerSelf/AvatarSelf范围明确绑定到原生模型实体。相同客户端的同一scope只能对应一个实体，scope/name不得重复。server.initial必须包含所有选定变量；这些初值在客户端OnInit前可读，不会因初始化而发送变化通知。缺少变量初值时，模型拒绝运行。
 
 步骤`{"op":"sync_variables","client":42,"notify":true}`从当前原生模型读取该客户端选定变量的快照，先更新全部选定值，再按声明顺序调用已注册的RegisterCustomVariableChangedHandler回调。回调仅接收范围和名称；当前值通过GetGlobalCustomVariableValue获取。notify必须显式声明；false更新值但不通知，true通知每个选中变量，包括值相同的快照。这是显式模型步骤，不自动推断原生事件是否应跨客户端同步，也不模拟网络复制延迟或自动发现玩家身份。
 

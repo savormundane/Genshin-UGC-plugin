@@ -1,13 +1,13 @@
 # 原生ID分配登记
 
-当前实现确定性ID分配、预留和绑定基底的登记输出，并支持已校准服务端图内节点重编号。未声明remap时，ids apply只提交登记文件；声明remap时同时生成修改后的level.gil。工程级图ID、实体、控件、脚本、结构体等引用重映射仍待实现，不代表已完成完整ID迁移能力。
+登记工具支持确定性 ID 分配、预留和基底绑定，也可对已校准的服务端图重编号。省略 `remap` 时，`ids apply` 只输出登记文件。声明 `remap` 后，还会生成修改后的 `level.gil`。工程级图 ID 以及实体、控件、脚本和结构体等引用的重映射仍待实现。
 
 ```text
 python scripts/qianxing.py ids plan base.gil allocation.json --out allocation-plan
 python scripts/qianxing.py ids apply base.gil allocation-plan/plan.json --out allocation-registry
 ```
 
-输入只读，输出目录必须不存在，临时目录成功后才提交。plan输出plan.json，apply输出registry.json；两者都有输入与产物清单。
+输入只读，输出目录须使用尚不存在的路径。工具在临时目录完成操作后提交输出。`plan` 输出 `plan.json`，`apply` 输出 `registry.json`，两者均附输入与产物清单。
 
 ```json
 {
@@ -25,11 +25,11 @@ python scripts/qianxing.py ids apply base.gil allocation-plan/plan.json --out al
 }
 ```
 
-第二种中性配置可选择另一图，例如scope为`["ordinary",1073741901]`且范围20至80；分配与该图已有节点分别核对。也可为graph登记`scope:["ordinary"]`，或entity登记`scope:[]`。node的范围属于单图，graph区分ordinary/composite，storage_slot归属于单个存储模板；其余支持种类为无额外scope的definition、structure、template、entity、control、script、storage_template。
+另一个示例可选择不同的图，例如 `scope` 为`["ordinary",1073741901]`且范围20至80；分配与该图已有节点分别核对。也可为graph登记`scope:["ordinary"]`，或entity登记`scope:[]`。node的范围属于单图，graph区分ordinary/composite，storage_slot归属于单个存储模板；其余支持种类为无额外scope的definition、structure、template、entity、control、script、storage_template。
 
 namespace仅是所有权名称，不能使同一原生域内相同ID合法共存。先登记已有对象与预留，再按requests的显式顺序取范围内最小可用ID；显式id冲突直接失败。保留requests顺序，不自动排序。范围是调用者给定的uint32子集，不意味着平台允许整个uint32范围，生成器仍须核对对应平台合同。
 
-输出包含每项的kind、scope、name、namespace、id和计划摘要。apply重新读取基底并重新计算完整计划，拒绝基底漂移、计划篡改及重算结果不符。不扫描任意整数猜测引用；未知结构仍由工程索引报告，complete_reference_index保持false。因此该登记只能说明已索引身份没有冲突，不能为未知资源引用或未知字段的迁移背书。
+输出包含每项的kind、scope、name、namespace、id和计划摘要。apply重新读取基底并重新计算完整计划，拒绝基底漂移、计划篡改及重算结果不符。不扫描任意整数猜测引用；未知结构仍由工程索引报告，complete_reference_index保持false。因此该登记只检查已索引身份是否冲突。迁移未知资源引用或字段前仍需单独核对。
 
 ## 图内节点重编号与制作链
 
@@ -39,7 +39,7 @@ namespace仅是所有权名称，不能使同一原生域内相同ID合法共存
 {"remap":[{"graph_kind":"ordinary","graph_id":1073741900,"nodes":[{"from":1,"namespace":"logic","name":"entry"}]}]}
 ```
 
-目标分配必须属于同一graph_kind/graph_id的node命名空间，每个目标只能消费一次。plan输出附带native-plan.json，含修改前后摘要、语义差异和受保护字段摘要。apply重新核对计划，原生审计通过后才提交level.gil和native-report.json；未知格式或引用载体失败时不提交输出目录。
+目标分配必须属于同一graph_kind/graph_id的node命名空间，每个目标只能使用一次。plan输出附带native-plan.json，含修改前后摘要、语义差异和受保护字段摘要。apply重新核对计划，原生审计通过后才提交level.gil和native-report.json；未知格式或引用载体失败时不提交输出目录。
 
 produce可直接使用该native-plan.json：
 

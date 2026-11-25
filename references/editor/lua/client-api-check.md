@@ -1,6 +1,6 @@
 # 客户端API检查
 
-能力名：client-api-check。使用包内固定版本 luaparse 0.3.1 解析 Lua 5.3，按包内客户端 API 整理稿检查词法作用域、宿主成员、字段权限、枚举、调用方式、参数数量和已明确声明的类型。检查时只解析源码。依赖 Node 以及最终语法检查所需的 lupa.lua53。解析器原文、MIT 许可证及来源摘要保存在 `vendor/luaparse`。 [API 来源及核验范围](../../platform/knowledge-reliability.md)
+`client-api-check` 使用随包锁定的 luaparse 0.3.1 解析 Lua 5.3，按包内客户端 API 整理稿检查词法作用域、宿主成员、字段权限、枚举、调用方式、参数数量和已明确声明的类型。检查时只解析源码。解析器使用 Node.js，最终语法检查还需 `lupa.lua53`。解析器原文、MIT 许可证及来源摘要保存在 `vendor/luaparse`。 [API 来源及核验范围](../../platform/knowledge-reliability.md)
 
 ## 接口与合同
 
@@ -15,7 +15,7 @@ check.json使用schema 2，scripts逐一列出被检查的映射：
 {"schema":2,"scripts":[{"mapping":null,"source_sha256":"正文的64位SHA256","bindings":[]}]}
 ```
 
-Lua文件的mapping为null；GIL使用精确映射名，默认必须覆盖全部映射。source_sha256计算方式为原始正文以UTF-8-sig解码后重新编码UTF-8的SHA256，保留CRLF，不做换行归一化。可从不带contract的client check报告中读取text_sha256。未知版本、陈旧正文、遗漏或重复映射拒绝。检查合同不是数字签名。
+Lua文件的mapping为null；GIL使用精确映射名，默认必须覆盖全部映射。source_sha256计算方式为原始正文以UTF-8-sig解码后重新编码UTF-8的SHA256，保留CRLF，不做换行归一化。可从不带contract的client check报告中读取text_sha256。版本未知、正文摘要不符、映射遗漏或重复均会导致检查失败。合同摘要用于校验输入一致性。数字签名验证独立于这项检查。
 
 bindings可为局部变量或函数参数声明补充类型，例如`{"range":[6,13],"type":"ClientUITextBoxControl"}`。range是最终解码正文重新编码UTF-8后的零起始字节区间，右端不包含；必须准确命中唯一声明。字符串参数可声明value以解析动态成员名；integer参数也可声明Lua 5.3有符号64位整数value，以检查明确绑定的模板索引，布尔值/浮点数/越界整数拒绝。与已推断类型/值冲突的绑定拒绝；基类控件可显式细化为具体控件类型。声明是项目提供的静态前提，不证明运行时实参或控件类型，不能替代模型或宿主证据。
 
@@ -25,7 +25,7 @@ bindings可为局部变量或函数参数声明补充类型，例如`{"range":[6
 
 已有工程：用native基底与修改配置制作，合同覆盖最终GIL的全部脚本，包括未挂载映射。通过bindings给通用控件参数声明类型，再检查具体字段和基类方法。替换正文后沿用旧摘要、漏掉辅助映射或提供错误声明区间均拒绝。portable自动携带合同和工具依赖，原输入路径不可用时仍可重建。
 
-纯客户端制作的检查对象是build/client.lua；有最终level.gil时检查其全部映射。所有松散Lua仍执行语法检查，API合同只作用于明确的最终客户端。没有对应产物时拒绝。
+纯客户端制作的检查对象是build/client.lua；有最终 `level.gil` 时，检查其中的全部映射。单独交付的 Lua 文件仍做语法检查。API 合同只适用于指定的最终客户端产物，缺少对应产物时检查失败。
 
 ## 报告与边界
 
@@ -39,9 +39,9 @@ test_client_variables包含Level/PlayerSelf两套声明与继承、监听、动�
 
 client-check.json逐脚本输出api报告，包括已解析调用、API文档摘要、解析器摘要、声明绑定、errors与unresolved；可绑定源映射回到原模块行。未知调用、动态环境、未解析类型或列表元素返回not_checked，必需API阶段因此不能提交。明确错误返回failed。默认未提供合同的旧入口仍只执行语法检查。
 
-解析区分局部同名变量、宿主别名、实例冒号/显式接收者与命名空间点号，处理多返回值及括号截断。紧凑控件表的省略类型结合本篇API中的字段、事件枚举和回调说明解析，保留类型依据行；不存在依据时不猜类型。integer字面值保留原文，避免JavaScript大整数精度损失。
+解析区分局部同名变量、宿主别名、实例冒号/显式接收者与命名空间点号，处理多返回值及括号截断。紧凑控件表的省略类型结合本篇API中的字段、事件枚举和回调说明解析，记录类型依据的行号。缺少依据时保留未知类型。integer字面值保留原文，避免JavaScript大整数精度损失。
 
-此词法检查不证明跨函数运行路径、容器动态修改、监听清理或Tween时序。参数顺序、模板和资源需对应的工程交叉检查，不能把词法API检查通过当作完整客户端验收。工程引用、运行模型、编辑器和实机分别报告。
+此词法检查不证明跨函数运行路径、容器动态修改、监听清理或Tween时序。参数顺序、模板和资源还需对照工程核查。词法 API 检查只覆盖静态可解析的内容。工程引用、运行模型、编辑器和实机分别报告。
 
 GIL合同检查还会将已解析的ServerSignal、RegisterServerSignalHandler和UnregisterServerSignalHandler调用名称与最终GIL信号登记表对照。signal_references记录逐调用映射、行号、名称和解析结果；名称缺失或歧义为failed，动态名称为not_checked，两者均阻止必需阶段提交。参数顺序采用下述直线流程检查，信号方向需要显式协议合同，实际送达另验；运行时控件ID也不能当作存档GUID查找。没有相关调用时为not_applicable，完整references状态仍保持not_checked。
 

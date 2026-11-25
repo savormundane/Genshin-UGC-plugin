@@ -79,7 +79,7 @@ dsh plugin --profile web add github:savormundane/miliastra-wonderland-plugin
 
 ## 首次工具验证
 
-启用插件后，在支持本地 MCP 的会话中[查询「创建实体」](../README.md#当知识库使用)。看到 `nodes_lookup` 匹配一条服务端记录并返回以下端口，表示工具已连通。
+启用插件后，在支持本地 MCP 的会话中[查询「创建实体」](../README.md#作为知识库使用)。如果 `nodes_lookup` 找到一条服务端节点记录并列出以下端口，说明工具已连通。
 
 - 输入为「流程入」「目标GUID（GUID）」和「单位标签索引列表（整数列表）」。
 - 输出为「流程出」。
@@ -92,9 +92,9 @@ Claude 的 Chat 可使用 Skill。本地 MCP 在 Cowork 或 Claude Code 中验�
 
 ## 回退与卸载
 
-- **市场安装**在各客户端的插件页管理。更新后开启新会话复验工具。
+- **市场安装**在各客户端的插件页管理。更新后开启新会话，确认工具能正常调用。
 - **CLI 安装**使用同一客户端的插件命令管理。Codex CLI 可用 `codex plugin marketplace upgrade miliastra-wonderland` 刷新已登记的市场。
-- **同版本重发**后，若客户端仍加载旧缓存，请从原入口卸载并重新安装。保留现有运行配置或通过 `MILIASTRA_WONDERLAND_RUNTIME_CONFIG` 指回原文件，便可继续使用原工程和解释器。
+- **同版本重新发布**后，若客户端仍加载旧缓存，请按原安装方式卸载并重装。保留现有运行配置，或用 `MILIASTRA_WONDERLAND_RUNTIME_CONFIG` 指定原配置文件，即可继续使用原工程和解释器。
 - **PowerShell 登记的 Codex 和 Claude**可从新版安装器升级。回退或卸载可用完整 ZIP 内的命令。改用 `-Agent claude-code` 即可操作 Claude，使用过 `-Root` 的用户应传入原值。
 - **本地目录导入**通过客户端管理。升级时导入新目录，回退时重新指向保留的旧版本。
 
@@ -120,7 +120,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-install.
 
 能运行 Node 时，也可以直接执行 `node .\scripts\mcp_launcher.cjs --check`。
 
-自检检查启动文件、Node.js、已有 Python 的版本与依赖，以及 PATH 上的 uv。根据报告修正后，重启客户端并[验证工具](#首次工具验证)。 [解释器选择](runtime-environment.md#启动时选择-python)
+自检会核对启动文件、Node.js、现有 Python 的版本和依赖，以及 PATH 上的 uv。处理报告指出的问题后，重启客户端并[验证工具](#首次工具验证)。 [解释器选择](runtime-environment.md#启动时选择-python)
 
 自检读取当前终端的 PATH、`MILIASTRA_WONDERLAND_PYTHON` 和 `MILIASTRA_WONDERLAND_RUNTIME_CONFIG` 等环境变量。客户端单独配置了解释器或绑定文件时，把同样的值设置到自检终端。使用 WinGet 的用户可运行 `winget install --id=astral-sh.uv -e` 安装 uv，再打开新终端检查 `uv --version`。 [uv 的 WinGet 安装说明](https://docs.astral.sh/uv/getting-started/installation/#winget)
 

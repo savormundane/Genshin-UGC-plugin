@@ -6,8 +6,8 @@
 
 | 项目 | 要求 |
 | --- | --- |
-| 操作系统 | 完整工具面向 Windows x64。Beyond 的 Windows 原生模块随完整 ZIP 分发，Git 或 Cordis 安装首次使用 Beyond 时下载校验。 |
-| Python | CPython 3.11–3.14。启动器复用具备依赖的环境，缺依赖时使用 PATH 上的 uv。 |
+| 操作系统 | 完整工具面向 Windows x64。发行 ZIP 包含 Beyond 的 Windows 原生模块。通过 Git 或 Cordis 安装时，首次使用 Beyond 会下载并校验原生模块。 |
+| Python | CPython 3.11–3.14。启动器优先使用已装好依赖的环境，找不到合适环境时使用 PATH 上的 uv。 |
 | Node.js | 插件 MCP 启动器需要 22+，DeepSeek Harness 接入使用 24.9+。 |
 | 客户端 | 文件和素材工具需要支持本地 stdio MCP 的会话。也可在终端运行 CLI。 |
 

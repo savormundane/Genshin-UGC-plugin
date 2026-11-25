@@ -1,6 +1,6 @@
 # 原生差异与修改计划
 
-能力名：native-changes。入口为qianxing.py native diff/plan及apply --plan，核心位于scripts/miliastra/native/changes.py，依赖Python标准库及包内原生定义。diff支持同格式GIL或GIA比较；修改计划复用[原生维护](native-maintenance.md)已校准的GIL补丁操作，不扩展未知格式写入。
+`native-changes` 提供 `qianxing.py native diff/plan` 和 `apply --plan`。实现位于 `scripts/miliastra/native/changes.py`，依赖 Python 标准库和随包原生定义。diff支持同格式GIL或GIA比较；修改计划复用[原生维护](native-maintenance.md)已校准的GIL补丁操作，不扩展未知格式写入。
 
 ```text
 python scripts/qianxing.py native diff BEFORE.gil AFTER.gil --allow-fields 10 --out DIFF.json
@@ -27,7 +27,7 @@ node_connection按使用者→提供者比较，忽略仅改变连线存储端�
 
 --allow-fields显式列出允许变化的顶层字段。其余字段按原顺序连接的完整原始字节，以及容器非长度参数与尾部必须相同；变化则protected.unchanged=false，status=failed，退出码2。空--allow-fields表示不允许修改任何顶层字段；不提供该选项时只做比较，不声称保护范围已检查。长度字段由合法容器长度核验，不要求修改后的长度与原文件相等。
 
-完整原始字节变化不会被“对象语义相同”隐藏。complete_semantic_diff仍为false，unindexed列出任意组件、自定义变量、动态Lua标识等当前未完整解析范围；不把这些变化判为无影响。结构无法读取时直接失败。最终原生/工程引用检查不通过也不能获得成功差异状态；editor与host保持not_checked。
+即使对象语义相同，报告仍会列出原始字节变化。complete_semantic_diff仍为false，unindexed列出任意组件、自定义变量、动态Lua标识等当前未完整解析范围；不把这些变化判为无影响。结构无法读取时直接失败。最终原生/工程引用检查不通过也不能获得成功差异状态；editor与host保持not_checked。
 
 涉及原生玩法的补丁还可在 `gameplay_records` 中比较职业、技能、道具、商店、环境资源、全局计时器、玩家组和复苏点的身份与记录摘要。`gameplay_references` 列出已校准引用的增删。`native plan --summary` 在终端显示摘要和保护范围，完整计划保存在 `--out` 指定的文件。由 `native apply` 的报告读取具名对象实际分配的 ID。 [原生玩法制作](../editor/native-gameplay.md)
 
@@ -35,7 +35,7 @@ node_connection按使用者→提供者比较，忽略仅改变连线存储端�
 
 PATCH 使用现有 schema 2、base_sha256、allowed_top_level_fields 及 operations 合同。写入 GIL 及 `section_from` 的来源均须匹配已用样本校准的容器头，且来源的目标字段须唯一。`replace_graph` 保留目标图 ID、名称和既有引用。`section_from` 仅用于显式整段替换。计划要求 `strict_audit=true` 或省略该字段。
 
-MCP 内联 `native_plan` 可省略 `patch.base_sha256`，服务用已验证的 `sha256` 填入计划。文件补丁保持原合同。预检或结果审计阻止写入时，`diagnostics` 给出阶段、已知对象键和名称、关系、字段与目标 ID。先按 `next_step` 找到并修复阻塞，再用变更后的摘要重新规划。
+MCP 内联 `native_plan` 可省略 `patch.base_sha256`，服务用已验证的 `sha256` 填入计划。文件补丁保持原合同。预检或结果审计阻止写入时，`diagnostics` 给出阶段、已知对象键和名称、关系、字段与目标 ID。先按 `next_step` 找到并修复阻塞，再用更新后的摘要重新生成计划。
 
 PLAN的schema为2、kind为native-change-plan，包含：
 
@@ -51,7 +51,7 @@ apply --plan先核对计划和所有来源内容，再执行现有补丁，核�
 
 `arrange_instances` 将布局文件与可选的 `previous_bindings` 一并绑定。`arrangements` 也纳入计划摘要，`--summary` 会显示每次布设操作的分类和变换。应用时重新校验来源、操作预览与输出 GIL 摘要。[重复布设](../editor/native-scene.md#重复布设)
 
-两种中性使用方式：第一种替换选定节点图，允许字段10并保护其它图及字段；第二种精确准备脚本映射区段，通过显式section_from替换字段50。后者会替换整段，须先在来源文件保留所有仍需使用的映射，不能当作自动合并。实际ID、脚本和字段范围由当前工程确定。
+替换指定节点图时，允许字段 10 并保护其他图及字段。替换脚本映射时，先准备包含所需映射的区段，再用 `section_from` 显式替换字段 50。后者会替换整段，须先在来源文件保留所有仍需使用的映射，不能当作自动合并。实际ID、脚本和字段范围由当前工程确定。
 
 ## 局部编辑
 
@@ -60,7 +60,7 @@ apply --plan先核对计划和所有来源内容，再执行现有补丁，核�
 | operation | allowed_top_level_fields | 参数与回读 |
 | --- | --- | --- |
 | `set_custom_variable_default` | 模板 `[4]`，实例 `[5]` | `{"op":"set_custom_variable_default","section":4,"entity_id":42,"name":"Count","value":8}`。精确选定已有变量，保留名称与类型描述符。接受对应的 JSON 整数、布尔、有限浮点或字符串。实例需已有该变量的覆盖条目。应用报告列出修改前后的值。 |
-| `set_timer_sequence` | `[10]` | `{"op":"set_timer_sequence","source":"platform.json","timer_id":"timer-a"}`。配置与 `platform check` 共用，须有对应 `native_bindings`，并匹配既有普通图、节点、实体及计时器名。序列写入使用 float32，编码后也须满足间隔并以正时间点结束。连线入参、歧义目标和无法保留的序列项拒绝写入。应用后可执行 `platform check platform.json --gil NEW.gil` 核对。 |
+| `set_timer_sequence` | `[10]` | `{"op":"set_timer_sequence","source":"platform.json","timer_id":"timer-a"}`。配置与 `platform check` 共用，须有对应 `native_bindings`，并匹配既有普通图、节点、实体及计时器名。序列写入使用 float32，编码后也须满足间隔并以正时间点结束。输入端口已有连线、目标不唯一或存在无法保留的序列项时，拒绝写入。应用后可执行 `platform check platform.json --gil NEW.gil` 核对。 |
 
 模板默认值用于继承该值的实例，已有覆盖继续生效。计时器编辑保留循环项、连线及挂载。新建计时器逻辑沿用 Graph Code 编译。两项写入均保留目标以外的内容，编辑器和游戏运行结果按实际验证记录。
 
@@ -76,7 +76,7 @@ produce schema 2的native阶段可以选择base+plan：
 }
 ```
 
-base与plan相对制作配置解析，inputs.source相对计划文件解析。native.spec和native.plan只能选其一；native仍与level新建互斥。计划约束native阶段的输出；若另有图编译、Lua嵌入或存储阶段，这些后续修改继续按各自合同和最终审计核验，不能将native阶段摘要冒充完整制作链最终摘要。
+base与plan相对制作配置解析，inputs.source相对计划文件解析。native.spec和native.plan只能选其一；native仍与level新建互斥。计划约束native阶段的输出；若另有图编译、Lua嵌入或存储阶段，这些后续修改继续按各自合同和最终审计核验，最终交付摘要以全部阶段执行后的文件为准。
 
 native-report.json记录实际应用和输入摘要；native-diff.json及native-plan.json保留审阅证据。交付目录内的计划副本属于记录，来源路径仍以输入计划为基准，重新应用请使用原计划或portable收纳后的输入计划。portable收纳基底、计划及所有令牌来源，只重写路径，保持plan_sha256和结果摘要；verify --portable在原工程目录不可用时仅静态核对；显式重建需按portable-delivery指南提供摘要确认。
 
@@ -95,6 +95,6 @@ python scripts/qianxing.py client check reexport.gil --out reexport-client.json
 
 新建工程重点核对脚本映射、图挂载和资源引用是否在再导出后仍存在。成熟工程迭代还需核对选定修改之外的对象和引用是否保持。名称相同不代表对象ID相同，字段重排也不自动代表语义等价；complete_semantic_diff始终为false。
 
-client check默认只编译再导出文件的所有内嵌Lua，不执行正文。需要API/引用检查时提供与再导出正文匹配的显式合同，不能复用已不匹配的摘要。运行日志对应哪个产物，就在[结构化日志诊断](../workflows/log-diagnostics.md)中绑定哪个产物和构建ID；原交付与再导出的事件不可因脚本名相同而混用。编辑器重新写入Lua后，旧行号映射可能失效，不能强行套用。
+client check默认只编译再导出文件的所有内嵌Lua，不执行正文。需要API/引用检查时提供与再导出正文匹配的显式合同，不能复用已不匹配的摘要。运行日志对应哪个产物，就在[结构化日志诊断](../workflows/log-diagnostics.md)中绑定哪个产物和构建ID；即使脚本同名，也要按原交付文件或再导出文件分别保存事件。编辑器重新写入Lua后，旧行号映射可能失效，不能强行套用。
 
 有存储时另记实际退出/重进和回读结果；差异报告、日志可解析或离线模型通过均不替代这一证据。此流程复用已实现的CLI，不自动操作编辑器，也不新增“已实机通过”的标记。

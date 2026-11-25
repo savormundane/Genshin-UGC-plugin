@@ -1,6 +1,6 @@
 # 排查一处 Lua 语法错误
 
-把下列代码保存为已授权工程中的 `button.lua`。使用本地 MCP 的 `client_check` 编译检查，读取文件即可开始。
+将下面两行代码保存为已授权工程中的 `button.lua`，再用本地 MCP 工具 `client_check` 检查语法。
 
 ```lua
 local function on_click()

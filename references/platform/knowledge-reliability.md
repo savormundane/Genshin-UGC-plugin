@@ -2,13 +2,13 @@
 
 入口为 `python scripts/qianxing.py knowledge api QUERY`、`knowledge sources` 和 MCP `api_lookup`。后者沿用 `symbol` 参数，可传正式符号、英文片段或中文用途。输出包含正式符号、原文说明和行号、摘要、推导标记及冲突说明。非精确匹配最多返回 20 项。
 
-`match_basis` 标记候选的命中依据。枚举结果保留正式枚举名，命中的成员及其原文行见 `matched_values`。零结果时，`retry_hint` 提供重查提示。
+`match_basis` 说明候选为何匹配。枚举结果保留正式枚举名，匹配的成员及其原文行号见 `matched_values`。查不到匹配项时，`retry_hint` 提供重新查询的建议。
 
 ## 中文查询
 
-- 平台规则走 `docs_search`。提取「定时器」「控件」「图元」等平台术语，按版本查询，检查请求版本、来源版本和继承标记。没有选定版本且结论取决于版本时，先确认目标版本。
-- Lua API 走 `api_lookup`。先查用途或已知正式符号。复合问法可拆成「按钮点击」和「隐藏控件」分别查。采用候选前核对正式符号、说明和适用依据。中文短语只用于检索。
-- Graph Code 走 `nodes_lookup`。先按客户端或服务端作用域查「启动定时器」「创建实体」等动作，再核对端口。PNG 转图元需要看效果和控件数时使用 [`asset_preview`](../../docs/mcp.md)。
+- 查平台规则用 `docs_search`。提取「定时器」「控件」「图元」等平台术语，按版本查询，再核对请求版本、来源版本及是否沿用旧资料。结论取决于版本时，先确认目标版本。
+- 查 Lua API 用 `api_lookup`。先查用途或已知的正式符号。一句里有多个动作时，可拆成「按钮点击」和「隐藏控件」分别查。采用候选前，核对正式符号、说明和适用范围。中文短语只用于检索。
+- 查 Graph Code 节点用 `nodes_lookup`。先按客户端或服务端作用域查「启动定时器」「创建实体」等节点，再核对端口。查看 PNG 转图元的效果和控件数时，用 [`asset_preview`](../../docs/mcp.md)。
 - 首次无匹配时，换用更短的平台术语、已知别名或正式名称再查。仍无匹配时说明这次未在所选资料中找到，并指出可补充的版本、作用域或正式名称。对平台能力的判断以有依据的资料为准。
 
 ## 来源和适用范围
@@ -17,7 +17,7 @@
 
 `nodes_lookup` 的作用域、调用签名与端口来自包内 Graph Code 编译器定义。结果提供实现路径、行号、摘要和校验范围。对应平台版本未知时 `platform_version` 为空。单独校准的端口资料见 `port_evidence`。服务端「创建实体」附带 7.1 官方文档两项入参和未列值出参的依据。其作用域和调用签名仍由编译器定义，其他版本上的可用性需单独核对。
 
-原文、整理说明和实测分别管理。官方平台资料通过 `docs search/show/diff` 查询版本、原始URL、摘要；7.2继承的旧资料明确标为未重新验证。遇到资料冲突，保留两方依据并限制结论到明确支持的范围；不要从标准Lua或其他引擎补造行为。
+原文、整理说明和实测结果分别记录。用 `docs search/show/diff` 查看官方资料的版本、原始链接和摘要。7.2 沿用的旧资料标为未重新验证。资料冲突时，保留双方依据，结论限于资料明确支持的范围。标准 Lua 或其他引擎的行为只适用于各自环境。
 
 来源索引将 `client_api` 整理稿关联到官方文档 `mhtakr07vej4` 的 7.1 镜像。2026-09-23 是该文档在 7.1 指南更新日志中的日期。签名查询、快照和静态检查读取同一份已核验整理稿。平台更新时先用 `docs show mhtakr07vej4 --version VERSION` 找到所选原文，在候选中审阅整理稿，再用 `knowledge snapshot/diff` 核对签名、字段、枚举和回调变化。
 
@@ -25,6 +25,6 @@
 
 图片资源ID不代表本地PNG加载能力；官方数量上限、工程预算与设备性能是不同证据。编辑器、宿主及用户验收通过显式人工记录附带产物摘要、环境和范围，不由离线测试推断。
 
-依赖：包内API和来源索引；静态Lua检查另需Node/luaparse。例：`knowledge api game.GetUICanvasSize` 返回原文声明；`knowledge api game.LoadAnyLocalPNG` 返回未确认；原文摘要变化会拒绝查询。只读操作，不挂载或修改游戏文件。
+查询使用随包提供的 API 资料和来源索引。静态 Lua 检查还需要 Node 和 luaparse。`knowledge api game.GetUICanvasSize` 返回原文声明，`knowledge api game.LoadAnyLocalPNG` 返回未确认。原文摘要变化时，工具会拒绝查询。查询为只读操作。
 
 增量维护使用knowledge snapshot与knowledge diff，见[平台更新与兼容](../../docs/contributing/platform-maintenance.md)。旧api文本检索保留输入输出字段，并附来源完整性与检索范围；它不替代签名查询。

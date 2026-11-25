@@ -2,7 +2,7 @@
 
 顶层 `produce` schema 1 任务从 V1.2.0 起列为弃用，计划在 V2.0.0 移除该入口。迁移时按 [Schema 2 制作指南](produce.md)调整任务和 GIL 映射。任务内的协议、动画和关卡配置各自使用对应指南的 schema。
 
-schema 2的装配、原生修改、存储、联合模型与独立重建见 [可执行制作](produce.md)。下文保留schema 1的接口与兼容行为，新增复杂协议见 [协议schema 2](protocol-v2.md)。
+装配、原生修改、存储、联合模型和独立重建的当前流程见[Schema 2 制作指南](produce.md)。下文记录 schema 1 的接口与兼容行为，复杂类型见[协议 schema 2](protocol-v2.md)。
 
 Schema 1 配置通过 `qianxing.py produce` 执行。下列示例使用随包的 Lua 装配、素材和原生文件工具。
 
@@ -29,7 +29,7 @@ api直接检索完整客户端API，返回章节、行号、上下文和文档�
 }
 ```
 
-各阶段按需出现，至少一个。相对路径以production.json所在目录为基准；graphs.spec内部路径按其自身目录解析。gil可以消费显式图构建输出，或使用base指定当前GIL；两者不能同时指定。配置level且未指定base时，可使用本轮生成/整合的level.gil。gil.source可另给Lua，省略时使用client.source。示例信号是新设计示例，映射名称必须从当前文件读取，不能直接假定存在。produce整合已经编写的源码及合同，不是自然语言玩法生成器；Agent负责先按需求写出实际图/客户端/绑定适配。
+按任务选择至少一个阶段。路径相对 `production.json` 所在目录，`graphs.spec` 内的路径相对其自己的配置文件。`gil` 可使用显式图构建输出，也可通过 `base` 指定当前 GIL，二者只能选一个。配置了 `level` 且未指定 `base` 时，可使用本轮生成或整合的 `level.gil`。`gil.source` 可单独指定 Lua 源文件，省略时使用 `client.source`。示例信号是新设计示例，映射名称必须从当前文件读取，不能直接假定存在。produce整合已经编写的源码及合同，不是自然语言玩法生成器；Agent负责先按需求写出实际图/客户端/绑定适配。
 
 ## level生成与安全重跑
 
@@ -37,7 +37,7 @@ api直接检索完整客户端API，返回章节、行号、上下文和文档�
 
 脚本项的templates_as按本次GUID建立局部别名表，produce同时输出template_indices.lua；最终Lua写回保留相同绑定。输入源码不修改，生成目录记录实际摘要。创建脚本/UI关联不等于自动完成任意服务器图挂载。
 
-默认输出必须不存在；--next选择新编号目录并在报告记录output_directory，不删除旧输出。至少包含一个实际阶段，只有level也可创建结构产物；结构生成不能被描述为完整玩法或已通过宿主验收。
+默认输出目录须使用未占用的路径。`--next` 选择下一个编号目录，在报告中写入 `output_directory` 并保留旧输出。至少包含一个实际阶段，只有level也可创建结构产物；结构生成不能被描述为完整玩法或已通过宿主验收。
 
 ## 客户端与协议
 
@@ -51,7 +51,7 @@ runtime.protocol(contract,session,round)的accept(source,direction,phase,packet)
 
 ## 动画
 
-消费内置素材的asset.json，检查格式、尺寸、矩形边界/调色板或文本块字段，拒绝混合矩形/富文本帧；计算最大帧控件池和总预算，输出animation.lua/json。每帧带duration、anchor及静态数据，所有数据内联，不在运行时读外部文件。
+动画阶段读取内置素材的 `asset.json`，检查格式、尺寸、矩形边界与调色板，或检查文本块字段。同一动画不能混用矩形和富文本帧。工具计算单帧所需的最大控件池及总预算，生成 `animation.lua` 和 `animation.json`。每帧的 `duration`、`anchor` 和静态数据均内联，运行时无需读取外部文件。
 
 runtime.player(animation,draw,loop)按真实dt选择当前帧，跨帧时调用draw，支持循环和reset；不逐帧重建控件。runtime.rectangles(frame,scale,mirror,emit,hide,pool)计算锚点坐标、镜像、尺寸和调色板颜色，发给emit并隐藏池尾。emit/hide必须由Agent绑定实际控件方法，文本/分层骨骼仍按对应工作流接入；该模块没有把缺失素材变成已有动作。
 
@@ -59,7 +59,7 @@ runtime.player(animation,draw,loop)按真实dt选择当前帧，跨帧时调用d
 
 produce中的Lua写回由Python原生实现，无需Node执行。仅支持已核验的20字节头+protobuf+4字节尾GIL；按唯一映射命中正文，保留其他脚本、未知字段、顺序及头部中间元数据，回读比较实际Lua。空代码、重复映射、损坏容器及已有输出拒绝。旧gil-toolkit.mjs继续作为兼容入口与独立交叉核验器，不删除有效能力。
 
-图逻辑、实体/挂载和资源变更使用既有严格图构建或Agent编写的有依据补丁；Python Lua写回本身不会创建挂载，也不承诺所有GIA格式。图构建报告位于graphs/build-report.json，整合报告从图构建的required_mounts核验结果汇总挂载证据；未给绑定合同时标记not_checked及原因，不冒充通过。
+图逻辑、实体/挂载和资源变更使用既有严格图构建或Agent编写的有依据补丁；Python Lua写回本身不会创建挂载，也不承诺所有GIA格式。图构建报告位于graphs/build-report.json，整合报告从图构建的 `required_mounts` 核验结果汇总挂载证据。未声明绑定时，报告标为 `not_checked` 并注明原因。
 
 ## 边界与依赖
 

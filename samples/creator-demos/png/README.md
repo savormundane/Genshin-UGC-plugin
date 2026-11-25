@@ -16,7 +16,7 @@
 
 工具依次返回「原尺寸参考」`original`（155 个控件，超预算）、「首选推荐」`grid-25`（11 个控件，预算内）和「更省控件」`grid-12.5`（5 个控件，预算内）。
 
-关闭终端工具的 Codex 会话实跑了这两步。选中的 `grid-25` 在 Lua 中读回 11 个矩形。用同一份试算报告走命令行生成，五个交付文件逐字节一致。
+在关闭终端工具的 Codex 会话中验证了这两步。对选中的 `grid-25`，从生成的 Lua 中读回了 11 个矩形。用同一份试算报告在命令行生成，五个交付文件逐字节一致。
 
 ## 用终端复现
 
@@ -41,7 +41,7 @@ python -X utf8 -B scripts/qianxing.py assets generate --from-preview "$markerOut
 | 首推 `grid-25` | ![11 个矩形图元的预览](preview-grid-25.png) | 6 × 6 | **11** | 约 0.04412 |
 | 更省控件的 `grid-12.5` | ![5 个矩形图元的预览](preview-grid-12-5.png) | 3 × 3 | 5 | 约 0.06782 |
 
-选中的 `grid-25` 是预算内误差最低的推荐项。原图中央的十字在缩小网格后失去了清晰轮廓，这是减少控件的代价。生成时重新核对了源图摘要，实际生成 11 个矩形图元。误差是报告中的归一化预乘 RGBA 均方误差，值越小越接近参考图。
+选中的 `grid-25` 在预算内误差最低。网格变粗后控件数量减少，原图中央十字的轮廓也变得模糊。生成时重新核对了源图摘要，共生成 11 个矩形图元。报告使用归一化预乘 RGBA 均方误差，值越小越接近参考图。
 
 ## 拟合并预览可挂载的 Lua
 
@@ -83,4 +83,4 @@ python -X utf8 -B scripts/qianxing.py assets generate --from-preview "$markerOut
 
 已用临时 GIL 回读图片模板与脚本挂载，通过 Lua 5.3 编译及离线控件模型。按模型输出的 11 个矩形重建画面，与软件对照图一致。模型中停用会隐藏图元，重新启用复用原控件。编辑器接入和游戏内显示待试玩验证。
 
-维护样例时，将 `ui` 模块、包好的 `generated/data.lua` 和绘制源码依次交给 `client assemble`，生成可挂载的单文件。 [绘制源码](checkpoint-marker-render.lua) · [装配与回读检查](../../../scripts/test_release_behaviors.py)
+维护样例时，将 `ui` 模块、生成的 `generated/data.lua` 和绘制源码依次交给 `client assemble`，生成可挂载的单个 Lua 文件。 [绘制源码](checkpoint-marker-render.lua) · [装配与回读检查](../../../scripts/test_release_behaviors.py)

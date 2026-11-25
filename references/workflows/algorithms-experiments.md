@@ -1,6 +1,6 @@
 # 通用算法与观察实验
 
-能力名：algorithms-experiments。scripts/runtime_algorithms.lua可通过client assemble内联；scripts/experiments.py运行独立Lua模型观察，不携带游戏策略、课程或经济参数。
+`algorithms-experiments` 提供通用算法和观察实验。可用 `client assemble` 内联 `scripts/runtime_algorithms.lua`。`scripts/experiments.py` 在独立 Lua 模型中执行实验，游戏策略、课程和经济参数由项目提供。
 
 Lua接口：rng(seed)及next/integer/restore；heap及push/pop（同优先级稳定）；shortest(start,goal,neighbors)返回路径、代价、工作量，neighbors返回有序{to,cost}；grid(width,height,blocked)提供四邻接适配；segment_distance、in_circle、in_rect；reservations的claim/release/expire；machine(initial,transitions)；clock的tick与paused；replay按非递减时间投递；cache(capacity,load,release)提供LRU与close。
 
@@ -11,8 +11,8 @@ python scripts/qianxing.py experiment run EXPERIMENT.json --out NEW_DIRECTORY
 python scripts/qianxing.py experiment compare BEFORE.json AFTER.json --out NEW_COMPARISON.json
 ```
 
-EXPERIMENT采用schema=2，包含source、entry、development_seeds、holdout_seeds、split、policies、metrics及可选tuning。Lua入口以(seed,policy)调用，metrics是要读取的全局字段路径；每个观察使用独立模型。两个种子集必须去重且互斥，holdout不允许tuning。失败作为观察保留；模型耗时与业务工作量分别记录。
+EXPERIMENT采用schema=2，包含source、entry、development_seeds、holdout_seeds、split、policies、metrics及可选tuning。Lua入口以(seed,policy)调用，metrics是要读取的全局字段路径；每个观察使用独立模型。开发集和保留集各自不能有重复种子，两组也不能重叠。`holdout` 禁止使用 `tuning`。报告保留失败的观察结果，并分别记录模型耗时和业务工作量。
 
-compare输入两份observations.json，要求同一分组、种子和策略集合，输出逐案例与数值差值。相同种子不自动构成等消费因果对照；保留集一旦用于调参便应重新划分独立验收样本。结果不能冒充真人策略、完整游玩时间或宿主FPS。
+`compare` 读取两份 `observations.json`。分组、种子和策略集合须一致，结果逐例给出差异和数值差。同一个种子也可能因策略不同而消耗不同数量的随机数，比较时需核对随机数的使用情况。用保留集调参后，应重新选取独立验收样本。结果不能冒充真人策略、完整游玩时间或宿主FPS。
 
-中性例可使用3×3避开中心格与4×2避开第二排第二格的路径查询，以及两条不同种子的独立随机流。实验配置可用开发种子[2,3]／保留种子[8]和策略[1,2]，另一配置选择保留集独立验证。负边代价、零RNG状态、重叠种子集及保留集调参均拒绝。观察失败保留调用参数、错误栈和最后一步／信号轨迹；failed结果的experiment run返回非零退出码。工作量由metrics中的项目指标提供，model_seconds单独记录模型进程耗时。
+示例可在 3×3 网格绕开中心格，在 4×2 网格绕开第二排第二格。可用两条不同种子的独立随机流分别测试。实验配置可用开发种子[2,3]／保留种子[8]和策略[1,2]，另一配置选择保留集独立验证。负边代价、零RNG状态、重叠种子集及保留集调参均拒绝。观察失败保留调用参数、错误栈和最后一步／信号轨迹；failed结果的experiment run返回非零退出码。工作量由metrics中的项目指标提供，model_seconds单独记录模型进程耗时。

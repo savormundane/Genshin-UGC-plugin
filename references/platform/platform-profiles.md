@@ -1,6 +1,6 @@
 # 平台版本与配置检查
 
-能力名：platform-profiles。入口为qianxing.py docs、platform和capabilities。使用Python标准库，资料与规则随插件提供，不需要网络或宿主文件系统。它检查显式声明的配置；不据此宣称已验证GIL的平台版本、组件写入或实机行为。
+能力名为 `platform-profiles`。通过 `qianxing.py` 的 `docs`、`platform` 和 `capabilities` 命令使用。查询资料和检查配置只需 Python 标准库及随包的资料和规则，无需联网或读取游戏文件。结果仅说明配置声明是否符合规则。GIL 的平台版本、组件写入和游戏内行为须另行验证。
 
 ## 资料查询和版本选择
 
@@ -16,7 +16,7 @@ python scripts/qianxing.py platform profile --version 7.2 --mode classic
 
 scripts/platform-sources.json 将文档 ID 映射到包内原文、来源类型、官方链接和摘要。资料沿 `base` 逐级回溯，取最近版本的声明。结果提供 requested_version、source_version 和 inherited。读取已选正文时检查文件和摘要，父级缺失或循环直接报错。diff 两侧保留来源，正文摘要相同时仍为 unchanged。正文差异包括排版变化。
 
-新版本通过 `limits`、`mode_limits`、`conflicts` 记录规则差异。默认沿用已有规则。覆盖了某项规则的依据时，在 `rules` 中将该规则设为 true 以登记审定后的沿用或修订，或设为 false 停用。缺少审定记录时，该规则在新版本返回 not_checked。
+新版本通过 `limits`、`mode_limits` 和 `conflicts` 记录规则差异，默认沿用已有规则。若更新了某项规则的依据，用 `rules` 中的 `true` 登记已确认的沿用或修订，用 `false` 停用规则。缺少审定记录时，该规则在新版本返回 `not_checked`。
 
 ## 配置合同
 
@@ -96,7 +96,7 @@ python scripts/qianxing.py platform check platform.json
 
 level.json使用[原生结构生成](../gil/native-authoring.md)的合同。platform在资源生成之前检查；failed或not_checked阻止正式输出提交。通过后输出platform-configuration.json和platform-report.json，记录配置、资料目录及所用原文依赖。配置正文属于交付产物并逐字节比较；检查报告属于证据。portable收纳配置、规则和资料，支持原输入目录不可用后的独立重建。
 
-本阶段不会向level.gil写入上述对象，也不会把配置中的对象id绑定为原生GUID。组件原生生成、资源ID支持、生命周期和详细节点签名属于报告中的未检查范围；最终GIL仍须经过原生审计，平台字段是否落地另行核验。
+本阶段只检查配置声明。向 `level.gil` 写入对象和将配置 ID 绑定到原生 GUID 属于其他阶段。组件生成、资源 ID 支持、生命周期和详细节点签名列为未检查。最终 GIL 仍须经过原生审计，平台字段是否实际写入也应另行核对。
 
 ## 分层能力证据
 

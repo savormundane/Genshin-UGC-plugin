@@ -1,19 +1,19 @@
 # Graph Code 常见验证错误修复
 
-Ayaya CLI 验证 Graph Code 时高频报错的排查与修复。每条给出错误原因、错误写法和正确写法。语法全貌见 [Graph Code 语法参考](graph-code-syntax.md)。
+本页用示例说明 Ayaya CLI 校验 Graph Code 时的常见错误及修复方法。完整语法见 [Graph Code 语法参考](graph-code-syntax.md)。
 
 ## 1. `!=` 不能出现在 if 条件中
 
-Graph Code 编译器不支持 `!=` 运算符。必须改写为正向分支。
+编译器会把 `!=` 改写成对相等比较结果的取反。写在 `if` 条件里会触发 `CODE_IF_DIRECT_LOGIC_NOT_CALL`。用 `==` 比较，并将原来的不相等分支放进 `else`。
 
 ```python
 # 错误
 if 当前修订 != 1:
     ...
 
-# 正确 — 用 == 交换分支
-if 当前修订 == 2:
-    ...
+# 正确 — 用 == 保留相同的分支行为
+if 当前修订 == 1:
+    pass
 else:
     ...
 ```
@@ -32,7 +32,7 @@ else:
 
 ## 3. `on_` 方法名必须精确匹配 `signal_id`
 
-`register_event_handler` 的回调方法名 = `"on_" + signal_id`。不能用信号的中文名或其他别名。
+`register_event_handler` 注册的回调方法名用 `"on_" + signal_id` 构成。方法名中的标识必须是信号 ID。
 
 ```python
 # 错误 — 用了中文名
@@ -46,7 +46,7 @@ def on_signal_example_move(self, ...):
 
 ## 4. 信号处理函数必须包含 3 个自动注入的实体参数
 
-引擎在调用信号 handler 时自动注入前 3 个参数：`事件源实体`、`事件源GUID`、`信号来源实体`。缺少或省略类型标注都会报错。
+引擎调用信号处理函数时，为前三个参数传入 `事件源实体`、`事件源GUID` 和 `信号来源实体`。函数签名必须声明这三个参数并标注类型，否则校验会报错。
 
 ```python
 # 错误 — 只有信号自身定义的参数
@@ -91,7 +91,7 @@ SIGNAL_PAYLOAD = {
 
 ## 6. 不能将比较结果赋值给类型变量
 
-Graph Code 不支持把 `==`/`and`/`or` 表达式的结果直接赋给带类型标注的变量。改为在 if 中直接使用比较。
+在这类比较和逻辑判断中，直接将 `==`、`and` 或 `or` 表达式写入 `if` 条件。将结果赋给带类型标注的变量会导致校验失败。
 
 ```python
 # 错误
@@ -118,7 +118,7 @@ self.game.register_event_handler("signal_example_move", self.on_signal_example_m
 
 ## 8. 风格建议：复合条件拆为 early return
 
-`if not X and Y:` 这类复合布尔条件虽然不一定报验证错误，但容易导致逻辑混乱。建议拆成连续的 guard clause。
+`if not X and Y:` 这类复合布尔条件通过校验后仍可能难以阅读。可先逐项检查前置条件，在不满足时提前返回。
 
 ```python
 # 不推荐
@@ -128,7 +128,9 @@ if not 对局已结束 and 来源序号 == 当前修订:
 # 推荐
 if 对局已结束:
     return
-if 来源序号 != 当前修订:    # 注意：实际编码时此处需用正向条件改写（见第 1 条）
+if 来源序号 == 当前修订:
+    pass
+else:
     return
 # 主逻辑
 ...

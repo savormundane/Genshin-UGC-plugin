@@ -2,18 +2,18 @@
 
 完整节点图制作优先使用 [统一构建工作流](node-graph-workflow.md)。以下入口用于单步诊断、资源转换及 HTML UI 分支。
 
-使用包内 `vendor/ayaya` 的离线源码完成节点图与 UI 文件交付，无需另行安装 Ayaya 编辑器或提供原仓库路径。插件原有 `gil-toolkit.mjs` 继续负责准确命中的内嵌 Lua 替换，本链路负责节点图与资源级转换。
+包内 `vendor/ayaya` 可离线生成节点图和 UI 文件，无需另行安装 Ayaya 编辑器或提供上游仓库路径。内嵌 Lua 的精确定位和替换使用 `gil-toolkit.mjs`，节点图和资源转换使用本页入口。
 
 ## 接入与环境
 
-上游：[Ayaya_Miliastra_Editor](https://github.com/AyayaXiaowang/Ayaya_Miliastra_Editor)。按当地仓库的源码与许可使用；上游声明 GPLv3，各第三方组件保留独立许可。包内包含经筛选的上游 GPLv3 源码、节点定义、静态 Workbench 页面和文件写回所需的校准 seed；不包含上游游戏项目资源库。源码改动、原文件/分发文件摘要见 `vendor/ayaya/VENDORED.json`，许可证及署名见同目录 LICENSE、LICENSES 和 NOTICE.md。
+上游 [Ayaya_Miliastra_Editor](https://github.com/AyayaXiaowang/Ayaya_Miliastra_Editor) 声明 GPLv3，各第三方组件保留各自的许可。插件内提供所需的上游 GPLv3 源码、节点定义、静态 Workbench 页面和用于文件写回的校准样本。上游游戏项目资源库由原仓库提供。源码改动、原文件和分发文件的摘要见 `vendor/ayaya/VENDORED.json`，许可证和署名见同目录的 `LICENSE`、`LICENSES` 和 `NOTICE.md`。
 
-命令中的 `PYTHON` 为实际 Python 可执行文件，`PLUGIN` 为本包根；输入与输出采用实际绝对路径。完整环境使用 Python 3.11–3.12，文件解析、图校验、GIL/GIA 生成链路仅用标准库；HTML 浏览器排版为可选依赖。接入脚本仅用标准库，不安装依赖，不启动 GUI、不执行 OCR、截图识别或游戏鼠标键盘自动化。不要为文件转换直接安装整个 GUI requirements；先用具体入口帮助定位所需依赖，缺少模块时单独处理该链路。
+将命令中的 `PYTHON` 替换为实际的 Python 可执行文件，将 `PLUGIN` 替换为插件根目录。输入和输出使用绝对路径。完整插件环境见 [运行要求](../../docs/compatibility.md#运行要求)。接入脚本、文件解析、图校验以及 GIL/GIA 生成只用 Python 标准库。HTML 浏览器排版所需的依赖单独安装。运行文件转换前，可用对应入口的帮助确认依赖。接入脚本不会安装依赖、启动 GUI、调用 OCR、识别截图或操作游戏窗口。
 
     PYTHON PLUGIN/scripts/ayaya_bridge.py doctor
     PYTHON PLUGIN/scripts/ayaya_bridge.py --tool export_project_graphs_to_gia tool -- --help
 
-默认输出 JSON 命令计划；增加位于 action 之前的 `--execute` 才调用。解释器不同则传 `--python Python可执行文件`。`doctor` 仅核对目录入口，不证明依赖或导出可用。选项 `--input/--output/--project/--tool/--package-id` 均放在 action 之前；action 后只放上游参数。
+默认只输出 JSON 命令计划。在操作名之前加 `--execute` 才会执行。指定其他解释器时使用 `--python Python可执行文件`。`doctor` 只核对目录入口，依赖和导出功能需另行检查。`--input`、`--output`、`--project`、`--tool` 和 `--package-id` 放在操作名之前，上游参数放在操作名之后。
 
 ## Graph Code 到节点图
 
@@ -41,7 +41,7 @@ Graph Code 是节点图 DSL，不是任意 Python。根据当前节点注册表�
 
     PYTHON PLUGIN/scripts/ayaya_bridge.py --execute --project 项目存档目录 --input 基底.gil --output 新输出.gil project-import
 
-该操作会处理该项目已支持的资源，不只是单张图；先核对选择范围，按需要通过上游 `--selection-json` 或 `--skip-*` 限定。不要将诊断用途的 pure-json 最小写回当成完整交付。基底及节点/record 样本应与目标类型匹配，保留原始文件，回读检查写回范围。文件输出通常被收口到包内 vendor/ayaya/private_extensions/ugc_file_tools/out；绝对输出路径可能被上游重定向，须以报告路径为准。接入层拒绝原位覆盖、新输出已存在、注入原地图及跳过校验选项；它不是上游全部参数的安全沙箱。上游工具可在其自身工作区写缓存及中间产物。
+该操作可处理项目中受支持的多类资源。执行前检查选择范围，必要时通过上游 `--selection-json` 或 `--skip-*` 缩小范围。`pure-json` 最小写回用于诊断。正式交付时，用与目标类型匹配的基底、节点和记录样本，保留原件并回读写回范围。文件通常写到包内 `vendor/ayaya/private_extensions/ugc_file_tools/out`，绝对路径也可能被上游重定向，实际位置以报告为准。接入层会拒绝原位覆盖、已存在的输出、注入原地图和跳过校验选项。其保护范围限于接入层检查的参数，上游仍可在自身工作区写入缓存和中间产物。
 
 ## GIA 回读与差异
 
@@ -56,14 +56,14 @@ HTML 是本链路 UI 源码，修改后重新生成 bundle；不直接维护过�
 
     PYTHON PLUGIN/scripts/ayaya_bridge.py --execute --tool export_ui_workbench_bundles_from_html tool -- --project-root 项目存档目录 --html 页面.html --pc-canvas-size 1920x1080
 
-此工具将 bundle 写入该项目 UI源码 下的 `__workbench_out__`；不是只读操作。它需要 Playwright 和 Chromium 用于浏览器排版计算，不依赖 OCR，也不操作游戏窗口；未准备此环境时，其余节点图/GIL/GIA流程仍可单独使用。HTML/CSS 支持范围以 Workbench 导出的控件类型为准，不承诺任意网页无损转换。
+工具将 bundle 写到项目 UI 源码目录下的 `__workbench_out__`。浏览器排版需要 Playwright 和 Chromium，运行时无需 OCR，也不会操作游戏窗口。其他节点图、GIL 和 GIA 流程可以独立使用。HTML/CSS 支持范围以 Workbench 导出的控件类型为准。
 
 生成 bundle 后，通过上述项目写回命令将 UI 控件资源写入新的 GIL。界面资源的 GIA 封装按当前 GIA 类型与模板处理，不将节点图 Graph IR 转换器用于 UI 控件模板。变量绑定、多状态控件、UI GUID 映射和信号派发必须回读核对；HTML 控件资源不是客户端 Lua 脚本控件，不混用 API。
 
-Playwright 与 Chromium 仅用于 HTML/CSS 布局计算，依赖清单在 vendor/ayaya/requirements-headless.txt。核心文件链路不需要它们；不会安装 PyQt、RapidOCR、ONNX、OpenCV、keyboard 或鼠标控制库。
+Playwright 与 Chromium 仅用于 HTML/CSS 布局计算。可选依赖见 `vendor/ayaya/requirements-headless.txt`，其中保留上游对 Python 3.10–3.12 的说明。核心文件流程无需浏览器依赖，也不会安装 PyQt、RapidOCR、ONNX、OpenCV、`keyboard` 或鼠标控制库。
 
 ## 验证层次
 
-依次记录：入口与依赖检查、严格图校验、资源作用域检查、导出及报告实际落盘路径、回读语义差异、编辑器导入、实际运行。帮助命令成功只证明 CLI 可加载，不证明生成链路成功。解析器、模拟器与游戏表现冲突时，以真实编辑器样本和运行证据定位差异，不跳过校验硬写。
+依次记录入口与依赖检查、严格图校验、资源作用域检查、实际导出路径和报告路径、回读差异、编辑器导入及实际运行。帮助命令通过只说明 CLI 可加载，生成流程应单独验证。解析器、模拟器与游戏表现不一致时，用实际编辑器样本和运行证据定位差异，写入前保留校验。
 
 新增协议及已有工程定义遵循[平台接口与工程合同](../workflows/implementation-policy.md)。

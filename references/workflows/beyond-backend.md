@@ -7,9 +7,9 @@ python scripts/qianxing.py simulate preview samples/beyond-button/preview.json -
 python scripts/qianxing.py beyond SPEC.json --out NEW_DIRECTORY
 ```
 
-先用[按钮示例](../../samples/beyond-button/README.md)看 PNG、控件树和点击日志。`simulate preview` 始终请求软件画面，可省略断言。已声明的断言仍执行，失败时返回非零。可取得的画面和报告写入独立的 `NEW_PREVIEW.diagnostics`，报告包含首项失败的预期与观测值。原 `beyond` 和制作链入口用于正式场景检查，要求执行断言。
+先用[按钮示例](../../samples/beyond-button/README.md)看 PNG、控件树和点击日志。`simulate preview` 始终请求软件画面，可省略断言。已声明的断言仍执行，失败时返回非零。失败前已生成的画面和报告保存在独立的 `NEW_PREVIEW.diagnostics` 目录。报告记录首个失败断言的预期值和实际值。`beyond` 和制作链入口用于正式场景检查，需要提供断言。
 
-MCP 中用 `simulate`，传同一份配置的路径和摘要并设 `preview=true`。通过时从 `output` 打开画面和报告。失败时从 `diagnostics_output` 打开已取得的画面和报告，用 `diagnostics_sha256` 核对文件。路径已存在时改用新名称。 `asset_fit` 配置 `mount` 后会生成可直接传入的配置以及显式的软件图片模板。 [拟合预览示例](../../samples/creator-demos/png/README.md#拟合并预览可挂载的-lua)
+MCP 中用 `simulate`，传同一份配置的路径和摘要并设 `preview=true`。通过时从 `output` 打开画面和报告。失败时从 `diagnostics_output` 找到已生成的画面和报告，用 `diagnostics_sha256` 核对文件。路径已存在时改用新名称。为 `asset_fit` 配置 `mount` 后，会生成可直接用于 `simulate` 的配置和供软件预览使用的图片模板。 [拟合预览示例](../../samples/creator-demos/png/README.md#拟合并预览可挂载的-lua)
 
 可用 --backend PATH 指定同一提交的干净独立检出；缺依赖时失败，不自动安装。默认加载 vendor/beyond 并核对随包文件摘要。
 
@@ -17,7 +17,7 @@ MCP 中用 `simulate`，传同一份配置的路径和摘要并设 `preview=true
 
 ## GIL 控件转换及渲染
 
-配置 schema 2；gil 与 project 二选一。GIL 模式要求摘要、唯一根 GUID 和显式画布。支持容器、文本框、交互区域，保留选中树的 GUID、名称、父子关系、四端变换和脚本挂载。转换不修改 GIL；输出供模拟器使用，不能回写为原生存档。根的外部父级明确排除，画布尺寸来自模拟器预设，并非读取到的官方画布。
+配置使用 schema 2，从 `gil` 和 `project` 中选择一项。使用 GIL 时，提供摘要、唯一的根控件 GUID 和指定画布。支持容器、文本框、交互区域，保留选中树的 GUID、名称、父子关系、四端变换和脚本挂载。转换不修改 GIL；输出供模拟器使用，不能回写为原生存档。转换范围从所选根控件开始，画布尺寸采用模拟器预设。
 
 ```json
 {
@@ -34,15 +34,15 @@ canvas 当前允许 pc-16-9 和 mobile-16-9。scripts 必须准确覆盖选中�
 
 render:true 生成透明背景 preview.png 和 render.json；render_checks 按唯一名称核对最终绘制对象的 width、height、text。未指定检查只表示生成了预览，rendering 仍为 not_checked。区域和容器本身不绘制像素，其身份和层级可查 converted-project.json，空白图片不能证明交互正确。字体及排版由软件渲染器决定，不承诺与宿主逐像素相同。
 
-未知组件、缺失或重复 GUID、父子不一致、缺少四端状态、非空旋转字段、错误摘要及错误挂载会拒绝。图片资源、输入开关等原生校准继续待办。已识别组件内采用上游有限字段语义读取，未知 protobuf 字段不宣称完整保真；原始文件始终只读。内部 GIA 信封仅用于复用解析器，不作为编辑器交付。
+未知组件、缺失或重复 GUID、父子不一致、缺少四端状态、非空旋转字段、错误摘要及错误挂载会拒绝。图片资源、输入开关等仍需原生样本校准。已识别组件仅按上游已知字段读取，未知 protobuf 字段的转换结果未经验证。源文件只读。内部 GIA 封装只供解析器复用，编辑器交付另走原生文件流程。
 
 ## 显式模拟工程及制作链
 
-旧接口继续接受 project:"controls.json"，scripts 使用 source、sha256、controlId、controlAsset、path。project 是无内嵌脚本的 Authoring JSON；source 可为 Lua，或带唯一 mapping 的 GIL。该模式只提供显式模拟工程绑定。
+旧接口继续接受 project:"controls.json"，scripts 使用 source、sha256、controlId、controlAsset、path。project 是无内嵌脚本的 Authoring JSON；source 可为 Lua，或带唯一 mapping 的 GIL。该模式按配置中明确声明的工程、脚本和控件关系绑定。
 
 制作链 schema 2 可添加 beyond:{"spec":"SPEC.json"}，backend 为可选路径。结果写入 beyond/external-simulation.json。绑定本轮生成 GIL 时，将 gil.source 和各 scripts[].source 设为 `@level`，对应 sha256 设为 `@level`（或给定必须匹配的精确摘要）。produce 在全部写回、原生审计及最终 Lua 检查之后绑定最终 level.gil，不读取旧基底。GUID 与 mapping 仍必须明确给出；最终报告的 final_gil_bindings 记录真实摘要。缺少最终 GIL、错误摘要或挂载不匹配会失败，不提交输出。独立 beyond 命令不能单独解析 @level。
 
-任务增加 `"portable":{}` 即可携带模拟器配置、所引用的 GIL/Lua/Authoring JSON，以及完整插件工具链和随包后端。原始配置保留，工作副本路径重定位，@level 标记留到实际构建时绑定；额外输入须位于 portable.roots 声明范围。portable 当前只允许默认随包后端，显式 backend 检出不属于此合同，会拒绝。`qianxing.py verify DELIVERY --portable` 仅静态核对；审阅后以 `--rebuild --trusted-inputs-sha256` 显式重建，比较 GIL、转换模型、PNG 和渲染清单的确定性正文。模拟执行日志属于证据，不要求跨轮路径或计时字节相同。Python/Lua 和 Node 的外部运行条件仍需满足，不声称完全独立的宿主模拟。
+任务增加 `"portable":{}` 后，交付目录包含模拟器配置、所引用的 GIL、Lua 和 Authoring JSON，以及完整插件工具链和随包后端。工具保留原始配置，调整工作副本中的路径，并在实际构建时绑定 `@level`。额外输入须位于 `portable.roots` 声明的目录内。该模式只接受随包默认后端，指定 `backend` 检出目录会被拒绝。`qianxing.py verify DELIVERY --portable` 仅静态核对；审阅后以 `--rebuild --trusted-inputs-sha256` 显式重建，比较 GIL、转换模型、PNG 和渲染清单的确定性正文。模拟执行日志属于证据，不要求跨轮路径或计时字节相同。Python/Lua 和 Node 的外部运行条件仍需满足，不声称完全独立的宿主模拟。
 
 路径相对配置目录。已有输出、摘要不符、断言失败、依赖损坏和 45 秒超时不提交正式结果。报告区分 external_lua_model、software_preview、native_graph_model、editor、host；编辑器和实机始终待验。不运行浏览器、游戏 GUI 自动化或截图识别。
 

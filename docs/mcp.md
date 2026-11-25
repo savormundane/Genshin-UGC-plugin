@@ -4,18 +4,18 @@ stdio 服务提供本地文件读取、审计和制作工具。编辑器导入�
 
 ## 依赖与启动
 
-客户端用 Node 运行启动器，也可用具备锁定依赖的 Python 直接启动 stdio。 [环境依赖](compatibility.md#运行要求) · [工程绑定](runtime-environment.md#连接-mcp-或切换工程)
+客户端用 Node 运行启动器。已装好所需版本依赖的 Python 也能直接启动 stdio 服务。 [环境依赖](compatibility.md#运行要求) · [工程绑定](runtime-environment.md#连接-mcp-或切换工程)
 
 ```text
 python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PATH_TO_OUTPUTS
 ```
 
-协议使用 stdout，执行日志使用 stderr 或请求临时日志。以 `tools/list` 返回的参数和 `capabilities` 报告的能力为准。
+协议消息通过 stdout 发送。执行日志写入 stderr 或该请求的临时日志文件。参数以 `tools/list` 返回的定义为准，能力范围见 `capabilities`。
 
 | 工具 | 参数与行为 |
 | --- | --- |
-| doctor | 返回依赖状态、当前加载路径、版本、原能力指纹和 `plugin.capability_groups` 分组摘要。用 CLI `doctor --compare PLUGIN_ROOT` 定位同版本的文件差异 |
-| capabilities | 返回当前实现和证据边界 |
+| doctor | 返回依赖状态、当前加载路径、版本、能力指纹和 `plugin.capability_groups` 分组摘要。用 CLI `doctor --compare PLUGIN_ROOT` 定位同版本的文件差异 |
+| capabilities | 返回当前实现的功能及验证范围 |
 | api_lookup | symbol。接受客户端 Lua 的正式符号、英文片段或中文用途。返回正式符号、原文说明、来源与推导状态 |
 | diagnose | spec、sha256。按配置执行只读的环境、Lua、GIL 和素材检查 |
 | docs_search | version、query：检索固定版本资料 |
@@ -34,13 +34,13 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 | client_check | input，可选 sha256、mapping、contract、contract_sha256。编译 Lua 正文，可选择单个 GIL 映射或检查 API 合同 |
 | produce | spec、sha256、output，可选 summary。执行已有制作配置并校验交付 |
 | native_diff | input、other，可选 sha256、other_sha256、allowed_top_level_fields。给出允许范围时，核对其余字段的原始字节 |
-| experiment_compare | input、sha256、other、other_sha256。直接返回成对观察比较 |
+| experiment_compare | input、sha256、other、other_sha256。比较两份实验观察结果 |
 | native_plan | input、sha256、output 加一个 patch 对象，或加 spec 和 spec_sha256 文件参数。可选 summary。输出可审阅的 plan.json 和文件摘要 |
 | simulate | spec、sha256、output。默认执行联合场景或复跑此前失败。传 preview=true 时执行 Beyond 配置并返回软件 PNG、控件树、日志和产物摘要 |
 | experiment_run | spec、sha256、output：观察实验，开发／保留种子合同不变；失败不提交 |
 | logs_diagnose | spec、sha256。只读解析 JSONL 或支持的编辑器二进制调试日志，并返回可核对的关联证据 |
 | verify | input 指向交付 manifest.json，sha256 必填。artifacts_only、portable、rebuild 默认为 false。仅产物校验独立运行。重建还需 portable=true 和 trusted_inputs_sha256 |
-| native_apply | input、sha256、plan、plan_sha256、output：执行已有摘要绑定原生计划 |
+| native_apply | input、sha256、plan、plan_sha256、output。按已绑定文件摘要的原生修改计划执行 |
 
 输入文件路径相对工程根目录，或使用工程根、输出根内的绝对路径。output 指向输出根内尚不存在的目录。父目录须存在，按工程生成的默认输出根可由工具创建。sha256 均为对应输入文件的原始字节摘要。`plan_sha256` 参数核对计划文件字节，计划内的同名字段核对计划语义。
 
@@ -58,11 +58,11 @@ python scripts/qianxing.py mcp call request.json --project PATH_TO_PROJECT --out
 {"schema":2,"operation":"native_inspect","arguments":{"input":"level.gil","sha256":"填写实际文件摘要"}}
 ```
 
-CLI 和 MCP 复用同一调度，结果包含 `schema`、`operation`、`status`、`result` 和 `output`。参数错误由 SDK 返回工具错误，执行失败返回结构化结果和诊断，CLI 对应非零退出。任务的检查范围和结果由产物报告记录。
+CLI 和 MCP 共用同一套任务调度逻辑。结果包含 `schema`、`operation`、`status`、`result` 和 `output`。参数错误由 SDK 返回。执行失败时，工具会返回结构化的结果和诊断信息，CLI 则以非零退出码退出。产物报告记录检查范围和结果。
 
 ## 取消和输出保护
 
-每次调用在独立临时目录内用固定 Python 工作进程执行，写入任务在输出根内暂存。输入开始和结束时核对摘要，成功且通过提交前取消检查后才将产物目录改名为正式输出。已有目录不覆盖。取消时终止本次工作进程，Windows 同时终止其进程树。清理仅限该请求的临时目录。
+每次调用都在独立临时目录内用指定的 Python 工作进程执行。需要写文件时，产物先暂存在输出根目录内。工具在任务开始和结束时核对输入摘要，确认执行成功且任务未取消后，再将暂存目录改名为正式输出目录。已有目录不覆盖。取消时终止本次工作进程，Windows 同时终止其进程树。清理仅限该请求的临时目录。
 
 进度依次报告输入绑定、核心运行和结果检查。普通操作默认时限 120 秒，制作、拟合、应用和重建为 900 秒。可分别设置 `MILIASTRA_WONDERLAND_MCP_TIMEOUT_SECONDS` 和 `MILIASTRA_WONDERLAND_MCP_BUILD_TIMEOUT_SECONDS`，范围为大于 0 且不超过 3600 秒。
 

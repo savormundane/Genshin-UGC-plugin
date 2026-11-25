@@ -1,14 +1,14 @@
 # 原生玩法制作
 
-用 GIL 交付可以继续在编辑器中修改的物件、规则、职业、技能、经济和界面。Editor 选定对象及配置，Graph Code 编译事件与行为，GIL 维护身份、引用和文件交付。所述新增场景制作范围为 7.2 超限模式。
+用 GIL 交付可以继续在编辑器中修改的物件、规则、职业、技能、经济和界面。Editor 选定对象及配置，Graph Code 编译事件与行为，GIL 维护身份、引用和文件交付。这里的原生场景生成面向千星奇域 7.2 超限模式。
 
 ## 组织一次工程修改
 
 1. 从目标模式的副本开始。用 `project inspect LEVEL.gil --scope scene` 确认实例、元件和图，用 `scene inspect LEVEL.gil` 查看预设点、地形和环境。通过 `nodes_lookup` 确认事件、节点作用域和参数。
 2. 把下面的操作写进 schema 2 补丁。用 `native plan` 审阅生成的身份、变化和基底摘要，再用 `native apply --plan` 另存。MCP 使用同样的操作数据。创建顺序有依赖时，把被引用对象的操作放在前面。 [原生修改合同](../gil/native-changes.md)
-3. 用 schema 2 的 `build` 编译 Graph Code，`mounts` 按图名和工程对象 ID 挂普通服务端图。用 `produce` 一次交付最终 GIL、场景和图源码。需要引用本次编译图的技能可以在 `native.after_graphs` 阶段登记。 [制作链](../workflows/produce.md)
+3. 用 schema 2 的 `build` 编译 Graph Code，用 `mounts` 按图名和工程对象 ID 挂载普通服务端图。用 `produce` 一次交付最终 GIL、场景和图源码。需要引用本次编译图的技能可以在 `native.after_graphs` 阶段登记。 [制作链](../workflows/produce.md)
 
-在模板或实例作用域中使用真实 ID。输入 `entity_key` 可引用同补丁中生成的一只普通实例，`template_key` 可引用同补丁中生成的元件。`produce` 的构建挂载也接受先前放置操作报告中的 `entity_key`。图内写死的 GUID 继续引用原对象。用于复用的机关图可以通过「获取自身实体」指定运行实例。 [场景制作](native-scene.md)
+在模板或实例作用域中使用真实 ID。输入 `entity_key` 可引用同一补丁中生成的普通实例，`template_key` 可引用同补丁中生成的元件。`produce` 的构建挂载也接受先前放置操作报告中的 `entity_key`。图内写死的 GUID 继续引用原对象。用于复用的机关图可以通过「获取自身实体」指定运行实例。 [场景制作](native-scene.md)
 
 ## 角色、造物、战斗
 
@@ -39,7 +39,7 @@
 | `timer` | `timer` 填写已有全局计时器名称。 |
 | `scoreboard` | `variable` 填写玩家整数变量，`player_count` 指定显示的玩家槽数。 |
 
-原生经济的制作路径是进入范围后让 Graph Code 修改角色背包的货币，再由玩家图打开指定商店。兑换条件和库存来自原生商店记录。可用控制组按钮或角色触发为玩家打开商店。
+原生经济的制作路径是进入范围后让 Graph Code 修改角色背包的货币，再由玩家图打开指定商店。兑换条件和库存来自原生商店记录。可通过控件组按钮或角色触发器为玩家打开商店。
 
 ## 多人推进与存档
 
@@ -47,8 +47,8 @@
 
 `set_native_revive` 用 `player_template_id` 选择已有复苏设置，可改 `lives`、整数 `delay_seconds`、`automatic`、`show_screen`、`health_percent` 和 `fall_loss_percent`。所选字段写到玩家模板所在字段 4。角色的复苏、倒下和异常掉落事件可继续由业务图处理。
 
-配置 `storage:{spec,transport:"server",host_section:4}` 生成原生存档槽、信号和图。在同一个玩家模板上挂载业务图。图发送的请求按信号来源玩家路由。收回包时再次选择玩家和请求号后更新个人状态。存档确认之后再推进合作目标和结算。schema 3 的同字段布局升级可配置 `compatible_record_version`，保留结构、槽位 ID 和字典，打开新会话时回写记录版本。 [服务端存档和迁移](../workflows/storage-authoring.md#原生服务端存档)
+配置 `storage:{spec,transport:"server",host_section:4}` 生成原生存档槽、信号和图。在同一个玩家模板上挂载业务图。图发送的请求按信号来源玩家路由。收到回复后，先核对玩家和请求号，再更新个人状态。存档确认之后再推进合作目标和结算。schema 3 的同字段布局升级可配置 `compatible_record_version`，保留结构、槽位 ID 和字典，打开新会话时回写记录版本。 [服务端存档和迁移](../workflows/storage-authoring.md#原生服务端存档)
 
 ## 样本与覆盖范围
 
-形状、职业技能、原生按钮和计分板字段以随包节点资料、官方模板及 8itlab 的原生记录研究核对。当前造物状态图写入覆盖单入口的决策、执行指定技能、以及通过技能向服务端发通知。复杂动画时间轴、重组任意造物决策、更多原生控件或模式须以实际记录校准。保存重进、匹配、伤害和控件显示以对应编辑器与游戏行为为准。 [8itlab 原生记录参考](https://github.com/8itlab/genshin-miliastra-mcp/blob/70470757d6fcb319c5afec13b178c87f2d8d54b3/src/scene-save.mjs)
+形状、职业技能、原生按钮和计分板字段以随包节点资料、官方模板及 8itlab 的原生记录研究核对。当前造物状态图写入覆盖单入口的决策、执行指定技能、以及通过技能向服务端发通知。复杂动画时间轴、重组任意造物决策、更多原生控件或模式须以实际记录校准。保存并重新进入、匹配、伤害和控件显示均需在对应编辑器和游戏中核对。 [8itlab 原生记录参考](https://github.com/8itlab/genshin-miliastra-mcp/blob/70470757d6fcb319c5afec13b178c87f2d8d54b3/src/scene-save.mjs)

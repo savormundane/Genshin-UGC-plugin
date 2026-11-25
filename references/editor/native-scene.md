@@ -9,13 +9,13 @@ python scripts/qianxing.py scene catalogue scene-sample.gia --version 7.2 --mode
 python scripts/qianxing.py resources search 围墙 --type model --version 7.2 --mode beyond --catalogue models.json
 ```
 
-在 MCP 中先用 `scene_catalogue` 提供原生样本、摘要、版本和模式，生成 `models.json`。文件会记录采样原文件的摘要和路径。同一驱动器上的路径相对目录文件，移动目录时要一起保留与样本的相对位置。接着调用 `resources_lookup`，传入 `version`，按需给 `query`、`mode` 和 `catalogue`。结果中的 `selection` 用于选择资源。
+在 MCP 中先用 `scene_catalogue` 提供原生样本、摘要、版本和模式，生成 `models.json`。文件会记录采样原文件的摘要和路径。样本与目录文件在同一驱动器上时，记录相对路径。移动目录文件时保留它与样本的相对位置。接着调用 `resources_lookup`，传入 `version`，按需给 `query`、`mode` 和 `catalogue`。结果中的 `selection` 用于选择资源。
 
 | 值 | 用法 |
 | --- | --- |
 | `native_verified` | 在关联的原生样本中读到了静态物件与平台模板的绑定。保存样本和目录供重建。 |
 | `preview_only` | 用作搜索线索。先在目标编辑器查找并导出带该物件的样本。 |
-| `whitebox_recipe` | 可另用白盒组合制作外观。 |
+| `whitebox_recipe` | 可用白盒形状组合出所需外观。 |
 
 选择查询结果的模板 ID 后建立 `layout.json`。下面用石台演示格式，使用时以自身目录里已核对的 ID 为准。
 
@@ -49,15 +49,15 @@ python scripts/qianxing.py scene build layout.json --out scene-output
 python scripts/qianxing.py scene inspect scene-output/scene.gia
 ```
 
-同一份布局 JSON 可直接交给 MCP `scene_preview`。在 `top.png`、`side.png` 看建议点位，在 `layout.json` 查看世界变换。报告的 `pending_native_evidence` 列出仍需要原生样本的对象键，图片只绘制点位。确认布局且清单为空后，用 `scene_build` 提供原布局、摘要和新目录。导出会重新校验模型证据，并按相同的世界坐标数据回读 GIA。
+同一份布局 JSON 可直接交给 MCP `scene_preview`。在 `top.png`、`side.png` 看建议点位，在 `layout.json` 查看世界变换。报告的 `pending_native_evidence` 列出仍需要原生样本的对象键，预览图只显示点位。确认布局后，若该清单为空，用 `scene_build` 提供原布局、摘要和新目录。导出会重新校验模型证据，并按相同的世界坐标数据回读 GIA。
 
 `scene.gia` 按独立静态单位组织。`scene.json` 可继续编辑，`scene-resources.json` 将布局键关联到包内记录、模板 ID 和回读变换。保留原布局位置及目录引用，或移动布局时按新目录调整 `catalogues`。`manifest.json` 绑定输入样本、目录和输出摘要。按 `IMPORT.md` 在编辑器的资产导入导出管理中加载并转存，存档后取用编辑器实际分配的身份。
 
-制作链 schema 2 中用 `"scene": {"spec": "layout.json"}` 执行同一生成器，输出位于 `scene/`。在同一任务的修改补丁中使用 `place_static_scene` 和 `"source":"@scene"` 可以把布局写入 GIL 基底。补丁的 `prototypes` 按平台模型 ID 映射到基底里具有相同模型的静态实例。使用 portable 时，目录、GIA/GIL 样本和尺寸记录须位于声明的输入根内。
+制作链 schema 2 中用 `"scene": {"spec": "layout.json"}` 执行同一生成器，输出位于 `scene/`。在同一任务的修改补丁中使用 `place_static_scene` 和 `"source":"@scene"` 可以把布局写入 GIL 基底。在补丁的 `prototypes` 中，将平台模型 ID 映射到基底中使用同一模型的静态实例。使用 portable 时，目录、GIA/GIL 样本和尺寸记录须位于声明的输入根内。
 
 ## 修改已有 GIL
 
-先用 `scene inspect LEVEL.gil` 查看场景、触发器和关卡配置，或用 `project inspect LEVEL.gil --scope scene` 查询原生物件、自定义元件实例与已知挂载。配置为 `native plan` 的 schema 2 用法，绑定原始 GIL 的 `base_sha256` 和表中所需的 `allowed_top_level_fields`，再用 `native apply --plan` 写出新的 GIL。步骤和保护范围见[原生修改](../gil/native-changes.md)。
+先用 `scene inspect LEVEL.gil` 查看场景、触发器和关卡配置，或用 `project inspect LEVEL.gil --scope scene` 查询原生物件、自定义元件实例与已知挂载。为 `native plan` 编写 schema 2 补丁，填入原始 GIL 的 `base_sha256` 和表中所需的 `allowed_top_level_fields`。审阅计划后，用 `native apply --plan` 写出新的 GIL。步骤和保护范围见[原生修改](../gil/native-changes.md)。
 
 | 操作 | 对象与参数 | 可写章节 |
 | --- | --- | --- |
@@ -110,9 +110,9 @@ python scripts/qianxing.py scene inspect scene-output/scene.gia
 
 下一轮使用上轮输出 GIL 作为基底，更新补丁的 `base_sha256`，并在操作中填入 `"previous_bindings":"layout-bindings.json"`。调整已有实例时保留其布局键，新增实例使用新键。布局中省略的旧键显示为 `retained`，实例及映射仍可供后续使用。每轮使用新的计划和输出路径。`produce` 的后续挂图可用 `{"ref":"entity:gate"}`，详见[制作链](../workflows/produce.md#按名称连接制作阶段)。
 
-白盒形状 ID 支持长方体 `10009001`、球体 `10009002`、圆柱 `10009008` 和圆锥 `10009009`。颜色为 `#RRGGBB`。新增装饰写到元件，场景已有实例的装饰列表独立保留。`scene preview LEVEL.gil --template-id ID --out PREVIEW` 用 Pillow 绘制俯视和侧视中零件的轴对齐近似。
+白盒形状 ID 支持长方体 `10009001`、球体 `10009002`、圆柱 `10009008` 和圆锥 `10009009`。颜色为 `#RRGGBB`。新增装饰写到元件，场景已有实例的装饰列表独立保留。`scene preview LEVEL.gil --template-id ID --out PREVIEW` 用 Pillow 绘制零件的俯视图和侧视图，以轴对齐包围盒表示轮廓。
 
-省略 `--template-id` 可预览 GIL 中读到的实体世界坐标。运行 `scene preview LEVEL.gil --before OLD.gil --out PREVIEW` 或 MCP `scene_preview` 可按原生对象键对照新增、移动、旋转和移除。共用比例的 `top.png` 和 `side.png` 以原点标记实体，符合条件的白盒另绘按缩放计算的单位包围盒近似。`layout.json` 与返回摘要的 `coverage` 分别统计当前和对照文件中的索引实体、有世界坐标的实体、仅有原点而无法绘制轮廓的实体、缺少世界坐标的实体与未解析记录。模型尺寸、编辑器导入和游戏运行需另行核对。触发路线可按[联合模拟](../workflows/joint-simulation.md#盒形触发路线)检查离线模型。
+省略 `--template-id` 可预览 GIL 中读到的实体世界坐标。运行 `scene preview LEVEL.gil --before OLD.gil --out PREVIEW` 或 MCP `scene_preview` 可按原生对象键对照新增、移动、旋转和移除。`top.png` 和 `side.png` 使用同一比例，并在各实体的原点处绘制标记，符合条件的白盒另绘按缩放计算的单位包围盒近似。`layout.json` 与返回摘要的 `coverage` 分别统计当前和对照文件中的索引实体、有世界坐标的实体、仅有原点而无法绘制轮廓的实体、缺少世界坐标的实体与未解析记录。模型尺寸、编辑器导入和游戏运行需另行核对。触发路线可按[联合模拟](../workflows/joint-simulation.md#盒形触发路线)检查离线模型。
 
 `scene export-whitebox LEVEL.gil --template-id ID --out OUTPUT` 将原点空模型元件的白盒零件另存为独立 `whitebox.gia`。它随包记录形状、局部变换、颜色和依赖索引。使用 `"scene":{"whitebox":{"source":"@level","template_id":ID}}` 可在制作任务最终 GIL 上执行相同导出。交互、组件和每个实例的修改由 GIL 版本承载。 [原生玩法制作](native-gameplay.md)
 
@@ -143,7 +143,7 @@ python scripts/qianxing.py scene inspect scene-output/scene.gia
 
 查看地形栅格时用 `scene inspect LEVEL.gil --terrain-id ID`。每格 5 米，每层 2.5 米，可读取格心、顶部高度、水面、路径及斜坡。平格用顶部高度定位布景，斜坡的落点高度需要按落点复核。写入只改已有格。材质使用 `grass`、`tile`、`sand`、`stone_wall`、`snow`。地块 `layers` 加上 `water_layers` 的合计从 1 到 20。道路用 `path:true`，水体用 `water_layers`，直线斜坡用 `slope` 的 `+z`、`+x`、`-z`、`-x` 或 `flat`，方向对应下降的一侧。水体和道路、直线斜坡分格布设。先保存关卡副本，再按需要烘焙寻路。
 
-交互的图和 Lua 通过已有[制作链](../workflows/produce.md)装配。用 `nodes_lookup` 查看“进入碰撞触发器时”和“获取角色归属的玩家实体”的编译器端口声明，再与目标版本资料或已有工程证据核对。节点图挂到这只触发对象。需要只提示进入者时，声明 `server_to_client` 信号，以业务参数中的玩家实体做定向目标。用已有 HUD 控件的 Lua 映射注册和注销信号处理，参见[复杂类型协议](../workflows/protocol-v2.md)与[客户端装配](lua/client-assembly.md)。
+交互的图和 Lua 通过已有[制作链](../workflows/produce.md)装配。用 `nodes_lookup` 查看“进入碰撞触发器时”和“获取角色归属的玩家实体”的编译器端口声明，再与目标版本资料或已有工程证据核对。将节点图挂载到触发器所属实体。需要只提示进入者时，声明 `server_to_client` 信号，以业务参数中的玩家实体做定向目标。用已有 HUD 控件的 Lua 映射注册和注销信号处理，参见[复杂类型协议](../workflows/protocol-v2.md)与[客户端装配](lua/client-assembly.md)。
 
 ### 房间入口示例
 
@@ -170,7 +170,7 @@ class SceneEntrance:
         return
 ```
 
-在 `produce` 中启用 `protocol_native:true`，用 schema 2 声明下面的信号。`graphs.spec` 指向该服务端图的构建配置。先用读回的图 ID 与触发器所属实体 ID 建立 `mount` 计划，再核对最终存档中的图、信号和挂载。
+在 `produce` 中启用 `protocol_native:true`，用 schema 2 声明下面的信号。`graphs.spec` 指向该服务端图的构建配置。先用回读得到的图 ID 和触发器所属实体 ID 建立 `mount` 计划，再核对最终存档中的图、信号和挂载。
 
 ```json
 {
