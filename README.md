@@ -20,7 +20,7 @@ Miliastra Wonderland 是面向原神「千星奇域」创作者的非官方 AI �
 | 客户端 | 市场安装 |
 | --- | --- |
 | ChatGPT/Codex/Claude | 在「插件 → 添加市场」输入 `savormundane/miliastra-wonderland-plugin`，然后安装 `miliastra-wonderland`。 |
-| DeepSeek Harness | npm 包发布后，在「插件 → 添加插件」输入 `miliastra-wonderland`。 |
+| DeepSeek Harness | 在「插件 → 添加插件」粘贴[定版安装地址](docs/installation.md#deepseek-harness)。 |
 | Agent Plugins | 在支持 GitHub 市场的客户端添加 `savormundane/miliastra-wonderland-plugin`，安装 `miliastra-wonderland`。 |
 
 **其他安装方式**。[本地安装](docs/installation.md#本地安装) · [CLI 安装](docs/installation.md#cli-安装)

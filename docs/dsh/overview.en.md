@@ -17,4 +17,4 @@ Native writes use samples calibrated for the target version. Test the exported f
 
 ## Local requirements
 
-The full toolset targets Windows x64. Use DeepSeek Harness 0.2.2-rc.5, Node.js 24.9 or later, and CPython 3.11–3.14 with the required packages or uv on PATH. Preparing Python dependencies on first use may require a network connection. [Installation checks](https://github.com/savormundane/miliastra-wonderland-plugin/blob/main/docs/installation.md#安装自检) · [Creator tutorials](https://github.com/savormundane/miliastra-wonderland-plugin/tree/main/samples/creator-demos)
+The full toolset targets Windows x64. It supports DeepSeek Harness 0.2.2-rc.5 and 0.2.3-alpha.2. Use the Node.js version required by your DSH release, with a minimum of 24.9 for the plugin. Use CPython 3.11–3.14 with the required packages or uv on PATH. Preparing Python dependencies on first use may require a network connection. [Installation checks](https://github.com/savormundane/miliastra-wonderland-plugin/blob/main/docs/installation.md#安装自检) · [Creator tutorials](https://github.com/savormundane/miliastra-wonderland-plugin/tree/main/samples/creator-demos)

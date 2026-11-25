@@ -110,6 +110,8 @@ def marketplace_files(agent, version, node, config):
               'args': ['${PLUGIN_ROOT}/scripts/mcp_launcher.cjs'],
               'env': {'MILIASTRA_WONDERLAND_RUNTIME_CONFIG': str(config)}}
     if agent == 'deepseek-harness':
+        from marketplace_release import DSH_DETAILS, DSH_ENGINE, DSH_ICON
+
         bundle = config.parent / 'miliastra-wonderland'
         # The Cordis YAML loader accepts JSON. Using the existing serializer keeps Windows paths
         # and Unicode lossless without evaluating expressions or interpolating YAML strings.
@@ -125,7 +127,7 @@ def marketplace_files(agent, version, node, config):
         local_manifest = {
             'name': '@local/miliastra-wonderland', 'version': version, 'private': True,
             'description': 'Miliastra Wonderland Skills and local MCP for DeepSeek Harness',
-            'engines': {'dsh': '0.2.2-rc.5'}, 'files': ['cordis.patch.yml'],
+            'engines': {'dsh': DSH_ENGINE}, 'files': ['cordis.patch.yml'],
             'dsh': {'bundle': {'patch': './cordis.patch.yml'}},
         }
         files = {
@@ -136,8 +138,6 @@ def marketplace_files(agent, version, node, config):
         if linked(bundle) or linked(package_path):
             raise ValueError('DeepSeek Harness 的插件清单路径指向链接。')
         if package_path.is_file():
-            from marketplace_release import DSH_DETAILS, DSH_ICON
-
             package = read_json(package_path)
             if package.get('icon') == './' + DSH_ICON:
                 paths = [DSH_ICON, *(f'locale/{lang}.json' for lang in DSH_DETAILS), *DSH_DETAILS.values()]

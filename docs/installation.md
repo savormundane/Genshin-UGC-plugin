@@ -16,7 +16,11 @@
 
 ### DeepSeek Harness
 
-当前可[从 GitHub 仓库安装](#deepseek-harness-命令行)。npm 上架后，在「插件 → 添加插件」输入 `miliastra-wonderland`。 [DeepSeek Harness 插件管理](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/boot/plugin-manager/README.md)
+在「插件 → 添加插件」的「包名或地址」中粘贴下列地址。安装完成后点「立即启用」。已发布的 V1.2.0 要求 DSH `0.2.2-rc.5`，其他插件版本的要求见对应发行包的 `package.json` 中的 `engines.dsh`。 [DeepSeek Harness 插件管理](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.5/packages/client/ui-plugin-manager/README.md)
+
+```text
+https://github.com/savormundane/miliastra-wonderland-plugin/archive/refs/tags/v1.2.0.tar.gz
+```
 
 ### Agent Plugins
 
@@ -55,10 +59,10 @@ claude plugin install miliastra-wonderland@miliastra-wonderland
 
 ### DeepSeek Harness 命令行
 
-在终端从 GitHub 仓库安装到 DSH 的 Web 配置。
+在终端将定版包安装到 DSH 的 Web 配置。
 
 ```powershell
-dsh plugin --profile web add github:savormundane/miliastra-wonderland-plugin
+dsh plugin --profile web add https://github.com/savormundane/miliastra-wonderland-plugin/archive/refs/tags/v1.2.0.tar.gz
 ```
 
 ## 本地安装
@@ -130,7 +134,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-install.
 | --- | --- | --- |
 | 市场中找不到插件 | ChatGPT/Codex 或 Claude | 核对仓库名和插件 ID，确认市场已导入。 [市场安装](#市场安装) |
 | 添加市场时 Claude 报错 | Claude 或 Claude Code | 用仓库根地址重试。若看到组织限制提示，核对允许的市场来源。Claude Code 可对同一份已解压源码运行 `claude plugin validate .`，定位具体清单或路径。 |
-| 搜不到 `miliastra-wonderland` | DeepSeek Harness | 核对 npm 包的发布状态及客户端选用的注册表。 [安装说明](#deepseek-harness) |
+| 添加 DeepSeek Harness 插件时报错 | DeepSeek Harness | 核对 DSH 版本，并使用完整的[定版安装地址](#deepseek-harness)。 |
 | Claude Chat 里有 Skill，调用不到节点查询 | Claude | 在 Cowork 新建任务并允许本地工具，再做[首次工具验证](#首次工具验证)。 |
 | 能看到 Skill，工具未连通 | 所有安装方式 | 确认插件已启用并允许本地 MCP，运行[安装自检](#安装自检)。 |
 | MCP 启动时缺少 Python 或依赖 | 所有安装方式 | 让客户端在 PATH 上能找到 uv，再重新打开客户端。已有专用 Python 时，可用[运行绑定](runtime-environment.md#桌面端首次绑定本机工程)指定解释器。 |

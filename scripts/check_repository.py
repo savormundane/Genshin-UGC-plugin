@@ -44,7 +44,7 @@ DOC_VERSIONS = {
     },
 }
 RELEASE_TAG = rf"https://github\.com/{REPO}/releases/tag/v({SEMVER})\b"
-SOURCE_ARCHIVE_TAG = rf"https://github\.com/{REPO}/archive/refs/tags/v({SEMVER})\.zip\b"
+SOURCE_ARCHIVE_TAG = rf"https://github\.com/{REPO}/archive/refs/tags/v({SEMVER})\.(?:zip|tar\.gz)\b"
 SOURCE_DOC_VERSIONS = {
     "README.md": {"current version": DOC_VERSIONS["README.md"]["current version"], "release tag": RELEASE_TAG},
     "docs/installation.md": {"release tag": RELEASE_TAG,

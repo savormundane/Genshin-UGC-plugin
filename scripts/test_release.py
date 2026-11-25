@@ -187,9 +187,13 @@ class ReleaseTests(unittest.TestCase):
                 self.assertEqual(check(self.root), [])
         self.write('docs/installation.md', f'[Source]({release})\n`Miliastra-Wonderland-4.1.2-agent-plugins-windows-x64.zip`\n')
         self.assertTrue(any('local ZIP filename' in error for error in check(self.root)))
-        archive = f'https://github.com/{REPO}/archive/refs/tags/v4.1.2.zip'
-        self.write('docs/installation.md', f'[Release]({release})\n[Source]({archive})\n')
-        self.assertTrue(any('source archive tag' in error for error in check(self.root)))
+        for extension in ('zip', 'tar.gz'):
+            with self.subTest(extension=extension):
+                archive = f'https://github.com/{REPO}/archive/refs/tags/v4.1.2.{extension}'
+                self.write('docs/installation.md', f'[Release]({release})\n[Source]({archive})\n')
+                self.assertTrue(any('source archive tag' in error for error in check(self.root)))
+                self.write('docs/installation.md', f'[Release]({release})\n[Source]({archive.replace("v4.1.2", "v1.0.0")})\n')
+                self.assertEqual(check(self.root), [])
 
     def test_dirty_input_rejected_without_output(self):
         self.fixture()

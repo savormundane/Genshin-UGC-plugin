@@ -17,4 +17,4 @@
 
 ## 本地运行
 
-完整功能面向 Windows x64。需要 DeepSeek Harness 0.2.2-rc.5 和 Node.js 24.9 或更高版本。Python 可使用装好依赖的 CPython 3.11–3.14，也可通过 PATH 上的 uv 准备运行环境。首次安装依赖可能需要联网。 [安装自检](https://github.com/savormundane/miliastra-wonderland-plugin/blob/main/docs/installation.md#安装自检) · [制作教程](https://github.com/savormundane/miliastra-wonderland-plugin/tree/main/samples/creator-demos)
+完整功能面向 Windows x64。支持 DeepSeek Harness 0.2.2-rc.5 和 0.2.3-alpha.2。Node.js 需满足所用 DSH 版本的要求，插件需要 24.9 或更高版本。Python 可使用装好依赖的 CPython 3.11–3.14，也可通过 PATH 上的 uv 准备运行环境。首次安装依赖可能需要联网。 [安装自检](https://github.com/savormundane/miliastra-wonderland-plugin/blob/main/docs/installation.md#安装自检) · [制作教程](https://github.com/savormundane/miliastra-wonderland-plugin/tree/main/samples/creator-demos)

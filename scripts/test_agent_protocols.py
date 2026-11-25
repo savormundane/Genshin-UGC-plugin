@@ -408,7 +408,7 @@ class ProtocolTests(unittest.TestCase):
                     manifest = files[Path('cordis-bundle/package.json')]
                     patch_file = manifest['dsh']['bundle']['patch']
                     self.assertEqual(manifest['version'], '3.8.0')
-                    self.assertEqual(manifest['engines']['dsh'], '0.2.2-rc.5')
+                    self.assertEqual(manifest['engines'], installer.read_json(ROOT / 'package.json')['engines'])
                     skills, mcp = files[Path('cordis-bundle') / patch_file][0]['insert']
                     self.assertEqual(skills['name'], '@deepseek-ai/dsh-skill-filesystem')
                     self.assertFalse(skills['config']['includeDefaultRoots'])

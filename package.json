@@ -9,7 +9,7 @@
     "url": "git+https://github.com/savormundane/miliastra-wonderland-plugin.git"
   },
   "engines": {
-    "dsh": "0.2.2-rc.5"
+    "dsh": "0.2.2-rc.5 || 0.2.3-alpha.2"
   },
   "files": [
     "cordis.patch.yml",

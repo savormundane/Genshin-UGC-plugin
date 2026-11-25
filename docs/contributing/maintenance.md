@@ -2,7 +2,7 @@
 
 1. 从待发行提交准备候选。以根目录的 `plugin.json` 为准，同步各客户端的清单、PowerShell 安装器、文档中的发行链接和变更记录的版本标题。运行 `python -B scripts/marketplace_release.py` 生成市场清单和 DSH 包清单。
 2. 在候选目录运行[本地检查](development.md)，用 `npm pack` 核对 DSH 包的文件清单。发行前核对 [PUBLIC_SOURCES.json](../../PUBLIC_SOURCES.json) 的分组、摘要和许可状态。
-3. 正式发布时快进推送候选提交，用同一提交创建标签和 Release，核对 Latest、附件摘要与安装入口。npm 包发布后查询公开注册表确认版本可用。
+3. 正式发布时快进推送候选提交，用同一提交创建标签和 Release，核对 Latest、附件摘要与安装入口。从[安装指南](../installation.md#deepseek-harness)所列地址在隔离 DSH 配置中安装，并调用一次 MCP 工具。
 
 定版流程从候选提交生成 `Miliastra-Wonderland-<version>-agent-plugins-windows-x64.zip`。检查 ZIP 根目录的 `plugin.json`、`mcp.json` 和 `skills/`，核对 Windows x64 Canvas 文件和公开下载的 SHA-256。
 

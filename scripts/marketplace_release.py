@@ -7,7 +7,7 @@ import re
 from check_repository import REPO, ROOT, SEMVER
 from package_release import distribution_exclusions
 
-DSH_ENGINE = '0.2.2-rc.5'
+DSH_ENGINE = '0.2.2-rc.5 || 0.2.3-alpha.2'
 DSH_ICON = 'assets/icon.png'
 DSH_DETAILS = {lang: f'docs/dsh/overview.{lang}.md' for lang in ('en', 'zh')}
 GITHUB = f'https://github.com/{REPO}'
