@@ -15,10 +15,6 @@ Miliastra Wonderland 是面向原神「千星奇域」创作者的非官方 AI �
 | [Miliastra GIL](skills/miliastra-gil/SKILL.md) | 对导出的关卡文件（GIL）审阅修改计划，另存并回读核对。 |
 | [Miliastra Assets](skills/miliastra-assets/SKILL.md) | 比较 PNG 转图元的预览和控件数，生成素材或拟合得到可挂载的 Lua。 |
 
-查询、素材试算和局部修改可直接调工具。把节点图、Lua 或素材装到同一份关卡，或按配置重建交付时，使用 [`produce`](references/workflows/produce.md)。 [能力与工具入口](references/README.md)
-
-修改已有工程时，可以从同一次对象查询继续编译 GIA、审阅改动并另存关卡。拟合素材也能直接绑定基底里的图片模板和容器，保留软件预览和实际挂载的核对结果。 [工程修改](references/gil/native-changes.md#审阅并另存已有工程)
-
 ## 安装
 
 插件支持 **Agent Plugins、Claude、DSH** 三种协议。 [协议与客户端](docs/compatibility.md#安装协议与客户端)
