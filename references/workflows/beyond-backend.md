@@ -9,6 +9,8 @@ python scripts/qianxing.py beyond SPEC.json --out NEW_DIRECTORY
 
 先用[按钮示例](../../samples/beyond-button/README.md)看 PNG、控件树和点击日志。`simulate preview` 始终请求软件画面，可省略断言。已声明的断言仍执行，失败时返回非零。可取得的画面和报告写入独立的 `NEW_PREVIEW.diagnostics`，报告包含首项失败的预期与观测值。原 `beyond` 和制作链入口用于正式场景检查，要求执行断言。
 
+MCP 中用 `simulate`，传同一份配置的路径和摘要并设 `preview=true`。通过时提交 PNG 和报告，失败时返回诊断。 `asset_fit` 配置 `mount` 后会生成可直接传入的配置以及显式的软件图片模板。 [拟合预览示例](../../samples/creator-demos/png/README.md#拟合并预览可挂载的-lua)
+
 可用 --backend PATH 指定同一提交的干净独立检出；缺依赖时失败，不自动安装。默认加载 vendor/beyond 并核对随包文件摘要。
 
 ## GIL 控件转换及渲染

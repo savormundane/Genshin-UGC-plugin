@@ -31,7 +31,7 @@ def parameters(spec: object) -> dict[str, Any]:
     }
     version = spec.get('schema') if isinstance(spec, dict) else None
     if version == 2:
-        allowed.add('max_total_controls')
+        allowed.update(('max_total_controls', 'mount'))
     if (
         not isinstance(spec, dict)
         or set(spec) - allowed
@@ -96,6 +96,14 @@ def parameters(spec: object) -> dict[str, Any]:
         total = cfg.get('max_total_controls')
         if 'max_total_controls' in cfg and (type(total) != int or total < 1):
             raise ValueError('Positive max_total_controls required')
+        if 'mount' in cfg:
+            mount = cfg['mount']
+            if (
+                not isinstance(mount, dict) or set(mount) != {'template_index', 'width', 'height'}
+                or any(type(mount[key]) is not int or mount[key] <= 0 for key in mount)
+                or mount['template_index'] > 0x7fffffff
+            ):
+                raise ValueError('mount requires a positive template index and positive integer width and height')
     return cfg
 
 
@@ -294,6 +302,29 @@ def rectangle_data(image):
     return {'rects': rects, 'palette': palette}
 
 
+def refinement(image, preview):
+    """Report alpha losses and the worst regions in source-image coordinates."""
+    foreground = image.getchannel('A').point(lambda value: 255 if value else 0)
+    fitted = preview.getchannel('A').point(lambda value: 255 if value else 0)
+    difference = ImageChops.difference(image.convert('RGBa'), preview.convert('RGBa'))
+    edge = math.ceil(max(image.size) / 8)
+    regions = []
+    for top in range(0, image.height, edge):
+        for left in range(0, image.width, edge):
+            right, bottom = min(left + edge, image.width), min(top + edge, image.height)
+            box = (left, top, right, bottom)
+            squared_error = sum(ImageStat.Stat(difference.crop(box)).sum2)
+            if squared_error:
+                error = squared_error / ((right - left) * (bottom - top) * 4 * 255**2)
+                regions.append({'box': list(box), 'error': error})
+    regions.sort(key=lambda row: -row['error'])
+    return {
+        'lost_foreground_pixels': ImageChops.subtract(foreground, fitted).histogram()[255],
+        'spill_pixels': ImageChops.subtract(fitted, foreground).histogram()[255],
+        'worst_regions': regions[:5],
+    }
+
+
 def build(
     source: str | Path,
     spec_path: str | Path,
@@ -307,6 +338,7 @@ def build(
     source = Path(source).resolve()
     sp = Path(spec_path).resolve()
     cfg = parameters(read_json(sp))
+    mount = cfg.pop('mount', None)
     inputs = {str(sp): sha_file(sp)}
     # A JSON source is an explicit layer manifest. Paths are relative to it, never discovered.
     if source.suffix.lower() == '.json':
@@ -342,6 +374,8 @@ def build(
         with open_single_image(path, MAX_FIT_PIXELS) as im:
             image = im.convert('RGBA')
         items.append((layer['name'], image, inputs[str(path)]))
+    if mount and len({image.size for _, image, _ in items}) != 1:
+        raise ValueError('Mounted layers must use the same source canvas')
     previous = read_json(resume) if resume else {}
     seed_data = read_json(initial) if initial else {}
     for extra in (resume, initial):
@@ -396,6 +430,8 @@ def build(
             dest = stage / name
             dest.mkdir()
             data = rectangle_data(preview)
+            if mount and not data['rects'] and image.getchannel('A').getbbox():
+                raise ValueError(f'拟合未保留 {name} 的前景。请调整预算或透明度阈值后重试。')
             if len(data['rects']) > quotas[i]:
                 raise ValueError(
                     'Lowered rectangle controls exceed max_controls; no output committed'
@@ -477,6 +513,7 @@ def build(
                     palette_size=len(data['palette']),
                     lua_utf8_bytes=(dest / 'data.lua').stat().st_size,
                     stats=state['stats'],
+                    refinement=refinement(image, preview),
                 )
                 record.update(schema=2, cost_history=state['history'], **metrics)
                 catalog[-1].update(metrics)
@@ -502,6 +539,10 @@ def build(
                 total_lua_utf8_bytes=sum(r['lua_utf8_bytes'] for r in catalog),
                 budget_kind='tool delivery budget; not platform limit',
             )
+        if mount:
+            from miliastra.assets.fit_mount import deliver
+
+            summary['mount'] = deliver(stage, catalog, mount, inputs)
         write_json(stage / 'catalog.json', summary)
         return finish(
             stage,
@@ -510,6 +551,7 @@ def build(
             binding=binding,
             layers=catalog,
             quality=quality,
+            **({'mount': summary['mount']} if mount else {}),
             editor='not_checked',
             host='not_checked',
         )

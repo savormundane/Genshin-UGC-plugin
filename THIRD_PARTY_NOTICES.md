@@ -32,6 +32,8 @@
 
 ## 参考研究
 
+内置的[音效与特效图鉴](references/platform/resource-catalogue.md#查询音效和特效)筛选并归一化了 8itlab 和贡献者采集的面板名称、编号、类别及标示时长。目录保留固定提交、来源与版本依据。随包内容为文字观察，米哈游保留音频、图像和游戏素材的权利。 [上游第三方声明](https://github.com/8itlab/genshin-miliastra-mcp/blob/70470757d6fcb319c5afec13b178c87f2d8d54b3/THIRD_PARTY_NOTICES.md) · [上游 MIT 许可](references/platform/8itlab-MIT.txt)
+
 感谢[genshin-miliastra-mcp](https://github.com/8itlab/genshin-miliastra-mcp)、[genshin-miliastra-file-format](https://github.com/script-1024/genshin-miliastra-file-format)与[UGC-File-Generate-Utils](https://github.com/luern0313/UGC-File-Generate-Utils)。本节仅表示研究参考，不声称打包了它们完整的代码或获得额外许可。
 
 ## 随包Node依赖

@@ -30,7 +30,7 @@ def main():
     roots.extend(Path(p).resolve() for p in sys.path if p and Path(p).is_dir()
                  and (project is None or not Path(p).resolve().is_relative_to(project)))
     native_cache=None
-    if op=='produce':
+    if op=='produce' or op=='simulate' and args.get('preview'):
         from beyond_native import native_cache_root
         cache=native_cache_root()
         if cache and cache.resolve()==cache and not any(
@@ -69,7 +69,7 @@ def main():
             result={'status':'passed','matches':search(args['version'],args['query'])}
         elif op=='resources_lookup':
             from resource_catalogue import search
-            result=search(args['version'],args.get('query',''),'model',args.get('mode','beyond'),
+            result=search(args['version'],args.get('query',''),args.get('resource_type','model'),args.get('mode','beyond'),
                           [args['catalogue']] if 'catalogue' in args else (),args.get('limit',20))
         elif op=='nodes_lookup':
             from node_build import catalog
@@ -103,6 +103,13 @@ def main():
         elif op == 'scene_preview':
             from scene_preview import preview
             result = preview(args['input'], args['output'], before=args.get('before'))
+        elif op == 'scene_build':
+            from scene_authoring import build
+            result = build(args['spec'], args['output'])
+        elif op == 'scene_catalogue':
+            from scene_authoring import capture_catalogue_bundle
+            result = capture_catalogue_bundle(args['input'], args['output'], args['version'],
+                                              args['mode'], reference_directory=request['destination'])
         elif op == 'asset_preview':
             from miliastra.assets.pipeline import candidate_is_usable, preview
             output = Path(args['output'])
@@ -157,6 +164,16 @@ def main():
                     has_foreground=result.get('has_foreground', True),
                 )
             ]
+        elif op == 'asset_fit':
+            from miliastra.assets.fit import build
+            output = Path(args['output'])
+            result = build(args['input'], args['spec'], output, args.get('resume'),
+                           args.get('steps'), args.get('initial'))
+            result['_inline_previews'] = [
+                _asset_thumbnail(output / row['name'] / 'preview.png', row['name'], row['controls'],
+                                 role='拟合结果', within_budget=True, has_foreground=row['controls'] > 0)
+                for row in result['layers'][:3]
+            ]
         elif op=='native_plan':
             from miliastra.native.changes import plan,plan_summary
             from authoring_io import output_directory,finish
@@ -177,6 +194,11 @@ def main():
                 write_json(stage/'plan.json',result)
                 finish(stage,inputs,kind='native-plan')
             if args.get('summary'):result=plan_summary(result)
+        elif op=='simulate' and args.get('preview'):
+            from beyond_backend import run
+            result = run(args['spec'], None, args['output'], preview=True)
+            result.pop('output', None)
+            result.pop('diagnostics_output', None)
         elif op=='simulate':
             from joint_simulator import evaluate,load_scenario
             from authoring_io import output_directory,finish
@@ -194,7 +216,7 @@ def main():
             result=compare(read_json(args['input']),read_json(args['other']))
         elif op=='logs_diagnose':
             from log_diagnostics import diagnose
-            result=diagnose(args['spec'])
+            result=diagnose(args['spec'], read_roots=mounted)
         elif op=='verify':
             from delivery_verify import verify
             if Path(args['input']).name!='manifest.json':raise ValueError('Verification input must be manifest.json')

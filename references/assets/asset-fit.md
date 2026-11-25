@@ -24,6 +24,16 @@ regions为`[[left,top,right,bottom],...]`，限制新增／调整范围。`--ini
 
 每层输出primitives.json、preview.png、asset.json、data.lua，顶层输出catalog.json、state.json及摘要清单。Lua复用矩形合同，通过[点阵运行支持](../editor/lua/pixel-runtime.md)接入调用方的控件模板。曲线先重建为像素，再无损合并为矩形；预览与矩形数据一致，不等于原图无损或宿主矢量曲线。
 
+Schema 2 的 `refinement` 报告标出拟合丢失的前景像素数、透明区域外溢像素数和误差最高的五块区域。先看 `preview.png`，再按 `worst_regions[].box` 选择要细化的区域。把该框写入 `regions`，用上一次的 `state.json` 作为 `initial` 另存。框坐标仍是源图像素。
+
+## 生成可挂载的 Lua 和软件预览
+
+在 schema 2 的拟合配置中加入 `"mount":{"template_index":1073744001,"width":144,"height":144}`。宽高为显示框的设计单位，图元等比居中。分层输入应使用同尺寸画布并按由底到顶声明，所有层装入一份 Lua。用当前关卡的实物图片根模板索引填写 `template_index`，模板使用可着色的白色实心矩形图片。
+
+`asset_fit` 或 CLI `assets fit` 产出 `mounted.lua`、`beyond.json` 和 `beyond-project.json`。把 Lua 映射并挂到客户端容器节点。需要预览时，传拟合结果的 `beyond.json` 路径及摘要，调用 MCP `simulate` 并设 `preview=true`。CLI 可用 `simulate preview FIT_OUT/beyond.json --out NEW_DIRECTORY`。
+
+Beyond 在软件布局中声明一个同索引的矩形图片模板，执行摘要绑定的原样 Lua。看 `preview.png`、`render.json` 和 `external-simulation.json` 确认控件、画面和日志。修改 Lua 后须用新的源码摘要更新预览配置。实际关卡的模板、挂载和画面需在编辑器和游戏中核对。 [检查点样例](../../samples/creator-demos/png/README.md#拟合并预览可挂载的-lua)
+
 `catalog.json` 和交付清单汇总各层的误差、矩形数、`stop_reason` 与 `target_reached`。顶层 `quality` 列出未达目标的层。制作链在 `evidence.asset_fit_quality` 引用同一结论和各素材报告。预算内的近似结果可按检查点继续迭代。制作任务的拟合条目可声明 `"require_target": true`。任一图层未达到误差目标时，制作返回该层的实际误差与停止原因，并取消交付。
 
 gia=true使用相同矩形数据与已校准XY平面封装；空图拒绝GIA输出。保留来源、颜色、坐标和锚点，并用导入器回读。编辑器与设备仍待验：空工程导入后核对颜色、边缘、大小和锚点，再在目标设备检查控件预算。软件PNG不代表实际视觉验收或FPS。

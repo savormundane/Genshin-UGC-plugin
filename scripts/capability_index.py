@@ -9,7 +9,7 @@ DOMAIN_TOOLS={
 TASK_ENTRYPOINTS = {
     'game': {'cli': ['produce JOB.json --out DIR'], 'mcp': ['produce']},
     'editor': {'cli': ['project search INPUT QUERY', 'docs search --version VERSION QUERY'],
-               'mcp': ['project_inspect', 'docs_search']},
+               'mcp': ['project_inspect', 'docs_search', 'scene_catalogue', 'scene_preview', 'scene_build']},
     'nodes': {'cli': ['nodes QUERY', 'graph check SOURCE.py', 'build SPEC.json --out DIR'],
               'mcp': ['nodes_lookup', 'graph_check']},
     'lua': {'cli': ['knowledge api SYMBOL', 'client check INPUT'], 'mcp': ['api_lookup', 'client_check']},
@@ -20,9 +20,9 @@ TASK_ENTRYPOINTS = {
                        'assets generate --from-preview REPORT.json --candidate NAME --out DIR',
                        'assets batch preview SPEC.json --out DIR', 'assets batch generate REPORT.json --out DIR',
                        'assets fit SOURCE.png --spec SPEC.json --out DIR'],
-               'mcp': ['resources_lookup', 'asset_preview', 'asset_generate']},
-    'animation': {'cli': ['client assemble SPEC.json --out SOURCE.lua', 'simulate preview SPEC.json --out DIR'], 'mcp': ['client_check']},
-    'diagnosis': {'cli': ['diagnose SPEC.json'], 'mcp': ['diagnose']},
+               'mcp': ['resources_lookup', 'asset_preview', 'asset_generate', 'asset_fit']},
+    'animation': {'cli': ['client assemble SPEC.json --out SOURCE.lua', 'simulate preview SPEC.json --out DIR'], 'mcp': ['client_check', 'simulate']},
+    'diagnosis': {'cli': ['diagnose SPEC.json'], 'mcp': ['diagnose', 'logs_diagnose']},
     'storage': {'cli': ['storage --help', 'produce JOB.json --out DIR'], 'mcp': ['produce']},
     'protocol': {'cli': ['produce JOB.json --out DIR', 'simulate run SCENE.json'], 'mcp': ['produce','simulate']},
 }

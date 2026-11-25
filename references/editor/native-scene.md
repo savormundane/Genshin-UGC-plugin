@@ -9,7 +9,7 @@ python scripts/qianxing.py scene catalogue scene-sample.gia --version 7.2 --mode
 python scripts/qianxing.py resources search 围墙 --type model --version 7.2 --mode beyond --catalogue models.json
 ```
 
-也可调用 MCP `resources_lookup`。传入 `version`，按需给 `query`、`mode` 和项目中的 `catalogue`。结果中的 `selection` 用于选择资源。
+在 MCP 中先用 `scene_catalogue` 提供原生样本、摘要、版本和模式，生成 `models.json`。文件会记录采样原文件的摘要和路径。同一驱动器上的路径相对目录文件，移动目录时要一起保留与样本的相对位置。接着调用 `resources_lookup`，传入 `version`，按需给 `query`、`mode` 和 `catalogue`。结果中的 `selection` 用于选择资源。
 
 | 值 | 用法 |
 | --- | --- |
@@ -44,9 +44,12 @@ python scripts/qianxing.py resources search 围墙 --type model --version 7.2 --
 - `scale` 可省略，默认 `[1,1,1]`。按记录中的实测尺寸摆放时，提供 `size_m` 并省略 `scale`。模型目录须包含 `dimensions` 和 `dimensions_source`。后者用 `path` 和 `sha256` 绑定 JSON 记录，内含 `template_id`、三轴正值 `dimensions_m`、原生样本摘要 `sample_sha256`、相同 `version` 和 `mode`，以及说明测量环境及方法的 `method`。只有模板 ID 和尺寸的旧记录仍可查看，使用此类记录布置时请直接指定 `scale`。导入时在目标编辑器中复核实际尺寸。
 
 ```text
+python scripts/qianxing.py scene preview layout.json --out scene-draft
 python scripts/qianxing.py scene build layout.json --out scene-output
 python scripts/qianxing.py scene inspect scene-output/scene.gia
 ```
+
+同一份布局 JSON 可直接交给 MCP `scene_preview`。在 `top.png`、`side.png` 看建议点位，在 `layout.json` 查看世界变换。报告的 `pending_native_evidence` 列出仍需要原生样本的对象键，图片只绘制点位。确认布局且清单为空后，用 `scene_build` 提供原布局、摘要和新目录。导出会重新校验模型证据，并按相同的世界坐标数据回读 GIA。
 
 `scene.gia` 按独立静态单位组织。`scene.json` 可继续编辑，`scene-resources.json` 将布局键关联到包内记录、模板 ID 和回读变换。保留原布局位置及目录引用，或移动布局时按新目录调整 `catalogues`。`manifest.json` 绑定输入样本、目录和输出摘要。按 `IMPORT.md` 在编辑器的资产导入导出管理中加载并转存，存档后取用编辑器实际分配的身份。
 
@@ -112,6 +115,31 @@ python scripts/qianxing.py scene inspect scene-output/scene.gia
 省略 `--template-id` 可预览 GIL 中读到的实体世界坐标。运行 `scene preview LEVEL.gil --before OLD.gil --out PREVIEW` 或 MCP `scene_preview` 可按原生对象键对照新增、移动、旋转和移除。共用比例的 `top.png` 和 `side.png` 以原点标记实体，符合条件的白盒另绘按缩放计算的单位包围盒近似。`layout.json` 与返回摘要的 `coverage` 分别统计当前和对照文件中的索引实体、有世界坐标的实体、仅有原点而无法绘制轮廓的实体、缺少世界坐标的实体与未解析记录。模型尺寸、编辑器导入和游戏运行需另行核对。触发路线可按[联合模拟](../workflows/joint-simulation.md#盒形触发路线)检查离线模型。
 
 `scene export-whitebox LEVEL.gil --template-id ID --out OUTPUT` 将原点空模型元件的白盒零件另存为独立 `whitebox.gia`。它随包记录形状、局部变换、颜色和依赖索引。使用 `"scene":{"whitebox":{"source":"@level","template_id":ID}}` 可在制作任务最终 GIL 上执行相同导出。交互、组件和每个实例的修改由 GIL 版本承载。 [原生玩法制作](native-gameplay.md)
+
+### 核对零件组和枢轴
+
+把门板和把手画在同一草案坐标系中，再按各轴包围盒的相对比例定枢轴。下面用 `[0, 0.5, 0.25]` 把枢轴放到门的左侧中高点。零件按轴对齐包围盒计算，`scale` 是草案中单位白盒的三轴尺寸。
+
+```json
+{
+  "schema": 1,
+  "kind": "whitebox-pivot",
+  "version": "7.2",
+  "mode": "beyond",
+  "groups": [
+    {
+      "key": "door",
+      "pivot_relative": [0, 0.5, 0.25],
+      "parts": [
+        {"name": "门板", "shape_id": 10009001, "position_m": [5, 1, 0], "scale": [2, 2, 0.25]},
+        {"name": "把手", "shape_id": 10009002, "position_m": [5.75, 1, 0.25], "scale": [0.25, 0.25, 0.25]}
+      ]
+    }
+  ]
+}
+```
+
+将 JSON 交给 `scene_preview` 或 `scene preview`，在俯视及侧视图里看十字标记。`layout.json` 的 `pivot_groups` 给出建议枢轴位置、原零件位置和相对枢轴的新位置。把新位置加回枢轴坐标可复原初始摆放。该配置只用于软件草案，原生枢轴写入需要同版本、同模式的实物对照样本。 [上游白盒枢轴参考](https://github.com/Ayn1631/Miliastra-Tools/blob/44db6abd01ac80d135ad3c06b3ea388e879b5b69/docs/gpt2gia.md)
 
 查看地形栅格时用 `scene inspect LEVEL.gil --terrain-id ID`。每格 5 米，每层 2.5 米，可读取格心、顶部高度、水面、路径及斜坡。平格用顶部高度定位布景，斜坡的落点高度需要按落点复核。写入只改已有格。材质使用 `grass`、`tile`、`sand`、`stone_wall`、`snow`。地块 `layers` 加上 `water_layers` 的合计从 1 到 20。道路用 `path:true`，水体用 `water_layers`，直线斜坡用 `slope` 的 `+z`、`+x`、`-z`、`-x` 或 `flat`，方向对应下降的一侧。水体和道路、直线斜坡分格布设。先保存关卡副本，再按需要烘焙寻路。
 

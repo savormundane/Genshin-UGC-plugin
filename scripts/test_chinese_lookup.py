@@ -18,7 +18,7 @@ import knowledge
 from miliastra.native.scene import OBJECT_ID_START, read_gia, static_gia
 from node_build import catalog
 from platform_profiles import search, show
-from resource_catalogue import catalogue, check as check_resources
+from resource_catalogue import catalogue, check as check_resources, search as search_resources
 from scene_authoring import build as build_scene, capture_catalogue
 
 
@@ -177,6 +177,30 @@ class ChineseLookupTests(unittest.TestCase):
                 document = show(version, 'mh4imrrhzdzi')
                 for key in ('source_kind', 'source_version', 'inherited', 'applicability', 'mirror_url', 'commit'):
                     self.assertEqual(source.get(key), document.get(key))
+
+    def test_media_lookup_preserves_version_and_read_only_evidence(self):
+        sound = search_resources('7.2', '界面音效 按钮点击', 'sound', 'beyond', limit=1)['resources'][0]
+        self.assertEqual((sound['type'], sound['category'], sound['version']), ('sound', '界面音效', '7.1'))
+        self.assertEqual(sound['applicability'], 'historical_observation')
+        self.assertIsNone(sound['mode'])
+        latest, = search_resources('7.2', '10019173', 'effect', 'beyond')['resources']
+        self.assertEqual(latest['category'], '限时特效')
+        self.assertEqual(latest['reported_duration_s'], 2.91)
+        self.assertTrue(latest['name_truncated'])
+        self.assertEqual(latest['source']['source_client_version'], '7.2.0')
+        self.assertEqual(latest['source']['frame_sha256'],
+                         '277380216ac195602b4ec7f3a3f7863163d575c7550644d857d5f639ef574009')
+        self.assertEqual(latest['source']['sha256'], sha((PLUGIN / latest['source']['path']).read_bytes()))
+        self.assertEqual((latest['native_write_evidence'], latest['host']), ('none', 'not_checked'))
+        self.assertEqual(search_resources('7.1', '10019173', 'effect')['matches'], 0)
+        with tempfile.TemporaryDirectory(prefix='miliastra resource observation ') as temporary:
+            usage = Path(temporary) / 'uses.json'
+            write_json(usage, {'schema': 2, 'version': '7.2', 'mode': 'beyond', 'uses': [
+                {'type': 'effect', 'id': latest['id'], 'accept_declared': True}
+            ]})
+            checked = check_resources(usage)
+            self.assertEqual(checked['status'], 'failed')
+            self.assertEqual(checked['errors'][0]['error'], 'resource absent')
 
     def test_lua_type_hints_remain_unverified(self):
         navigation = ('local focused = game.GetControllerFocus(); '

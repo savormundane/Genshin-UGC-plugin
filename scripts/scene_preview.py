@@ -1,9 +1,10 @@
-"""Draw calibrated world placements and compare two GIL layouts at one scale."""
+"""Draw a scene draft or compare calibrated GIL world placements."""
 
 import math
 from pathlib import Path
 
-from authoring_io import finish, output_directory, write_json
+from authoring_io import finish, output_directory, schema, write_json
+from miliastra.native.scene import TRS, vector
 from miliastra.native.scene_edits import WHITEBOX
 from project_index import build_scene
 
@@ -50,7 +51,7 @@ def coverage(rows, report):
             'complete_reference_index': report['complete_reference_index']}
 
 
-def render(path, axes, current, previous, changes):
+def render(path, axes, current, previous, changes, *, draft=False):
     from PIL import Image, ImageDraw
 
     points = [r for r in (*current.values(), *previous.values()) if r['transform']]
@@ -85,12 +86,18 @@ def render(path, axes, current, previous, changes):
             if 'outline_m' in row:
                 w, h = (max(2, row['outline_m'][axis] * scale / 2) for axis in axes)
                 draw.rectangle((x-w, y-h, x+w, y+h), outline=colour, width=2)
+            if row.get('pivot'):
+                colour = '#FFC971'
+                draw.line((x-6, y, x+6, y), fill=colour, width=2)
+                draw.line((x, y-6, x, y+6), fill=colour, width=2)
             draw.ellipse((x-2, y-2, x+2, y+2), fill=colour)
-            if (not old and (kinds or len(current) <= 24) or 'removed' in kinds):
-                draw.text((x+5, y-5), str(row['id']), fill=colour)
+            if (not old and (kinds or len(current) <= 24 or row.get('pivot')) or 'removed' in kinds):
+                draw.text((x+5, y-5), row['key'] if draft else str(row['id']), fill=colour)
     view = 'Top | X right, Z up' if axes[1] == 2 else 'Side | X right, Y up'
     draw.text((24, 20), f'{view} | {scale:.4g} px per metre', fill='white')
-    draw.text((24, 42), 'Outline: scaled unit whitebox proxy   Dot: indexed native origin', fill='#B9CADF')
+    legend = ('Outline: whitebox bounds proxy   Dot: draft origin   Cross: pivot' if draft
+              else 'Outline: scaled unit whitebox proxy   Dot: indexed native origin')
+    draw.text((24, 42), legend, fill='#B9CADF')
     if previous:
         draw.text((24, size[1]-29), 'Green: added   Amber: changed   Rose: removed   Grey: previous', fill='#B9CADF')
     image.save(path)
@@ -98,8 +105,84 @@ def render(path, axes, current, previous, changes):
             'image_size_px': list(size)}
 
 
+def whitebox_draft(groups):
+    if not isinstance(groups, list) or not groups:
+        raise ValueError('Whitebox draft requires a nonempty groups list')
+    rows, results = {}, {}
+    for group in groups:
+        schema(group, ('key', 'pivot_relative', 'parts'), ('key', 'pivot_relative', 'parts'))
+        key = group['key']
+        if not isinstance(key, str) or not key.strip() or key in results:
+            raise ValueError('Whitebox group keys must be unique nonempty strings')
+        relative = vector(group['pivot_relative'], 'Bounds-relative pivot')
+        if any(value < 0 or value > 1 for value in relative):
+            raise ValueError('Bounds-relative pivot must be within [0, 1] on each axis')
+        if not isinstance(group['parts'], list) or not group['parts']:
+            raise ValueError('Whitebox group requires at least one part: ' + key)
+        parts = {}
+        for part in group['parts']:
+            schema(part, ('name', 'shape_id', 'position_m', 'scale'),
+                   ('name', 'shape_id', 'position_m', 'scale'))
+            name, shape = part['name'], part['shape_id']
+            if not isinstance(name, str) or not name.strip() or name in parts:
+                raise ValueError('Whitebox part names must be unique nonempty strings in ' + key)
+            if type(shape) is not int or shape not in WHITEBOX:
+                raise ValueError('Unsupported whitebox shape: ' + repr(shape))
+            position = vector(part['position_m'], 'Whitebox world position')
+            scale = vector(part['scale'], 'Whitebox size', positive=True)
+            parts[name] = {**part, 'position_m': position, 'scale': scale}
+            rows[(key, name)] = {'key': key + '/' + name, 'name': name, 'shape_id': shape,
+                                 'transform': {'position_m': position}, 'outline_m': scale}
+        lo = [min(part['position_m'][i] - part['scale'][i] / 2 for part in parts.values()) for i in range(3)]
+        hi = [max(part['position_m'][i] + part['scale'][i] / 2 for part in parts.values()) for i in range(3)]
+        if any(a >= b for a, b in zip(lo, hi)):
+            raise ValueError('Cannot represent whitebox bounds for ' + key)
+        pivot = [a + (b - a) * fraction for a, b, fraction in zip(lo, hi, relative)]
+        projected = []
+        for part in parts.values():
+            world = part['position_m']
+            local = [component - axis for component, axis in zip(world, pivot)]
+            projected.append({**part, 'position_m': local, 'world_position_m': world})
+        rows[(key, '')] = {'key': key, 'name': key, 'pivot': True, 'transform': {'position_m': pivot}}
+        results[key] = {'key': key, 'pivot_relative': relative, 'pivot_position_m': pivot,
+                        'bounds_m': {'min': lo, 'max': hi}, 'parts': projected}
+    return rows, list(results.values())
+
+
+def preview_draft(path, out):
+    from scene_authoring import scene_spec, static_layout
+
+    spec, inputs = scene_spec(path, allow_whitebox=True)
+    rows = {}
+    whitebox = spec.get('kind') == 'whitebox-pivot'
+    if whitebox:
+        rows, groups = whitebox_draft(spec['groups'])
+        details = {'scope': 'axis_aligned_whitebox_pivot_geometry', 'pivot_groups': groups}
+    else:
+        layout, models = static_layout(path, spec, inputs, draft=True)
+        pending = []
+        for key, obj in layout:
+            selection = models[obj['template_id']]['selection']
+            rows[key] = {'key': key, 'name': obj['name'], 'template_id': obj['template_id'],
+                         'selection': selection, 'transform': {field: obj[field] for field in TRS}}
+            if selection != 'native_verified':
+                pending.append(key)
+        details = {'scope': 'proposed_static_world_positions', 'pending_native_evidence': pending}
+    with output_directory(out) as stage:
+        views = {name: render(stage / f'{name}.png', axes, rows, {}, {}, draft=True)
+                 for name, axes in (('top', (0, 2)), ('side', (0, 1)))}
+        details.update(version=spec['version'], mode=spec['mode'], views=views,
+                       editor='not_checked', host='not_checked')
+        write_json(stage / 'layout.json', {'schema': 1, 'objects': list(rows.values()), **details})
+        return finish(stage, inputs, kind='scene-draft-preview', objects=len(rows), **details)
+
+
 def preview(path, out, *, before=None):
     path = Path(path).resolve()
+    if path.suffix.lower() == '.json':
+        if before is not None:
+            raise ValueError('Before comparison requires a GIL')
+        return preview_draft(path, out)
     current, report = scene_rows(path)
     inputs = {str(path): report['artifacts']['level']['sha256']}
     previous = {}

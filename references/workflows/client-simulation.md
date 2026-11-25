@@ -56,3 +56,15 @@ API没有枚举整个编辑器模板库的方法，因此完整候选来自离�
 在千星沙箱的日志窗口中勾选“客户端脚本”，确认选择后发起试玩；脚本错误可双击对应日志条目查看。用print记录阶段和ID，printerr不会抛异常，debug.traceback只生成文本。卡死/循环而普通日志不能报告时，检查客户端脚本储存目录中的ErrorLog.txt；它只在相应错误出现时创建，不保证每次都有。
 
 官方操作依据：[客户端控件和客户端脚本，第8节](../platform/official/概念介绍/客户端控件和客户端脚本__mhbgxf0nynww.md)。客户端节点图日志是另一套筛选对象，不能用其已勾选代替脚本日志开启。排障时绑定当前交付摘要、日志、触发步骤和设备，不靠多轮无版本猜测。
+
+## 读取编辑器调试日志
+
+将编辑器导出的二进制调试日志放进已授权工程。用下面的诊断配置调用 MCP `logs_diagnose`，传入配置路径与 SHA-256。命令行可用 `python scripts/qianxing.py logs diagnose diagnose.json`。
+
+```json
+{"schema":2,"logs":[{"path":"playtest.bytes","format":"editor-debug-log","limit":100}],"bindings":[]}
+```
+
+每份日志最多 64 MiB。`offset` 从 0 开始，按识别出的打印记录分页；`editor_logs[].next_offset` 给出下一页，`limit` 可为 1 到 1000。报告保留客户端 Lua 或节点图的打印原文、记录位置，以及记录中可读的图 ID、实体 ID 和时间。未识别项计入 `ignored_record_count`，图轨迹中的字符串不计作打印。普通 JSONL 输入继续使用 `logs` 中的路径字符串。
+
+二进制格式依据社区对双长度封套与 `1.22.2`、`1.23.2` 字段路径的观察。目前本插件以合成样本检查读取、分页与拒绝条件，报告中的构建匹配、编辑器和实机状态留待独立证据。打印正文按数据处理，无法仅按文本判断错误等级。 [格式观察](https://github.com/8itlab/genshin-miliastra-mcp/blob/70470757d6fcb319c5afec13b178c87f2d8d54b3/src/debug-log.mjs)

@@ -2,11 +2,48 @@
 from pathlib import Path
 import argparse,json,re
 from authoring_io import schema,sha,read_json,resolve
-from platform_profiles import show,CATALOGUE
+from platform_profiles import selection,show,CATALOGUE
 
 
 MODEL_SELECTIONS = ('native_verified', 'preview_only', 'whitebox_recipe')
 MODEL_CANDIDATES = Path(__file__).with_name('scene-model-candidates.json')
+MEDIA_OBSERVATIONS = Path(__file__).with_name('media-resource-observations.json')
+MEDIA_OBSERVATIONS_SHA256 = '430d3f111eaaee0fa7be9a3f9c5fb6862053308a468f983a1dc83bda8a327467'
+
+
+def media_observations(version, resource_type, inputs):
+    """List attributed observations for discovery only."""
+    raw = MEDIA_OBSERVATIONS.read_bytes()
+    digest = sha(raw)
+    if digest != MEDIA_OBSERVATIONS_SHA256:
+        raise ValueError('Bundled media resource catalogue source changed')
+    data = json.loads(raw)
+    _, lineage, _, _ = selection(version)
+    inputs[str(MEDIA_OBSERVATIONS)] = digest
+    rows = []
+    for batch in data['batches']:
+        if batch['type'] != resource_type or batch['source']['source_version'] not in lineage:
+            continue
+        source = {**data['upstream'], **batch['source'], 'sha256': digest,
+                  'path': 'scripts/media-resource-observations.json'}
+        source_version = source['source_version']
+        for ident, name, category, *observed in batch['rows']:
+            row = {
+                'type': resource_type, 'id': ident, 'name': name, 'category': category,
+                'version': source_version, 'requested_version': version,
+                'applicability': ('historical_observation' if source_version != version else
+                                  'observation_for_requested_version'),
+                'mode': None, 'dimensions': None, 'dependencies': None,
+                'evidence': 'third_party_editor_observation',
+                'native_write_evidence': 'none', 'host': 'not_checked', 'source': source,
+            }
+            if observed:
+                row['reported_duration_s'] = observed[0]
+            if len(observed) == 3:
+                row['name_truncated'] = observed[1]
+                row['source'] = {**source, 'frame_sha256': observed[2]}
+            rows.append(row)
+    return rows
 
 
 def model_row(row, directory, version, inputs, samples):
@@ -227,14 +264,25 @@ def search(version, query='', resource_type=None, mode=None, catalogues=(), limi
     if not isinstance(query, str) or type(limit) not in (int, type(None)) or limit is not None and limit < 1:
         raise ValueError('Resource search requires a string and a positive limit')
     result = catalogue(version, catalogues, include_model_candidates=resource_type == 'model')
+    media = resource_type in ('sound', 'effect')
+    if media:
+        existing = {(row['type'], row['id']) for row in result['resources']}
+        observations = media_observations(version, resource_type, result['inputs'])
+        result['resources'].extend(row for row in observations if (row['type'], row['id']) not in existing)
+        result['scope'] = 'resource_metadata_and_editor_observations'
+    terms = query.casefold().split() if media else [query.casefold()]
+    exact_id = media and len(terms) == 1 and re.fullmatch(r'[0-9]+', terms[0]) is not None
     matches = [
         row for row in result['resources']
         if (resource_type is None or row['type'] == resource_type)
         and (mode is None or row['mode'] in (None, mode, 'both'))
-        and query.casefold() in ' '.join(
-            str(row.get(key) or '') for key in ('name', 'id', 'type', 'category')
-        ).casefold()
+        and (str(row['id']) == terms[0] if exact_id else all(
+            term in ' '.join(str(row.get(key) or '') for key in ('name', 'id', 'type', 'category')).casefold()
+            for term in terms
+        ))
     ]
+    if media:
+        matches.sort(key=lambda row: (row['version'] != version, row['id']))
     result['resources'] = matches[:limit]
     result['matches'] = len(matches)
     return result

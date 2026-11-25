@@ -1,0 +1,9 @@
+{
+  "schema": 2,
+  "budget": 20,
+  "max_controls": 20,
+  "work": 2000,
+  "seed": 7,
+  "target_error": 0.035,
+  "mount": {"template_index": 1073744001, "width": 144, "height": 144}
+}

@@ -66,6 +66,67 @@ class NativeWorkflowTests(unittest.TestCase):
         self.assertEqual(outcome.structured_content["status"], status, outcome)
         return outcome.structured_content
 
+    def test_fit_mount_uses_the_same_lua_for_beyond(self):
+        sample = PLUGIN / 'samples/creator-demos/png'
+        source = self.project / 'checkpoint-marker.png'
+        spec = self.project / 'fit.json'
+        for target in (source, spec):
+            shutil.copyfile(sample / target.name, target)
+        source_digest = sha_file(source)
+        archive = os.environ.get('MILIASTRA_TEST_BEYOND_ARCHIVE')
+        if archive:
+            from beyond_native import extract_native_archive, read_native_lock
+
+            self.server.env = self.workspace_environment()
+            lock = read_native_lock(PLUGIN / 'vendor/beyond')
+            cache = Path(self.server.env['MILIASTRA_WONDERLAND_PLUGIN_DATA']) / 'beyond-native'
+            cache.mkdir(parents=True)
+            extract_native_archive(lock, Path(archive), cache / lock['sha256'])
+
+        async def run():
+            async with Client(self.server) as client:
+                response = await self.call(client, 'asset_fit', {
+                    'input': source.name, 'spec': spec.name, 'output': 'fit',
+                })
+                output = Path(response['output'])
+                layer, = response['result']['layers']
+                count = layer['controls']
+                self.assertGreater(count, 0)
+                self.assertLessEqual(count, 20)
+                self.assertEqual(layer['refinement']['spill_pixels'], 0)
+                self.assertTrue(layer['refinement']['worst_regions'])
+                self.assertEqual(response['inputs_sha256']['input'], source_digest)
+                mounted = output / 'mounted.lua'
+                mounted_sha256 = sha_file(mounted)
+                preview_spec = output / 'beyond.json'
+                self.assertEqual(read_json(preview_spec)['scripts'][0]['sha256'], mounted_sha256)
+                self.assertEqual(response['outputs_sha256']['mounted.lua'], mounted_sha256)
+                self.assertEqual(response['outputs_sha256']['beyond.json'], sha_file(preview_spec))
+                code = mounted.read_text(encoding='utf-8')
+                self.assertIn('function OnStart()', code)
+                self.assertIn((output / 'image/data.lua').read_text(encoding='utf-8').strip(), code)
+                LuaRuntime().compile(code)
+                if archive:
+                    preview = await self.call(client, 'simulate', {
+                        'spec': str(preview_spec), 'sha256': sha_file(preview_spec),
+                        'output': 'preview', 'preview': True,
+                    })
+                    rendered = Path(preview['output'])
+                    report = preview['result']
+                    self.assertEqual(report['inputs'][str(mounted)], mounted_sha256)
+                    self.assertEqual(report['render_layer'], 'software_preview')
+                    render = read_json(rendered / 'render.json')
+                    self.assertEqual(len(render['paint']), count)
+                    self.assertTrue(all(row['primitive'] == 'rect' for row in render['paint']))
+                    with Image.open(rendered / 'preview.png') as image, Image.open(output / 'image/preview.png') as fit:
+                        x, y = image.width // 2, image.height // 2
+                        actual = image.crop((x - 72, y - 72, x + 72, y + 72))
+                        expected = fit.resize((144, 144), Image.Resampling.NEAREST)
+                        self.assertEqual(actual.convert('RGBa').tobytes(), expected.convert('RGBa').tobytes())
+                self.assertEqual(sha_file(source), source_digest)
+
+        asyncio.run(run())
+
     def test_asset_preview_returns_images_and_counts(self):
         source = self.project / "练习 图标.png"
         shutil.copyfile(PLUGIN / "samples/creator-demos/png/checkpoint-marker.png", source)

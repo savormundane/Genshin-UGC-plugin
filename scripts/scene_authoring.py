@@ -11,12 +11,18 @@ VERSION = '7.2'
 MODE = 'beyond'
 
 
-def scene_spec(path):
+def scene_spec(path, *, allow_whitebox=False):
     path = Path(path).resolve()
     raw = path.read_bytes()
     spec = json.loads(raw.decode('utf-8-sig'))
-    schema(spec, ('schema', 'version', 'mode', 'catalogues', 'offset_m', 'objects'),
-           ('version', 'mode', 'objects'), version=1)
+    if isinstance(spec, dict) and spec.get('kind') == 'whitebox-pivot':
+        if not allow_whitebox:
+            raise ValueError('白盒枢轴草案请用 scene_preview。原生枢轴导出需要同版本、同模式的对照样本。')
+        schema(spec, ('schema', 'kind', 'version', 'mode', 'groups'),
+               ('kind', 'version', 'mode', 'groups'), version=1)
+    else:
+        schema(spec, ('schema', 'version', 'mode', 'catalogues', 'offset_m', 'objects'),
+               ('version', 'mode', 'objects'), version=1)
     catalogues = spec.get('catalogues', [])
     if not isinstance(catalogues, list) or any(not isinstance(p, str) or not p for p in catalogues):
         raise ValueError('Scene catalogues must be paths relative to the scene specification')
@@ -25,11 +31,9 @@ def scene_spec(path):
     return spec, {str(path): sha(raw)}
 
 
-def build(path, out):
+def static_layout(path, spec, inputs, *, draft=False):
     from resource_catalogue import catalogue
 
-    path = Path(path).resolve()
-    spec, inputs = scene_spec(path)
     discovered = catalogue(spec['version'], [resolve(path.parent, p) for p in spec.get('catalogues', [])],
                            include_model_candidates=True)
     inputs.update(discovered['inputs'])
@@ -51,9 +55,9 @@ def build(path, out):
         model = models.get(template) if type(template) is int else None
         if model is None:
             raise ValueError('Unknown native model template: ' + repr(template))
-        if model.get('selection') != 'native_verified':
+        if not draft and model.get('selection') != 'native_verified':
             raise ValueError('Native static record evidence required for model ' + str(template))
-        if model['mode'] not in (MODE, 'both'):
+        if model['mode'] not in (MODE, 'both') and not (draft and model['mode'] is None):
             raise ValueError('Model mode does not match the scene target: ' + str(template))
         position = vector(obj['position_m'], 'Position for ' + key)
         position = vector([p + d for p, d in zip(position, offset)], 'World position for ' + key)
@@ -74,7 +78,14 @@ def build(path, out):
         (key, dict(layout[key], record_id=OBJECT_ID_START + index))
         for index, key in enumerate(sorted(layout))
     ]
-    selected = {obj['template_id'] for obj in layout.values()}
+    selected = {record['template_id']: models[record['template_id']] for _, record in ordered}
+    return ordered, selected
+
+
+def build(path, out):
+    path = Path(path).resolve()
+    spec, inputs = scene_spec(path)
+    ordered, models = static_layout(path, spec, inputs)
     with output_directory(out) as stage:
         gia = stage / 'scene.gia'
         expected = [record for _, record in ordered]
@@ -90,7 +101,7 @@ def build(path, out):
             'models': [
                 {**{k: v for k, v in models[ident].items() if k not in ('source', 'dimensions_source')},
                  'source_sha256': models[ident]['source']['sha256']}
-                for ident in sorted(selected)
+                for ident in sorted(models)
             ],
         })
         (stage / 'IMPORT.md').write_text(
@@ -106,26 +117,26 @@ def build(path, out):
         return finish(
             stage, inputs, kind='native-static-scene', specification=str(path),
             version=spec['version'], mode=spec['mode'], object_count=len(actual),
-            native_templates=sorted(selected), coordinates='native_world_xyz_y_up',
+            native_templates=sorted(models), coordinates='native_world_xyz_y_up',
             checks={'readback': 'passed', 'editor': 'not_checked', 'host': 'not_checked'},
         )
 
 
-def capture_catalogue(source, out, version, mode):
-    """Register witnessed platform template IDs from ordinary static objects."""
+def sampled_catalogue(source, reference_directory, version, mode):
+    """Read witnessed template IDs and bind the corresponding native sample."""
     from platform_profiles import profile
 
     profile(version, mode)
     source = Path(source).resolve()
-    out = Path(out).resolve()
     blob = source.read_bytes()
     records = {}
     for obj in static_objects(blob):
         records.setdefault(obj['template_id'], obj)
     if not records:
         raise ValueError('The export contains no ordinary static object with a platform template ID')
-    path = (Path(os.path.relpath(source, out.parent)).as_posix()
-            if source.drive == out.drive else source.as_posix())
+    reference_directory = Path(reference_directory).resolve()
+    path = (Path(os.path.relpath(source, reference_directory)).as_posix()
+            if source.drive == reference_directory.drive else source.as_posix())
     provenance = {'path': path, 'sha256': sha(blob)}
     result = {
         'schema': 2, 'version': version, 'resources': [
@@ -135,11 +146,28 @@ def capture_catalogue(source, out, version, mode):
             for ident, obj in sorted(records.items())
         ],
     }
+    return result, str(source), provenance['sha256']
+
+
+def capture_catalogue(source, out, version, mode):
+    """Register witnessed platform template IDs from ordinary static objects."""
+    out = Path(out).resolve()
+    result, _, digest = sampled_catalogue(source, out.parent, version, mode)
     with out.open('x', encoding='utf-8', newline='\n') as stream:
         json.dump(result, stream, ensure_ascii=False, indent=2)
         stream.write('\n')
-    return {'status': 'passed', 'templates': sorted(records), 'count': len(records), 'output': str(out),
-            'input_sha256': provenance['sha256'], 'target_metadata': 'caller_declared'}
+    return {'status': 'passed', 'templates': [row['id'] for row in result['resources']],
+            'count': len(result['resources']), 'output': str(out),
+            'input_sha256': digest, 'target_metadata': 'caller_declared'}
+
+
+def capture_catalogue_bundle(source, out, version, mode, *, reference_directory):
+    result, source, digest = sampled_catalogue(source, reference_directory, version, mode)
+    with output_directory(out) as stage:
+        write_json(stage / 'models.json', result)
+        return finish(stage, {source: digest}, kind='native-scene-catalogue',
+                      templates=[row['id'] for row in result['resources']], count=len(result['resources']),
+                      catalogue='models.json', version=version, mode=mode, target_metadata='caller_declared')
 
 
 

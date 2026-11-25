@@ -7,7 +7,7 @@ import sys
 import tempfile
 import unittest
 
-from authoring_io import DiagnosticError, PLUGIN, read_json, sha, sha_file
+from authoring_io import DiagnosticError, PLUGIN, read_json, sha, sha_file, write_json
 from level_authoring import flt, initial_level, integer, msg, pack, set_section, text, vi
 from level_inventory import container, fields, unique, vals
 from miliastra.native.changes import apply_plan, difference, fingerprint, plan
@@ -192,6 +192,82 @@ class EntityTransformTests(unittest.TestCase):
             self.assertFalse(after['complete_reference_index'])
             self.assertEqual(result['editor'], 'not_checked')
             self.assertEqual(result['host'], 'not_checked')
+
+    def test_scene_draft_and_static_gia_share_normalized_layout(self):
+        from miliastra.native.scene import read_gia
+        from scene_authoring import build as build_scene, capture_catalogue_bundle
+        from scene_preview import preview
+
+        data, _ = fixture()
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            project, outputs = root / 'project', root / 'outputs'
+            project.mkdir()
+            outputs.mkdir()
+            sample = project / 'scene.gil'
+            sample.write_bytes(data)
+            catalogue = outputs / 'models'
+            staging = root / 'scratch' / 'delivery'
+            captured = capture_catalogue_bundle(sample, staging, '7.2', 'beyond', reference_directory=catalogue)
+            staging.rename(catalogue)
+            self.assertEqual(captured['inputs'], {str(sample): sha(data)})
+            self.assertEqual(captured['templates'], [STONE])
+            source = read_json(catalogue / 'models.json')['resources'][0]['source']
+            self.assertEqual((catalogue / source['path']).resolve(), sample)
+
+            layout = project / 'layout.json'
+            configuration = {'schema': 1, 'version': '7.2', 'mode': 'beyond',
+                             'catalogues': ['../outputs/models/models.json'], 'offset_m': [-2, 0, 5],
+                             'objects': [{'key': 'terrace', 'name': 'East terrace', 'template_id': STONE,
+                                          'position_m': [2, 4, -6], 'rotation_deg': [0, 15, 0],
+                                          'scale': [1, 1.5, 2]}]}
+            write_json(layout, configuration)
+            preview_output, build_output = outputs / 'draft', outputs / 'scene'
+            draft = preview(layout, preview_output)
+            delivered = build_scene(layout, build_output)
+            self.assertEqual(draft['inputs'], delivered['inputs'])
+            self.assertEqual(draft['pending_native_evidence'], [])
+            self.assertEqual(draft['editor'], 'not_checked')
+            entry, = read_json(preview_output / 'layout.json')['objects']
+            actual, = read_gia((build_output / 'scene.gia').read_bytes(), static_only=True)
+            self.assertEqual(actual['position_m'], [0, 4, -1])
+            self.assertEqual(entry['transform'], {field: actual[field] for field in
+                                                  ('position_m', 'rotation_deg', 'scale')})
+            self.assertEqual(sha_file(build_output / 'scene.gia'), delivered['files']['scene.gia'])
+            self.assertEqual(sample.read_bytes(), data)
+
+            configuration['objects'][0]['template_id'] = 20002217
+            write_json(layout, configuration)
+            self.assertEqual(preview(layout, outputs / 'candidate')['pending_native_evidence'], ['terrace'])
+            with self.assertRaisesRegex(ValueError, 'Native static record evidence required'):
+                build_scene(layout, outputs / 'rejected')
+            self.assertFalse((outputs / 'rejected').exists())
+
+    def test_whitebox_draft_preserves_world_positions_after_pivot_change(self):
+        from scene_authoring import build as build_scene
+        from scene_preview import preview
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            draft = root / 'door.json'
+            parts = [
+                {'name': 'door panel', 'shape_id': 10009001, 'position_m': [5, 1, 0], 'scale': [2, 2, .25]},
+                {'name': 'handle', 'shape_id': 10009002, 'position_m': [5.75, 1, .25], 'scale': [.25, .25, .25]},
+            ]
+            door = {'key': 'door', 'pivot_relative': [0, .5, .25], 'parts': parts}
+            write_json(draft, {'schema': 1, 'kind': 'whitebox-pivot', 'version': '7.2',
+                               'mode': 'beyond', 'groups': [door]})
+            report = preview(draft, root / 'preview')
+            group, = report['pivot_groups']
+            self.assertEqual(group['pivot_position_m'], [4, 1, 0])
+            for actual, expected in zip(group['parts'], parts, strict=True):
+                self.assertEqual(actual['world_position_m'], expected['position_m'])
+                self.assertEqual([component + axis for component, axis in
+                                  zip(actual['position_m'], group['pivot_position_m'])], expected['position_m'])
+            self.assertEqual(set(report['files']), {'top.png', 'side.png', 'layout.json'})
+            with self.assertRaisesRegex(ValueError, '原生枢轴导出需要同版本、同模式的对照样本'):
+                build_scene(draft, root / 'unverified')
+            self.assertFalse((root / 'unverified').exists())
 
     def test_production_model_evidence_requires_the_final_gil(self):
         from authoring_io import write_json

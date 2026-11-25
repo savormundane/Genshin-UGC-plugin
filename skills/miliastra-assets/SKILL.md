@@ -10,9 +10,9 @@ description: 将 PNG 或分层图片转成千星奇域图元，比较候选预�
 | 任务 | 工具 |
 | --- | --- |
 | 多张图共用控件预算 | 终端 `assets batch preview/generate`。 [预算分配](../../references/assets/image-to-primitives.md#多素材共用控件预算) |
-| 分层拟合或续算 | 终端 `assets fit`，看每层误差、实际控件数和停止原因。 [拟合配置](../../references/assets/asset-fit.md) |
+| 分层拟合、局部细化或续算 | `asset_fit`，查看每层误差、边缘检查和控件数。配置 `mount` 生成可挂载 Lua，再用 `simulate` 的 `preview=true` 看画面。 [拟合与挂载](../../references/assets/asset-fit.md) |
 | 检查或对比素材文件 | 终端 `assets check/diff`。 [素材检查](../../references/assets/asset-inspection.md) |
-| 查原生模型、模板 ID 和白盒 | `resources_lookup` 查 ID 和样本依据。终端 `scene preview --template-id` 查看白盒，`scene export-whitebox` 导出几何。 [原生场景](../../references/editor/native-scene.md) |
+| 查模型、音效、特效或白盒 | `resources_lookup` 查 ID 和来源，可传 `resource_type="sound"` 或 `"effect"`。用 `scene_preview` 看布局或枢轴草案。 [资源目录](../../references/platform/resource-catalogue.md) · [原生场景](../../references/editor/native-scene.md) |
 | 把校准的 GIA 装饰转成图元数据 | 终端 `assets import-gia`，按已验证的几何投影和依赖范围转换。 [GIA 素材导入](../../references/assets/native-assets.md) |
 
 图元交付附坐标、来源、预算、输出路径和重建预览。播放与动作接入 Editor 的 Client Lua，写入关卡时交给 GIL。素材和 Lua 或节点图需要绑定至同一份最终关卡时，通过已保存的制作配置调用 `produce`。 [动画接入](../../references/assets/animation.md) · [制作配置](../../references/workflows/produce.md)

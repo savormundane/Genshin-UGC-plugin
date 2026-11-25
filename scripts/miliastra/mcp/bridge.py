@@ -8,6 +8,8 @@ OPERATIONS={'doctor':(), 'capabilities':(), 'docs_search':('version','query'),'a
             'native_inspect':('input',),'native_audit':('input',),
             'project_inspect':('input',),'client_check':('input',),'graph_check':('input',),
             'native_diff':('input','other'), 'scene_preview':('input','output'), 'asset_preview':('input','output'),
+            'scene_catalogue':('input','sha256','version','mode','output'),
+            'scene_build':('spec','sha256','output'), 'asset_fit':('input','spec','output'),
             'asset_generate':('input','sha256','report','report_sha256','candidate','output'),
             'native_plan':('input','sha256','output'),
             'simulate':('spec','sha256','output'),'experiment_run':('spec','sha256','output'),
@@ -21,11 +23,13 @@ READ_FILE_OPERATIONS={
     'native_diff':('sha256','other_sha256','allowed_top_level_fields'),
     'client_check':('sha256','contract','contract_sha256','mapping'),
     'graph_check':('sha256','job','job_sha256','bindings','bindings_sha256'),
-    'resources_lookup':('query','mode','limit','catalogue','catalogue_sha256'),
+    'resources_lookup':('query','mode','limit','catalogue','catalogue_sha256','resource_type'),
     'scene_preview':('sha256','before','before_sha256'),
     'asset_preview':('sha256','max_controls','step'),
+    'asset_fit':('sha256','spec_sha256','resume','resume_sha256','initial','initial_sha256','steps'),
 }
 OPTIONAL_FIELDS={**READ_FILE_OPERATIONS,'native_plan':('patch','spec','spec_sha256','summary'),'produce':('summary',),
+                 'simulate':('preview',),
                  'nodes_lookup':('query','scope','limit'),'verify':('rebuild','portable','trusted_inputs_sha256','artifacts_only')}
 BUILTIN_OPERATIONS = ('doctor', 'capabilities', 'docs_search', 'api_lookup', 'nodes_lookup', 'resources_lookup')
 
@@ -106,7 +110,7 @@ class Bridge:
         return resolved
 
     async def call(self,operation,arguments,progress=None,*,roots=()):
-        build=operation in ('produce','native_apply') or operation=='verify' and arguments.get('rebuild')
+        build=operation in ('produce','native_apply','asset_fit') or operation=='verify' and arguments.get('rebuild')
         try:
             return await asyncio.wait_for(self._call(operation,arguments,progress,roots),self.timeouts['build' if build else 'ordinary'])
         except asyncio.TimeoutError:
@@ -147,17 +151,19 @@ class Bridge:
             raise ValueError('Nonempty Lua mapping required')
         if 'catalogue_sha256' in args and 'catalogue' not in args:raise ValueError('Catalogue path required')
         if 'before_sha256' in args and 'before' not in args:raise ValueError('Before path required')
+        if 'preview' in args and type(args['preview']) is not bool:raise ValueError('preview must be a boolean')
         if operation=='resources_lookup':
             limit=args.get('limit',20)
             if type(limit) is not int or not 1<=limit<=100:
                 raise ValueError('Resource lookup limit must be from 1 to 100')
         digest_fields=(('catalogue','catalogue_sha256'),('input','sha256'),
-                       ('spec','spec_sha256' if operation=='native_plan' else 'sha256'),('other','other_sha256'),
+                       ('spec','spec_sha256' if operation in ('native_plan','asset_fit') else 'sha256'),
+                       ('resume','resume_sha256'),('initial','initial_sha256'),('other','other_sha256'),
                        ('plan','plan_sha256'),('report','report_sha256'),('contract','contract_sha256'),('job','job_sha256'),
                        ('bindings','bindings_sha256'),('before','before_sha256'))
         for field,digest_field in digest_fields:
             if field not in args:
-                if field in ('job','bindings') and digest_field in args:raise ValueError(field+' path required')
+                if field in ('job','bindings','resume','initial') and digest_field in args:raise ValueError(field+' path required')
                 continue
             path=self.path(args[field],project,output_root);actual=sha_file(path)
             if not automatic or digest_field in args:
@@ -189,7 +195,8 @@ class Bridge:
             if destination:args['output']=str(scratch/'delivery')
             write_json(request,{'operation':operation,'arguments':args,'inputs':bound,
                                'project':str(project) if project else None,
-                               'output_root':str(output_root) if output_root else None,'scratch':str(scratch)})
+                               'output_root':str(output_root) if output_root else None,'scratch':str(scratch),
+                               'destination':str(destination) if destination else None})
             process=None
             code=None
             with (scratch/'stdout.log').open('wb')as stdout,(scratch/'stderr.log').open('wb')as stderr:
@@ -232,7 +239,9 @@ class Bridge:
             output_hashes=None
             if destination:
                 delivery=scratch/'delivery'
-                if operation in ('native_plan','native_apply','asset_generate'):
+                if operation in ('native_plan','native_apply','asset_generate','asset_fit','scene_build','scene_catalogue') or (
+                    operation == 'simulate' and args.get('preview')
+                ):
                     manifest=delivery/'manifest.json'
                     field = 'files_sha256' if operation == 'asset_generate' else 'files'
                     output_hashes={**read_json(manifest)[field],'manifest.json':sha_file(manifest)}
@@ -260,6 +269,6 @@ def main(argv=None):
         server(bridge).run(transport='stdio');return 0
     request=read_json(args.request);schema(request,('schema','operation','arguments'),('operation','arguments'))
     result=asyncio.run(bridge.call(request['operation'],request['arguments']))
-    if request['operation'] in ('asset_preview', 'asset_generate'):
+    if request['operation'] in ('asset_preview', 'asset_generate', 'asset_fit'):
         result.get('result', {}).pop('_inline_previews', None)
     print(json.dumps(result,ensure_ascii=False));return 1 if result['status']in('failed','not_checked')else 0

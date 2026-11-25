@@ -45,6 +45,18 @@ python -X utf8 -B scripts/qianxing.py assets generate --from-preview "$markerOut
 
 选中的 `grid-25` 是预算内误差最低的推荐项。原图中央的十字在缩小网格后失去了清晰轮廓，这是减少控件的代价。生成时重新核对了源图摘要，实际生成 11 个矩形图元。误差是报告中的归一化预乘 RGBA 均方误差，值越小越接近参考图。
 
+## 拟合并预览可挂载的 Lua
+
+将原图和 [fit.json](fit.json) 放入会话已授权的工程，然后发送下面的请求。
+
+> 用内置拟合处理 checkpoint-marker.png，使用 fit.json，最多 20 个矩形。保留可挂载 Lua，再用 Beyond 预览这份 Lua。告诉我实际控件数、边缘遗漏和误差目标是否达成。
+
+1. 用 `asset_fit` 传入原图和 `fit.json`，输出到新目录。查看 `image/preview.png`、`catalog.json` 里的实际误差和建议细化区域。
+2. 用 `simulate` 传入交付的 `beyond.json` 绝对路径和对应摘要，设 `preview=true`。打开 `preview.png` 查看画面，读 `render.json` 和 `external-simulation.json` 核对控件及日志。
+3. 将 `mounted.lua` 中的 `template_index` 设置为当前关卡图片模板索引，按下面的挂载步骤映射该文件。样例配置中的索引用于随输出生成的软件模板。
+
+本次用 20 个矩形，实测误差约 0.04499，目标为 0.035。Beyond 日志确认创建 20 个矩形，控件树和拟合图在 144 × 144 的显示区域逐像素核对通过。简单图标也可用上面的 11 控件网格方案。 [拟合配置和局部细化](../../../references/assets/asset-fit.md#生成可挂载的-lua-和软件预览)
+
 ## 接下来怎么用
 
 [checkpoint-marker.lua](checkpoint-marker.lua) 已包含 `grid-25` 的 11 个矩形和绘制代码。将它保存到本机，先在一张测试关卡里接入。

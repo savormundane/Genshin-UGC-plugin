@@ -70,6 +70,7 @@ CAPABILITY_GROUPS = {
         'scripts/miliastra/client/assembly.py', 'scripts/miliastra/client/variables.py', 'scripts/miliastra/client/signal_binding.py',
         'references/platform/community/client-controls-api.md', 'scripts/client_simulator.py',
         'scripts/client_simulator.lua', 'scripts/joint_simulator.py', 'scripts/beyond_backend.py',
+        'scripts/log_diagnostics.py', 'scripts/runtime_rectangle_mount.lua',
         'scripts/beyond_gil.py', 'scripts/beyond_worker.mjs', 'vendor/beyond/bundle.json',
     ),
     'gil': (
@@ -81,9 +82,11 @@ CAPABILITY_GROUPS = {
         'scripts/delivery_verify.py', 'scripts/portable_trust.py', 'scripts/portable_delivery.py',
     ),
     'assets': (
-        'scripts/resource_catalogue.py', 'scripts/scene-model-candidates.json', 'scripts/scene_authoring.py', 'scripts/scene_preview.py',
+        'scripts/resource_catalogue.py', 'scripts/scene-model-candidates.json', 'scripts/media-resource-observations.json',
+        'scripts/scene_authoring.py', 'scripts/scene_preview.py',
         'scripts/miliastra/assets/pipeline.py', 'scripts/miliastra/assets/batch.py', 'scripts/miliastra/assets/core.py', 'scripts/miliastra/assets/inspection.py',
-        'scripts/miliastra/assets/fit.py', 'scripts/miliastra/assets/fit_residual.py', 'scripts/miliastra/native/assets.py',
+        'scripts/miliastra/assets/fit.py', 'scripts/miliastra/assets/fit_residual.py',
+        'scripts/miliastra/assets/fit_mount.py', 'scripts/miliastra/native/assets.py',
     ),
 }
 

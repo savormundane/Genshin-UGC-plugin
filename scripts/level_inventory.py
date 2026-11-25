@@ -5,8 +5,8 @@ import argparse,collections,hashlib,json,struct
 GIL_HEADER = (1, 806, 2)
 STATIC_GIA_HEADER = (1, 806, 3)
 
-def fields(data):
-    pos=0;result=[]
+def iter_fields(data):
+    pos=0
     def varint():
         nonlocal pos
         value=0
@@ -26,8 +26,11 @@ def fields(data):
             if pos+length>len(data):raise ValueError('Truncated field')
             value=data[pos:pos+length];pos+=length
         else:raise ValueError('Unsupported wire type')
-        result.append((n,w,value,data[start:pos]))
-    return result
+        yield (n,w,value,data[start:pos])
+
+
+def fields(data):
+    return list(iter_fields(data))
 
 def vals(fs,n,w=2):return [v for a,b,v,_ in fs if a==n and b==w]
 def unique(fs,n,w=2,default=None):

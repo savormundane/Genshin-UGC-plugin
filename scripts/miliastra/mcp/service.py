@@ -86,10 +86,11 @@ def server(bridge):
                           bindings=bindings,bindings_sha256=bindings_sha256)
     @app.tool(structured_output=True)
     async def resources_lookup(version:str,ctx:Context,query:str='',mode:str='beyond',limit:int=20,
-                               catalogue:str|None=None,catalogue_sha256:str|None=None)->dict[str,Any]:
-        """Find native model candidates or template IDs witnessed by a project catalogue."""
+                               catalogue:str|None=None,catalogue_sha256:str|None=None,
+                               resource_type:str|None=None)->dict[str,Any]:
+        """Find model and template candidates or select a resource type such as sound or effect."""
         return await call('resources_lookup',ctx,version=version,query=query,mode=mode,limit=limit,
-                          catalogue=catalogue,catalogue_sha256=catalogue_sha256)
+                          catalogue=catalogue,catalogue_sha256=catalogue_sha256,resource_type=resource_type)
     @app.tool(structured_output=True)
     async def native_inspect(input:str,ctx:Context,sha256:str|None=None)->dict[str,Any]:
         """Read native identities and return the file digest."""
@@ -98,9 +99,19 @@ def server(bridge):
     @app.tool(structured_output=True)
     async def scene_preview(input:str,output:str,ctx:Context,before:str|None=None,
                             sha256:str|None=None,before_sha256:str|None=None)->dict[str,Any]:
-        """Draw scene layout PNGs and a world-space object list. Compare an optional earlier GIL at the same scale."""
+        """Draw a scene draft or native GIL layout. Compare an optional earlier GIL at the same scale."""
         return await call('scene_preview',ctx,input=input,output=output,before=before,
                           sha256=sha256,before_sha256=before_sha256)
+
+    @app.tool(structured_output=True)
+    async def scene_catalogue(input:str,sha256:str,version:str,mode:str,output:str,ctx:Context)->dict[str,Any]:
+        """Capture readable static scene templates and their evidence from the selected GIL/GIA sample."""
+        return await call('scene_catalogue',ctx,input=input,sha256=sha256,version=version,mode=mode,output=output)
+
+    @app.tool(structured_output=True)
+    async def scene_build(spec:str,sha256:str,output:str,ctx:Context)->dict[str,Any]:
+        """Export a standalone static scene GIA using digest-bound layout and witnessed template IDs."""
+        return await call('scene_build',ctx,spec=spec,sha256=sha256,output=output)
 
     @app.tool(structured_output=True)
     async def asset_preview(input:str,output:str,ctx:Context,sha256:str|None=None,
@@ -116,6 +127,17 @@ def server(bridge):
         """Generate the selected candidate into a new directory. Use asset_preview inputs_sha256.input and outputs_sha256['report.json'] for the digests."""
         response = await call('asset_generate', ctx, input=input, sha256=sha256, report=report,
                               report_sha256=report_sha256, candidate=candidate, output=output)
+        return _asset_result(response)
+
+    @app.tool(structured_output=True)
+    async def asset_fit(input:str,spec:str,output:str,ctx:Context,sha256:str|None=None,
+                        spec_sha256:str|None=None,resume:str|None=None,resume_sha256:str|None=None,
+                        initial:str|None=None,initial_sha256:str|None=None,
+                        steps:StrictInt|None=None)->types.CallToolResult:
+        """Fit an image or ordered layer manifest within a control budget. A mount config emits a self-contained Lua and Beyond preview spec."""
+        response = await call('asset_fit',ctx,input=input,spec=spec,output=output,sha256=sha256,
+                              spec_sha256=spec_sha256,resume=resume,resume_sha256=resume_sha256,
+                              initial=initial,initial_sha256=initial_sha256,steps=steps)
         return _asset_result(response)
 
     @app.tool(structured_output=True)
@@ -156,9 +178,9 @@ def server(bridge):
         """Plan a GIL edit from an inline patch or a digest-bound spec. Review result.difference and use outputs_sha256 for native_apply."""
         return await call('native_plan',ctx,input=input,sha256=sha256,output=output,patch=patch,spec=spec,spec_sha256=spec_sha256,summary=summary)
     @app.tool(structured_output=True)
-    async def simulate(spec:str,sha256:str,output:str,ctx:Context)->dict[str,Any]:
-        """Run a schema 2 scene or replay a recorded joint failure. Replay sources must match their recorded digests."""
-        return await call('simulate',ctx,spec=spec,sha256=sha256,output=output)
+    async def simulate(spec:str,sha256:str,output:str,ctx:Context,preview:bool=False)->dict[str,Any]:
+        """Run or replay a joint scenario. With preview=true, run a Beyond spec and save the software PNG, control tree and logs."""
+        return await call('simulate',ctx,spec=spec,sha256=sha256,output=output,preview=preview)
     @app.tool(structured_output=True)
     async def experiment_run(spec:str,sha256:str,output:str,ctx:Context)->dict[str,Any]:
         """Run the corresponding CLI core with digest-bound inputs and exclusive outputs."""
@@ -169,7 +191,7 @@ def server(bridge):
         return await call('experiment_compare',ctx,input=input,sha256=sha256,other=other,other_sha256=other_sha256)
     @app.tool(structured_output=True)
     async def logs_diagnose(spec:str,sha256:str,ctx:Context)->dict[str,Any]:
-        """Run the corresponding CLI core with digest-bound inputs and exclusive outputs."""
+        """Diagnose structured JSONL or a supported editor debug-log export and correlate digest-bound artifacts."""
         return await call('logs_diagnose',ctx,spec=spec,sha256=sha256)
     @app.tool(structured_output=True)
     async def verify(input:str,sha256:str,ctx:Context,rebuild:bool=False,portable:bool=False,

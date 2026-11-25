@@ -10,7 +10,7 @@
 | 单张 PNG 转矩形图元 | 本地 MCP 先用 `asset_preview` 比较候选，再用 `asset_generate` 生成所选方案。终端可用 `assets preview/generate`。 |
 | 自定网格、富文本和参数化图形 | 用终端运行 `assets preview/generate`，指定相应参数或图形 JSON。 |
 | 多素材共用控件预算 | 用终端执行 `assets batch preview/generate`。已有预算报告和制作配置时，可通过 MCP 的 `produce` 执行 `kind: "batch"` 生成步骤。 |
-| 分层拟合和续算 | 用终端执行 `assets fit`。已有拟合制作配置时，可通过 MCP 的 `produce` 执行 `kind: "fit"` 拟合。 |
+| 分层拟合和续算 | 用 MCP `asset_fit` 或终端 `assets fit`。配置 `mount` 可生成可挂载 Lua 和 Beyond 预览配置。 [拟合配置](asset-fit.md) |
 
 ## 单张 PNG 试算与生成
 

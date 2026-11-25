@@ -10,6 +10,19 @@ python scripts/qianxing.py resources check uses.json --out resource-report.json
 
 search按名称、ID或类型搜索，可多次提供`--catalogue custom.json`追加显式资源目录。check的输出文件必须不存在，所有来源只读。
 
+## 查询音效和特效
+
+`resources_lookup` 的 `resource_type` 取 `sound` 或 `effect`。查询词可用空格分隔，例如「界面音效 按钮点击」或「循环特效 光环」。纯数字查询按完整 ID 匹配。
+
+```text
+python scripts/qianxing.py resources search "界面音效 按钮点击" --type sound --version 7.1
+python scripts/qianxing.py resources search 10019173 --type effect --version 7.2
+```
+
+包内图鉴收录 147 条音效和 431 条特效的编辑器观察。2026-10-11 的观察日期位于官方 7.1 更新后和 7.2 更新前，具体客户端构建未记录。2026-11-07 的 26 条限时特效来自上游登记的 7.2.0 客户端。查询 7.2 时，7.1 条目可作为历史候选，`applicability` 为 `historical_observation`。名称截断以原记录为准，`reported_duration_s` 为面板标示时长。
+
+图鉴返回每批原始来源、固定提交、版本依据和本地目录摘要。模式未知写为 `null`，实机状态为 `not_checked`。这些观察仅供检索。项目要在制作中引用资源，仍需提供与目标版本、模式匹配的项目资源声明和来源。 [音效源](https://github.com/8itlab/genshin-miliastra-mcp/blob/70470757d6fcb319c5afec13b178c87f2d8d54b3/src/scene/media/sounds.json) · [特效源](https://github.com/8itlab/genshin-miliastra-mcp/blob/70470757d6fcb319c5afec13b178c87f2d8d54b3/src/scene/media/effects.json) · [7.2.0 采集证据](https://github.com/8itlab/genshin-miliastra-mcp/blob/70470757d6fcb319c5afec13b178c87f2d8d54b3/docs/evidence/7.2/secret-fx-capture.json)
+
 ## 使用合同
 
 ```json
@@ -53,7 +66,7 @@ search按名称、ID或类型搜索，可多次提供`--catalogue custom.json`�
 
 produce在生成前检查合同，failed或not_checked均不提交输出。成功交付resource-catalogue.json，其来源只包含内容摘要、行号和资料元信息，避免机器绝对路径影响独立重建的字节比较。resource-report.json另外保留完整路径、输入摘要和合同诊断，登记为证据文件。portable输入收集包含使用合同、外部目录及其来源文件。
 
-默认检查范围是显式uses清单，artifact_references_verified=false；它不证明最终Lua/GIL已经引用这些资源，也不证明没有未声明引用。可按下一节开启客户端SetImage子集检查。完整客户端/原生资源引用提取仍待补齐。complete_platform_catalogue=false，内置目录当前仅含经典角色编号；图片、音效等平台完整清单未凭空生成。角色尺寸与依赖未在表中给出，因此保留null，不猜测。
+默认检查范围是显式uses清单，artifact_references_verified=false；它不证明最终Lua/GIL已经引用这些资源，也不证明没有未声明引用。可按下一节开启客户端SetImage子集检查。完整客户端/原生资源引用提取仍待补齐。complete_platform_catalogue=false，使用合同内置经典角色编号，其余资源依赖项目显式提供的目录。角色尺寸与依赖未在表中给出，因此保留null，不猜测。
 
 ## 三维模型引用
 

@@ -17,8 +17,10 @@ Miliastra Wonderland 是面向原神「千星奇域」创作者的非官方 AI �
 | 修改已有工程 | 基底文件、具体修改要求 | 另存的文件、修改摘要和差异 | 已支持的局部修改可通过本地 MCP 规划、应用和比较 |
 | 制作界面或节点逻辑 | 需求、已有代码或工程（如有） | Lua 代码或节点图文件，以及相应检查结果 | 本地 MCP 可检查源码。编译节点图或组装交付可用终端命令，或通过 MCP 执行已有制作配置 |
 | 转换单张 PNG | 工程目录中的 PNG 和控件预算 | 候选预览和控件数，选定后生成图元数据和 Lua 文件 | 本地 MCP 的 `asset_preview` 和 `asset_generate` |
+| 拟合图片并预览挂载效果 | 图片或分层清单、控件预算、挂载配置 | 拟合报告、可挂载 Lua 和 Beyond 软件预览 | 本地 MCP 的 `asset_fit` 和 `simulate` |
+| 制作静态布景 | 对应版本的 GIL/GIA 样本、模型和摆放要求 | 布景草案、可回读的 `scene.gia` | 本地 MCP 的 `scene_catalogue`、`scene_preview` 和 `scene_build` |
 
-批量预算、分层拟合和自定网格可按任务选择终端命令或已有制作配置。 [素材任务与客户端能力](references/assets/image-to-primitives.md#素材任务与客户端能力)
+批量预算和自定网格可按任务选择终端命令或已有制作配置。 [素材任务与客户端能力](references/assets/image-to-primitives.md#素材任务与客户端能力)
 
 查资料、试算素材和局部修改可直接走对应工具。需要把节点图、Lua 或素材装到同一份关卡，或者按同一配置重建交付时，用 [`produce` 制作流程](references/workflows/produce.md)。
 
