@@ -167,10 +167,13 @@ def check(root: Path = ROOT) -> list[str]:
         try:
             registry = json.loads(provenance.read_text(encoding="utf-8-sig"))
             rows = registry["permission_unverified_files"]
+            licensed = registry.get("licensed_files", [])
             groups = registry["groups"]
-            if not isinstance(rows, list) or not isinstance(groups, dict):
+            if not isinstance(rows, list) or not isinstance(licensed, list) or not isinstance(groups, dict):
                 raise ValueError("invalid source groups or permission records")
-            for row in rows:
+            records = [(row, "redistribution_permission_unverified") for row in rows]
+            records.extend((row, "redistribution_permission_granted") for row in licensed)
+            for row, expected_status in records:
                 relative = row["path"]
                 if (not isinstance(relative, str) or not relative or "\\" in relative or ":" in relative
                         or relative.startswith("/") or ".." in PurePosixPath(relative).parts
@@ -178,10 +181,14 @@ def check(root: Path = ROOT) -> list[str]:
                     raise ValueError(f"invalid or duplicate recorded path {relative!r}")
                 raw_paths.add(relative)
                 digest = row["sha256"]
-                if (row.get("status") != "redistribution_permission_unverified" or row.get("group") not in groups
+                group = groups.get(row.get("group"))
+                if (not isinstance(group, dict)
                         or not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest)):
                     errors.append(f"{relative}: incomplete source or permission record")
                     continue
+                granted = expected_status == "redistribution_permission_granted"
+                if row.get("status") != expected_status or bool(group.get("license")) != granted:
+                    errors.append(f"{relative}: source group and permission record disagree")
                 target = root / relative
                 if (not target.resolve().is_relative_to(root) or not target.is_file()
                         or hashlib.sha256(target.read_bytes()).hexdigest() != digest):

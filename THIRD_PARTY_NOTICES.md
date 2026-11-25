@@ -16,17 +16,19 @@
 
 第三方模块的版权、许可证文本及原始头注释保留。GPL代码使用和分发应遵循其源码及通知义务；参考过一个项目不表示它的所有实现都被打包。Beyond内的源码和构建脚本随选定子集保留，依赖版本与路径见PUBLIC_SOURCES.json。
 
+## GEIMG 资料
+
+没空放肆授权以 MIT 许可分发随包的 GEIMG 手册、知识快照及拟 L2D 案例中由作者提供的正文、脚本和模板。授权由插件维护者取得，适用文件以 [PUBLIC_SOURCES.json](PUBLIC_SOURCES.json) 的 `licensed_files` 为准。拟 L2D 的文件名与章节对应上游案例，随包文件以本地摘要标识。 [GEIMG Wiki](https://docs.lumkfs.cn/GEIMG-WIKI/) · [拟 L2D 案例](https://docs.lumkfs.cn/GEIMG-WIKI/EG-L2D/) · [MIT 许可全文](references/assets/geimg/LICENSE.txt)
+
 ## 原始资料与授权待核项
 
 | 内容 | 已知来源 | 当前状态 |
 | --- | --- | --- |
-| GE 手册、知识快照与历史模板 | [没空放肆下载页](https://docs.lumkfs.cn/GEIMG-WIKI/Download/) | 暂未取得再分发授权 |
-| 拟 L2D 正文、附件与模板 | [没空放肆知识库](https://docs.lumkfs.cn/GEIMG-WIKI/EG-L2D/) | 暂未取得再分发授权，精确下载包身份待核 |
 | 点阵像素图处理与导入指南 | 原始下载出处待核 | 作者与许可待核，不冒称原创或GPL |
 | 客户端API整理文档 | [相关官方页面](https://act.mihoyo.com/ys/ugc/tutorial/detail/mhtakr07vej4) | 本地整理稿来源与再分发许可待核 |
 | 官方正文及版本镜像 | 米哈游；[Miliastra-knowledge](https://github.com/1475505/Miliastra-knowledge) | 平台资料权利与工具代码许可分开；未确认镜像正文的再分发许可 |
 
-逐文件范围和SHA-256见[PUBLIC_SOURCES.json](PUBLIC_SOURCES.json)。这些文件已收录，但许可状态仍是未确认；该声明不是原作者授权或免责承诺。资料中的实测数字属于原作者对应场景，不能视为本插件或任意生成项目的宿主验证。
+本节表格对应 [PUBLIC_SOURCES.json](PUBLIC_SOURCES.json) 中的 `permission_unverified_files`。第三方资料中的实测数字仅适用于原作者对应的环境和样本。
 
 ## 参考研究
 
