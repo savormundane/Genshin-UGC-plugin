@@ -36,17 +36,17 @@ async def check(config, node, adapter=None):
         listed = await client.list_tools()
         tools = {tool.name for tool in listed.tools}
         if tools != set(OPERATIONS):
-            raise ValueError('MCP tools differ from the bundled operation list')
+            raise ValueError('MCP 提供的工具与随包操作清单不一致。')
         nodes = await client.call_tool('nodes_lookup', {'query': '启动定时器', 'scope': 'server'})
         if nodes.is_error or not nodes.structured_content['result']['nodes']:
-            raise ValueError('MCP node lookup failed')
+            raise ValueError('MCP 节点查询未成功。')
         doctor = await client.call_tool('doctor', {})
         if doctor.is_error or doctor.structured_content['status'] != 'passed':
-            raise ValueError(f'MCP worker cannot diagnose the configured runtime: {doctor.structured_content!r}')
+            raise ValueError(f'MCP 自检未通过。\n详细原因 {doctor.structured_content!r}')
         for symbol in ('game.GetUICanvasSize', 'OnUpdate'):
             result = await client.call_tool('api_lookup', {'symbol': symbol})
             if result.is_error or result.structured_content['status'] != 'passed':
-                raise ValueError('MCP lookup failed: ' + symbol)
+                raise ValueError('MCP 查询未成功。查询项 ' + symbol)
     backend = bundle / 'vendor/beyond'
     native_lock = read_native_lock(backend)
     software_png = 'not_checked'
@@ -59,7 +59,7 @@ async def check(config, node, adapter=None):
                              'import {renderPaintPng} from ' + json.dumps((backend / 'studio/host-png.js').as_uri()) + ';\n'
                              'let s=createStudio(createDefaultProject());s.playStart();s.playStep(.1);'
                              'let p=s.playGet({paint:true});let r=renderPaintPng(p.paint,p.canvasWidth,p.canvasHeight);'
-                             's.playStop();if(r.data.length<100)throw Error("empty PNG");console.log(r.data.length);', encoding='utf-8')
+                             's.playStop();if(r.data.length<100)throw Error("软件预览返回了空 PNG");console.log(r.data.length);', encoding='utf-8')
             subprocess.run([node, str(probe)], check=True, env=native_canvas_environment(binding))
         software_png = 'passed'
     print(json.dumps({'stdio': 'passed', 'tools': len(tools), 'software_png': software_png,

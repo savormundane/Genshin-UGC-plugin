@@ -21,19 +21,19 @@ def supported_python(version_info):
 
 def probe():
     if sys.platform != 'win32' or platform.machine().lower() not in ('amd64', 'x86_64') or sys.maxsize < 2**32:
-        raise ValueError('The complete plugin requires Windows x64')
+        raise ValueError('完整插件需要 Windows x64。')
     if platform.python_implementation() != 'CPython' or not supported_python(sys.version_info):
-        raise ValueError(f'CPython {PYTHON_RANGE} required')
+        raise ValueError(f'请使用 CPython {PYTHON_RANGE}。')
     mismatches = []
     for name, expected in REQUIREMENTS.items():
         try:
             actual = version(name)
         except PackageNotFoundError:
-            actual = 'missing'
+            actual = '未安装'
         if actual != expected:
-            mismatches.append(f'{name}=={expected} (found {actual})')
+            mismatches.append(f'{name}=={expected}（当前 {actual}）')
     if mismatches:
-        raise ValueError('Python dependencies: ' + ', '.join(mismatches))
+        raise ValueError('Python 依赖版本需匹配锁定版本。\n' + '\n'.join(mismatches))
     import mcp.server
     import lupa.lua53
     import PIL.Image

@@ -14,7 +14,7 @@ function startupError(step, message, next, detail) {
 }
 
 function probeDetail(result) {
-  return result.stderr?.trim() || result.error?.message || `exit status ${result.status}`;
+  return result.stderr?.trim() || result.error?.message || `退出码 ${result.status}`;
 }
 
 function probeUv(env) {
@@ -28,7 +28,7 @@ function readBinding(filename) {
   if (record.schema !== 1 || typeof record.python !== 'string' || !path.isAbsolute(record.python)
       || !['project_root', 'output_root'].every(key => record[key] == null
         || (typeof record[key] === 'string' && path.isAbsolute(record[key])))) {
-    throw new Error('Invalid runtime binding: ' + filename);
+    throw new Error('运行绑定需使用 schema 1，Python 与已填写的工程和输出目录需为绝对路径。文件 ' + filename);
   }
   return record;
 }
@@ -63,7 +63,7 @@ function runtimeConfig(env) {
   const clientConfig = env.MILIASTRA_WONDERLAND_PLUGIN_DATA && path.isAbsolute(env.MILIASTRA_WONDERLAND_PLUGIN_DATA)
     ? path.join(env.MILIASTRA_WONDERLAND_PLUGIN_DATA, 'runtime.json') : null;
   const config = env.MILIASTRA_WONDERLAND_RUNTIME_CONFIG || (clientConfig && fs.existsSync(clientConfig) ? clientConfig : null);
-  if (config && !path.isAbsolute(config)) throw new Error('MILIASTRA_WONDERLAND_RUNTIME_CONFIG must be an absolute path.');
+  if (config && !path.isAbsolute(config)) throw new Error('MILIASTRA_WONDERLAND_RUNTIME_CONFIG 需使用绝对路径。');
   return config;
 }
 
@@ -89,7 +89,7 @@ function start() {
   if (Number(process.versions.node.split('.')[0]) < 22) {
     throw startupError('runtime.node', '当前 Node.js 版本过低。',
       '安装 Node.js 22 或更高版本，再重新打开终端和客户端。DeepSeek Harness 需要 24.9+。',
-      `Node.js 22+ required. Found ${node}`);
+      `所需版本为 Node.js 22 或更高版本。当前环境 ${node}`);
   }
   if (checking) console.log(`${node} 可用（Windows x64）。`);
   const env = {...process.env, PYTHONNOUSERSITE: '1', PYTHONDONTWRITEBYTECODE: '1'};
@@ -113,7 +113,7 @@ function start() {
   const chosen = env.MILIASTRA_WONDERLAND_PYTHON;
   let explicit, workspaceConfig, installed;
   try {
-    if (!root || !path.isAbsolute(root)) throw new Error('Set MILIASTRA_WONDERLAND_INSTALL_ROOT to an absolute path.');
+    if (!root || !path.isAbsolute(root)) throw new Error('MILIASTRA_WONDERLAND_INSTALL_ROOT 需使用绝对路径。');
     workspaceConfig = runtimeConfig(env);
     explicit = workspaceConfig ? readBinding(workspaceConfig) : null;
     installed = chosen ? [] : installedPythons(root);
@@ -126,7 +126,7 @@ function start() {
 
   const pythonRecovery = '将 MILIASTRA_WONDERLAND_PYTHON 设为已配置好插件依赖的 Python 绝对路径，或清除它后让启动器查找环境。重新打开客户端后重试。';
   if (chosen && !path.isAbsolute(chosen)) {
-    throw startupError('runtime.python', '指定的 Python 路径无效。', pythonRecovery, 'MILIASTRA_WONDERLAND_PYTHON must be an absolute path.');
+    throw startupError('runtime.python', '指定的 Python 路径无效。', pythonRecovery, 'MILIASTRA_WONDERLAND_PYTHON 需使用绝对路径。');
   }
   const active = env.VIRTUAL_ENV && path.isAbsolute(env.VIRTUAL_ENV)
     ? path.join(env.VIRTUAL_ENV, 'Scripts', 'python.exe') : null;
@@ -160,7 +160,7 @@ function start() {
     if (check.status !== 0) {
       throw startupError('runtime.python', '未找到可用的 Python 运行环境，PATH 上也没有可用的 uv。',
         '安装 uv 并确认 uv --version 能运行，或通过 MILIASTRA_WONDERLAND_PYTHON 指定已配置依赖的 Python。重新打开客户端后重试。',
-        ['No compatible Python environment found.', ...failures, 'uv.exe: ' + probeDetail(check)].join('\n'));
+        [...failures, 'uv.exe: ' + probeDetail(check)].join('\n'));
     }
     const digest = createHash('sha256').update(
       fs.readFileSync(path.join(plugin, 'uv.lock'), 'utf8').replace(/\r\n/g, '\n')).digest('hex').slice(0, 16);
@@ -187,7 +187,7 @@ function start() {
   const next = useUv ? '查看上方 uv 日志。若下载失败，确认网络可访问依赖源后重试。' : retryCheck;
   child.on('error', error => fail(startupError(step, message, retryCheck, error.message)));
   child.on('exit', code => {
-    if (code) fail(startupError(step, message, next, `exit status ${code}`), code);
+    if (code) fail(startupError(step, message, next, `退出码 ${code}`), code);
     else process.exitCode = code ?? 2;
   });
   for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => child.kill(signal));

@@ -13,11 +13,11 @@ def configure(python,destination,project,outputs,config,resume=False):
     journal=destination/'.installation-pending.json'
     if destination.exists():
         if not resume or config.exists() or not journal.is_file() or json.loads(journal.read_text())!=binding:
-            raise ValueError('Runtime exists; resume requires a matching unfinished installation')
-    elif resume:raise ValueError('No unfinished runtime to resume')
-    if project.is_relative_to(outputs) or outputs.is_relative_to(project):raise ValueError('Project and output roots must be disjoint')
+            raise ValueError('运行环境已存在。请使用原参数继续已登记的未完成安装。')
+    elif resume:raise ValueError('没有可继续配置的运行环境。')
+    if project.is_relative_to(outputs) or outputs.is_relative_to(project):raise ValueError('工程目录和输出目录不能互相包含。')
     version=json.loads(subprocess.check_output([str(python),'-c','import sys,json;print(json.dumps(list(sys.version_info[:2])))'],text=True))
-    if not supported_python(version):raise ValueError(f'Locked dependencies require CPython {PYTHON_RANGE}')
+    if not supported_python(version):raise ValueError(f'锁定的依赖需要 CPython {PYTHON_RANGE}。')
     destination.mkdir(parents=True,exist_ok=True)
     journal.write_text(json.dumps(binding),encoding='utf-8')
     subprocess.run([str(python),'-m','venv',str(destination)],check=True)

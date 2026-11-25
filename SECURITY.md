@@ -2,7 +2,7 @@
 
 请**不要在公开 Issue、PR 或讨论中发布尚未修复的漏洞利用细节、凭据或敏感项目文件**。
 
-建议先使用 GitHub 仓库 **Security → Report a vulnerability**（如果该仓库已启用私密漏洞报告）。如未启用且无法联系维护者，请仅创建不包含攻击细节的 Issue，请求提供私密沟通渠道。
+请打开仓库的 **Security → Advisories**，点击 **Report a vulnerability** 向维护者提交私密报告。 [私密漏洞报告入口](https://github.com/savormundane/miliastra-wonderland-plugin/security/advisories)
 
 报告建议包含：受影响版本、受影响组件、复现条件、潜在影响，以及可以安全共享的最小复现方式。收到报告后由维护者评估与安排处理；当前不承诺固定的响应时限或漏洞赏金。
 

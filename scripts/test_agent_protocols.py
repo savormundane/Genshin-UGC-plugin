@@ -30,7 +30,7 @@ class ProtocolTests(unittest.TestCase):
                                     env=env, capture_output=True, text=True, encoding='utf-8', timeout=10)
             self.assertEqual((result.returncode, result.stdout), (2, ''))
             self.assertIn('指定的 Python 路径无效', result.stderr)
-            self.assertIn('MILIASTRA_WONDERLAND_PYTHON must be an absolute path', result.stderr)
+            self.assertIn('MILIASTRA_WONDERLAND_PYTHON 需使用绝对路径', result.stderr)
 
     @unittest.skipUnless(sys.platform == 'win32' and shutil.which('node'), 'Windows Node.js required')
     def test_standalone_check_reuses_runtime_failure(self):
@@ -65,7 +65,7 @@ class ProtocolTests(unittest.TestCase):
             self.assertEqual(result.stderr.count('[runtime.env.deprecated]'), len(old))
             for name, replacement in renames.items():
                 self.assertIn(f'{name} 已停用，请使用 {replacement}', result.stderr)
-            self.assertIn('MILIASTRA_WONDERLAND_PYTHON must be an absolute path', result.stderr)
+            self.assertIn('MILIASTRA_WONDERLAND_PYTHON 需使用绝对路径', result.stderr)
             self.assertNotIn('retired-relative-path', result.stderr)
 
     def test_direct_cli_does_not_bind_project_from_retired_environment(self):
@@ -212,7 +212,7 @@ class ProtocolTests(unittest.TestCase):
                         patch.object(installer, 'activate') as activate, \
                         patch.object(installer, 'activate_codex_install') as codex_activate, \
                         patch.object(installer, 'run') as run:
-                    with self.assertRaisesRegex(ValueError, 'SHA-256 mismatch'):
+                    with self.assertRaisesRegex(ValueError, 'SHA-256 校验失败'):
                         installer.operate(args)
                     self.assertFalse(args.root.exists())
                     args.sha256 = installer.archive_sha256(archive)
@@ -230,7 +230,7 @@ class ProtocolTests(unittest.TestCase):
                     self.assertEqual(Path(result['plugin_directory']), home / 'miliastra-wonderland')
                     self.assertIn('--adapter', run.call_args.args[0])
                     self.assertFalse((home / 'installation-pending.json').exists())
-                    with self.assertRaisesRegex(ValueError, 'already prepared'):
+                    with self.assertRaisesRegex(ValueError, '文件已准备好'):
                         installer.operate(args)
                     activate.assert_not_called()
                     codex_activate.assert_not_called()
