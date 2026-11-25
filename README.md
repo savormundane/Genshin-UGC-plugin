@@ -55,13 +55,6 @@ Miliastra Wonderland 是面向原神「千星奇域」创作者的非官方 AI �
 
 打开包含关卡的工程目录，给助手 `.gil` 路径和要找的对象。用公开样例跟做[只读检查](samples/creator-demos/README.md)，找不到输入时核对[工程绑定](docs/runtime-environment.md#连接-mcp-或切换工程)。
 
-## 使用产物
-
-有文件输出时，从助手回复里的路径或文件链接打开。使用插件默认位置时，文件按工程保存在本机插件数据目录。需要固定保存位置时，可[绑定独立输出目录](docs/runtime-environment.md#连接-mcp-或切换工程)。
-
-- **关卡和节点图**。在编辑器中导入另存的 GIL 副本并核对改动。节点图或资源（GIA）按相应类型导入，再挂载到目标对象。 [关卡复核](references/gil/native-changes.md#人工再导出核对)
-- **Lua 和图元素材**。按交付说明将 Lua 接到目标客户端控件。 [Lua 接入](references/editor/lua/client-assembly.md) · [PNG 试算与生成](references/assets/image-to-primitives.md#单张-png-试算与生成)
-
 ## 参与项目
 
 [反馈问题](https://github.com/savormundane/miliastra-wonderland-plugin/issues/new/choose) · [交流与建议](https://github.com/savormundane/miliastra-wonderland-plugin/discussions) · [参与贡献](CONTRIBUTING.md) · [安全问题报告](SECURITY.md)
@@ -79,7 +72,8 @@ Miliastra Wonderland 是面向原神「千星奇域」创作者的非官方 AI �
 - 感谢没空放肆分享 GEIMG 的图元处理资料和拟 L2D 案例，并授权随插件分发。[GEIMG Wiki](https://docs.lumkfs.cn/GEIMG-WIKI/) · [拟 L2D 案例](https://docs.lumkfs.cn/GEIMG-WIKI/EG-L2D/)
 - 感谢 8itlab 及贡献者整理音效、特效资料和场景样例。[genshin-miliastra-mcp](https://github.com/8itlab/genshin-miliastra-mcp)
 - 感谢 XingGou 分享静态 GIA 和坐标转换的研究，Miliastra-Tools 分享白盒枢轴的做法。[XingGou](https://github.com/Crazyfourrrrrrrrrrr/XingGou) · [Miliastra-Tools](https://github.com/Ayn1631/Miliastra-Tools)
-- 感谢社区分享千星奇域文件格式和生成工具的研究。[genshin-miliastra-file-format](https://github.com/script-1024/genshin-miliastra-file-format) · [UGC-File-Generate-Utils](https://github.com/luern0313/UGC-File-Generate-Utils) · [第三方声明](THIRD_PARTY_NOTICES.md)
+- 感谢社区分享千星奇域文件格式和生成工具的研究。[genshin-miliastra-file-format](https://github.com/script-1024/genshin-miliastra-file-format) · [UGC-File-Generate-Utils](https://github.com/luern0313/UGC-File-Generate-Utils) 
+-[第三方声明](THIRD_PARTY_NOTICES.md)
 
 ## 许可证
 
