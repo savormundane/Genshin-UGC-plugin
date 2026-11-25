@@ -128,7 +128,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-install.
 | 搜不到 `miliastra-wonderland` | DeepSeek Harness | 核对 npm 包的发布状态及客户端选用的注册表。 [安装说明](#deepseek-harness) |
 | Claude Chat 里有 Skill，调用不到节点查询 | Claude | 在 Cowork 新建任务并允许本地工具，再做[首次工具验证](#首次工具验证)。 |
 | 能看到 Skill，工具未连通 | 所有安装方式 | 确认插件已启用并允许本地 MCP，运行[安装自检](#安装自检)。 |
-| MCP 启动时缺少 Python 或依赖 | 所有安装方式 | 安装 uv 并确认新终端能运行 `uv --version`，或让 `MILIASTRA_WONDERLAND_PYTHON` 指向已配置依赖的解释器。修正旧绑定后重新打开客户端。 |
+| MCP 启动时缺少 Python 或依赖 | 所有安装方式 | 让客户端在 PATH 上能找到 uv，再重新打开客户端。已有专用 Python 时，可用[运行绑定](runtime-environment.md#桌面端首次绑定本机工程)指定解释器。 |
 | 安装器找不到 Python，或提示工程与输出路径冲突 | 用 `install.ps1` 准备本地 ZIP | 缺少 Python 时，给原安装命令加 `-Python '<解释器绝对路径>'`。目录冲突时，为 `-Project` 和 `-Outputs` 选择互不包含的目录。 |
 | 安装准备中断 | 用 `install.ps1` 准备本地 ZIP | 保留未完成的安装目录。按报错修复后，用同一安装命令加 `-Resume` 重跑。已进入 Claude 登记时，按错误提示核对客户端中的条目。 |
 | 工程目录未绑定，或找不到输入文件 | 所有安装方式 | 打开包含输入的本地工程并授权，或按[工程绑定说明](runtime-environment.md#连接-mcp-或切换工程)配置目录。核对输入文件的路径和扩展名。 |
