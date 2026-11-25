@@ -26,57 +26,23 @@ Miliastra Wonderland 是面向原神「千星奇域」创作者的非官方 AI �
 
 ## 安装
 
-### 运行要求
+插件支持 **Agent Plugins、Claude、DSH** 三种协议。按下表选择安装方式。 [协议与客户端](docs/compatibility.md#安装协议与客户端)
 
-在 **Windows x64** 上任选下面一个客户端。插件的本地工具需要 **Node.js 22+**（DeepSeek Harness 用 **24.9+**），以及装好依赖的 **CPython 3.11–3.14** 或 PATH 上的 `uv`。首次由 `uv` 准备依赖时可能需要联网。 [运行要求](docs/compatibility.md) · [安装自检](docs/installation.md#安装自检)
+| 安装方式 | 从哪里开始 |
+| --- | --- |
+| [本地](docs/installation.md#本地安装) | 用已有的插件目录或完整 Windows ZIP 安装。 |
+| [CLI](docs/installation.md#cli-安装) | 在终端用 Codex CLI、Claude Code 或 `dsh` 从市场或仓库安装。 |
+| [原生](docs/installation.md#原生安装) | 在提供插件管理入口的桌面端、移动端或 Web 界面安装。 [ChatGPT/Codex](docs/installation.md#chatgptcodex) · [Claude](docs/installation.md#claude) · [DeepSeek Harness](docs/installation.md#deepseek-harness) |
 
-### Codex
+完整本地工具面向 Windows x64，需要 Node.js 22+（DSH 用 24.9+）以及具备依赖的 CPython 3.11–3.14 或 PATH 上的 `uv`。 [运行要求](docs/compatibility.md#运行要求) · [安装自检](docs/installation.md#安装自检)
 
-**桌面端**先在 Windows PowerShell 登记市场。
-
-```text
-codex plugin marketplace add savormundane/miliastra-wonderland-plugin
-```
-
-打开桌面应用的插件目录，选择 Miliastra Wonderland 市场并安装。 [Codex 桌面端安装](docs/installation.md#codex-桌面端)
-
-**Codex CLI** 可在终端完成登记和安装。
-
-```text
-codex plugin marketplace add savormundane/miliastra-wonderland-plugin
-codex plugin add miliastra-wonderland@miliastra-wonderland
-```
-
-用 `codex plugin list` 确认 `miliastra-wonderland` 已安装并启用，再运行 `codex` 打开本机对话。
-
-### Claude
-
-**Claude 桌面端**在「自定义 → 插件」添加仓库市场 `https://github.com/savormundane/miliastra-wonderland-plugin`，安装 Miliastra Wonderland 后在 **Cowork** 查询第一个节点。 [Claude 桌面端安装](docs/installation.md#claude-桌面端)
-
-**Claude Code** 先装好 CLI，再在 Windows PowerShell 执行下面两行。
-
-```text
-claude plugin marketplace add savormundane/miliastra-wonderland-plugin
-claude plugin install miliastra-wonderland@miliastra-wonderland
-```
-
-用 `claude plugin list` 确认已启用，再开启新会话，查询第一个节点。 [Claude Code 安装与排查](docs/installation.md#claude-code)
-
-### DeepSeek Harness
-
-在 **DeepSeek Harness 0.2.2-rc.5** 的「插件 → 添加插件」粘贴下面的地址。
-
-```text
-git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
-```
-
-在插件列表打开「千星奇域开发插件」，详情页直接提供用法和第一个查询示例。 [DeepSeek Harness 安装与排查](docs/installation.md#deepseek-harness)
+**当前版本 `1.1.0`**。使用发行包时，按该版本的安装说明和教程操作。 [下载源码](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/v1.1.0) · [版本记录](CHANGELOG.md)
 
 ## 快速开始
 
 ### 查询第一个节点
 
-在刚才启用插件的 AI 客户端里打开新对话，复制这条指令。节点查询无需准备工程文件。
+启用插件后，在能运行本地工具的会话里发送下面的请求。查询节点无需准备工程文件。 [首次工具验证](docs/installation.md#首次工具验证)
 
 > 请使用千星奇域插件查询服务端「创建实体」节点，列出输入和输出端口，用中文解释它的用途，并注明资料依据。版本依据不明确的部分请直接说明。
 
@@ -112,14 +78,6 @@ git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
 | [Miliastra Graph Code](skills/miliastra-graph-code/SKILL.md) | 确认节点签名，编写并检查节点图。 |
 | [Miliastra GIL](skills/miliastra-gil/SKILL.md) | 审阅局部修改计划，另存 GIL 并核对差异。 |
 | [Miliastra Assets](skills/miliastra-assets/SKILL.md) | 将 PNG 转成图元，比较候选方案的效果和控件预算。 |
-
-## 其他安装方式
-
-**当前版本 `1.1.0`**
-
-本文按当前源码的工具编写。使用标签源码时请跟该标签内的安装说明和教程。可用工具见客户端列表，已安装版本及运行绑定可用 `doctor` 核对。
-
-[Agent Plugins 接入](docs/installation.md#agent-plugins) · [下载源码](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/v1.1.0) · [导入本地源码](docs/installation.md#从本地目录导入) · [自行打包 ZIP](docs/installation.md#自行打包-zip) · [版本记录](CHANGELOG.md)
 
 ## 参与项目
 

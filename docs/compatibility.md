@@ -9,21 +9,19 @@
 | 操作系统 | 完整工具面向 Windows x64。Beyond 的 Windows 原生模块随完整 ZIP 分发，Git 或 Cordis 安装首次使用 Beyond 时下载校验。 |
 | Python | CPython 3.11–3.14。启动器复用具备依赖的环境，缺依赖时使用 PATH 上的 uv。 |
 | Node.js | 插件 MCP 启动器需要 22+，DeepSeek Harness 接入使用 24.9+。 |
-| 客户端 | 可选择下表的接入方式，也可独立使用 CLI。 |
+| 客户端 | 按客户端支持的协议选择本地、CLI 或原生安装。 |
 
 Python 依赖在 `pyproject.toml` 声明，并用 `uv.lock` 锁定。需要创建运行环境时，uv 将它放到插件目录之外，首次缺少缓存时需要联网。完整包包含 Windows 原生模拟器依赖。
 
-## 客户端接入
+## 安装协议与客户端
 
-| 入口 | 安装方式 |
+| 协议 | 客户端与安装入口 |
 | --- | --- |
-| Codex CLI | 在终端添加市场并安装插件。 [安装步骤](installation.md#codex-cli) |
-| Codex 桌面端 | 登记市场后在插件目录安装。 [安装步骤](installation.md#codex-桌面端) |
-| Claude Code | 在终端或 Claude Code 会话里添加市场并安装插件。 [安装步骤](installation.md#claude-code) |
-| Claude 桌面端 | 在「自定义 → 插件」添加仓库市场。使用 Cowork 运行本地 MCP。 [安装步骤](installation.md#claude-桌面端) |
-| DeepSeek Harness | 从 GitHub 直接安装 Cordis Bundle。 [安装步骤](installation.md#deepseek-harness) |
-| Agent Plugins | 使用通用插件清单、Skills 和本地 stdio MCP 接入。 [安装步骤](installation.md#agent-plugins) |
-| 独立 CLI | 使用已配置依赖的 Python 运行 `scripts/qianxing.py`。 [环境配置](runtime-environment.md) |
+| Agent Plugins | [ChatGPT/Codex](installation.md#chatgptcodex)、[Codex CLI](installation.md#codex-cli)及[通用 Agent Plugins 客户端](installation.md#agent-plugins)。 |
+| Claude | [Claude](installation.md#claude) 和 [Claude Code](installation.md#claude-code)。 |
+| DSH | [DeepSeek Harness](installation.md#deepseek-harness) 或 [`dsh` 命令](installation.md#deepseek-harness-命令行)，通过 Cordis Bundle 接入。 |
+
+也可用已配置依赖的 Python 直接运行 `scripts/qianxing.py`。 [环境配置](runtime-environment.md)
 
 工具连不上时，可以运行安装自检。欢迎提交问题或 PR。 [安装自检](installation.md#安装自检) · [贡献指南](../CONTRIBUTING.md)
 
