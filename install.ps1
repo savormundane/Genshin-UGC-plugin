@@ -1,7 +1,7 @@
 ﻿param(
     [ValidateSet('codex', 'claude-code', 'agent-plugins', 'deepseek-harness')][string]$Agent = 'codex',
     [ValidateSet('install', 'rollback', 'uninstall')][string]$Action = 'install',
-    [string]$Version = '1.1.0',
+    [string]$Version = '1.2.0',
     [switch]$Resume,
     [string]$Project, [string]$Outputs, [string]$Python,
     [string]$Root, [string]$Archive, [string]$Sha256

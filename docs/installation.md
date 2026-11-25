@@ -69,7 +69,7 @@ dsh plugin --profile web add miliastra-wonderland
 
 ### 从本地目录导入
 
-在 [GitHub Releases](https://github.com/savormundane/miliastra-wonderland-plugin/releases) 选择附有 Agent Plugins ZIP 的版本。客户端支持导入 Agent Plugins ZIP 时直接上传，支持目录导入时解压到独立目录并选择包含 `plugin.json` 的目录。只有源码附件的版本也可解压后导入目录。 [Agent Plugins 规范](https://agent-plugins.org/specification) · [本版发行说明](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/v1.1.0)
+在 [GitHub Releases](https://github.com/savormundane/miliastra-wonderland-plugin/releases) 选择附有 Agent Plugins ZIP 的版本。客户端支持导入 Agent Plugins ZIP 时直接上传，支持目录导入时解压到独立目录并选择包含 `plugin.json` 的目录。只有源码附件的版本也可解压后导入目录。 [Agent Plugins 规范](https://agent-plugins.org/specification) · [本版发行说明](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/v1.2.0)
 
 ### 自行打包 ZIP
 

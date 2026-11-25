@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "miliastra-wonderland",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Miliastra Wonderland 千星奇域社区创作工具。提供 Miliastra Editor、Miliastra Graph Code、Miliastra GIL 和 Miliastra Assets。",
   "author": {
     "name": "Miliastra Wonderland contributors"
