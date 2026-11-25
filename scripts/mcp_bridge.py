@@ -77,7 +77,7 @@ async def finish_worker(process):
 class Bridge:
     def __init__(self,project=None,output_root=None):
         self.timeouts = {kind: float(os.environ.get(variable, default)) for kind, variable, default in
-                         [('ordinary','UGC_MCP_TIMEOUT_SECONDS','120'),('build','UGC_MCP_BUILD_TIMEOUT_SECONDS','900')]}
+                         [('ordinary','MILIASTRA_WONDERLAND_MCP_TIMEOUT_SECONDS','120'),('build','MILIASTRA_WONDERLAND_MCP_BUILD_TIMEOUT_SECONDS','900')]}
         if any(not math.isfinite(value) or not 0 < value <= 3600 for value in self.timeouts.values()):
             raise ValueError('MCP timeouts must be finite seconds in (0, 3600]')
         self.project = project
@@ -196,7 +196,7 @@ class Bridge:
                 try:
                     from portable_trust import child_environment
                     env={**child_environment(),'PYTHONDONTWRITEBYTECODE':'1'}
-                    if (data:=data_directory()) is not None:env['UGC_PLUGIN_DATA']=str(data)
+                    if (data:=data_directory()) is not None:env['MILIASTRA_WONDERLAND_PLUGIN_DATA']=str(data)
                     process=await asyncio.create_subprocess_exec(sys.executable,'-X','utf8','-B',str(PLUGIN/'scripts/mcp_worker.py'),
                         str(request),str(result_path),cwd=project or PLUGIN,stdout=stdout,stderr=stderr,
                         env=env,start_new_session=os.name!='nt')
@@ -251,7 +251,7 @@ class Bridge:
 def main(argv=None):
     parser=argparse.ArgumentParser();sub=parser.add_subparsers(dest='operation',required=True)
     for name in('serve','call'):
-        command=sub.add_parser(name);command.add_argument('--project',default=os.environ.get('UGC_PROJECT_ROOT'));command.add_argument('--output-root',default=os.environ.get('UGC_OUTPUT_ROOT'))
+        command=sub.add_parser(name);command.add_argument('--project',default=os.environ.get('MILIASTRA_WONDERLAND_PROJECT_ROOT'));command.add_argument('--output-root',default=os.environ.get('MILIASTRA_WONDERLAND_OUTPUT_ROOT'))
         if name=='call':command.add_argument('request')
     args=parser.parse_args(argv)
     bridge=Bridge(args.project,args.output_root)

@@ -28,10 +28,10 @@ def directory(value, *, create=False):
 
 
 def data_directory():
-    value = os.environ.get('UGC_PLUGIN_DATA')
+    value = os.environ.get('MILIASTRA_WONDERLAND_PLUGIN_DATA')
     if value and Path(value).is_absolute():
         return Path(value)
-    root = os.environ.get('MILIASTRA_WONDERLAND_INSTALL_ROOT') or os.environ.get('UGC_PUBLIC_INSTALL_ROOT')
+    root = os.environ.get('MILIASTRA_WONDERLAND_INSTALL_ROOT')
     if root and Path(root).is_absolute():
         return Path(root)
     local = os.environ.get('LOCALAPPDATA')
@@ -39,12 +39,12 @@ def data_directory():
 
 
 def runtime_workspace(data):
-    configured = os.environ.get('UGC_RUNTIME_CONFIG')
+    configured = os.environ.get('MILIASTRA_WONDERLAND_RUNTIME_CONFIG')
     path = Path(configured) if configured else data / 'runtime.json' if data else None
     if path is None or not configured and not path.exists():
         return {}
     if not path.is_absolute():
-        raise ValueError('UGC_RUNTIME_CONFIG must be an absolute path')
+        raise ValueError('MILIASTRA_WONDERLAND_RUNTIME_CONFIG must be an absolute path')
     record = read_json(path)
     if not isinstance(record, dict) or type(record.get('schema')) is not int or record['schema'] != 1:
         raise ValueError('Invalid runtime binding')
@@ -113,20 +113,20 @@ def workspace(project, output, roots=(), arguments=None):
             if config_error:
                 raise ValueError(config_error)
             return {**context,
-                    'message': '尚未绑定工程目录。请在客户端打开并授权工程目录，或在启动客户端的终端将 UGC_PROJECT_ROOT 设为工程的绝对路径。已有 runtime.json 时可填写 project_root 后重试。',
-                    'detail': 'Open a workspace in an MCP client that provides Roots, or set a project in runtime.json or UGC_PROJECT_ROOT'}
+                    'message': '尚未绑定工程目录。请在客户端打开并授权工程目录，或在启动客户端的终端将 MILIASTRA_WONDERLAND_PROJECT_ROOT 设为工程的绝对路径。已有 runtime.json 时可填写 project_root 后重试。',
+                    'detail': 'Open a workspace in an MCP client that provides Roots, or set a project in runtime.json or MILIASTRA_WONDERLAND_PROJECT_ROOT'}
         if selected == Path(selected.anchor):
             raise ValueError('Project root must be a specific directory')
     except (OSError, ValueError, RuntimeError) as exc:
         return {**context, 'status': 'invalid',
-                'message': '无法使用当前工程目录。请确认目录存在并已在客户端授权，或检查 UGC_PROJECT_ROOT 与 runtime.json 中的 project_root。修正后重试。',
+                'message': '无法使用当前工程目录。请确认目录存在并已在客户端授权，或检查 MILIASTRA_WONDERLAND_PROJECT_ROOT 与 runtime.json 中的 project_root。修正后重试。',
                 'detail': str(exc)}
 
     context.update(status='ready', project_root=str(selected), source=source, missing=['output_root'])
     runtime_project = record.get('project_root')
     configured = output or (record.get('output_root') if not runtime_project or Path(runtime_project) == selected else None)
     if not configured and data is None:
-        context['output_message'] = 'Set UGC_OUTPUT_ROOT or use a local plugin data directory'
+        context['output_message'] = 'Set MILIASTRA_WONDERLAND_OUTPUT_ROOT or use a local plugin data directory'
         return context
     try:
         target = directory(configured or workspace_outputs(data, selected), create=not configured)

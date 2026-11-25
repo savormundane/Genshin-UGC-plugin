@@ -1,9 +1,9 @@
 ---
-name: qianxing-graph-code
+name: miliastra-graph-code
 description: 查询千星奇域节点签名和端口，编写、检查和编译客户端／服务端 Graph Code 与复合节点。
 ---
 
-# Qianxing Graph Code
+# Miliastra Graph Code
 
 | 任务 | 入口 |
 | --- | --- |
@@ -15,6 +15,6 @@ description: 查询千星奇域节点签名和端口，编写、检查和编译�
 
 编写时按实际类型、端口和事件连接，检查图变量、结构体与复合引脚。 [编写规则](../../references/graph-code/graph-authoring.md) · [语法](../../references/graph-code/graph-code-syntax.md) · [编译错误](../../references/graph-code/validation-fixes.md)
 
-独立交付图或只检查源码时走上表。需要引用本轮新建对象并与 Lua、GIL 一起交付时，按 [produce 的具名绑定](../../references/workflows/produce.md#按名称连接制作阶段) 协作。文件挂载交给 [Qianxing GIL](../qianxing-gil/SKILL.md)，客户端控件和脚本交给 [Qianxing Editor](../qianxing-editor/SKILL.md#client-lua)。
+独立交付图或只检查源码时走上表。需要引用本轮新建对象并与 Lua、GIL 一起交付时，按 [produce 的具名绑定](../../references/workflows/produce.md#按名称连接制作阶段) 协作。文件挂载交给 [Miliastra GIL](../miliastra-gil/SKILL.md)，客户端控件和脚本交给 [Miliastra Editor](../miliastra-editor/SKILL.md#client-lua)。
 
 交付文件时写明变更、保存位置、用法和本次检查。编译、回读、模型与宿主结果按实际证据记录。 [验证与交付](../../references/workflows/validation.md#交付反馈)

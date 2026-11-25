@@ -3,7 +3,7 @@ from pathlib import Path
 import json,os,runpy,sys
 
 def main():
-    boundary=json.loads(os.environ['UGC_BUILD_BOUNDARY'])
+    boundary=json.loads(os.environ['MILIASTRA_WONDERLAND_BUILD_BOUNDARY'])
     allowed=[Path(p).resolve()for p in boundary['read_roots']]
     writable=[Path(p).resolve()for p in boundary.get('write_roots',[])]
     blocked=[Path(p).resolve()for p in boundary.get('blocked_roots',[])]

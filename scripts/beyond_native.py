@@ -117,7 +117,7 @@ def native_library_path(backend, *, lock=None):
         return None
     if verify_native_files(backend, lock):
         return backend / NATIVE_BINARY
-    staged = os.environ.get('UGC_BEYOND_NATIVE_ROOT')
+    staged = os.environ.get('MILIASTRA_WONDERLAND_BEYOND_NATIVE_ROOT')
     if staged:
         path = Path(staged)
         if not path.is_absolute() or not verify_native_files(path, lock):
@@ -125,7 +125,7 @@ def native_library_path(backend, *, lock=None):
         return path / NATIVE_BINARY
     root = native_cache_root()
     if root is None:
-        raise ValueError('请设置绝对路径 UGC_PLUGIN_DATA 或 LOCALAPPDATA，以缓存 Beyond 原生渲染依赖。')
+        raise ValueError('请设置绝对路径 MILIASTRA_WONDERLAND_PLUGIN_DATA 或 LOCALAPPDATA，以缓存 Beyond 原生渲染依赖。')
     cache = root / lock['sha256']
     if (cache.resolve() != cache or cache.is_relative_to(PLUGIN.resolve())
             or cache.is_relative_to(backend.resolve())):

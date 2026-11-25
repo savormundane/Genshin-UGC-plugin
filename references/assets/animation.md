@@ -1,6 +1,6 @@
 # 图元动画接入
 
-输入包括图像或现有图元数据、目标界面的坐标和尺寸，以及当前工程的控件预算。用 Assets 准备图元，要播放时接入 Client Lua，需要更新已有 GIL 时按 GIL 工具审阅挂载。普通按钮或窗口的 Tween 见 [Editor 的 Client Lua 入口](../../skills/qianxing-editor/SKILL.md#client-lua)。
+输入包括图像或现有图元数据、目标界面的坐标和尺寸，以及当前工程的控件预算。用 Assets 准备图元，要播放时接入 Client Lua，需要更新已有 GIL 时按 GIL 工具审阅挂载。普通按钮或窗口的 Tween 见 [Editor 的 Client Lua 入口](../../skills/miliastra-editor/SKILL.md#client-lua)。
 
 ## 点阵帧
 

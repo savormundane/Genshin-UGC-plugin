@@ -104,10 +104,10 @@ git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
 
 | Skill | 适用任务 |
 | --- | --- |
-| [Qianxing Editor](skills/qianxing-editor/SKILL.md) | 查看关卡对象、对照 3D 布设并配置原生界面，查询 API、编写和检查 [Client Lua](skills/qianxing-editor/SKILL.md#client-lua)。 |
-| [Qianxing Graph Code](skills/qianxing-graph-code/SKILL.md) | 确认节点签名，编写并检查节点图。 |
-| [Qianxing GIL](skills/qianxing-gil/SKILL.md) | 审阅局部修改计划，另存 GIL 并核对差异。 |
-| [Qianxing Assets](skills/qianxing-assets/SKILL.md) | 将 PNG 转成图元，比较候选方案的效果和控件预算。 |
+| [Miliastra Editor](skills/miliastra-editor/SKILL.md) | 查看关卡对象、对照 3D 布设并配置原生界面，查询 API、编写和检查 [Client Lua](skills/miliastra-editor/SKILL.md#client-lua)。 |
+| [Miliastra Graph Code](skills/miliastra-graph-code/SKILL.md) | 确认节点签名，编写并检查节点图。 |
+| [Miliastra GIL](skills/miliastra-gil/SKILL.md) | 审阅局部修改计划，另存 GIL 并核对差异。 |
+| [Miliastra Assets](skills/miliastra-assets/SKILL.md) | 将 PNG 转成图元，比较候选方案的效果和控件预算。 |
 
 ## 其他安装方式
 

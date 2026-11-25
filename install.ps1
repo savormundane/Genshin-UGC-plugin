@@ -10,17 +10,13 @@ $ErrorActionPreference = 'Stop'
 if ($Resume -and $Action -ne 'install') { throw '-Resume is only valid for install.' }
 if ($env:OS -ne 'Windows_NT') { throw 'The complete bundle currently supports Windows x64 only.' }
 if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw 'Version must be x.y.z.' }
-$explicitRoot = [bool]$Root
 if (!$Root) { $Root = Join-Path $env:LOCALAPPDATA 'Miliastra Wonderland' }
-$legacyRoot = Join-Path $env:LOCALAPPDATA 'Genshin-UGC-Public'
-# Recovery must also work offline, without downloading an old release bootstrap.
+# Recovery uses the retained installation at the selected root.
 if ($Action -ne 'install') {
     if ($Agent -in @('agent-plugins', 'deepseek-harness')) {
         throw 'Manage registration and rollback in the host. The prepared files are retained.'
     }
     $recordName = $Agent + '.json'
-    if (!$explicitRoot -and !(Test-Path -LiteralPath (Join-Path $Root $recordName)) -and
-        (Test-Path -LiteralPath (Join-Path $legacyRoot $recordName))) { $Root = $legacyRoot }
     $state = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $Root $recordName) | ConvertFrom-Json
     if ($state.schema -ne 1) { throw 'Unknown installation state version.' }
     $owned = $state.current
@@ -31,7 +27,7 @@ if ($Action -ne 'install') {
     if (!$ownedHome.StartsWith($ownedRoot, [StringComparison]::OrdinalIgnoreCase)) { throw 'Installation is outside the selected root.' }
     $runner = Join-Path $ownedHome 'miliastra-wonderland/scripts/install_plugin.py'
     if (!(Test-Path -LiteralPath $runner -PathType Leaf)) {
-        $runner = Join-Path $ownedHome 'Genshin-UGC/scripts/install_public.py'
+        throw 'Retained installation is missing scripts/install_plugin.py. Check the selected installation root.'
     }
     $boundPython = Join-Path $ownedHome 'runtime/Scripts/python.exe'
     & $boundPython -X utf8 -B $runner $Action --agent $Agent --root $Root --version $Version
@@ -67,27 +63,18 @@ try {
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     $zip = [IO.Compression.ZipFile]::OpenRead((Resolve-Path -LiteralPath $Archive).Path)
     try {
-        $minMinor = 11
-        $maxMinor = 13
         $archiveRoot = 'miliastra-wonderland'
         $bootstrap = 'scripts/install_plugin.py'
-        if (!$zip.GetEntry("$archiveRoot/$bootstrap") -and $zip.GetEntry('Genshin-UGC/scripts/install_public.py')) {
-            $archiveRoot = 'Genshin-UGC'
-            $bootstrap = 'scripts/install_public.py'
-            if (!$explicitRoot) { $Root = $legacyRoot }
-        }
-        $entries = @($bootstrap)
+        $entries = @($bootstrap, 'pyproject.toml', 'scripts/runtime_policy.py')
         $contract = $zip.GetEntry("$archiveRoot/pyproject.toml")
-        if ($contract) {
-            $reader = New-Object IO.StreamReader($contract.Open())
-            try { $declaration = $reader.ReadToEnd() } finally { $reader.Dispose() }
-            if ($declaration -notmatch '(?m)^requires-python\s*=\s*">=3\.(\d+),<3\.(\d+)"\s*$') {
-                throw 'Invalid Python range in verified archive.'
-            }
-            $minMinor = [int]$Matches[1]
-            $maxMinor = [int]$Matches[2]
-            $entries += @('pyproject.toml', 'scripts/runtime_policy.py')
+        if (!$contract) { throw "Installer entry missing: $archiveRoot/pyproject.toml" }
+        $reader = New-Object IO.StreamReader($contract.Open())
+        try { $declaration = $reader.ReadToEnd() } finally { $reader.Dispose() }
+        if ($declaration -notmatch '(?m)^requires-python\s*=\s*">=3\.(\d+),<3\.(\d+)"\s*$') {
+            throw 'Invalid Python range in verified archive.'
         }
+        $minMinor = [int]$Matches[1]
+        $maxMinor = [int]$Matches[2]
         New-Item -ItemType Directory -Path (Join-Path $taskTemp 'scripts') | Out-Null
         foreach ($file in $entries) {
             $entry = @($zip.Entries | Where-Object { $_.FullName -ceq "$archiveRoot/$file" })

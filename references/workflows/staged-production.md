@@ -2,7 +2,7 @@
 
 ## 适用范围
 
-本流程仅帮助制作原神千星奇域：玩法、节点图、客户端Lua、控件/素材/动画、多人信号、平台存档/成就和GIA/GIL交付。用户说“做一个奇域”“继续制作”“修复这个玩法”时，由qianxing-editor组织现有专责技能持续实施。普通接口查询、单点小改动直接使用对应技能，只执行有意义的验证；不把本流程推广到通用网站、业务软件或其他游戏引擎。
+本流程仅帮助制作原神千星奇域：玩法、节点图、客户端Lua、控件/素材/动画、多人信号、平台存档/成就和GIA/GIL交付。用户说“做一个奇域”“继续制作”“修复这个玩法”时，由miliastra-editor组织现有专责技能持续实施。普通接口查询、单点小改动直接使用对应技能，只执行有意义的验证；不把本流程推广到通用网站、业务软件或其他游戏引擎。
 
 用户不需要掌握技能名、节点连法或构建命令。Agent负责决定实现路径并调用工具。已授权任务不在每一步重复等待确认；需求足够时简要说明假设和计划后执行，只有会改变核心玩法/原有数据、或确实缺少必要输入时询问。阶段检查是产物和证据检查，不是额外审批。
 
@@ -28,13 +28,13 @@
 
 | 工作 | 使用的现有能力 |
 | --- | --- |
-| 完整需求和制作顺序 | qianxing-editor |
-| Graph Code语法、类型和连接 | qianxing-graph-code |
-| 控件与生命周期 | [Qianxing Editor · Client Lua](../../skills/qianxing-editor/SKILL.md#client-lua) |
+| 完整需求和制作顺序 | miliastra-editor |
+| Graph Code语法、类型和连接 | miliastra-graph-code |
+| 控件与生命周期 | [Miliastra Editor · Client Lua](../../skills/miliastra-editor/SKILL.md#client-lua) |
 | 权威状态、信号与恢复 | Graph Code与Client Lua的多人流程 |
-| 原生写回与字段保护 | qianxing-gil |
+| 原生写回与字段保护 | miliastra-gil |
 | 信号→图→Lua组装 | GIL组装流程 |
-| 位图/参数图形与静态数据 | qianxing-assets |
+| 位图/参数图形与静态数据 | miliastra-assets |
 | 帧/分层动作与控件池 | Client Lua动画流程 |
 | 千星奇域生成目录数据合并 | 生成目录合并指南 |
 | 交付来源与证据失配 | 交付诊断流程 |
@@ -86,7 +86,7 @@ kind支持feature/fix/ui/assets/delivery，各自缩减为适用阶段。check�
   "kind": "fix",
   "goal": "修复当前奇域重开后的输入状态",
   "requirements": [{"id": "R1", "acceptance": "重开后首轮操作能正常执行"}],
-  "steps": [{"id": "S1", "phase": "inspect", "owner": "qianxing-editor", "requires": [], "requirements": ["R1"], "status": "pending"}]
+  "steps": [{"id": "S1", "phase": "inspect", "owner": "miliastra-editor", "requires": [], "requirements": ["R1"], "status": "pending"}]
 }
 ```
 

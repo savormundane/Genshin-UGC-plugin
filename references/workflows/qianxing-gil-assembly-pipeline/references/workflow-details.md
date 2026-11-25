@@ -1,7 +1,7 @@
 
 # GIL 组装流水线
 
-把 Graph Code、信号定义和客户端 Lua 组装成一个自包含 `.gil`。本流程横跨 qianxing-graph-code（源码与验证）和 qianxing-gil（GIL 读写原语），负责写回顺序和交付前验证。
+把 Graph Code、信号定义和客户端 Lua 组装成一个自包含 `.gil`。本流程横跨 miliastra-graph-code（源码与验证）和 miliastra-gil（GIL 读写原语），负责写回顺序和交付前验证。
 
 类型适配和图补丁必须回读最终文件，沿源输出声明检查目标输入；转换时新增节点不能遗漏重接，也不能把原始结构体列表边全部替换为字段列表边。具体见 [原生数据流检查](../../../graph-code/native-dataflow-validation.md)。模型通过、节点引用存在和写入回包均不能代替该检查或跨次保存验证。
 
@@ -161,9 +161,9 @@ PLUGIN_PYTHON -X utf8 -B private_extensions/run_ugc_file_tools.py tool inspect_g
 
 ## 与其他技能的边界
 
-- **qianxing-graph-code**：Graph Code 编写、Ayaya 验证、导出 GraphModel JSON。本流程从 JSON/源码产物开始。
-- **qianxing-gil**：GIL 基础读写原语（inspect、replace-lua、模板生成、结构诊断）。本流程编排这些原语完成端到端组装。
-- **Qianxing Editor**：编辑器内的脚本映射、挂载、UI 配置及 Lua 5.3 客户端控件代码编写。
+- **miliastra-graph-code**：Graph Code 编写、Ayaya 验证、导出 GraphModel JSON。本流程从 JSON/源码产物开始。
+- **miliastra-gil**：GIL 基础读写原语（inspect、replace-lua、模板生成、结构诊断）。本流程编排这些原语完成端到端组装。
+- **Miliastra Editor**：编辑器内的脚本映射、挂载、UI 配置及 Lua 5.3 客户端控件代码编写。
 - **共享多人流程（Graph Code / Client Lua）**：协议、信号合同与状态机设计。本流程只负责把已定义的信号与图写入 GIL。
 
 schema 2可在同一 [制作链](../../produce.md) 调度 [原生图替换与挂载](../../../gil/native-maintenance.md)、[保存／成就](../../storage-authoring.md) 及 [源码装配](../../../editor/lua/client-assembly.md)。严格编译之后仍审计最终GIL，指定模型读取实际产物；必需阶段失败不提交正式输出。

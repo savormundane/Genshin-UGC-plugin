@@ -53,8 +53,8 @@ class NativeWorkflowTests(unittest.TestCase):
 
     def workspace_environment(self):
         env = {key: value for key, value in os.environ.items()
-               if key not in ('UGC_PROJECT_ROOT', 'UGC_OUTPUT_ROOT', 'UGC_RUNTIME_CONFIG', 'UGC_PYTHON')}
-        env['UGC_PLUGIN_DATA'] = str(self.root / 'plugin-data')
+               if key not in ('MILIASTRA_WONDERLAND_PROJECT_ROOT', 'MILIASTRA_WONDERLAND_OUTPUT_ROOT', 'MILIASTRA_WONDERLAND_RUNTIME_CONFIG', 'MILIASTRA_WONDERLAND_PYTHON')}
+        env['MILIASTRA_WONDERLAND_PLUGIN_DATA'] = str(self.root / 'plugin-data')
         return env
 
     async def call(self, client, tool, params, status="passed"):
@@ -208,7 +208,7 @@ class NativeWorkflowTests(unittest.TestCase):
                 self.assertTrue(denied.is_error)
                 self.assertIn("mcp.workspace_required", denied.content[0].text)
                 self.assertIn("尚未绑定工程目录", denied.content[0].text)
-                self.assertIn("UGC_PROJECT_ROOT", denied.content[0].text)
+                self.assertIn("MILIASTRA_WONDERLAND_PROJECT_ROOT", denied.content[0].text)
                 self.assertIn("Open a workspace", denied.content[0].text)
 
                 version = await self.call(client, "docs_search", {"version": "1.0.0", "query": "节点"}, "failed")
@@ -385,7 +385,7 @@ class NativeWorkflowTests(unittest.TestCase):
         config = self.root / "runtime.json"
         write_json(config, {"schema": 1, "python": sys.executable,
                             "project_root": str(self.project), "output_root": str(self.outputs)})
-        env = {**self.workspace_environment(), "UGC_RUNTIME_CONFIG": str(config)}
+        env = {**self.workspace_environment(), "MILIASTRA_WONDERLAND_RUNTIME_CONFIG": str(config)}
 
         async def run():
             params = StdioServerParameters(command=sys.executable, args=self.server.args[:-4], env=env)
@@ -411,7 +411,7 @@ class NativeWorkflowTests(unittest.TestCase):
         second.mkdir()
         (second / "entrance.gil").write_bytes(initial_level("Changed", (2, 2)))
         config = self.root / "runtime.json"
-        env = {**self.workspace_environment(), "UGC_RUNTIME_CONFIG": str(config)}
+        env = {**self.workspace_environment(), "MILIASTRA_WONDERLAND_RUNTIME_CONFIG": str(config)}
         binding = {"schema": 1, "python": sys.executable}
         write_json(config, {**binding, "project_root": str(self.project)})
 

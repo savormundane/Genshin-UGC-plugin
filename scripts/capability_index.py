@@ -1,7 +1,7 @@
 """Stable technical ownership; workflows and persisted owners are not Skill discovery."""
 DOMAINS={
-    'editor':'qianxing-editor','graph':'qianxing-graph-code','client':'qianxing-editor',
-    'gil':'qianxing-gil','assets':'qianxing-assets'}
+    'editor':'miliastra-editor','graph':'miliastra-graph-code','client':'miliastra-editor',
+    'gil':'miliastra-gil','assets':'miliastra-assets'}
 DOMAIN_TOOLS={
     'editor':['docs','platform','project','resources','ids','ui','scene'],
     'graph':['nodes','graph','build'],'client':['client','simulate'],
@@ -48,7 +48,9 @@ LEGACY_OWNERS={
 
 def resolve_owner(owner):
     if owner=='client-controls-lua':return {'kind':'domain','id':'client','skills':[DOMAINS['client']]}
-    if owner in DOMAINS.values():return {'kind':'domain','id':next(k for k,v in DOMAINS.items()if v==owner),'skills':[owner]}
+    # Saved workflow records can use the earlier domain owners.
+    skill = 'miliastra-' + owner.removeprefix('qianxing-') if isinstance(owner,str) and owner.startswith('qianxing-') else owner
+    if skill in DOMAINS.values():return {'kind':'domain','id':next(k for k,v in DOMAINS.items()if v==skill),'skills':[skill]}
     workflow=LEGACY_OWNERS.get(owner,owner)
     if workflow in WORKFLOWS:
         return {'kind':'workflow','id':workflow,'skills':list(dict.fromkeys(DOMAINS[d] for d in WORKFLOWS[workflow]['domains']))}

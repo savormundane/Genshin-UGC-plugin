@@ -15,7 +15,7 @@ async def check(config, node, adapter=None):
     bundle = Path(__file__).resolve().parents[1]
     command = node
     args = [str(bundle / 'scripts/mcp_launcher.cjs')]
-    env = {**os.environ, 'UGC_RUNTIME_CONFIG': str(config)}
+    env = {**os.environ, 'MILIASTRA_WONDERLAND_RUNTIME_CONFIG': str(config)}
     cwd = None
     if adapter == 'deepseek-harness':
         patch = json.loads((bundle.parent / 'cordis-bundle/cordis.patch.yml').read_text(encoding='utf-8'))

@@ -144,7 +144,7 @@ def doctor(compare=None):
         'vendor/ayaya/VENDORED.json', 'vendor/beyond/bundle.json',
     )
     return {'schema':2,'status':status,
-            'project_context':project_context(os.environ.get('UGC_PROJECT_ROOT'),os.environ.get('UGC_OUTPUT_ROOT')),
+            'project_context':project_context(os.environ.get('MILIASTRA_WONDERLAND_PROJECT_ROOT'),os.environ.get('MILIASTRA_WONDERLAND_OUTPUT_ROOT')),
             'plugin':capability_snapshot(fingerprint_files,compare),
             'python':sys.version.split()[0],'python_executable':sys.executable,'python_supported':supported,'node':node,'node_version':node_version,'node_supported':node_supported,
             'dependencies':dependencies,'dependency_imports':{'status':'passed' if imports.returncode==0 else 'failed','error':imports.stderr[-1500:] if imports.returncode else None},

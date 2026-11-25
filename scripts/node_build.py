@@ -33,7 +33,7 @@ def route(kind='game',interface='lua',multiplayer=False,output='gil',task_mode=N
     if multiplayer and 'multiplayer' not in selected_workflows:selected_workflows.append('multiplayer')
     for selected in selected_workflows:helpers.extend(DOMAINS[d]for d in WORKFLOWS[selected]['domains'])
     if kind=='game':helpers.append(DOMAINS['graph'])
-    if kind in ['game','nodes','gil'] and output in ['gia','gil','both']:helpers.append('qianxing-gil')
+    if kind in ['game','nodes','gil'] and output in ['gia','gil','both']:helpers.append('miliastra-gil')
     from qianxing_workflow import guide
     workflow=guide(task_mode or {'gil':'delivery','assets':'assets','lua':'ui','diagnosis':'fix'}.get(kind,'feature'))
     routing = {'domain':workflow['domain'],'workflow':workflow,'primary':primary,'support':[x for x in dict.fromkeys(helpers) if x!=primary],
@@ -265,7 +265,7 @@ def build(spec_path,out_dir,preserve_container_order=False,structure_bindings=()
 
         def call(label,args,*,validation=False):
             cmd=[sys.executable,'-X','utf8','-B',*map(str,args)]
-            if os.environ.get('UGC_BUILD_BOUNDARY'):
+            if os.environ.get('MILIASTRA_WONDERLAND_BUILD_BOUNDARY'):
                 cmd=[sys.executable,'-X','utf8','-B',str(PLUGIN/'scripts/dependency_runner.py'),*map(str,args)]
             r=subprocess.run(cmd,cwd=runtime,capture_output=True,text=True,encoding='utf-8',timeout=180)
             diagnostic=remap_source_paths(r.stdout+r.stderr)

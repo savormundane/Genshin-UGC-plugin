@@ -147,7 +147,7 @@ def execute(bundle,out,trusted_inputs_sha256=None):
         if native_lock is not None:
             native_root = scratch / 'native-canvas'
             copy_canvas_payload(bundle / 'native-canvas', native_root, native_lock)
-            env['UGC_BEYOND_NATIVE_ROOT'] = str(native_root)
+            env['MILIASTRA_WONDERLAND_BEYOND_NATIVE_ROOT'] = str(native_root)
         read_roots=[str(work),str(out.parent),str(scratch),str(Path(sys.base_prefix).resolve()),str(Path(sys.prefix).resolve())]
         package_paths=[]
         for name in('lupa','PIL'):
@@ -159,7 +159,7 @@ def execute(bundle,out,trusted_inputs_sha256=None):
         read_roots.append(str(PLUGIN))
         runner=PLUGIN/'scripts/dependency_runner.py'
         command=[sys.executable,'-X','utf8','-B',str(runner),str(PLUGIN/'scripts/qianxing.py'),'produce',str(work/record['job']),'--out',str(out)]
-        env.update(UGC_BUILD_BOUNDARY=json.dumps(boundary), TMP=str(scratch), TEMP=str(scratch), TMPDIR=str(scratch),
+        env.update(MILIASTRA_WONDERLAND_BUILD_BOUNDARY=json.dumps(boundary), TMP=str(scratch), TEMP=str(scratch), TMPDIR=str(scratch),
                    PYTHONDONTWRITEBYTECODE='1', PYTHONPATH=os.pathsep.join(dict.fromkeys(package_paths)))
         process=subprocess.run(command,cwd=scratch,env=env,capture_output=True,text=True,encoding='utf-8',timeout=900)
         if process.returncode:raise ValueError('Portable build failed: '+(process.stdout+process.stderr)[-18000:])

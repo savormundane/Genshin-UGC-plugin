@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+- 将插件环境变量统一为 `MILIASTRA_WONDERLAND_*`。启动时遇到此前的配置键，会提示对应的新名称。
+- PowerShell 安装、回退和 MCP 只使用 Miliastra Wonderland 的安装布局。
+- 四个 Skill 更名为 Miliastra Editor、Miliastra Graph Code、Miliastra GIL 和 Miliastra Assets。
+- 收拢平台、素材与制作参考，常用任务从对应 Skill 直达工具。
+- 将 Beyond 的 Windows Canvas 依赖移入锁定 SHA-256 的版本化发行资产。完整 Windows ZIP 可离线运行。
+
 ## 1.1.0
 
 - 收紧原生文件写入的格式校准，并分别说明编译器定义、Lua 类型推导、资源记录和模拟的证据范围。
@@ -24,8 +30,8 @@
 - 安装入口和项目链接更新为更名后的 GitHub 仓库地址。
 - Codex 和 Claude 提供终端安装命令，DeepSeek Harness 通过 GitHub 直装。
 - 精简技术参考与旧依赖文件，修正源码下载入口，自行打包时排除本地配置。
-- Genshin-UGC 更名为 Miliastra Wonderland，发行从 1.0.0 重新编号。
-- Codex、Claude、DeepSeek Harness 与通用 Agent Plugins 共用四个 Skill 和一个插件目录。Client Lua 由 Qianxing Editor 提供。
+- 首次以 Miliastra Wonderland 名称发布，发行从 1.0.0 开始。
+- Codex、Claude、DeepSeek Harness 与通用 Agent Plugins 共用四个 Skill 和一个插件目录。Client Lua 由编辑器 Skill 提供。
 - 市场或直装可复用 CPython 3.11–3.14，缺依赖时由 uv 准备。Release 提供源码，完整 Windows ZIP 可自行打包。
 - 接入 MCP 后可直接查节点、API、平台资料和内置资源。打开工程后按名称和类型查找对象，并用同一输入摘要接续另存修改。
 - 3D 布设可按布局键反复更新并保留实例身份。编辑器重新导出后可审阅具名绑定，联合模拟可复跑失败场景。

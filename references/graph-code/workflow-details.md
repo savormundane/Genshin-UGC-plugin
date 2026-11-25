@@ -117,12 +117,12 @@ class 功能名:
 ## 与其他技能的边界
 
 - **本流程**：Python Graph Code 编写与验证
-- **Qianxing Editor · Client Lua**：Lua 5.3 客户端控件代码
-- **qianxing-editor**：编辑器内的脚本映射、挂载和 UI 配置
-- **qianxing-gil**：GIL/GIA 存档读写和 Lua 替换
+- **Miliastra Editor · Client Lua**：Lua 5.3 客户端控件代码
+- **miliastra-editor**：编辑器内的脚本映射、挂载和 UI 配置
+- **miliastra-gil**：GIL/GIA 存档读写和 Lua 替换
 - **qianxing-gil-assembly-pipeline**：把验证后的源码编译产物、信号和 Lua 组装为完整 GIL
 - **共享多人流程（Graph Code / Client Lua）**：多人协议设计
 
-Graph Code 编写完成后，由 qianxing-editor 配置挂载，由 qianxing-gil-assembly-pipeline 或 qianxing-gil 写入 `.gil`。
+Graph Code 编写完成后，由 miliastra-editor 配置挂载，由 qianxing-gil-assembly-pipeline 或 miliastra-gil 写入 `.gil`。
 
 新增消费者或动态端口后，使用 [最终原生类型审计](../gil/native-maintenance.md) 检查声明、显隐端口、结构体身份及版本。已有图替换通过build schema 2保留图ID和外部引用；仅支持已实现节点的 [联合模型](../workflows/joint-simulation.md) 不能替代宿主验收。

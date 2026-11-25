@@ -23,7 +23,7 @@
 
 中性有序命令与状态快照配置见 [协议接入示例](references/implementation-template.md)；协议产物写入 GIL 的顺序由 [GIL 组装流水线](../qianxing-gil-assembly-pipeline/README.md) 编排。
 
-与其他制作阶段协作时按 [统一能力合同](../capability-contract.md) 传递本流程的输入、输出及验证状态；完整玩法由 qianxing-editor 协调。
+与其他制作阶段协作时按 [统一能力合同](../capability-contract.md) 传递本流程的输入、输出及验证状态；完整玩法由 miliastra-editor 协调。
 
 新功能由Agent主动设计并实现合同、服务端图与客户端调用，已有项目则读取并兼容实际合同。没有现成协议不是停止理由；名称和自定义编号经作用域冲突检查后自行确定，平台身份及权限仍按真实接口。
 

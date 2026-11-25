@@ -1,9 +1,9 @@
 ---
-name: qianxing-assets
+name: miliastra-assets
 description: 将 PNG 或分层图片转成千星奇域图元，比较候选预览和控件数，拟合、校验及生成素材。也可查原生模型与模板 ID。
 ---
 
-# Qianxing Assets
+# Miliastra Assets
 
 单张 PNG 先用 `asset_preview` 给出候选预览、误差和控件数。选定候选后调用 `asset_generate`。复用同一 PNG、试算报告以及工具返回的两份摘要，输出到新目录。 [图片转图元](../../references/assets/image-to-primitives.md#单张-png-试算与生成)
 

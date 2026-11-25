@@ -33,8 +33,8 @@ function readBinding(filename) {
   return record;
 }
 
-function legacyBindings(root) {
-  const bindings = [];
+function installedPythons(root) {
+  const interpreters = [];
   for (const agent of ['agent-plugins', 'codex', 'claude-code', 'deepseek-harness']) {
     const parent = path.join(root, 'versions', agent);
     if (!fs.existsSync(parent)) continue;
@@ -49,37 +49,29 @@ function legacyBindings(root) {
       try {
         const record = readBinding(filename);
         if (fs.realpathSync.native(record.python) === fs.realpathSync.native(python)) {
-          bindings.push({record, agent, filename});
+          interpreters.push(record.python);
         }
       } catch {
-        // An invalid legacy record is not a usable interpreter candidate.
+        // Skip installation records that cannot provide a usable interpreter.
       }
     }
   }
-  return bindings;
+  return interpreters;
 }
 
-function runtimeBindings(env, root, configuredRoot) {
-  const clientConfig = env.UGC_PLUGIN_DATA && path.isAbsolute(env.UGC_PLUGIN_DATA)
-    ? path.join(env.UGC_PLUGIN_DATA, 'runtime.json') : null;
-  const config = env.UGC_RUNTIME_CONFIG || (clientConfig && fs.existsSync(clientConfig) ? clientConfig : null);
-  if (config && !path.isAbsolute(config)) throw new Error('UGC_RUNTIME_CONFIG must be an absolute path.');
-  const explicit = config ? readBinding(config) : null;
-  const bindingRoots = configuredRoot ? [root] : [root, path.join(env.LOCALAPPDATA, 'Genshin-UGC-Public')];
-  const legacy = bindingRoots.flatMap(legacyBindings);
-  // The old agent-plugins preparation was explicitly shared across hosts.
-  // Other registrations supply Python only, unless the user selects their config.
-  const shared = legacy.find(({record, agent}) => agent === 'agent-plugins'
-    && [record.project_root, record.output_root].every(dir => dir && fs.statSync(dir, {throwIfNoEntry: false})?.isDirectory()));
-  const workspaceConfig = config || shared?.filename;
-  if (workspaceConfig) env.UGC_RUNTIME_CONFIG = workspaceConfig;
-  return {explicit, legacy, workspaceConfig};
+function runtimeConfig(env) {
+  const clientConfig = env.MILIASTRA_WONDERLAND_PLUGIN_DATA && path.isAbsolute(env.MILIASTRA_WONDERLAND_PLUGIN_DATA)
+    ? path.join(env.MILIASTRA_WONDERLAND_PLUGIN_DATA, 'runtime.json') : null;
+  const config = env.MILIASTRA_WONDERLAND_RUNTIME_CONFIG || (clientConfig && fs.existsSync(clientConfig) ? clientConfig : null);
+  if (config && !path.isAbsolute(config)) throw new Error('MILIASTRA_WONDERLAND_RUNTIME_CONFIG must be an absolute path.');
+  return config;
 }
 
 function start() {
   if (checking) console.log(`Miliastra Wonderland 安装自检\n插件目录 ${plugin}`);
   const startupFiles = [
     'plugin.json', 'pyproject.toml', 'uv.lock', 'scripts/runtime_policy.py', 'scripts/qianxing.py',
+    'scripts/runtime-env-renames.json',
     'scripts/node_build.py', 'scripts/level_inventory.py', 'scripts/graph_validation.py', 'scripts/authoring_io.py',
     'scripts/mcp_service.py', 'scripts/mcp_bridge.py', 'scripts/mcp_workspace.py', 'scripts/mcp_worker.py',
   ];
@@ -103,32 +95,42 @@ function start() {
   const env = {...process.env, PYTHONNOUSERSITE: '1', PYTHONDONTWRITEBYTECODE: '1'};
   delete env.PYTHONPATH;
   delete env.PYTHONHOME;
+  const renames = require('./runtime-env-renames.json');
+  for (const name of Object.keys(env)) {
+    const current = renames[name.toUpperCase()];
+    if (current) {
+      console.error(`[runtime.env.deprecated] ${name} 已停用，请使用 ${current}。`);
+      delete env[name];
+    }
+  }
 
   const uv = checking ? probeUv(env) : null;
   if (checking) console.log(uv.status === 0 ? `PATH 上的 uv 可用（${uv.stdout.trim()}）。`
     : 'PATH 上未找到可用的 uv。');
 
-  const configuredRoot = env.MILIASTRA_WONDERLAND_INSTALL_ROOT || env.UGC_PUBLIC_INSTALL_ROOT;
+  const configuredRoot = env.MILIASTRA_WONDERLAND_INSTALL_ROOT;
   const root = configuredRoot || (env.LOCALAPPDATA && path.join(env.LOCALAPPDATA, 'Miliastra Wonderland'));
-  let bindings;
+  const chosen = env.MILIASTRA_WONDERLAND_PYTHON;
+  let explicit, workspaceConfig, installed;
   try {
     if (!root || !path.isAbsolute(root)) throw new Error('Set MILIASTRA_WONDERLAND_INSTALL_ROOT to an absolute path.');
-    bindings = runtimeBindings(env, root, configuredRoot);
+    workspaceConfig = runtimeConfig(env);
+    explicit = workspaceConfig ? readBinding(workspaceConfig) : null;
+    installed = chosen ? [] : installedPythons(root);
   } catch (error) {
     throw startupError('runtime.binding', '无法读取插件运行配置。',
-      '检查安装根目录和 UGC_RUNTIME_CONFIG 指向的 runtime.json。修正路径或绑定后重试。', error.message);
+      '检查安装根目录和 MILIASTRA_WONDERLAND_RUNTIME_CONFIG 指向的 runtime.json。修正路径或绑定后重试。', error.message);
   }
-  const {explicit, legacy, workspaceConfig} = bindings;
+  if (workspaceConfig) env.MILIASTRA_WONDERLAND_RUNTIME_CONFIG = workspaceConfig;
   if (checking && workspaceConfig) console.log(`运行绑定 ${workspaceConfig}`);
 
-  const chosen = env.UGC_PYTHON;
-  const pythonRecovery = '将 UGC_PYTHON 设为已配置好插件依赖的 Python 绝对路径，或清除它后让启动器查找环境。重新打开客户端后重试。';
+  const pythonRecovery = '将 MILIASTRA_WONDERLAND_PYTHON 设为已配置好插件依赖的 Python 绝对路径，或清除它后让启动器查找环境。重新打开客户端后重试。';
   if (chosen && !path.isAbsolute(chosen)) {
-    throw startupError('runtime.python', '指定的 Python 路径无效。', pythonRecovery, 'UGC_PYTHON must be an absolute path.');
+    throw startupError('runtime.python', '指定的 Python 路径无效。', pythonRecovery, 'MILIASTRA_WONDERLAND_PYTHON must be an absolute path.');
   }
   const active = env.VIRTUAL_ENV && path.isAbsolute(env.VIRTUAL_ENV)
     ? path.join(env.VIRTUAL_ENV, 'Scripts', 'python.exe') : null;
-  const candidates = chosen ? [chosen] : [explicit?.python, active, ...legacy.map(item => item.record.python), 'python.exe'];
+  const candidates = chosen ? [chosen] : [explicit?.python, active, ...installed, 'python.exe'];
   const runArgs = ['-X', 'utf8', '-B', cli, 'mcp', 'serve'];
   let command;
   let args;
@@ -157,7 +159,7 @@ function start() {
     const check = uv || probeUv(env);
     if (check.status !== 0) {
       throw startupError('runtime.python', '未找到可用的 Python 运行环境，PATH 上也没有可用的 uv。',
-        '安装 uv 并确认 uv --version 能运行，或通过 UGC_PYTHON 指定已配置依赖的 Python。重新打开客户端后重试。',
+        '安装 uv 并确认 uv --version 能运行，或通过 MILIASTRA_WONDERLAND_PYTHON 指定已配置依赖的 Python。重新打开客户端后重试。',
         ['No compatible Python environment found.', ...failures, 'uv.exe: ' + probeDetail(check)].join('\n'));
     }
     const digest = createHash('sha256').update(

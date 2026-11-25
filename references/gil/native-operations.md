@@ -24,7 +24,7 @@
 需要通过 Graph Code 或 HTML UI 生成 GIL/GIA 时，使用 [离线工具链](../graph-code/ayaya-offline-toolchain.md) 中的内置 Ayaya CLI；图源码、类型和资源配置由编辑器工作流负责，封装、写回与回读由存档工作流负责。
 
 
-节点图的事件和状态设计由 qianxing-graph-code 主责；完整编译交付先用 [统一构建](../graph-code/node-graph-workflow.md)，本技能负责基底、字段范围、关联定义和挂载保护。实际协议来自 共享协议流程或当前项目合同，不在封装中推测。
+节点图的事件和状态设计由 miliastra-graph-code 主责；完整编译交付先用 [统一构建](../graph-code/node-graph-workflow.md)，本技能负责基底、字段范围、关联定义和挂载保护。实际协议来自 共享协议流程或当前项目合同，不在封装中推测。
 
 信号写入、节点图写回与 Lua 嵌入的端到端顺序由 [GIL 组装流水线](../workflows/qianxing-gil-assembly-pipeline/README.md) 编排。
 
@@ -38,7 +38,7 @@
 
 ## 二进制结构诊断
 
-`gil-toolkit.mjs` 无法解释结构时，用 [GIL 格式诊断](gil-format-diagnostics.md) 和 `skills/qianxing-gil/scripts/diagnose_gil.py` 只读解析 20 字节头部与 protobuf 字段。跨GIL迁移UI或实体时须重分配ID、修正所有关联并回读；不能直接复制带旧引用的字段。
+`gil-toolkit.mjs` 无法解释结构时，用 [GIL 格式诊断](gil-format-diagnostics.md) 和 `skills/miliastra-gil/scripts/diagnose_gil.py` 只读解析 20 字节头部与 protobuf 字段。跨GIL迁移UI或实体时须重分配ID、修正所有关联并回读；不能直接复制带旧引用的字段。
 
 按实际输入、已校准字段和工具支持范围编写写回、关联及挂载补丁。遇到未确认的结构时先保持只读，报告还需核对的样本或资料。图逻辑与新协议按项目约定设计，再核对最终挂载。
 

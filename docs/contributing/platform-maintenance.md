@@ -1,6 +1,6 @@
 # 平台更新、兼容与恢复
 
-四个 Skill 入口为 Qianxing Editor、Qianxing Graph Code、Qianxing GIL 和 Qianxing Assets。Client Lua 由 Qianxing Editor 提供。入口只维护触发与领域约束；共享事实由原始资料和对应指南单点维护。原始API、官方镜像、校准、许可证和第三方目录保留。历史经验只有经核对的通用结论进入当前规则；完整游戏和专属协议不进入能力登记。
+四个 Skill 入口为 Miliastra Editor、Miliastra Graph Code、Miliastra GIL 和 Miliastra Assets。Client Lua 由 Miliastra Editor 提供。入口只维护触发与领域约束；共享事实由原始资料和对应指南单点维护。原始API、官方镜像、校准、许可证和第三方目录保留。历史经验只有经核对的通用结论进入当前规则；完整游戏和专属协议不进入能力登记。
 
 ## 来源更新
 

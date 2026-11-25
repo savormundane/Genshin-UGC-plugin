@@ -43,7 +43,7 @@ class BeyondNativeTests(unittest.TestCase):
                 archive.writestr(name, contents)
 
     def test_first_use_caches_verified_files_then_refuses_tampered_cache(self):
-        with patch('os.environ', {'UGC_PLUGIN_DATA': str(self.data)}):
+        with patch('os.environ', {'MILIASTRA_WONDERLAND_PLUGIN_DATA': str(self.data)}):
             with patch('beyond_native.download_native_archive',
                        side_effect=lambda _lock, path: shutil.copyfile(self.archive, path)) as download:
                 binding = native_library_path(self.backend)
@@ -125,7 +125,7 @@ mcp_worker.main()
         result = scratch / 'result.json'
         child = subprocess.run([sys.executable, '-B', '-c', probe, str(Path(__file__).resolve().parent),
                                 str(request), str(result)], capture_output=True, text=True,
-                               env={**os.environ, 'UGC_PLUGIN_DATA': str(self.data), 'UGC_BEYOND_NATIVE_ROOT': ''})
+                               env={**os.environ, 'MILIASTRA_WONDERLAND_PLUGIN_DATA': str(self.data), 'MILIASTRA_WONDERLAND_BEYOND_NATIVE_ROOT': ''})
         self.assertEqual(child.returncode, 0, child.stderr)
         binding = Path(json.loads(result.read_text(encoding='utf-8'))['binding'])
         self.assertEqual(binding, self.data / 'beyond-native' / self.lock['sha256'] / NATIVE_BINARY)

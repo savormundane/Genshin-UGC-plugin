@@ -59,7 +59,7 @@ def backend_inventory():
         distribution=importlib.metadata.distribution('Pillow'if name=='PIL'else name)
         result[name]={'available':True,'version':distribution.version,'files':inventory(directory)}
     # Some suites explicitly prepend this directory; capture that resolution too.
-    override=os.environ.get('UGC_LUA_TEST_PATH')
+    override=os.environ.get('MILIASTRA_WONDERLAND_LUA_TEST_PATH')
     if override:
         result['test_path_packages']={}
         for name in('lupa','PIL'):

@@ -1,9 +1,9 @@
 ---
-name: qianxing-gil
+name: miliastra-gil
 description: 比较、审计和安全修改千星奇域 GIL/GIA，审阅后另存，处理图、资源与脚本挂载及回读。
 ---
 
-# Qianxing GIL
+# Miliastra GIL
 
 | 任务 | 入口 |
 | --- | --- |

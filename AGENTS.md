@@ -1,6 +1,6 @@
 # Miliastra Wonderland 开发约定
 
-- 仓库根目录是 Codex、Claude、DeepSeek Harness 和通用 Agent Plugins 共用的插件入口。安装 ID 使用 `miliastra-wonderland`，四个 Skill 沿用各自路径。面向创作者的入口见 [README](README.md)。
+- 仓库根目录是 Codex、Claude、DeepSeek Harness 和通用 Agent Plugins 共用的插件入口。安装 ID 使用 `miliastra-wonderland`。四个 Skill 使用 `miliastra-editor`、`miliastra-graph-code`、`miliastra-gil` 和 `miliastra-assets`。面向创作者的入口见 [README](README.md)。
 - Editor 管工程语义与 Client Lua，Graph Code 管节点编写和编译，GIL 管容器与回读，Assets 管原生模型和图元。CLI 与 MCP 复用相同实现。历史修改计划、具名绑定及交付清单按原合同读取。
 - 原生写入须绑定输入摘要和唯一对象，输出到新路径并核对保护范围。平台规则、离线模型、编辑器和实机结果分别记录。代码或指南涉及新平台事实时，核对可用资料及具体版本。
 - 千星奇域的官方正文只支持其中明确记载的规则。逆向结果以原生样本的摘要、版本或可识别的容器家族、对象和测试范围为限。编译器签名、推导类型和软件预览分别注明来源。证据缺失时停在只读检查并说明需要的资料或最小样本。项目自有的业务协议按项目约定设计。

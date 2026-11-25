@@ -7,7 +7,7 @@
         "${CLAUDE_PLUGIN_ROOT}/scripts/mcp_launcher.cjs"
       ],
       "env": {
-        "UGC_PLUGIN_DATA": "${CLAUDE_PLUGIN_DATA}"
+        "MILIASTRA_WONDERLAND_PLUGIN_DATA": "${CLAUDE_PLUGIN_DATA}"
       }
     }
   }

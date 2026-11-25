@@ -41,7 +41,7 @@
 排查报错、无响应、不同步或显示异常时，先读 [调试方法](../../workflows/debugging-workflow.md)，再按本技能负责的部分定位。修改后的检查按 [验收标准](../../workflows/validation.md) 选择有意义的范围；只报告本次执行的验证，不自动扩大成全面审计。
 
 
-与其他制作阶段协作时按 [统一能力合同](../../workflows/capability-contract.md) 传递本技能的输入、输出及验证状态；完整玩法由 qianxing-editor 协调。
+与其他制作阶段协作时按 [统一能力合同](../../workflows/capability-contract.md) 传递本技能的输入、输出及验证状态；完整玩法由 miliastra-editor 协调。
 
 新功能需要原生事件、服务器状态或结算时，与编辑器/协议能力在同一任务内实现图和通信；本技能继续完成实际Lua调用与回包处理，不因缺少现成信号名停在占位代码。
 

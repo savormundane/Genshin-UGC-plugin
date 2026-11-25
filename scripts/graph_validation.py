@@ -181,7 +181,7 @@ def check(source, bindings_path=None, job_path=None):
             else:
                 compiled.write_bytes(expanded.encode('utf-8'))
             worker = [sys.executable,'-X','utf8','-B',__file__,'--worker',str(compiled),str(RUNTIME),str(cache),*workspace_args]
-            if os.environ.get('UGC_BUILD_BOUNDARY'):
+            if os.environ.get('MILIASTRA_WONDERLAND_BUILD_BOUNDARY'):
                 worker.insert(4,str(RUNTIME.parents[1]/'scripts/dependency_runner.py'))
             proc = subprocess.run(worker,cwd=RUNTIME,capture_output=True,text=True,encoding='utf-8',timeout=180)
             if not proc.stdout.strip():

@@ -23,20 +23,21 @@ class ProtocolTests(unittest.TestCase):
     @unittest.skipUnless(sys.platform == 'win32' and shutil.which('node'), 'Windows Node.js required')
     def test_launcher_rejects_invalid_explicit_python(self):
         with tempfile.TemporaryDirectory(prefix='ugc launcher ') as temporary:
-            env = {**os.environ, 'UGC_PUBLIC_INSTALL_ROOT': temporary, 'UGC_PYTHON': 'relative.exe'}
-            env.pop('UGC_RUNTIME_CONFIG', None)
-            env.pop('UGC_PLUGIN_DATA', None)
+            env = {**os.environ, 'MILIASTRA_WONDERLAND_INSTALL_ROOT': temporary, 'MILIASTRA_WONDERLAND_PYTHON': 'relative.exe'}
+            env.pop('MILIASTRA_WONDERLAND_RUNTIME_CONFIG', None)
+            env.pop('MILIASTRA_WONDERLAND_PLUGIN_DATA', None)
             result = subprocess.run(['node', str(ROOT / 'scripts/mcp_launcher.cjs')],
                                     env=env, capture_output=True, text=True, encoding='utf-8', timeout=10)
             self.assertEqual((result.returncode, result.stdout), (2, ''))
             self.assertIn('指定的 Python 路径无效', result.stderr)
-            self.assertIn('UGC_PYTHON must be an absolute path', result.stderr)
+            self.assertIn('MILIASTRA_WONDERLAND_PYTHON must be an absolute path', result.stderr)
 
     @unittest.skipUnless(sys.platform == 'win32' and shutil.which('node'), 'Windows Node.js required')
     def test_standalone_check_reuses_runtime_failure(self):
         with tempfile.TemporaryDirectory(prefix='ugc 自检 ') as temporary:
             env = {key: value for key, value in os.environ.items()
-                   if not key.startswith('UGC_') and key.upper() not in ('PATH', 'VIRTUAL_ENV')}
+                   if not key.upper().startswith(('MILIASTRA_WONDERLAND_', 'UGC_'))
+                   and key.upper() not in ('PATH', 'VIRTUAL_ENV')}
             env.update(PATH=temporary, MILIASTRA_WONDERLAND_INSTALL_ROOT=str(Path(temporary) / 'install'))
             command = [shutil.which('node'), str(ROOT / 'scripts/mcp_launcher.cjs')]
             serve = subprocess.run(command, env=env, capture_output=True, encoding='utf-8', timeout=15)
@@ -49,6 +50,35 @@ class ProtocolTests(unittest.TestCase):
             self.assertIn('uv --version', check.stderr)
             self.assertIn('spawnSync python.exe ENOENT', check.stderr)
             self.assertFalse((Path(temporary) / 'install').exists())
+
+    @unittest.skipUnless(sys.platform == 'win32' and shutil.which('node'), 'Windows Node.js required')
+    def test_launcher_warns_without_reading_retired_environment(self):
+        renames = installer.read_json(ROOT / 'scripts/runtime-env-renames.json')
+        old = {key: 'retired-relative-path' for key in renames}
+        with tempfile.TemporaryDirectory(prefix='miliastra-env-') as temporary:
+            env = {key: value for key, value in os.environ.items()
+                   if not key.upper().startswith(('MILIASTRA_WONDERLAND_', 'UGC_'))}
+            env.update(old, MILIASTRA_WONDERLAND_INSTALL_ROOT=temporary, MILIASTRA_WONDERLAND_PYTHON='new-relative-path')
+            result = subprocess.run(['node', str(ROOT / 'scripts/mcp_launcher.cjs')],
+                                    env=env, capture_output=True, text=True, encoding='utf-8', timeout=10)
+            self.assertEqual((result.returncode, result.stdout), (2, ''))
+            self.assertEqual(result.stderr.count('[runtime.env.deprecated]'), len(old))
+            for name, replacement in renames.items():
+                self.assertIn(f'{name} 已停用，请使用 {replacement}', result.stderr)
+            self.assertIn('MILIASTRA_WONDERLAND_PYTHON must be an absolute path', result.stderr)
+            self.assertNotIn('retired-relative-path', result.stderr)
+
+    def test_direct_cli_does_not_bind_project_from_retired_environment(self):
+        renames = installer.read_json(ROOT / 'scripts/runtime-env-renames.json')
+        variable, = [old for old, new in renames.items() if new == 'MILIASTRA_WONDERLAND_PROJECT_ROOT']
+        with tempfile.TemporaryDirectory(prefix='miliastra-cli-env-') as temporary:
+            env = {key: value for key, value in os.environ.items()
+                   if not key.upper().startswith(('MILIASTRA_WONDERLAND_', 'UGC_'))}
+            env.update({variable: temporary, 'MILIASTRA_WONDERLAND_INSTALL_ROOT': temporary})
+            result = subprocess.run([sys.executable, '-B', str(ROOT / 'scripts/qianxing.py'), 'doctor'],
+                                    env=env, capture_output=True, encoding='utf-8', timeout=15)
+            self.assertIn(f'{variable} 已停用，请使用 MILIASTRA_WONDERLAND_PROJECT_ROOT', result.stderr)
+            self.assertIsNone(json.loads(result.stdout)['project_context']['project_root'])
 
     @unittest.skipUnless(sys.platform == 'win32' and shutil.which('node'), 'Windows Node.js required')
     def test_standalone_check_reports_incomplete_plugin(self):
@@ -111,10 +141,10 @@ class ProtocolTests(unittest.TestCase):
                 self.assertEqual(descriptor['mcpServers'], {installer.MCP_NAME: {
                     'type': 'stdio', 'command': 'node',
                     'args': [anchor + '/scripts/mcp_launcher.cjs'],
-                    'env': {'UGC_PLUGIN_DATA': data},
+                    'env': {'MILIASTRA_WONDERLAND_PLUGIN_DATA': data},
                 }})
-        names = {'qianxing-editor': 'Qianxing Editor', 'qianxing-graph-code': 'Qianxing Graph Code',
-                 'qianxing-gil': 'Qianxing GIL', 'qianxing-assets': 'Qianxing Assets'}
+        names = {'miliastra-editor': 'Miliastra Editor', 'miliastra-graph-code': 'Miliastra Graph Code',
+                 'miliastra-gil': 'Miliastra GIL', 'miliastra-assets': 'Miliastra Assets'}
         self.assertEqual({path.parent.name for path in (ROOT / 'skills').glob('*/SKILL.md')}, names.keys())
         for identity, title in names.items():
             skill = ROOT / 'skills' / identity
@@ -142,19 +172,19 @@ class ProtocolTests(unittest.TestCase):
                     self.assertEqual(skills['config']['customSkillDirs'], [str(home / 'miliastra-wonderland/skills')])
                     self.assertEqual(mcp['name'], '@deepseek-ai/dsh-mcp-client')
                     self.assertEqual(mcp['config']['args'], [str(home / 'miliastra-wonderland/scripts/mcp_launcher.cjs')])
-                    self.assertEqual(mcp['config']['env']['UGC_RUNTIME_CONFIG'], str(config))
+                    self.assertEqual(mcp['config']['env']['MILIASTRA_WONDERLAND_RUNTIME_CONFIG'], str(config))
                 elif agent == 'claude-code':
                     self.assertIn(Path('.claude-plugin/marketplace.json'), files)
                     server, = files[Path('miliastra-wonderland/.mcp.json')]['mcpServers'].values()
                     self.assertEqual(server['args'], ['${CLAUDE_PLUGIN_ROOT}/scripts/mcp_launcher.cjs'])
-                    self.assertEqual(server['env']['UGC_RUNTIME_CONFIG'], str(config))
+                    self.assertEqual(server['env']['MILIASTRA_WONDERLAND_RUNTIME_CONFIG'], str(config))
                     self.assertNotIn(Path('miliastra-wonderland/mcp.json'), files)
                 else:
                     data = files[Path('miliastra-wonderland/mcp.json')]
                     self.assertEqual(data['$schema'], installer.MCP_SCHEMA)
                     server, = data['mcpServers'].values()
                     self.assertEqual(server['command'], 'node')
-                    self.assertEqual(server['env']['UGC_RUNTIME_CONFIG'], str(config))
+                    self.assertEqual(server['env']['MILIASTRA_WONDERLAND_RUNTIME_CONFIG'], str(config))
                     if agent == 'agent-plugins':
                         self.assertIsNone(market)
                         self.assertEqual(len(files), 1)

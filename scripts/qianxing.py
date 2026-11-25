@@ -1,7 +1,7 @@
 """Unified Qianxing task routing, node discovery, input inventory and graph build CLI."""
 from pathlib import Path
-import argparse,json,subprocess,sys
-from authoring_io import missing_input
+import argparse,json,os,subprocess,sys
+from authoring_io import PLUGIN, missing_input, read_json
 from node_build import route,catalog,build
 from level_inventory import inspect_file
 
@@ -34,6 +34,10 @@ def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
     for stream in (sys.stdout,sys.stderr):
         if hasattr(stream,'reconfigure'):stream.reconfigure(encoding='utf-8')
+    for old, current in read_json(PLUGIN / 'scripts/runtime-env-renames.json').items():
+        if old in os.environ:
+            print(f'[runtime.env.deprecated] {old} 已停用，请使用 {current}。', file=sys.stderr)
+            del os.environ[old]
     p=argparse.ArgumentParser(description=__doc__);sub=p.add_subparsers(dest='command',required=True)
     plan=sub.add_parser('plan');plan.add_argument('--kind',choices=['game','nodes','lua','gil','assets','animation','editor','diagnosis','storage','protocol'],default='game');plan.add_argument('--interface',choices=['lua','html','native','none'],default='lua');plan.add_argument('--multiplayer',action='store_true');plan.add_argument('--format',choices=['gia','gil','both','source'],default='gil')
     plan.add_argument('--task-mode',choices=['feature','fix','ui','assets','delivery'])

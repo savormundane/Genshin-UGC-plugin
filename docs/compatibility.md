@@ -35,7 +35,7 @@ V1.0.0 的客户端验收记录对应[重发提交 `f80f8d8`](https://github.com
 
 ## 平台与制作范围
 
-四个 Skill 为 Qianxing Editor、Qianxing Graph Code、Qianxing GIL 和 Qianxing Assets。Client Lua 由 [Qianxing Editor](../skills/qianxing-editor/SKILL.md#client-lua) 提供。平台规则和文档查询应指定目标千星奇域版本；已收录资料、已实现的文件操作和实际游戏行为分别判断，不能将插件版本号当作千星奇域版本号。
+四个 Skill 为 Miliastra Editor、Miliastra Graph Code、Miliastra GIL 和 Miliastra Assets。Client Lua 由 [Miliastra Editor](../skills/miliastra-editor/SKILL.md#client-lua) 提供。平台规则和文档查询应指定目标千星奇域版本；已收录资料、已实现的文件操作和实际游戏行为分别判断，不能将插件版本号当作千星奇域版本号。
 
 要了解某个对象能做什么，先查[能力与资料索引](../references/README.md)，或让助手调用 `capabilities`。已有 GIL 的局部修改以已校准操作为范围；不把未知字段推断成可写字段。
 

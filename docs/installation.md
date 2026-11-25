@@ -54,9 +54,9 @@ codex plugin marketplace add savormundane/miliastra-wonderland-plugin
 
 完整工具需要 Windows x64、Node.js 22+（DeepSeek Harness 24.9+），以及具备锁定依赖的 CPython 3.11–3.14 或 PATH 上的 uv。安装前在终端用 `node --version` 和 `uv --version` 检查对应依赖。启用插件后开启新对话，使用[「创建实体」查询](../README.md#查询第一个节点)核对真实 `nodes_lookup` 调用和结果。
 
-客户端启用插件后，通过 Node 启动本地 MCP。启动器依次查找运行绑定指定的 Python、当前虚拟环境、兼容的旧安装和 PATH 上的 Python。显式设置 `UGC_PYTHON` 时，使用该路径。找不到具备完整依赖的环境时，可由 PATH 上的 uv 按 `uv.lock` 准备环境，需要时也会获取受支持的 Python。首次缺少缓存时，uv 需要联网。 [uv 安装说明](https://docs.astral.sh/uv/getting-started/installation/)
+客户端启用插件后，通过 Node 启动本地 MCP。启动器依次查找运行绑定指定的 Python、当前虚拟环境、Miliastra Wonderland 安装根内的解释器和 PATH 上的 Python。显式设置 `MILIASTRA_WONDERLAND_PYTHON` 时，使用该路径。找不到具备完整依赖的环境时，可由 PATH 上的 uv 按 `uv.lock` 准备环境，需要时也会获取受支持的 Python。首次缺少缓存时，uv 需要联网。 [uv 安装说明](https://docs.astral.sh/uv/getting-started/installation/)
 
-- 用 `UGC_PYTHON` 指定已有 Python 的绝对路径。旧安装位于自选位置时，用 `MILIASTRA_WONDERLAND_INSTALL_ROOT` 指明原安装根。也可用 `UGC_RUNTIME_CONFIG` 直接选择旧的 `runtime.json`。
+- 用 `MILIASTRA_WONDERLAND_PYTHON` 指定已有 Python 的绝对路径。安装位于自选位置时，用 `MILIASTRA_WONDERLAND_INSTALL_ROOT` 指明安装根。也可用 `MILIASTRA_WONDERLAND_RUNTIME_CONFIG` 直接指定 `runtime.json`。
 - 节点、API 与公开资料查询可直接使用。文件工具优先使用显式工程路径，其次使用客户端通过 MCP Roots 提供的会话目录。客户端未提供目录时，可沿用 `runtime.json`。只读查询只需要工程目录。写入默认按工程归档到本机插件数据目录，也可指定独立的输出目录。参见[切换工程](runtime-environment.md#连接-mcp-或切换工程)。
 
 ## 从本地目录导入
@@ -87,7 +87,7 @@ python -B scripts/package_release.py --source . --out ../Miliastra-Wonderland-1.
 
 - **市场安装和直装**通过客户端管理更新和卸载。需要更换依赖时，启动器会交给 uv。
 - **Codex 桌面端**在插件目录的已安装列表管理插件。通过终端登记的市场可用 `codex plugin marketplace upgrade miliastra-wonderland` 刷新，再到桌面应用检查安装状态。**Claude 桌面端**在「自定义 → 插件」管理安装项和已添加的市场。更新后开启新对话复验工具。
-- **同版本重发**后，若客户端仍加载旧缓存，请从原入口卸载并重新安装。保留现有运行配置或通过 `UGC_RUNTIME_CONFIG` 指回原文件，便可继续使用原工程和解释器。
+- **同版本重发**后，若客户端仍加载旧缓存，请从原入口卸载并重新安装。保留现有运行配置或通过 `MILIASTRA_WONDERLAND_RUNTIME_CONFIG` 指回原文件，便可继续使用原工程和解释器。
 - **PowerShell 登记的 Codex 和 Claude**可从新版安装器升级。回退或卸载可用完整 ZIP 内的命令。改用 `-Agent claude-code` 即可操作 Claude，使用过 `-Root` 的用户应传入原值。
 - **本地目录导入**通过客户端管理。升级时导入新目录，回退时重新指向保留的旧版本。
 
@@ -113,7 +113,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-install.
 
 自检适用于市场、GitHub 直装、本地导入和 PowerShell 登记。它检查启动文件、Node.js 版本、已有 Python 环境及 PATH 上的 uv，遇到阻塞项时会显示失败环节、原始错误和下一步。自检只做本机探测。如果报告会由 uv 准备环境，请在依赖源可访问时重启客户端，再[查询第一个节点](../README.md#查询第一个节点)确认工具连通。MCP 连通后，可继续用 `doctor` 查看客户端实际采用的工程目录和依赖。
 
-自检读取当前终端的 PATH、`UGC_PYTHON` 和 `UGC_RUNTIME_CONFIG` 等环境变量。客户端单独配置了解释器或绑定文件时，把同样的值设置到自检终端。使用 WinGet 的用户可运行 `winget install --id=astral-sh.uv -e` 安装 uv，再打开新终端检查 `uv --version`。 [uv 的 WinGet 安装说明](https://docs.astral.sh/uv/getting-started/installation/#winget)
+自检读取当前终端的 PATH、`MILIASTRA_WONDERLAND_PYTHON` 和 `MILIASTRA_WONDERLAND_RUNTIME_CONFIG` 等环境变量。客户端单独配置了解释器或绑定文件时，把同样的值设置到自检终端。使用 WinGet 的用户可运行 `winget install --id=astral-sh.uv -e` 安装 uv，再打开新终端检查 `uv --version`。 [uv 的 WinGet 安装说明](https://docs.astral.sh/uv/getting-started/installation/#winget)
 
 ## 失败后续装
 
@@ -121,8 +121,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-install.
 | --- | --- | --- |
 | 市场中找不到插件 | Codex 或 Claude 的市场安装 | 核对[客户端安装步骤](#按客户端安装)中的 GitHub 仓库名和插件 ID，确认已完成市场登记或同步。 |
 | 直装地址无法加载 | DeepSeek Harness 的 GitHub 直装 | 核对直装地址和客户端版本，再到「插件 → 添加插件」重试。 [直装说明](../README.md#deepseek-harness) |
-| 能看到 Skill，工具未连通 | 所有安装方式 | 先[运行安装自检](#安装自检)。修复后重启客户端，确认插件已启用并允许本地 MCP。使用自选旧安装根目录时，核对 `MILIASTRA_WONDERLAND_INSTALL_ROOT`。 |
-| MCP 启动时缺少 Python 或依赖 | 所有安装方式 | 安装 uv 并确认新终端能运行 `uv --version`，或让 `UGC_PYTHON` 指向已配置依赖的解释器。修正旧绑定后重新打开客户端。 |
+| 能看到 Skill，工具未连通 | 所有安装方式 | 先[运行安装自检](#安装自检)。修复后重启客户端，确认插件已启用并允许本地 MCP。使用自选安装根目录时，核对 `MILIASTRA_WONDERLAND_INSTALL_ROOT`。 |
+| MCP 启动时缺少 Python 或依赖 | 所有安装方式 | 安装 uv 并确认新终端能运行 `uv --version`，或让 `MILIASTRA_WONDERLAND_PYTHON` 指向已配置依赖的解释器。修正旧绑定后重新打开客户端。 |
 | 安装器找不到 Python，或提示工程与输出路径冲突 | 用 `install.ps1` 准备本地 ZIP | 缺少 Python 时，给原安装命令加 `-Python '<解释器绝对路径>'`。目录冲突时，为 `-Project` 和 `-Outputs` 选择互不包含的目录。 |
 | 安装准备中断 | 用 `install.ps1` 准备本地 ZIP | 保留未完成的安装目录。按报错修复后，用同一安装命令加 `-Resume` 重跑。已进入 Claude 登记时，按错误提示核对客户端中的条目。 |
 | 工程目录未绑定，或找不到输入文件 | 所有安装方式 | 打开包含输入的本地工程并授权，或按[工程绑定说明](runtime-environment.md#连接-mcp-或切换工程)配置目录。核对输入文件的路径和扩展名。 |

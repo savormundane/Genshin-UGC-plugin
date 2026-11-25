@@ -7,7 +7,7 @@
     {
       "name": "miliastra-wonderland",
       "source": "./",
-      "description": "Miliastra Wonderland 千星奇域社区创作工具。包含 Qianxing Editor、Qianxing Graph Code、Qianxing GIL 和 Qianxing Assets。"
+      "description": "Miliastra Wonderland 千星奇域社区创作工具。包含 Miliastra Editor、Miliastra Graph Code、Miliastra GIL 和 Miliastra Assets。"
     }
   ]
 }
