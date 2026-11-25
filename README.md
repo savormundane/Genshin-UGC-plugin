@@ -74,14 +74,12 @@ Miliastra Wonderland 是面向原神「千星奇域」创作者的非官方 AI �
 
 ## 致谢
 
-- 感谢 **AyayaXiaowang** 及贡献者提供节点图编译和 GIA 导出的工具链基础。 [Ayaya_Miliastra_Editor](https://github.com/AyayaXiaowang/Ayaya_Miliastra_Editor)
-- 感谢 **1475505** 及贡献者提供 Beyond 的离线 Lua 模拟和界面渲染实现，并整理千星奇域资料镜像。规则原文来自米哈游「奇匠学院」。 [Beyond](https://github.com/1475505/miliastra-beyond-simulator) · [Miliastra-knowledge](https://github.com/1475505/Miliastra-knowledge)
-- 感谢 **没空放肆** 编写 GEIMG 的图元处理指南和拟 L2D 案例，并授权以 MIT 许可随插件分发对应资料。 [GEIMG Wiki](https://docs.lumkfs.cn/GEIMG-WIKI/) · [拟 L2D 案例](https://docs.lumkfs.cn/GEIMG-WIKI/EG-L2D/)
-- 感谢 **8itlab** 及贡献者采集音效、特效的面板信息并分享场景样本。插件的资源图鉴和布景参考使用了这些记录。 [genshin-miliastra-mcp](https://github.com/8itlab/genshin-miliastra-mcp)
-- 感谢 **Crazyfourrrrrrrrrrr** 分享静态 GIA 与坐标转换研究，以及 **Ayn1631** 分享白盒枢轴的做法，供插件的布景和预览参考。 [XingGou](https://github.com/Crazyfourrrrrrrrrrr/XingGou) · [Miliastra-Tools](https://github.com/Ayn1631/Miliastra-Tools)
-- 感谢 **script-1024**、**luern0313** 及社区贡献者分享 GIL/GIA 文件格式与生成工具研究。 [genshin-miliastra-file-format](https://github.com/script-1024/genshin-miliastra-file-format) · [UGC-File-Generate-Utils](https://github.com/luern0313/UGC-File-Generate-Utils)
-
-Lua 语法解析复用了 Oskar Schöldström 的 luaparse。随包代码、资料及依赖的完整来源和许可见[第三方声明](THIRD_PARTY_NOTICES.md)。
+- Ayaya 为节点图工具链提供了基础，Beyond 提供离线模拟和界面预览。[Ayaya](https://github.com/AyayaXiaowang/Ayaya_Miliastra_Editor) · [Beyond](https://github.com/1475505/miliastra-beyond-simulator)
+- 感谢 Miliastra-knowledge 整理平台资料。[Miliastra-knowledge](https://github.com/1475505/Miliastra-knowledge)
+- 感谢没空放肆分享 GEIMG 的图元处理资料和拟 L2D 案例，并授权随插件分发。[GEIMG Wiki](https://docs.lumkfs.cn/GEIMG-WIKI/) · [拟 L2D 案例](https://docs.lumkfs.cn/GEIMG-WIKI/EG-L2D/)
+- 感谢 8itlab 及贡献者整理音效、特效资料和场景样例。[genshin-miliastra-mcp](https://github.com/8itlab/genshin-miliastra-mcp)
+- 感谢 XingGou 分享静态 GIA 和坐标转换的研究，Miliastra-Tools 分享白盒枢轴的做法。[XingGou](https://github.com/Crazyfourrrrrrrrrrr/XingGou) · [Miliastra-Tools](https://github.com/Ayn1631/Miliastra-Tools)
+- 感谢社区分享千星奇域文件格式和生成工具的研究。[genshin-miliastra-file-format](https://github.com/script-1024/genshin-miliastra-file-format) · [UGC-File-Generate-Utils](https://github.com/luern0313/UGC-File-Generate-Utils) · [第三方声明](THIRD_PARTY_NOTICES.md)
 
 ## 许可证
 
