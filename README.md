@@ -26,7 +26,7 @@ Miliastra Wonderland 是面向原神「千星奇域」创作者的非官方 AI �
 | DeepSeek Harness | npm 包发布后，在「插件 → 添加插件」输入 `miliastra-wonderland`。 |
 | Agent Plugins | 在支持 GitHub 市场的客户端添加 `savormundane/miliastra-wonderland-plugin`，安装 `miliastra-wonderland`。 |
 
-**本地安装**。在 [GitHub Releases](https://github.com/savormundane/miliastra-wonderland-plugin/releases) 选择附有 Agent Plugins ZIP 的版本。只有源码附件时，可解压后导入插件目录。 [本地安装](docs/installation.md#本地安装) · [CLI 安装](docs/installation.md#cli-安装)
+**其他安装方式**。[本地安装](docs/installation.md#本地安装) · [CLI 安装](docs/installation.md#cli-安装)
 
 完整本地工具面向 Windows x64。 [运行要求](docs/compatibility.md#运行要求) · [安装自检](docs/installation.md#安装自检)
 
