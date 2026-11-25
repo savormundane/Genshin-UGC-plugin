@@ -2,11 +2,12 @@
 
 import asyncio
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import unittest
 
-from authoring_io import DiagnosticError, PLUGIN, read_json, sha
+from authoring_io import DiagnosticError, PLUGIN, read_json, sha, sha_file
 from level_authoring import flt, initial_level, integer, msg, pack, set_section, text, vi
 from level_inventory import container, fields, unique, vals
 from miliastra.native.changes import apply_plan, difference, fingerprint, plan
@@ -194,37 +195,121 @@ class EntityTransformTests(unittest.TestCase):
 
     def test_production_model_evidence_requires_the_final_gil(self):
         from authoring_io import write_json
+        from delivery_verify import verify
         from level_authoring import register_script
-        from production_core import produce
+        from mcp import Client, StdioServerParameters
 
         data, _ = fixture()
         code = b'value = 7\n'
         data, _ = register_script(data, 'main.lua', code)
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / 'base.gil').write_bytes(data)
-            (root / 'outside.lua').write_bytes(code)
-            write_json(root / 'patch.json', {'schema': 2, 'base_sha256': sha(data),
-                                             'allowed_top_level_fields': [], 'operations': []})
-            write_json(root / 'job.json', {'schema': 2, 'native': {'base': 'base.gil', 'spec': 'patch.json'},
-                                           'simulation': {'spec': 'simulation.json'}})
-            for source, out in (('@level', 'bound'), ('outside.lua', 'external')):
-                write_json(root / 'simulation.json', {'schema': 2, 'clients': [{'id': 1, 'source': source}],
-                           'steps': [], 'assertions': [{'client': 1, 'path': 'value', 'equals': 7}]})
-                evidence = produce(root / 'job.json', root / out)['evidence']
-                self.assertEqual(evidence['simulation']['status'], 'passed')
-                model = evidence['lua_model']
-                self.assertEqual(model['model_status'], 'passed')
-                if source == '@level':
-                    self.assertEqual(model['status'], 'passed')
-                    self.assertEqual(evidence['simulation']['artifact_scope'], 'final_gil')
-                    self.assertEqual(model['artifact_sha256'], sha((root / out / 'level.gil').read_bytes()))
-                    self.assertEqual(model['bindings'][0]['mapping'], 'main.lua')
-                else:
-                    self.assertEqual(model['status'], 'not_checked')
-                    self.assertEqual(evidence['simulation']['artifact_scope'], 'external_or_mixed')
-                    self.assertEqual(model['artifact_scope'], 'external_or_mixed')
-                    self.assertEqual(model['bindings'][0]['sha256'], sha(code))
+        graph_id = 1073741900
+        server_locator = integer(1, 10001) + integer(2, 20000) + integer(3, 22000)
+        created = integer(1, 1) + msg(2, server_locator + integer(5, 71))
+        graph = msg(1, server_locator + integer(5, graph_id)) + text(2, 'Creation check') + msg(3, created)
+        data = set_section(data, 10, msg(1, msg(1, graph)))
+
+        async def run(root):
+            project, outputs = root / 'project', root / 'outputs'
+            project.mkdir()
+            outputs.mkdir()
+            (project / 'base.gil').write_bytes(data)
+            outside = project / 'outside.lua'
+            outside.write_bytes(code)
+            write_json(project / 'patch.json', {
+                'schema': 2, 'base_sha256': sha(data), 'allowed_top_level_fields': [], 'operations': [],
+            })
+            job = project / 'job.json'
+            scene = project / 'scene.json'
+            write_json(job, {'schema': 2, 'native': {'base': 'base.gil', 'spec': 'patch.json'},
+                             'simulation': {'spec': scene.name}})
+            cli = [sys.executable, '-X', 'utf8', '-B', str(PLUGIN / 'scripts/qianxing.py')]
+            server = StdioServerParameters(
+                command=cli[0], args=[*cli[1:], 'mcp', 'serve', '--project', str(project),
+                                      '--output-root', str(outputs)],
+            )
+            args = {'spec': job.name, 'sha256': sha_file(job)}
+
+            def produce_cli(destination):
+                return subprocess.run(
+                    [*cli, 'produce', str(job), '--out', str(outputs / destination)],
+                    capture_output=True, encoding='utf-8', timeout=60,
+                )
+
+            async with Client(server) as client:
+                for case, sources in (('bound', ['@level']), ('external', [outside.name]),
+                                      ('mixed', ['@level', outside.name])):
+                    scenario = {
+                        'schema': 2,
+                        'clients': [{'id': i, 'source': source} for i, source in enumerate(sources, 1)],
+                        'steps': [],
+                        'assertions': [
+                            {'client': i, 'path': 'value', 'equals': 7}
+                            for i in range(1, len(sources) + 1)
+                        ],
+                    }
+                    if case == 'bound':
+                        scenario['server'] = {
+                            'source': '@level', 'graph_ids': [graph_id],
+                            'instances': [{'graph_id': graph_id, 'owner_entity': STATIC}],
+                        }
+                        scenario['steps'] = [{'op': 'entity_created', 'entity': STATIC}]
+                    write_json(scene, scenario)
+                    terminal = await asyncio.to_thread(produce_cli, case + '-cli')
+                    self.assertEqual(terminal.returncode, 0, terminal.stderr)
+                    response = await client.call_tool('produce', {**args, 'output': case + '-mcp'})
+                    self.assertFalse(response.is_error, response)
+                    self.assertEqual(response.structured_content['status'], 'passed', response)
+                    reports = []
+                    for channel in ('cli', 'mcp'):
+                        with self.subTest(case=case, channel=channel):
+                            destination = outputs / f'{case}-{channel}'
+                            moved = destination.rename(root / f'moved-{case}-{channel}')
+                            report = read_json(moved / 'production-report.json')
+                            manifest = read_json(moved / 'manifest.json')
+                            simulation = read_json(moved / 'simulation.json')
+                            self.assertEqual(report['evidence'], manifest['evidence'])
+                            evidence = report['evidence']
+                            models = evidence['lua_model'], evidence['native_graph_model']
+                            self.assertEqual(evidence['simulation']['status'], 'passed')
+                            self.assertEqual(models[0]['model_status'], 'passed')
+                            scope = 'final_gil' if case == 'bound' else 'external_or_mixed'
+                            self.assertEqual(evidence['simulation']['artifact_scope'], scope)
+                            self.assertEqual(models[0]['artifact_scope'], scope)
+                            self.assertEqual(models[0]['status'], 'passed' if case == 'bound' else 'not_checked')
+                            expected_sources = [
+                                'level.gil' if source == '@level' else str(outside.resolve())
+                                for source in sources
+                            ]
+                            self.assertEqual([row['source'] for row in models[0]['bindings']], expected_sources)
+                            if case == 'bound':
+                                self.assertEqual(models[0]['artifact_sha256'], sha_file(moved / 'level.gil'))
+                                self.assertEqual(models[1]['bindings'][0]['source'], 'level.gil')
+                                self.assertEqual(simulation['executed_graphs'], [graph_id])
+                            self.assertEqual(set(simulation['inputs']), set(expected_sources))
+                            for model in models:
+                                for binding in model['bindings']:
+                                    source = binding['source']
+                                    self.assertEqual(binding['sha256'], sha_file(moved / source))
+                                    self.assertEqual(simulation['inputs'][source], binding['sha256'])
+                            if '@level' in sources:
+                                self.assertEqual(models[0]['bindings'][0]['mapping'], 'main.lua')
+                                self.assertNotIn('level.gil', manifest['inputs'])
+                            self.assertEqual(manifest['files']['simulation.json'], sha_file(moved / 'simulation.json'))
+                            self.assertTrue(verify(moved)['passed'])
+                            reports.append((simulation['inputs'], models))
+                    self.assertEqual(*reports)
+
+                scenario['assertions'][0]['equals'] = 8
+                write_json(scene, scenario)
+                rejected = await asyncio.to_thread(produce_cli, 'failed-cli')
+                self.assertNotEqual(rejected.returncode, 0)
+                response = await client.call_tool('produce', {**args, 'output': 'failed-mcp'})
+                self.assertEqual(response.structured_content['status'], 'failed')
+                self.assertFalse((outputs / 'failed-cli').exists())
+                self.assertFalse((outputs / 'failed-mcp').exists())
+
+        with tempfile.TemporaryDirectory(prefix='miliastra delivery ') as tmp:
+            asyncio.run(run(Path(tmp)))
 
     def test_stdio_uses_existing_review_flow(self):
         from mcp import Client, StdioServerParameters

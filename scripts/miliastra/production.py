@@ -1119,30 +1119,32 @@ def produce(
 
             sp = track(resolve(base, job['simulation']['spec']))
             scene = read_json(sp)
-            for item in scene['clients']:
+            server = scene.get('server')
+            staged_level = str(final_gil_path)
+            for item in scene['clients'] + ([server] if server else []):
                 item['source'] = (
-                    str(stage / 'level.gil')
+                    staged_level
                     if item['source'] == '@level'
                     else str(track(resolve(sp.parent, item['source'])))
-                )
-            if scene.get('server'):
-                scene['server']['source'] = (
-                    str(stage / 'level.gil')
-                    if scene['server']['source'] == '@level'
-                    else str(track(resolve(sp.parent, scene['server']['source'])))
                 )
             result = run(scene, sp.parent, job['simulation'].get('timeout', 30))
             inputs.merge(
                 {p: h for p, h in result['inputs'].items() if not Path(p).is_relative_to(stage)},
                 'simulation',
             )
-            write_json(stage / 'simulation.json', result)
             if result['acceptance']['status'] != 'passed':
                 evidence['simulation'] = {'status': 'failed', 'coverage': result['acceptance']}
                 raise ValueError(
                     'Required simulation acceptance incomplete: '
                     + str(result['acceptance']['gaps'])
                 )
+            # The simulator reads the staged file; published references resolve from the delivery.
+            artifact_names = {staged_level: final_gil_path.name}
+            report_inputs = {
+                artifact_names.get(source, source): digest
+                for source, digest in result['inputs'].items()
+            }
+            write_json(stage / 'simulation.json', {**result, 'inputs': report_inputs})
             state('simulation')
             evidence['simulation']['layer'] = (
                 'lua_model' if scene['clients'] else 'native_graph_model'
@@ -1150,7 +1152,7 @@ def produce(
             clients = [
                 {
                     'client': item['id'],
-                    'source': item['source'],
+                    'source': artifact_names.get(item['source'], item['source']),
                     'sha256': result['inputs'][item['source']],
                     'mapping': item.get('mapping', 'main.lua')
                     if Path(item['source']).suffix.lower() == '.gil'
@@ -1158,9 +1160,11 @@ def produce(
                 }
                 for item in scene['clients']
             ]
-            server = scene.get('server')
             servers = (
-                [{'source': server['source'], 'sha256': result['inputs'][server['source']]}]
+                [{
+                    'source': artifact_names.get(server['source'], server['source']),
+                    'sha256': result['inputs'][server['source']],
+                }]
                 if server
                 else []
             )

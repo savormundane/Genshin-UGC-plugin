@@ -5,6 +5,7 @@ const {spawn, spawnSync} = require('node:child_process');
 
 const plugin = path.resolve(__dirname, '..');
 const probe = path.join(__dirname, 'runtime_policy.py');
+const pythonProbeFlags = ['-I', '-X', 'utf8', '-B'];
 const cli = path.join(__dirname, 'qianxing.py');
 const checking = process.argv[2] === '--check';
 const retryCheck = '在插件目录运行 node .\\scripts\\mcp_launcher.cjs --check，按报告修正后重新打开客户端。';
@@ -21,6 +22,70 @@ function probeUv(env) {
   return spawnSync('uv.exe', ['--version'], {
     cwd: plugin, env, encoding: 'utf8', timeout: 2500, windowsHide: true,
   });
+}
+
+function pathExecutables(name) {
+  const found = [];
+  for (const entry of (process.env.PATH || '').split(path.delimiter)) {
+    const directory = entry.trim().replace(/^"(.*)"$/, '$1');
+    if (!path.isAbsolute(directory)) continue;
+    const executable = path.join(directory, name);
+    // WindowsApps can contain a Store stub for python.exe. Use py discovery there.
+    if (name === 'python.exe' && /[\\/]Microsoft[\\/]WindowsApps[\\/]/i.test(executable)) continue;
+    if (fs.existsSync(executable)) found.push(executable);
+  }
+  return found;
+}
+
+function probePython(executable, args, env, failures, label = executable) {
+  const result = spawnSync(executable, args, {
+    cwd: plugin, env, encoding: 'utf8', timeout: 5000, windowsHide: true,
+  });
+  if (result.status !== 0) {
+    failures.push(label + ' · ' + probeDetail(result));
+    return null;
+  }
+  try {
+    const resolved = JSON.parse(result.stdout);
+    if (typeof resolved !== 'string' || !path.isAbsolute(resolved) || !fs.existsSync(resolved)) {
+      throw new Error('探测未返回存在的 Python 可执行文件绝对路径。');
+    }
+    return resolved;
+  } catch (error) {
+    failures.push(label + ' · ' + error.message);
+    return null;
+  }
+}
+
+function findLauncherPython(env, checkPython, failures) {
+  const launchers = new Set(pathExecutables('py.exe'));
+  if (!launchers.size) {
+    failures.push('PATH 上未找到 py.exe。');
+    return null;
+  }
+  const project = fs.readFileSync(path.join(plugin, 'pyproject.toml'), 'utf8');
+  const range = /^requires-python[ \t]*=[ \t]*">=3\.(\d+),<3\.(\d+)"[ \t]*\r?$/m.exec(project);
+  if (!range || Number(range[1]) >= Number(range[2])) {
+    throw startupError('install.files', '无法识别 pyproject.toml 中的 Python 版本范围。', retryCheck);
+  }
+  const launcherEnv = {...env};
+  for (const name of Object.keys(launcherEnv)) {
+    if (['PYLAUNCHER_ALLOW_INSTALL', 'PYLAUNCHER_ALWAYS_INSTALL', 'PYTHON_MANAGER_AUTOMATIC_INSTALL']
+      .includes(name.toUpperCase())) delete launcherEnv[name];
+  }
+  launcherEnv.PYTHON_MANAGER_AUTOMATIC_INSTALL = 'false';
+  const min = Number(range[1]);
+  const max = Number(range[2]);
+  for (const launcher of launchers) {
+    for (let minor = max - 1; minor >= min; minor--) {
+      const selector = '-3.' + minor;
+      const candidate = probePython(launcher, [selector, ...pythonProbeFlags, '-c',
+        'import json, sys; print(json.dumps(sys.executable))'], launcherEnv, failures, launcher + ' ' + selector);
+      const command = candidate && checkPython(candidate);
+      if (command) return command;
+    }
+  }
+  return null;
 }
 
 function readBinding(filename) {
@@ -130,30 +195,30 @@ function start() {
   }
   const active = env.VIRTUAL_ENV && path.isAbsolute(env.VIRTUAL_ENV)
     ? path.join(env.VIRTUAL_ENV, 'Scripts', 'python.exe') : null;
-  const candidates = chosen ? [chosen] : [explicit?.python, active, ...installed, 'python.exe'];
-  const runArgs = ['-X', 'utf8', '-B', cli, 'mcp', 'serve'];
-  let command;
-  let args;
+  const pathPythons = chosen ? [] : pathExecutables('python.exe');
+  const candidates = chosen ? [chosen] : [explicit?.python, active, ...installed, ...pathPythons];
   const failures = [];
-  for (const candidate of new Set(candidates.filter(Boolean))) {
-    const result = spawnSync(candidate, ['-I', '-X', 'utf8', '-B', probe], {
-      cwd: plugin, env, encoding: 'utf8', timeout: 5000, windowsHide: true,
-    });
-    if (result.status === 0) {
-      try {
-        command = JSON.parse(result.stdout);
-      } catch (error) {
-        failures.push(`${candidate}: ${error.message}`);
-        continue;
-      }
-      args = runArgs;
-      break;
-    }
-    failures.push(`${candidate}: ${probeDetail(result)}`);
+  const checked = new Set();
+  const checkPython = candidate => {
+    const key = path.normalize(candidate).toLowerCase();
+    if (checked.has(key)) return null;
+    checked.add(key);
+    return probePython(candidate, [...pythonProbeFlags, probe], env, failures);
+  };
+  let command;
+  for (const candidate of candidates.filter(Boolean)) {
+    command = checkPython(candidate);
+    if (command) break;
   }
   if (chosen && !command) {
     throw startupError('runtime.python', '指定的 Python 环境不可用或缺少所需依赖。', pythonRecovery, failures.join('\n'));
   }
+  if (!command) {
+    if (!pathPythons.length) failures.push('PATH 上未找到可探测的 python.exe。');
+    command = findLauncherPython(env, checkPython, failures);
+  }
+  const runArgs = ['-X', 'utf8', '-B', cli, 'mcp', 'serve'];
+  let args = runArgs;
   let useUv = false;
   if (!command) {
     const check = uv || probeUv(env);

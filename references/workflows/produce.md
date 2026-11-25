@@ -54,7 +54,9 @@ python scripts/qianxing.py verify NEW_DIRECTORY
 
 报告绑定源配置、Lua、工具、必要编译后端及产物摘要。普通交付可用同一 JOB 和新输出目录再次执行 `produce`，按清单中 `artifacts` 的交付角色核对摘要。只检查已归档产物时用 `verify NEW_DIRECTORY --artifacts-only`，结果中的来源与重建为 `not_checked`。可迁移交付先执行 `verify NEW_DIRECTORY --portable` 获取输入闭包摘要，再执行 `verify NEW_DIRECTORY --portable --rebuild --trusted-inputs-sha256 DIGEST`。重建使用随附输入闭包。路径和耗时属于当轮证据，模型、编译回读、软件预览与宿主结果各有状态。 [可迁移交付](portable-delivery.md)
 
-`environment.json` 记录生成前的依赖和各能力组指纹。`dependency-graph.json` schema 3 的 `external_and_tool_inputs` 集中登记输入和工具摘要。每阶段通过 `inputs_added` 引用新增输入，并记录依赖边和产物变化。最终 `client.lua` 须与指定 GIL 映射正文相同。模拟配置可用 `@level` 读取本轮最终 GIL。报告按客户端和服务端记录实际使用的文件摘要，Lua 另记录脚本映射。该类输入均与最终 GIL 绑定时，对应 `lua_model` 或 `native_graph_model` 才记录最终产物状态。外部或混合输入的实际模型结果保留在 `model_status` 与 `simulation.json` 中，最终产物状态为 `not_checked`。整个场景的 `simulation.artifact_scope` 需要所有参与者都绑定最终 GIL 才能标为 `final_gil`。必需阶段失败、已有输出路径或输入变化均拒绝提交。
+`environment.json` 记录生成前的依赖和各能力组指纹。`dependency-graph.json` schema 3 的 `external_and_tool_inputs` 集中登记输入和工具摘要。每阶段通过 `inputs_added` 引用新增输入，并记录依赖边和产物变化。最终 `client.lua` 须与指定 GIL 映射正文相同。
+
+内置联合模拟可用 `@level` 读取本轮最终 GIL。`simulation.json` 的 `inputs` 及客户端、服务端模型证据的 `source` 中，`level.gil` 相对于交付目录解析。外部输入仍使用实际绝对路径。报告记录所用文件的 SHA-256，Lua 另记录脚本映射。该类输入均与最终 GIL 绑定时，对应 `lua_model` 或 `native_graph_model` 才记录最终产物状态。外部或混合输入的实际模型结果保留在 `model_status` 与 `simulation.json` 中，最终产物状态为 `not_checked`。整个场景的 `simulation.artifact_scope` 需要所有参与者都绑定最终 GIL 才能标为 `final_gil`。必需阶段失败、已有输出路径或输入变化均拒绝提交。
 
 两种中性整合配置可以分别采用单整数槽与双槽布尔／列表布局，变化模板别名、记录版本、素材数量及开发／保留集。失败用例包括未知schema、缺环境、源变更、输出已存在、原生审计错误及最终场景断言失败。独立重建比对交付正文，运行报告中的路径和耗时分别保留。
 

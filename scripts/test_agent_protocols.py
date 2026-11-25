@@ -1,6 +1,7 @@
 """Test the published descriptors and installer-owned preparation contract."""
 
 import argparse
+import asyncio
 import json
 import os
 from pathlib import Path
@@ -10,13 +11,251 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+import venv
 import zipfile
 
 import install_plugin as installer
+from runtime_policy import PYTHON_MAX
 
 
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_SCHEMA = 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json'
+WINDOWS_TOOLS = (sys.platform == 'win32' and shutil.which('node') and shutil.which('powershell.exe'))
+
+
+def isolated_windows_path(path, root):
+    env = {key: value for key, value in os.environ.items()
+           if not key.upper().startswith(('MILIASTRA_WONDERLAND_', 'UGC_', 'PYLAUNCHER_'))
+           and key.upper() not in ('PATH', 'VIRTUAL_ENV', 'PYTHONHOME', 'PYTHONPATH')}
+    return {**env, 'PATH': str(path), 'MILIASTRA_WONDERLAND_INSTALL_ROOT': str(root)}
+
+
+def powershell_install(env, **arguments):
+    env = {**env, 'MILIASTRA_TEST_INSTALLER': str(ROOT / 'install.ps1'),
+           'MILIASTRA_TEST_INSTALL_ARGS': json.dumps(arguments)}
+    return subprocess.run([
+        shutil.which('powershell.exe'), '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+        '-Command',
+        '[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)\n'
+        'Import-Module (Join-Path $PSHOME "Modules/Microsoft.PowerShell.Utility/Microsoft.PowerShell.Utility.psd1")\n'
+        '$installArgs = @{}\n'
+        'foreach ($property in (ConvertFrom-Json $env:MILIASTRA_TEST_INSTALL_ARGS).PSObject.Properties) '
+        '{ $installArgs[$property.Name] = $property.Value }\n'
+        '& $env:MILIASTRA_TEST_INSTALLER @installArgs\n'
+        'exit $LASTEXITCODE',
+    ], env=env, capture_output=True, encoding='utf-8', errors='replace', timeout=120)
+
+
+@unittest.skipUnless(WINDOWS_TOOLS, 'Windows Node.js and PowerShell required')
+class WindowsRuntimeTests(unittest.TestCase):
+    def test_py_discovery_in_installer_self_check_and_stdio(self):
+        from mcp import Client, StdioServerParameters
+
+        with tempfile.TemporaryDirectory(prefix='miliastra Python 查找 ') as temporary:
+            root = Path(temporary)
+            binaries = root / 'bin'
+            binaries.mkdir()
+            launcher = binaries / 'py.exe'
+            source = root / 'probe.cs'
+            source.write_text("""
+using System;
+using System.IO;
+class Probe {
+    static int Main(string[] args) {
+        if (Path.GetFileNameWithoutExtension(Environment.GetCommandLineArgs()[0]) == "uv") {
+            if (args.Length != 1 || args[0] != "--version") return 2;
+            Console.WriteLine("uv fixture");
+            return 0;
+        }
+        if (Environment.GetEnvironmentVariable("PYLAUNCHER_ALLOW_INSTALL") != null ||
+            Environment.GetEnvironmentVariable("PYLAUNCHER_ALWAYS_INSTALL") != null ||
+            Environment.GetEnvironmentVariable("PYTHON_MANAGER_AUTOMATIC_INSTALL") != "false") return 3;
+        File.AppendAllText(Environment.GetEnvironmentVariable("MILIASTRA_TEST_PY_LOG"), args[0] + "\\n");
+        string candidate = Environment.GetEnvironmentVariable("MILIASTRA_TEST_PY_" + args[0].Substring(3));
+        if (candidate == null) return 4;
+        Console.WriteLine(candidate);
+        return 0;
+    }
+}
+""", encoding='utf-8')
+            compile_env = {**os.environ, 'MILIASTRA_TEST_CSHARP_SOURCE': str(source),
+                           'MILIASTRA_TEST_CSHARP_EXE': str(launcher)}
+            subprocess.run([
+                shutil.which('powershell.exe'), '-NoProfile', '-NonInteractive', '-Command',
+                '$ErrorActionPreference = "Stop"; Add-Type -Path $env:MILIASTRA_TEST_CSHARP_SOURCE '
+                '-OutputAssembly $env:MILIASTRA_TEST_CSHARP_EXE -OutputType ConsoleApplication',
+            ], env=compile_env, check=True, capture_output=True, timeout=45)
+            log = root / 'py-probes.txt'
+            highest = PYTHON_MAX[1] - 1
+            highest_key = f'MILIASTRA_TEST_PY_{highest}'
+            ready_key = f'MILIASTRA_TEST_PY_{highest - 1}'
+            env = {**isolated_windows_path(binaries, root / 'installed'),
+                   'MILIASTRA_TEST_PY_LOG': str(log), highest_key: 'invalid probe response',
+                   ready_key: json.dumps(sys.executable),
+                   'PYLAUNCHER_ALLOW_INSTALL': '1', 'PYLAUNCHER_ALWAYS_INSTALL': '1',
+                   'PYTHON_MANAGER_AUTOMATIC_INSTALL': 'true'}
+
+            archive = root / 'bootstrap.zip'
+            with zipfile.ZipFile(archive, 'w') as zip_file:
+                zip_file.writestr('miliastra-wonderland/scripts/install_plugin.py',
+                                  'import json, sys\nprint(json.dumps(sys.executable))\n')
+                for name in ('pyproject.toml', 'scripts/runtime_policy.py'):
+                    zip_file.write(ROOT / name, 'miliastra-wonderland/' + name)
+            setup = powershell_install(
+                env, Archive=str(archive), Sha256=installer.archive_sha256(archive),
+                Project=str(root), Outputs=str(root / 'outputs'), Root=str(root / 'installed'),
+            )
+            self.assertEqual(setup.returncode, 0, setup.stderr)
+            self.assertEqual(setup.stderr, '')
+            self.assertEqual(Path(json.loads(setup.stdout)), Path(sys.executable))
+            selectors = [f'-3.{highest}', f'-3.{highest - 1}']
+            self.assertEqual(log.read_text(encoding='utf-8').splitlines(), selectors)
+
+            # Give the first selector a real CPython environment without the locked dependencies.
+            incomplete = root / 'incomplete'
+            venv.EnvBuilder(with_pip=False).create(incomplete)
+            env[highest_key] = json.dumps(str(incomplete / 'Scripts/python.exe'))
+            command = [shutil.which('node'), str(ROOT / 'scripts/mcp_launcher.cjs')]
+            log.write_text('', encoding='utf-8')
+            check = subprocess.run([*command, '--check'], env=env, capture_output=True, encoding='utf-8', timeout=30)
+            self.assertEqual(check.returncode, 0, check.stderr)
+            self.assertIn(sys.executable, check.stdout)
+            self.assertEqual(log.read_text(encoding='utf-8').splitlines(), selectors)
+
+            async def lookup():
+                async with Client(StdioServerParameters(command=command[0], args=command[1:], env=env)) as client:
+                    outcome = await client.call_tool('nodes_lookup', {'query': '创建实体', 'scope': 'server'})
+                    self.assertFalse(outcome.is_error, outcome)
+                    self.assertTrue(outcome.structured_content['result']['nodes'])
+
+            asyncio.run(lookup())
+            self.assertEqual(log.read_text(encoding='utf-8').splitlines(), selectors * 2)
+
+            shutil.copyfile(launcher, binaries / 'uv.exe')
+            rejected = subprocess.run([*command, '--check'], capture_output=True, encoding='utf-8', timeout=30,
+                                      env={**env, 'MILIASTRA_WONDERLAND_PYTHON': str(root / 'missing.exe')})
+            self.assertEqual(rejected.returncode, 2)
+            self.assertIn('[runtime.python]', rejected.stderr)
+            self.assertEqual(log.read_text(encoding='utf-8').splitlines(), selectors * 2)
+            del env[ready_key]
+            uv = subprocess.run([*command, '--check'], env=env, capture_output=True, encoding='utf-8', timeout=30)
+            self.assertEqual(uv.returncode, 0, uv.stderr)
+            self.assertIn('下次启动会由 uv', uv.stdout)
+            self.assertIn('Python 依赖版本需匹配锁定版本', uv.stdout)
+            self.assertFalse((root / 'installed').exists())
+
+    def test_powershell_recovery_reuses_valid_python_and_checks_target_before_registration(self):
+        import mcp
+
+        with tempfile.TemporaryDirectory(prefix='miliastra 保留版本 ') as temporary:
+            root = Path(temporary)
+            project, outputs = root / '工程', root / '产物'
+            project.mkdir()
+            outputs.mkdir()
+            node = shutil.which('node')
+            env = {**isolated_windows_path(Path(node).parent, root), 'MILIASTRA_TEST_NODE': node}
+            old, current = '1.0.0', '1.1.0'
+            records = {}
+            for version in (old, current):
+                retained = root / 'versions/codex' / version
+                scripts = retained / 'miliastra-wonderland/scripts'
+                scripts.mkdir(parents=True)
+                shutil.copyfile(ROOT / 'pyproject.toml', scripts.parent / 'pyproject.toml')
+                runtime = retained / 'runtime'
+                python = runtime / 'Scripts/python.exe'
+                config = retained / 'runtime.json'
+                records[version] = {'version': version, 'home': str(retained), 'config': str(config),
+                                    'python': str(python), 'marketplace': version}
+                installer.save(config, {'schema': 1, 'python': str(python),
+                                        'project_root': str(project), 'output_root': str(outputs)})
+                # Run the actual state transitions against a test registry, with the real target smoke.
+                (scripts / 'install_plugin.py').write_text(f"""
+import argparse, json, os, sys
+from pathlib import Path
+from unittest.mock import patch
+sys.path.insert(0, {str(ROOT / 'scripts')!r})
+import install_plugin as installer
+
+args = argparse.Namespace(action=sys.argv[1], project=None, outputs=None, **{{
+    key[2:]: value for key, value in zip(sys.argv[2::2], sys.argv[3::2])
+}})
+registry = Path(args.root) / 'test-registration.json'
+
+def mark(action, record):
+    state = installer.read_json(registry)
+    getattr(state, action)(record['version'])
+    installer.save(registry, state)
+
+with patch.object(installer, 'preflight', return_value=('test-client', os.environ['MILIASTRA_TEST_NODE'])), \\
+     patch.object(installer, 'ensure_codex_active', side_effect=lambda _, row: mark('append', row)), \\
+     patch.object(installer, 'retire_codex_registration', side_effect=lambda _, row: mark('remove', row)):
+    result = installer.operate(args)
+print(json.dumps({{'bootstrap': sys.executable, **result}}))
+""", encoding='utf-8')
+                if version == old:
+                    venv.EnvBuilder(with_pip=False).create(runtime)
+                    site_packages = Path(mcp.__file__).resolve().parents[1]
+                    (runtime / 'Lib/site-packages/test-dependencies.pth').write_text(
+                        f'import site; site.addsitedir({ascii(str(site_packages))})\n', encoding='utf-8',
+                    )
+                    marker = scripts / 'fail-smoke'
+                    marker.touch()
+                    (scripts / 'install_smoke.py').write_text(f"""
+import json, runpy, sys
+from pathlib import Path
+if Path(__file__).with_name('fail-smoke').exists():
+    sys.exit('injected target smoke failure')
+config = Path(sys.argv[sys.argv.index('--config') + 1])
+assert Path(sys.executable) == Path(json.loads(config.read_text(encoding='utf-8'))['python'])
+sys.path.insert(0, {str(ROOT / 'scripts')!r})
+runpy.run_path({str(ROOT / 'scripts/install_smoke.py')!r}, run_name='__main__')
+""", encoding='utf-8')
+                else:
+                    self.assertFalse(python.exists())
+
+            state = root / 'codex.json'
+            registry = root / 'test-registration.json'
+            installer.save(state, {'schema': 1, 'current': records[current], 'history': [records[old]]})
+            installer.save(registry, [current])
+            original = state.read_bytes()
+            rollback = {'Agent': 'codex', 'Root': str(root), 'Action': 'rollback', 'Version': old}
+            smoke_failed = powershell_install(env, **rollback)
+            self.assertNotEqual(smoke_failed.returncode, 0)
+            self.assertIn('injected target smoke failure', smoke_failed.stderr)
+            self.assertEqual(state.read_bytes(), original)
+            self.assertEqual(installer.read_json(registry), [current])
+
+            marker.unlink()
+            explicit_failed = powershell_install(env, **rollback, Python=str(root / 'missing.exe'))
+            self.assertNotEqual(explicit_failed.returncode, 0)
+            self.assertIn('[runtime.python]', explicit_failed.stderr)
+            self.assertIn(f"-Version '{old}'", explicit_failed.stderr)
+            self.assertEqual(state.read_bytes(), original)
+
+            broken = Path(records[current]['python'])
+            broken.parent.mkdir(parents=True)
+            broken.write_bytes(b'invalid executable for the recovery test')
+            recovered = powershell_install(env, **rollback)
+            self.assertEqual(recovered.returncode, 0, recovered.stderr)
+            receipts = [json.loads(line) for line in recovered.stdout.splitlines() if line.startswith('{')]
+            self.assertEqual(receipts[-2]['stdio'], 'passed', recovered.stdout)
+            self.assertEqual(Path(receipts[-1]['bootstrap']), Path(records[old]['python']))
+            self.assertEqual(receipts[-1]['rolled_back'], old)
+            self.assertEqual(installer.read_json(state)['current'], records[old])
+            self.assertEqual(installer.read_json(registry), [old])
+
+            target_python = Path(records[old]['python'])
+            target_python.rename(target_python.with_suffix('.disabled'))
+            system_env = {**env, 'PATH': os.pathsep.join([env['PATH'], str(Path(sys.executable).parent)])}
+            uninstall = {'Agent': 'codex', 'Root': str(root), 'Action': 'uninstall'}
+            for next_env, options in ((system_env, {}), (env, {'Python': sys.executable})):
+                removed = powershell_install(next_env, **uninstall, **options)
+                self.assertEqual(removed.returncode, 0, removed.stderr)
+                result = json.loads(removed.stdout.splitlines()[-1])
+                self.assertTrue(result['registration_removed'])
+                self.assertEqual(Path(result['bootstrap']), Path(sys.executable))
+                self.assertIsNone(installer.read_json(state)['current'])
+                self.assertEqual(installer.read_json(registry), [])
 
 
 class ProtocolTests(unittest.TestCase):
@@ -48,7 +287,8 @@ class ProtocolTests(unittest.TestCase):
             self.assertIn('未找到可用的 uv', check.stdout)
             self.assertIn('[runtime.python] 未找到可用的 Python 运行环境', check.stderr)
             self.assertIn('uv --version', check.stderr)
-            self.assertIn('spawnSync python.exe ENOENT', check.stderr)
+            self.assertIn('PATH 上未找到可探测的 python.exe', check.stderr)
+            self.assertIn('PATH 上未找到 py.exe', check.stderr)
             self.assertFalse((Path(temporary) / 'install').exists())
 
     @unittest.skipUnless(sys.platform == 'win32' and shutil.which('node'), 'Windows Node.js required')

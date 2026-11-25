@@ -22,6 +22,90 @@ function Invoke-MiliastraInstaller([string]$Executable, [string[]]$Arguments) {
         [Console]::OutputEncoding = $consoleEncoding
     }
 }
+
+function Get-PythonRange([string]$File) {
+    if (!(Test-Path -LiteralPath $File -PathType Leaf)) {
+        throw "[install.files] 找不到 Python 版本声明 $File。请核对安装文件是否完整。"
+    }
+    $declaration = Get-Content -Raw -Encoding UTF8 -LiteralPath $File
+    if ($declaration -notmatch '(?m)^requires-python[ \t]*=[ \t]*">=3\.(\d+),<3\.(\d+)"[ \t]*\r?$' -or
+        [int]$Matches[1] -ge [int]$Matches[2]) {
+        throw "[install.files] 无法识别 $File 中的 Python 版本范围。"
+    }
+    @{ Min = [int]$Matches[1]; Max = [int]$Matches[2] }
+}
+
+function Find-SupportedPython([string]$Executable, [hashtable]$Range, [string[]]$Selector = @()) {
+    if (!$Executable -or !(Test-Path -LiteralPath $Executable -PathType Leaf)) { return }
+    # An unavailable launcher version can write to stderr and return nonzero.
+    $ErrorActionPreference = 'Continue'
+    $PSNativeCommandUseErrorActionPreference = $false
+    # Windows PowerShell strips embedded double quotes from native command arguments.
+    $probe = 'import json,platform,sys; ok = sys.platform == ''win32'' and platform.machine().lower() in (''amd64'', ''x86_64'') and sys.maxsize >= 2**32 and sys.implementation.name == ''cpython'' and (3, int(sys.argv[1])) <= sys.version_info[:2] < (3, int(sys.argv[2])); print(json.dumps(sys.executable)) if ok else sys.exit(1)'
+    $answer = @(& $Executable @Selector -I -X utf8 -B -c $probe $Range.Min $Range.Max 2>$null)
+    if ($LASTEXITCODE -eq 0 -and $answer.Count -eq 1) {
+        try {
+            $resolved = ConvertFrom-Json -InputObject $answer[0] -ErrorAction Stop
+        } catch {
+            return
+        }
+        if ($resolved -is [string] -and $resolved -match '^(?:[a-z]:[\\/]|[\\/]{2})' -and
+            (Test-Path -LiteralPath $resolved -PathType Leaf)) { return $resolved }
+    }
+}
+
+function Find-InstallerPython([hashtable]$Range, [string]$Explicit, [string[]]$Retained = @()) {
+    if ($Explicit) {
+        $requested = Get-Command -Name $Explicit -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($requested.Source -notmatch '[\\/]Microsoft[\\/]WindowsApps[\\/]') {
+            Find-SupportedPython $requested.Source $Range
+        }
+        return
+    }
+    foreach ($candidate in $Retained) {
+        $resolved = Find-SupportedPython $candidate $Range
+        if ($resolved) { return $resolved }
+    }
+    foreach ($candidate in @(Get-Command python.exe -All -CommandType Application -ErrorAction SilentlyContinue)) {
+        if ($candidate.Source -match '[\\/]Microsoft[\\/]WindowsApps[\\/]') { continue }
+        $resolved = Find-SupportedPython $candidate.Source $Range
+        if ($resolved) { return $resolved }
+    }
+    $launchers = @(Get-Command py.exe -All -CommandType Application -ErrorAction SilentlyContinue)
+    if (!$launchers.Count) { return }
+    $launcherEnv = @{
+        PYLAUNCHER_ALLOW_INSTALL = $null
+        PYLAUNCHER_ALWAYS_INSTALL = $null
+        PYTHON_MANAGER_AUTOMATIC_INSTALL = 'false'
+    }
+    $savedEnv = @{}
+    try {
+        foreach ($name in $launcherEnv.Keys) {
+            $savedEnv[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
+            [Environment]::SetEnvironmentVariable($name, $launcherEnv[$name], 'Process')
+        }
+        foreach ($launcher in $launchers) {
+            for ($minor = $Range.Max - 1; $minor -ge $Range.Min; $minor--) {
+                $resolved = Find-SupportedPython $launcher.Source $Range @("-3.$minor")
+                if ($resolved) { return $resolved }
+            }
+        }
+    } finally {
+        foreach ($name in $savedEnv.Keys) {
+            [Environment]::SetEnvironmentVariable($name, $savedEnv[$name], 'Process')
+        }
+    }
+}
+
+function Get-RetainedHome($Record, [string]$InstallRoot) {
+    $directory = [IO.Path]::GetFullPath($Record.home)
+    $prefix = $InstallRoot.TrimEnd('\') + '\'
+    if (!$directory.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) {
+        throw '[install.state] 安装记录中的路径超出选定的安装根目录。'
+    }
+    $directory
+}
+
 # Recovery uses the retained installation at the selected root.
 if ($Action -ne 'install') {
     if ($Agent -in @('agent-plugins', 'deepseek-harness')) {
@@ -30,38 +114,50 @@ if ($Action -ne 'install') {
     $recordName = $Agent + '.json'
     $recordPath = Join-Path $Root $recordName
     try {
+        $installRoot = (Get-Item -LiteralPath $recordPath).DirectoryName
         $state = Get-Content -Raw -Encoding UTF8 -LiteralPath $recordPath | ConvertFrom-Json
     } catch {
         throw "[install.state] 无法读取安装记录 $recordPath。请核对原安装使用的 -Root。`n详细原因 $($_.Exception.Message)"
     }
     if ($state.schema -ne 1) { throw '[install.state] 无法识别安装记录的版本。' }
+    if ($Agent -eq 'codex' -and $state.pending_rollback_retirement -and
+        ($Action -ne 'rollback' -or $state.current.version -ne $Version)) {
+        throw '[install.state] 请先用当前版本完成尚未结束的 Codex 回退。'
+    }
+    $target = $null
+    if ($Action -eq 'rollback') {
+        if ($Agent -eq 'codex' -and $state.current.version -eq $Version) {
+            $target = $state.current
+        } else {
+            $target = $state.history | Where-Object { $_.version -eq $Version } | Select-Object -Last 1
+        }
+        if (!$target) { throw "[install.state] 找不到保留的版本 $Version。请核对 -Root 和 -Version。" }
+    }
     $owned = $state.current
+    if (!$owned -and $target) { $owned = $target }
     if (!$owned -and $state.history.Count) { $owned = $state.history[-1] }
     if (!$owned) { throw '[install.state] 当前目录没有此安装器登记的安装记录。' }
-    $ownedHome = [IO.Path]::GetFullPath($owned.home)
-    $ownedRoot = [IO.Path]::GetFullPath($Root).TrimEnd('\') + '\'
-    if (!$ownedHome.StartsWith($ownedRoot, [StringComparison]::OrdinalIgnoreCase)) { throw '[install.state] 安装记录中的路径超出选定的安装根目录。' }
-    $runner = Join-Path $ownedHome 'miliastra-wonderland/scripts/install_plugin.py'
+    $ownedHome = Get-RetainedHome $owned $installRoot
+    $bundle = Join-Path $ownedHome 'miliastra-wonderland'
+    $runner = Join-Path $bundle 'scripts/install_plugin.py'
     if (!(Test-Path -LiteralPath $runner -PathType Leaf)) {
         throw '[install.files] 已保留的安装缺少 scripts/install_plugin.py。请核对安装根目录。'
     }
-    $boundPython = Join-Path $ownedHome 'runtime/Scripts/python.exe'
-    Invoke-MiliastraInstaller $boundPython @('-X', 'utf8', '-B', $runner, $Action, '--agent', $Agent, '--root', $Root, '--version', $Version)
-    return
-}
-
-function Find-SupportedPython([string]$Executable, [string[]]$Selector = @()) {
-    if (!$Executable -or $Executable -match '[\\/]Microsoft[\\/]WindowsApps[\\/]') { return }
-    # An unavailable launcher version can write to stderr and return nonzero.
-    $ErrorActionPreference = 'Continue'
-    $PSNativeCommandUseErrorActionPreference = $false
-    # Windows PowerShell strips embedded double quotes from native command arguments.
-    $probe = 'import json,sys; sys.exit(1) if not ((3, int(sys.argv[1])) <= sys.version_info[:2] < (3, int(sys.argv[2]))) or sys.implementation.name != ''cpython'' or sys.maxsize < 2**32 else print(json.dumps(sys.executable))'
-    $answer = @(& $Executable @Selector -I -B -c $probe $minMinor $maxMinor 2>$null)
-    if ($LASTEXITCODE -eq 0 -and $answer.Count -eq 1) {
-        $resolved = ConvertFrom-Json -InputObject $answer[0] -ErrorAction SilentlyContinue
-        if ($resolved -is [string] -and (Test-Path -LiteralPath $resolved -PathType Leaf)) { return $resolved }
+    $retained = @(Join-Path $ownedHome 'runtime/Scripts/python.exe')
+    if ($target -and $target -ne $owned) {
+        $targetHome = Get-RetainedHome $target $installRoot
+        $retained += Join-Path $targetHome 'runtime/Scripts/python.exe'
     }
+    $range = Get-PythonRange (Join-Path $bundle 'pyproject.toml')
+    $bootstrapPython = Find-InstallerPython $range $Python $retained
+    if (!$bootstrapPython) {
+        $retry = ".\install.ps1 -Agent $Agent -Action $Action -Root '" + $installRoot.Replace("'", "''") + "'"
+        if ($Action -eq 'rollback') { $retry += " -Version '$Version'" }
+        $retry += " -Python 'C:\路径\python.exe'"
+        throw "[runtime.python] 找不到可启动恢复程序的兼容 Python。请指定可用的 Windows x64 版 CPython 3.$($range.Min)–3.$($range.Max - 1)。`n下一步 $retry"
+    }
+    Invoke-MiliastraInstaller $bootstrapPython @('-X', 'utf8', '-B', $runner, $Action, '--agent', $Agent, '--root', $installRoot, '--version', $Version)
+    return
 }
 
 if (!$Archive -or $Sha256 -notmatch '^[0-9a-fA-F]{64}$') {
@@ -84,15 +180,6 @@ try {
         $archiveRoot = 'miliastra-wonderland'
         $bootstrap = 'scripts/install_plugin.py'
         $entries = @($bootstrap, 'pyproject.toml', 'scripts/runtime_policy.py')
-        $contract = $zip.GetEntry("$archiveRoot/pyproject.toml")
-        if (!$contract) { throw "[install.files] ZIP 缺少 $archiveRoot/pyproject.toml。请核对 ZIP 是否为完整安装包。" }
-        $reader = New-Object IO.StreamReader($contract.Open())
-        try { $declaration = $reader.ReadToEnd() } finally { $reader.Dispose() }
-        if ($declaration -notmatch '(?m)^requires-python\s*=\s*">=3\.(\d+),<3\.(\d+)"\s*$') {
-            throw '[install.files] ZIP 中的 pyproject.toml 包含无法识别的 Python 版本范围。'
-        }
-        $minMinor = [int]$Matches[1]
-        $maxMinor = [int]$Matches[2]
         New-Item -ItemType Directory -Path (Join-Path $taskTemp 'scripts') | Out-Null
         foreach ($file in $entries) {
             $entry = @($zip.Entries | Where-Object { $_.FullName -ceq "$archiveRoot/$file" })
@@ -101,29 +188,15 @@ try {
         }
         $runner = Join-Path $taskTemp $bootstrap
     } finally { $zip.Dispose() }
-    if ($Python) {
-        $requested = Get-Command -Name $Python -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
-        $Python = Find-SupportedPython $requested.Source
-    } else {
-        foreach ($candidate in @(Get-Command python.exe -All -CommandType Application -ErrorAction SilentlyContinue)) {
-            $Python = Find-SupportedPython $candidate.Source
-            if ($Python) { break }
-        }
-        if (!$Python) {
-            foreach ($launcher in @(Get-Command py.exe -All -CommandType Application -ErrorAction SilentlyContinue)) {
-                foreach ($selector in ((($maxMinor - 1)..$minMinor) | ForEach-Object { "-3.$_" })) {
-                    $Python = Find-SupportedPython $launcher.Source @($selector)
-                    if ($Python) { break }
-                }
-                if ($Python) { break }
-            }
-        }
+    $range = Get-PythonRange (Join-Path $taskTemp 'pyproject.toml')
+    $bootstrapPython = Find-InstallerPython $range $Python
+    if (!$bootstrapPython) {
+        throw "[runtime.python] 请安装 Windows x64 版 CPython 3.$($range.Min)–3.$($range.Max - 1)，并通过 -Python 指定其可执行文件。"
     }
-    if (!$Python) { throw "[runtime.python] 请安装 Windows x64 版 CPython 3.$minMinor–3.$($maxMinor - 1)，并通过 -Python 指定其可执行文件。" }
-    $arguments = @('-X', 'utf8', '-B', $runner, $Action, '--agent', $Agent, '--root', $Root, '--version', $Version)
-    if ($Action -eq 'install') { $arguments += @('--archive', $Archive, '--sha256', $Sha256, '--project', $Project, '--outputs', $Outputs) }
+    $arguments = @('-X', 'utf8', '-B', $runner, $Action, '--agent', $Agent, '--root', $Root, '--version', $Version,
+                   '--archive', $Archive, '--sha256', $Sha256, '--project', $Project, '--outputs', $Outputs)
     if ($Resume) { $arguments += '--resume' }
-    Invoke-MiliastraInstaller $Python $arguments
+    Invoke-MiliastraInstaller $bootstrapPython $arguments
 } finally {
     $resolvedTemp = [IO.Path]::GetFullPath($taskTemp)
     $allowedTemp = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\') + '\'

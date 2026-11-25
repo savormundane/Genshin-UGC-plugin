@@ -99,6 +99,8 @@ python -B scripts/package_release.py --source . --out ../miliastra-wonderland-wi
 .\install.ps1 -Agent codex -Action uninstall
 ```
 
+当前版本的 Python 无法启动时，回退会尝试目标版本保留的解释器，再查找系统中兼容的 Python。也可以给回退或卸载命令加上 `-Python '<可用 Python 的绝对路径>'`。回退在目标版本的运行环境通过自检后才切换登记。
+
 卸载保留项目、输出和各版本的运行环境。清理旧版本目录前，确认其他客户端已停用该版本，并且无需回退。
 
 ## 安装自检
@@ -111,7 +113,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-install.
 
 能运行 Node 时，也可以直接执行 `node .\scripts\mcp_launcher.cjs --check`。
 
-自检适用于市场、GitHub 直装、本地导入和 PowerShell 登记。它检查启动文件、Node.js 版本、已有 Python 环境及 PATH 上的 uv，遇到阻塞项时会显示失败环节、原始错误和下一步。自检只做本机探测。如果报告会由 uv 准备环境，请在依赖源可访问时重启客户端，再[查询第一个节点](../README.md#查询第一个节点)确认工具连通。MCP 连通后，可继续用 `doctor` 查看客户端实际采用的工程目录和依赖。
+自检适用于市场、GitHub 直装、本地导入和 PowerShell 登记。它检查启动文件、Node.js、已有 Python 的版本与依赖，以及 PATH 上的 uv。自动查找 Python 时会检查 PATH 上的 `python.exe`，并通过 Windows 的 `py.exe` 查找已安装的兼容版本。自检显示选择的解释器，遇到阻塞项会列出失败原因和下一步。如果报告会由 uv 准备环境，请在依赖源可访问时重启客户端，再[查询第一个节点](../README.md#查询第一个节点)确认工具连通。MCP 连通后，可用 `doctor` 查看客户端实际采用的工程目录和依赖。
 
 自检读取当前终端的 PATH、`MILIASTRA_WONDERLAND_PYTHON` 和 `MILIASTRA_WONDERLAND_RUNTIME_CONFIG` 等环境变量。客户端单独配置了解释器或绑定文件时，把同样的值设置到自检终端。使用 WinGet 的用户可运行 `winget install --id=astral-sh.uv -e` 安装 uv，再打开新终端检查 `uv --version`。 [uv 的 WinGet 安装说明](https://docs.astral.sh/uv/getting-started/installation/#winget)
 
