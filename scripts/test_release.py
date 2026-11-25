@@ -163,7 +163,7 @@ class ReleaseTests(unittest.TestCase):
         self.write("docs/contributing/guide.md", "[bad](missing.md)")
         self.assertTrue(any("missing.md" in error for error in check(self.root)))
 
-    def test_source_release_verifies_tag_and_local_package_version(self):
+    def test_source_release_verifies_tags_and_accepts_a_generic_local_package_name(self):
         self.fixture('1.0.0')
         release = f'https://github.com/{REPO}/releases/tag/v1.0.0'
         for source in (SOURCE_ARCHIVE, release):
@@ -171,8 +171,13 @@ class ReleaseTests(unittest.TestCase):
                 self.write('README.md', f'**当前版本 `1.0.0`**\n[Source]({source})\n')
                 self.write('docs/installation.md', f'[Source]({source})\n`Miliastra-Wonderland-1.0.0-windows-x64.zip`\n')
                 self.assertEqual(check(self.root), [])
+                self.write('docs/installation.md', f'[Source]({source})\n`miliastra-wonderland-windows-x64.zip`\n')
+                self.assertEqual(check(self.root), [])
         self.write('docs/installation.md', f'[Source]({release})\n`Miliastra-Wonderland-4.1.2-windows-x64.zip`\n')
         self.assertTrue(any('local ZIP filename' in error for error in check(self.root)))
+        archive = f'https://github.com/{REPO}/archive/refs/tags/v4.1.2.zip'
+        self.write('docs/installation.md', f'[Release]({release})\n[Source]({archive})\n')
+        self.assertTrue(any('source archive tag' in error for error in check(self.root)))
 
     def test_dirty_input_rejected_without_output(self):
         self.fixture()

@@ -5,14 +5,60 @@ import argparse
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 import zipfile
 
-from check_repository import check
+from check_repository import (
+    CHANGELOG_VERSION, DOC_VERSIONS, INSTALLER_VERSION, SEMVER, SOURCE_DOC_VERSIONS, check,
+)
 from package_release import build_release, sha256_file, validate_windows_names
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def sync_release_text(root: Path) -> None:
+    """Update release-facing text in the staged source tree from its manifest."""
+    version = json.loads((root / "plugin.json").read_text(encoding="utf-8-sig"))["version"]
+    if not isinstance(version, str) or not re.fullmatch(SEMVER, version):
+        raise ValueError("Expected x.y.z release version")
+
+    def replace_version(match: re.Match[str]) -> str:
+        start, end = match.span(1)
+        offset = match.start()
+        return match[0][:start - offset] + version + match[0][end - offset:]
+
+    for relative, patterns in DOC_VERSIONS.items():
+        path = root / relative
+        content = path.read_bytes().decode("utf-8")
+        for pattern in dict.fromkeys((*patterns.values(), *SOURCE_DOC_VERSIONS[relative].values())):
+            content = re.sub(pattern, replace_version, content)
+        path.write_bytes(content.encode("utf-8"))
+
+    installer = root / "install.ps1"
+    updated, count = re.subn(INSTALLER_VERSION, replace_version, installer.read_bytes().decode("utf-8"))
+    if count != 1:
+        raise ValueError("Expected one default version in install.ps1")
+    installer.write_bytes(updated.encode("utf-8"))
+
+    changelog = root / "CHANGELOG.md"
+    content = changelog.read_bytes().decode("utf-8")
+    released = re.search(CHANGELOG_VERSION, content, re.M)
+    if released and released[1] == version:
+        return
+    line_end = "\r\n" if "\r\n" in content else "\n"
+    heading = f"## {version}{line_end}"
+    unreleased = re.search(r"^##[ \t]+Unreleased[ \t]*(?:\r?\n|$)", content, re.M)
+    if unreleased:
+        position = unreleased.end()
+        content = content[:position].rstrip("\r\n") + line_end * 2 + heading + content[position:]
+    elif released:
+        position = released.start()
+        content = content[:position] + heading + line_end + content[position:]
+    else:
+        content = content.rstrip("\r\n") + line_end * 2 + heading
+    changelog.write_bytes(content.encode("utf-8"))
 
 
 def prepare(source: Path, output: Path, notes: Path) -> dict:

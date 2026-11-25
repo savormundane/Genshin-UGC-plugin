@@ -29,6 +29,8 @@ REPO = "savormundane/miliastra-wonderland-plugin"
 SOURCE_ARCHIVE = f"https://github.com/{REPO}/archive/refs/heads/main.zip"
 INSTALL_TAG = rf"https://raw\.githubusercontent\.com/{REPO}/v({SEMVER})/install\.ps1\b"
 ZIP_VERSION = rf"\bMiliastra-Wonderland-({SEMVER})-windows-x64\.zip\b"
+INSTALLER_VERSION = r"\[string\]\$Version\s*=\s*'([^']+)'"
+CHANGELOG_VERSION = rf"^##[ \t]+v?({SEMVER})(?=\s|$)"
 DOC_VERSIONS = {
     "README.md": {
         "current version": rf"\*\*当前版本 `({SEMVER})`\*\*",
@@ -42,9 +44,11 @@ DOC_VERSIONS = {
     },
 }
 RELEASE_TAG = rf"https://github\.com/{REPO}/releases/tag/v({SEMVER})\b"
+SOURCE_ARCHIVE_TAG = rf"https://github\.com/{REPO}/archive/refs/tags/v({SEMVER})\.zip\b"
 SOURCE_DOC_VERSIONS = {
     "README.md": {"current version": DOC_VERSIONS["README.md"]["current version"], "release tag": RELEASE_TAG},
     "docs/installation.md": {"release tag": RELEASE_TAG,
+                             "source archive tag": SOURCE_ARCHIVE_TAG,
                              "local ZIP filename": rf"\bMiliastra-Wonderland-({SEMVER})-windows-x64\.zip\b"},
 }
 DESTINATION = r'(<[^\n<>]+>|(?:[^()\s]|\([^()\n]*\))+)'
@@ -114,6 +118,8 @@ def check(root: Path = ROOT) -> list[str]:
                 errors.append(f"{relative}: source release must use local ZIP packaging")
             for label, pattern in patterns.items():
                 found = set(re.findall(pattern, text))
+                if not found and label in {"source archive tag", "local ZIP filename"}:
+                    continue
                 if source_release and label == "release tag" and not found and SOURCE_ARCHIVE in text:
                     continue
                 if found != {version}:
@@ -121,13 +127,13 @@ def check(root: Path = ROOT) -> list[str]:
                     errors.append(f"{relative}: {label} must match plugin.json ({version}); found {details}")
 
     installer = root / "install.ps1"
-    defaults = re.findall(r"\[string\]\$Version\s*=\s*'([^']+)'", installer.read_text(encoding="utf-8-sig")) if installer.is_file() else []
+    defaults = re.findall(INSTALLER_VERSION, installer.read_text(encoding="utf-8-sig")) if installer.is_file() else []
     if defaults != [version]:
         errors.append("install.ps1 default version must match plugin.json")
 
     changelog = root / "CHANGELOG.md"
     if changelog.is_file():
-        released = re.search(r"^##[ \t]+v?(\d+\.\d+\.\d+)(?=\s|$)", changelog.read_text(encoding="utf-8-sig"), re.M)
+        released = re.search(CHANGELOG_VERSION, changelog.read_text(encoding="utf-8-sig"), re.M)
         if released is None or released[1] != version:
             errors.append("CHANGELOG.md first released version must match plugin.json")
 
