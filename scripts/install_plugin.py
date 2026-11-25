@@ -27,11 +27,15 @@ def json_text(data):
     return json.dumps(data, ensure_ascii=False, indent=2) + '\n'
 
 
+def generated_bytes(data):
+    return data if isinstance(data, bytes) else json_text(data).replace('\n', os.linesep).encode('utf-8')
+
+
 def save(p, data):
     p = Path(p)
     p.parent.mkdir(parents=True, exist_ok=True)
     pending = p.with_suffix('.pending')
-    pending.write_text(json_text(data), encoding='utf-8')
+    pending.write_bytes(generated_bytes(data))
     os.replace(pending, p)
 
 
@@ -117,14 +121,32 @@ def marketplace_files(agent, version, node, config):
                         'args': [str(bundle / 'scripts/mcp_launcher.cjs')], 'env': server['env'],
                         'cwd': str(bundle), 'toolCallTimeoutMs': 930000, 'failOnStartupError': True}},
         ]}]
-        return None, {
-            Path('cordis-bundle/package.json'): {
-                'name': '@local/miliastra-wonderland', 'version': version, 'private': True,
-                'description': 'Miliastra Wonderland Skills and local MCP for DeepSeek Harness',
-                'engines': {'dsh': '0.2.2-rc.5'}, 'files': ['cordis.patch.yml'],
-                'dsh': {'bundle': {'patch': './cordis.patch.yml'}}},
+        local_manifest = {
+            'name': '@local/miliastra-wonderland', 'version': version, 'private': True,
+            'description': 'Miliastra Wonderland Skills and local MCP for DeepSeek Harness',
+            'engines': {'dsh': '0.2.2-rc.5'}, 'files': ['cordis.patch.yml'],
+            'dsh': {'bundle': {'patch': './cordis.patch.yml'}},
+        }
+        files = {
+            Path('cordis-bundle/package.json'): local_manifest,
             Path('cordis-bundle/cordis.patch.yml'): patch,
         }
+        package_path = bundle / 'package.json'
+        if linked(bundle) or linked(package_path):
+            raise ValueError('DeepSeek Harness 的插件清单路径指向链接。')
+        if package_path.is_file():
+            from marketplace_release import DSH_DETAILS, DSH_ICON
+
+            package = read_json(package_path)
+            if package.get('icon') == './' + DSH_ICON:
+                paths = [DSH_ICON, *(f'locale/{lang}.json' for lang in DSH_DETAILS), *DSH_DETAILS.values()]
+                for relative in map(Path, paths):
+                    if any(linked(bundle / part) for part in (relative, *relative.parents)):
+                        raise ValueError(f'DeepSeek Harness 的展示资源路径指向链接 {relative}')
+                    files[Path('cordis-bundle') / relative] = (bundle / relative).read_bytes()
+                local_manifest.update(description=package['description'], icon=package['icon'],
+                                      exports=package['exports'], files=[*local_manifest['files'], *paths])
+        return None, files
     if agent == 'claude-code':
         server.update(command=node, args=['${CLAUDE_PLUGIN_ROOT}/scripts/mcp_launcher.cjs'])
         return market, {
@@ -185,7 +207,7 @@ def verify_unfinished_bundle(home, archive, binding, generated):
             data = path.read_bytes()
             if relative in expected and data == expected[relative].read_bytes():
                 continue
-            if relative in generated and data == json_text(generated[relative]).replace('\n', os.linesep).encode('utf-8'):
+            if relative in generated and data == generated_bytes(generated[relative]):
                 continue
             raise ValueError(f'未完成的安装与 ZIP 或安装器配置不一致。文件 {relative}')
 

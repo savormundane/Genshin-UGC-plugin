@@ -7,7 +7,7 @@
     {
       "name": "miliastra-wonderland",
       "source": "./",
-      "description": "Miliastra Wonderland 千星奇域社区创作工具。包含 Miliastra Editor、Miliastra Graph Code、Miliastra GIL 和 Miliastra Assets。"
+      "description": "千星奇域本机创作工具。用中文查节点和 Lua API、检查关卡，并生成节点图和图元素材。"
     }
   ]
 }

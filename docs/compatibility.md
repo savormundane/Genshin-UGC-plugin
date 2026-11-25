@@ -20,7 +20,7 @@ Python 依赖在 `pyproject.toml` 声明，并用 `uv.lock` 锁定。需要创�
 | Codex CLI | 在终端添加市场并安装插件。 [安装步骤](installation.md#codex-cli) |
 | Codex 桌面端 | 登记市场后在插件目录安装。 [安装步骤](installation.md#codex-桌面端) |
 | Claude Code | 在终端或 Claude Code 会话里添加市场并安装插件。 [安装步骤](installation.md#claude-code) |
-| Claude 桌面端 | 在「自定义 → 插件」添加仓库市场并安装。 [安装步骤](installation.md#claude-桌面端) |
+| Claude 桌面端 | 在「自定义 → 插件」添加仓库市场。使用 Cowork 运行本地 MCP。 [安装步骤](installation.md#claude-桌面端) |
 | DeepSeek Harness | 从 GitHub 直接安装 Cordis Bundle。 [安装步骤](installation.md#deepseek-harness) |
 | Agent Plugins | 使用通用插件清单、Skills 和本地 stdio MCP 接入。 [安装步骤](installation.md#agent-plugins) |
 | 独立 CLI | 使用已配置依赖的 Python 运行 `scripts/qianxing.py`。 [环境配置](runtime-environment.md) |

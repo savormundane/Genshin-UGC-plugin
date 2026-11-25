@@ -1,6 +1,7 @@
 {
   "meta": {
     "title": "千星奇域开发插件",
-    "description": "查询节点和 Lua API，检查关卡，编写节点图并制作图元素材。"
+    "description": "查询节点和 Lua API，检查关卡，编写节点图并制作图元素材。",
+    "detail": "docs/dsh/overview.zh.md"
   }
 }

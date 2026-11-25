@@ -83,7 +83,7 @@ class ReleaseTests(unittest.TestCase):
             inputs = {
                 'plugin.json': json.dumps(plugin),
                 '.codex-plugin/plugin.json': json.dumps({**plugin, 'interface': {'displayName': 'Fixture'}}),
-                '.claude-plugin/plugin.json': json.dumps({'displayName': 'Fixture', 'description': 'Test plugin'}),
+                '.claude-plugin/plugin.json': json.dumps({'description': 'Test plugin'}),
                 'distribution.json': json.dumps(policy),
                 'skills/fixture/SKILL.md': '---\nname: fixture\ndescription: Distribution fixture\n---\n',
                 **dict.fromkeys(omitted | retained, 'Test content'),
@@ -92,7 +92,12 @@ class ReleaseTests(unittest.TestCase):
                 path = source / name
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(content, encoding='utf-8')
-            (source / 'package.json').write_text(marketplace_files(source)['package.json'], encoding='utf-8')
+            manifests = marketplace_files(source)
+            claude = json.loads(manifests['.claude-plugin/marketplace.json'])
+            self.assertEqual(claude['metadata']['description'], 'Test plugin')
+            self.assertEqual(claude['plugins'][0]['source'], './')
+            self.assertNotIn('displayName', claude['plugins'][0])
+            (source / 'package.json').write_text(manifests['package.json'], encoding='utf-8')
             zip_path = root / 'fixture.zip'
             build_release(source, zip_path, archive_root='fixture')
             with zipfile.ZipFile(zip_path) as archive:

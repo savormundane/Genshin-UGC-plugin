@@ -51,7 +51,7 @@ codex plugin add miliastra-wonderland@miliastra-wonderland
 
 ### Claude
 
-**Claude 桌面端**在「自定义 → 插件」添加来自仓库的市场，输入 `https://github.com/savormundane/miliastra-wonderland-plugin`，同步后安装 Miliastra Wonderland。 [Claude 桌面端安装](docs/installation.md#claude-桌面端)
+**Claude 桌面端**在「自定义 → 插件」添加仓库市场 `https://github.com/savormundane/miliastra-wonderland-plugin`，安装 Miliastra Wonderland 后在 **Cowork** 查询第一个节点。 [Claude 桌面端安装](docs/installation.md#claude-桌面端)
 
 **Claude Code** 先装好 CLI，再在 Windows PowerShell 执行下面两行。
 
@@ -60,15 +60,17 @@ claude plugin marketplace add savormundane/miliastra-wonderland-plugin
 claude plugin install miliastra-wonderland@miliastra-wonderland
 ```
 
-打开本机 Claude Code 会话，用 `/plugin` 的已安装列表确认插件已启用。 [Claude Code 插件说明](https://code.claude.com/docs/en/plugins/install#manage-installed-plugins)
+用 `claude plugin list` 确认已启用，再开启新会话，查询第一个节点。 [Claude Code 安装与排查](docs/installation.md#claude-code)
 
 ### DeepSeek Harness
 
-安装清单面向 **DeepSeek Harness 0.2.2-rc.5**。在客户端的 **插件 → 添加插件** 粘贴下方地址，安装后确认插件列表里已启用 Miliastra Wonderland，再打开本机对话。
+在 **DeepSeek Harness 0.2.2-rc.5** 的「插件 → 添加插件」粘贴下面的地址。
 
 ```text
 git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
 ```
+
+在插件列表打开「千星奇域开发插件」，详情页直接提供用法和第一个查询示例。 [DeepSeek Harness 安装与排查](docs/installation.md#deepseek-harness)
 
 ## 快速开始
 

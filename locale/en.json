@@ -1,6 +1,7 @@
 {
   "meta": {
     "title": "Miliastra Wonderland",
-    "description": "Look up nodes and Lua APIs, inspect levels, and create node graphs and assets for Genshin Impact's Miliastra Wonderland."
+    "description": "Look up nodes and Lua APIs, inspect levels, and create node graphs and assets for Genshin Impact's Miliastra Wonderland.",
+    "detail": "docs/dsh/overview.en.md"
   }
 }

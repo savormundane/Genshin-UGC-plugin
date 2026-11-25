@@ -24,10 +24,11 @@ codex plugin marketplace add savormundane/miliastra-wonderland-plugin
 
 ### Claude 桌面端
 
-1. 打开「自定义 → 插件」。选择「添加 → 添加市场 → 从仓库添加」。
-2. 输入 `https://github.com/savormundane/miliastra-wonderland-plugin` 并同步。
-3. 在已添加的市场中打开 **Miliastra Wonderland**，安装并启用。
-4. 在连接到这台 Windows 电脑的对话里验证本地工具。涉及工程的任务按客户端提示选取本机文件夹。 [Claude 插件与市场说明](https://support.claude.com/en/articles/13837440-use-plugins-in-claude) · [统一 Claude 体验](https://support.claude.com/en/articles/16761823-claude-cowork-and-chat-are-one-claude)
+1. 在 Claude 的「自定义 → 插件」选择「添加 → 添加市场 → 从仓库添加」。
+2. 粘贴 `https://github.com/savormundane/miliastra-wonderland-plugin`，等待市场出现后，打开 **Miliastra Wonderland** 并添加。
+3. 在桌面应用的 **Cowork** 中开启新任务，按提示允许本地工具，再做下方[首次工具验证](#首次工具验证)。查看或修改关卡时再选择实际工程文件夹。
+
+Claude 的 Chat 页可以使用插件的 Skill。查询节点、读取工程和素材转换等本地 MCP 操作在 Cowork 或 Claude Code 执行。市场需要支持插件的账户，组织管理的账户还取决于允许的仓库来源。 [Claude 插件与市场说明](https://support.claude.com/en/articles/13837440-use-plugins-in-claude)
 
 ### Claude Code
 
@@ -40,19 +41,38 @@ codex plugin marketplace add savormundane/miliastra-wonderland-plugin
 /plugin install miliastra-wonderland@miliastra-wonderland
 ```
 
-用 `/plugin` 查看安装状态，按客户端提示重新加载或开启新会话。 [Claude Code 插件说明](https://code.claude.com/docs/en/plugins/install)
+运行 `claude plugin list` 查看启用状态，然后开启新会话。需要先试用已解压的插件时，在自己的工程目录运行 `claude --plugin-dir '<插件源码根目录的绝对路径>'`。 [Claude Code 插件说明](https://code.claude.com/docs/en/plugins/install)
 
 ### DeepSeek Harness
 
-[GitHub 直装](../README.md#deepseek-harness)
+1. 到「插件 → 添加插件」粘贴[直装地址](../README.md#deepseek-harness)并安装。
+2. 在插件列表打开「千星奇域开发插件」的详情，根据页面上的查询示例验证本地工具。界面语言为英语时，名称显示为 **Miliastra Wonderland**。
+3. 查看 `.gil` 等本地文件时，切换到包含该文件的工程再打开对话。需要固定输入和输出路径时，按[工程绑定](runtime-environment.md#连接-mcp-或切换工程)配置。
+
+使用 DSH CLI 的 Web 配置时，也可在 PowerShell 安装，然后继续打开同一套 Web 配置。
+
+```powershell
+dsh plugin --profile web add 'github:savormundane/miliastra-wonderland-plugin'
+dsh web
+```
+
+直接安装仍从 Git 仓库取得 Bundle。安装后的标题、摘要和详情由安装包内的语言资源提供。若仍出现仓库的长 README，先在插件列表核对已安装来源，再刷新到含新详情页的版本。 [DeepSeek Harness 插件元数据](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/cookbook/adding-a-package.md)
 
 ### Agent Plugins
 
 其他支持 Agent Plugins 和本地 stdio MCP 的客户端，可通过其市场入口添加 `savormundane/miliastra-wonderland-plugin`，再安装 `miliastra-wonderland`。如果客户端提供的是本地目录导入，按[从本地目录导入](#从本地目录导入)操作。
 
+## 首次工具验证
+
+在可运行本地工具的会话中，发送下面的请求。首次查询可直接用随包节点资料。
+
+> 请用千星奇域插件查询服务端「创建实体」节点，列出输入和输出端口。
+
+打开工具调用记录，确认有 `nodes_lookup` 并返回端口。看到插件卡片或 Skill 表示客户端已经读到插件，看到这次调用才表示本地 MCP 已启动。失败时按具体现象查[失败后续装](#失败后续装)。
+
 ## 运行依赖与工程目录
 
-完整工具需要 Windows x64、Node.js 22+（DeepSeek Harness 24.9+），以及具备锁定依赖的 CPython 3.11–3.14 或 PATH 上的 uv。安装前在终端用 `node --version` 和 `uv --version` 检查对应依赖。启用插件后开启新对话，使用[「创建实体」查询](../README.md#查询第一个节点)核对真实 `nodes_lookup` 调用和结果。
+完整工具需要 Windows x64、Node.js 22+（DeepSeek Harness 24.9+），以及具备锁定依赖的 CPython 3.11–3.14 或 PATH 上的 uv。安装前在终端用 `node --version` 和 `uv --version` 检查对应依赖。
 
 客户端启用插件后，通过 Node 启动本地 MCP。启动器依次查找运行绑定指定的 Python、当前虚拟环境、Miliastra Wonderland 安装根内的解释器和 PATH 上的 Python。显式设置 `MILIASTRA_WONDERLAND_PYTHON` 时，使用该路径。找不到具备完整依赖的环境时，可由 PATH 上的 uv 按 `uv.lock` 准备环境，需要时也会获取受支持的 Python。首次缺少缓存时，uv 需要联网。 [uv 安装说明](https://docs.astral.sh/uv/getting-started/installation/)
 
@@ -82,6 +102,8 @@ python -B scripts/package_release.py --source . --out ../miliastra-wonderland-wi
 ```powershell
 .\install.ps1 -Agent codex -Archive ..\miliastra-wonderland-windows-x64.zip -Sha256 '<打包输出的 SHA-256>'
 ```
+
+DeepSeek Harness 的本地安装可把同一命令改为 `-Agent deepseek-harness`。准备完成后，在选定的 DSH 配置里添加返回的 `bundle_directory`。该目录带有中英文详情和图标，并引用已准备的本地运行目录。
 
 ## 回退与卸载
 
@@ -122,7 +144,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-install.
 | 遇到的问题 | 适用安装方式 | 下一步 |
 | --- | --- | --- |
 | 市场中找不到插件 | Codex 或 Claude 的市场安装 | 核对[客户端安装步骤](#按客户端安装)中的 GitHub 仓库名和插件 ID，确认已完成市场登记或同步。 |
+| 添加市场时 Claude 报错 | Claude 桌面端或 Claude Code | 用仓库根地址重试。若看到组织限制提示，核对允许的市场来源。Claude Code 可对同一份已解压源码运行 `claude plugin validate .`，定位具体清单或路径。 |
+| Claude 提示 `Unrecognized key: "displayName"` | Claude Code 读取了 V1.1.0 的旧清单 | 更新市场源后再安装。若仍加载旧版本，可按 [Claude Code 本地试用](#claude-code) 使用修复后的插件目录。 |
 | 直装地址无法加载 | DeepSeek Harness 的 GitHub 直装 | 核对直装地址和客户端版本，再到「插件 → 添加插件」重试。 [直装说明](../README.md#deepseek-harness) |
+| Claude Chat 里有 Skill，调用不到节点查询 | Claude 桌面端 | 在 Cowork 新建任务并允许本地工具，再做[首次工具验证](#首次工具验证)。 |
 | 能看到 Skill，工具未连通 | 所有安装方式 | 先[运行安装自检](#安装自检)。修复后重启客户端，确认插件已启用并允许本地 MCP。使用自选安装根目录时，核对 `MILIASTRA_WONDERLAND_INSTALL_ROOT`。 |
 | MCP 启动时缺少 Python 或依赖 | 所有安装方式 | 安装 uv 并确认新终端能运行 `uv --version`，或让 `MILIASTRA_WONDERLAND_PYTHON` 指向已配置依赖的解释器。修正旧绑定后重新打开客户端。 |
 | 安装器找不到 Python，或提示工程与输出路径冲突 | 用 `install.ps1` 准备本地 ZIP | 缺少 Python 时，给原安装命令加 `-Python '<解释器绝对路径>'`。目录冲突时，为 `-Project` 和 `-Outputs` 选择互不包含的目录。 |
