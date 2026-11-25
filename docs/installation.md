@@ -71,7 +71,7 @@ codex plugin marketplace add savormundane/miliastra-wonderland-plugin
 
 将选定版本的源码解压到空目录，再进入解压后的源码根目录用 Python 打包。打包器按分发清单读取这个目录，Git 忽略规则不参与筛选。先确认目录中只有该版本的解压文件。命令把 Windows x64 ZIP 写到源码目录之外，并输出 SHA-256。正式发行从经确认的 Git 提交准备。 [发行流程](contributing/maintenance.md)
 
-源码缺少 Beyond 的 Canvas 原生文件时，打包器会按摘要下载锁定版本并把校验后的文件放入 ZIP。已有本地资产时可在命令末尾加 `--beyond-native-archive <资产 ZIP 路径>`，在离线环境打包。完整 ZIP 内含 Beyond 原生文件，已有可用的插件运行环境时可以离线运行。Git 市场及 Cordis 安装在首次使用 Beyond 时单独准备这两个文件。 [Beyond 运行要求](../references/beyond-backend.md)
+源码缺少 Beyond 的 Canvas 原生文件时，打包器会按摘要下载锁定版本并把校验后的文件放入 ZIP。已有本地资产时可在命令末尾加 `--beyond-native-archive <资产 ZIP 路径>`，在离线环境打包。完整 ZIP 内含 Beyond 原生文件，已有可用的插件运行环境时可以离线运行。Git 市场及 Cordis 安装在首次使用 Beyond 时单独准备这两个文件。 [Beyond 运行要求](../references/workflows/beyond-backend.md)
 
 ```powershell
 python -B scripts/package_release.py --source . --out ../Miliastra-Wonderland-1.1.0-windows-x64.zip --layout plugin --archive-root miliastra-wonderland

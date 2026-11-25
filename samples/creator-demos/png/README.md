@@ -12,7 +12,7 @@
 
 ## 用本地 MCP 复现
 
-客户端需具备 `asset_preview` 和 `asset_generate`。在已授权的工程目录放入样图，准备独立输出位置，再发送上面的提示。助手用 `asset_preview` 比较预算与预览，随后把原图和报告摘要、候选名传给 `asset_generate`，写入新目录。 [MCP 调用顺序](../../../references/local-mcp.md#单张-png-试算与生成)
+客户端需具备 `asset_preview` 和 `asset_generate`。在已授权的工程目录放入样图，准备独立输出位置，再发送上面的提示。助手用 `asset_preview` 比较预算与预览，随后把原图和报告摘要、候选名传给 `asset_generate`，写入新目录。 [MCP 调用顺序](../../../docs/mcp.md#单张-png-试算与生成)
 
 关闭终端工具的 Codex 会话实跑了这两步。选中的 `grid-25` 在 Lua 中读回 11 个矩形。用同一份试算报告走命令行生成，五个交付文件逐字节一致。
 
@@ -47,4 +47,4 @@ python -X utf8 -B scripts/qianxing.py assets generate --from-preview "$markerOut
 
 打开 [asset.json](generated/asset.json) 查看调色板和矩形坐标，或把 [data.lua](generated/data.lua) 交给工程里的 Lua 矩形图元绘制逻辑。接入时按目标容器的显示尺寸缩放，并计入容器等其他控件。[生成报告](generated/report.json)和[文件摘要清单](generated/manifest.json)可用于核对产物。
 
-本次通过了离线预览、生成和控件预算检查。千星奇域编辑器中的接入和游戏内显示待实测。 [素材接入说明](../../../references/asset-generation.md#接入与兼容)
+本次通过了离线预览、生成和控件预算检查。千星奇域编辑器中的接入和游戏内显示待实测。 [素材接入说明](../../../references/assets/image-to-primitives.md#接入与兼容)

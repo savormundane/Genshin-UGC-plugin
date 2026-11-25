@@ -1,6 +1,6 @@
 # 本地开发与检查
 
-按任务从[工具导航](../../scripts/README.md)定位模块。修改工具时核对 CLI、MCP 和包内引用。更新平台资料时核对[来源与摘要](../../references/knowledge-reliability.md)。
+按任务从[工具导航](../../scripts/README.md)定位模块。修改工具时核对 CLI、MCP 和包内引用。更新平台资料时核对[来源与摘要](../../references/platform/knowledge-reliability.md)。
 
 从仓库根运行以下命令。只改文档时，系统 Python 就能运行仓库检查。
 
@@ -37,7 +37,7 @@ $ugcPython = (Resolve-Path .\.venv\Scripts\python.exe).Path
 & $ugcPython -B scripts/test_mcp_native_workflow.py -v
 ```
 
-脚本生成一个继承模板参数 `ActivationDelay=7` 的最小工程，通过真实 stdio 查询引用、生成计划并另存为 `12`。随后校验保护字段的原始字节、过期输入拒绝和来源变更。成功输出 `OK`。[输入与断言](../../scripts/test_mcp_native_workflow.py) · [MCP 操作合同](../../references/local-mcp.md#审阅并另存已有工程)
+脚本生成一个继承模板参数 `ActivationDelay=7` 的最小工程，通过真实 stdio 查询引用、生成计划并另存为 `12`。随后校验保护字段的原始字节、过期输入拒绝和来源变更。成功输出 `OK`。[输入与断言](../../scripts/test_mcp_native_workflow.py) · [MCP 操作合同](../mcp.md#审阅并另存已有工程)
 
 ## Windows 长路径
 

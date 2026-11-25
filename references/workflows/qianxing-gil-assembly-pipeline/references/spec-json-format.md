@@ -21,7 +21,7 @@
 
 **Aliases**: `"name"` can be used instead of `"signal_name"` or `"param_name"`; `"type"` can be used instead of `"type_id"`.
 
-此表描述外部低层原生写回格式，不能推导客户端ServerSignal可直接发送结构体。客户端桥只使用[协议合同](../../../protocol-v2.md)明确支持的类型。
+此表描述外部低层原生写回格式，不能推导客户端ServerSignal可直接发送结构体。客户端桥只使用[协议合同](../../protocol-v2.md)明确支持的类型。
 
 ## type_id Mapping
 

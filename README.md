@@ -4,7 +4,7 @@ Miliastra Wonderland 是面向原神「千星奇域」创作者的非官方 AI �
 
 在支持本地工具的 AI 客户端里安装插件，用中文对话查询资料、检查或生成工程文件，再按产物说明导入千星奇域编辑器或接入项目。
 
-千星奇域是封闭平台。平台规则按目标版本查原文，原生文件操作限于已校准的样本范围。编译、文件回读、软件预览、编辑器导入和游戏内运行分别核对。 [来源判断](references/knowledge-reliability.md) · [验证分层](docs/compatibility.md#验证分层)
+千星奇域是封闭平台。平台规则按目标版本查原文，原生文件操作限于已校准的样本范围。编译、文件回读、软件预览、编辑器导入和游戏内运行分别核对。 [来源判断](references/platform/knowledge-reliability.md) · [验证分层](docs/compatibility.md#验证分层)
 
 [安装](#安装) · [快速开始](#快速开始) · [使用产物](#使用产物)
 
@@ -18,7 +18,9 @@ Miliastra Wonderland 是面向原神「千星奇域」创作者的非官方 AI �
 | 制作界面或节点逻辑 | 需求、已有代码或工程（如有） | Lua 代码或节点图文件，以及相应检查结果 | 本地 MCP 可检查源码。编译节点图或组装交付可用终端命令，或通过 MCP 执行已有制作配置 |
 | 转换单张 PNG | 工程目录中的 PNG 和控件预算 | 候选预览和控件数，选定后生成图元数据和 Lua 文件 | 本地 MCP 的 `asset_preview` 和 `asset_generate` |
 
-批量预算、分层拟合和自定网格可按任务选择终端命令或已有制作配置。 [素材任务与客户端能力](references/asset-generation.md#素材任务与客户端能力)
+批量预算、分层拟合和自定网格可按任务选择终端命令或已有制作配置。 [素材任务与客户端能力](references/assets/image-to-primitives.md#素材任务与客户端能力)
+
+查资料、试算素材和局部修改可直接走对应工具。需要把节点图、Lua 或素材装到同一份关卡，或者按同一配置重建交付时，用 [`produce` 制作流程](references/workflows/produce.md)。
 
 ## 安装
 
@@ -77,7 +79,7 @@ git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
 本机实际调用 `nodes_lookup`，在服务端节点库中匹配到 1 条结果。
 
 - 输入为「流程入」「目标GUID（GUID）」和「单位标签索引列表（整数列表）」，输出只有「流程出」。
-- 用途是按 GUID 创建已预先布设在场景里的实体。`source` 指向随包编译器定义。`port_evidence` 对应 7.1 版[官方《执行节点》](references/official/节点介绍/执行节点__mhw66orrrfkm.md#2-创建实体)的两项值输入，文档未列值输出。节点记录的 `platform_version` 仍为空，编辑器与游戏内行为待验。
+- 用途是按 GUID 创建已预先布设在场景里的实体。`source` 指向随包编译器定义。`port_evidence` 对应 7.1 版[官方《执行节点》](references/platform/official/节点介绍/执行节点__mhw66orrrfkm.md#2-创建实体)的两项值输入，文档未列值输出。节点记录的 `platform_version` 仍为空，编辑器与游戏内行为待验。
 
 看到实际工具调用和上述端口结果，表示本地工具已连通。接着可以按任务跟做 [五个中文教程](samples/creator-demos/README.md)。如果助手无法调用插件，先[运行安装自检](docs/installation.md#安装自检)。
 
@@ -93,8 +95,8 @@ git+https://github.com/savormundane/miliastra-wonderland-plugin.git#main
 
 有文件输出时，从助手回复里的路径或文件链接打开。使用插件默认位置时，文件按工程保存在本机插件数据目录。需要固定保存位置时，可[绑定独立输出目录](docs/runtime-environment.md#连接-mcp-或切换工程)。
 
-- **关卡和节点图**。使用另存的 GIL 副本，按交付说明在编辑器中导入并核对改动。GIA 节点图或资源按相应类型导入，再挂载到目标对象。 [关卡复核](references/native-changes.md#人工再导出核对)
-- **Lua 和图元素材**。按交付说明将 Lua 接到目标客户端控件。可在具备素材工具的本地 MCP 客户端中试算 PNG，选定方案后拿到 `asset.json`、`data.lua` 和最终预览。 [PNG 试算与生成](references/local-mcp.md#单张-png-试算与生成) · [Lua 接入](references/client-assembly.md)
+- **关卡和节点图**。使用另存的 GIL 副本，按交付说明在编辑器中导入并核对改动。GIA 节点图或资源按相应类型导入，再挂载到目标对象。 [关卡复核](references/gil/native-changes.md#人工再导出核对)
+- **Lua 和图元素材**。按交付说明将 Lua 接到目标客户端控件。可在具备素材工具的本地 MCP 客户端中试算 PNG，选定方案后拿到 `asset.json`、`data.lua` 和最终预览。 [PNG 试算与生成](docs/mcp.md#单张-png-试算与生成) · [Lua 接入](references/editor/lua/client-assembly.md)
 
 回复还会说明生成了什么、改了哪里，以及本次完成了哪些检查。打开编辑器导入、到游戏里运行时，分别核对对应结果。 [验证分层](docs/compatibility.md#验证分层)
 

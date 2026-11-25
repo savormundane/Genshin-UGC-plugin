@@ -19,4 +19,4 @@ end
 
 > 请用相同的工具重新检查 button-fixed.lua，告诉我语法是否通过。
 
-再次调用 `client_check` 后，语法状态为 `passed`。这次验证的是 Lua 编译。接入真实控件时，继续核对控件 API 和事件挂载。 [客户端 Lua 接入](../../../references/client-assembly.md) · [软件模拟按钮点击](../../beyond-button/README.md)
+再次调用 `client_check` 后，语法状态为 `passed`。这次验证的是 Lua 编译。接入真实控件时，继续核对控件 API 和事件挂载。 [客户端 Lua 接入](../../../references/editor/lua/client-assembly.md) · [软件模拟按钮点击](../../beyond-button/README.md)

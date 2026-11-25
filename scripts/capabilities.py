@@ -5,16 +5,16 @@ from mcp_bridge import BUILTIN_OPERATIONS,OPERATIONS,project_context
 from runtime_policy import REQUIREMENTS,supported_python
 from validation_evidence import execution_inventory,validation_dependencies,backend_inventory,case_coverage
 CAPABILITIES={
- 'knowledge':('knowledge.py','knowledge-reliability.md'),'diagnosis':('project_diagnosis.py','project-diagnosis.md'),'asset_inspection':('asset_inspection.py','asset-inspection.md'),
- 'mcp':('mcp_service.py','local-mcp.md'), 'asset_batch':('asset_batch.py','asset-generation.md'),
- 'native':('native_core.py','native-maintenance.md'), 'storage':('storage_authoring.py','storage-authoring.md'),
- 'protocol':('protocol_codegen.py','protocol-v2.md'), 'ui':('runtime_ui.lua','runtime-ui.md'),
- 'assembly':('client_assembly.py','client-assembly.md'), 'simulation':('joint_simulator.py','joint-simulation.md'),
- 'algorithms':('runtime_algorithms.lua','algorithms-experiments.md'), 'asset_fit':('asset_fit.py','asset-fit.md'),
- 'native_assets':('native_assets.py','native-assets.md'),
- 'production':('production_v2.py','production-v2.md'),'platform':('platform_profiles.py','platform-profiles.md'),
- 'project':('project_index.py','project-index.md'),'native_changes':('native_changes.py','native-changes.md'),
- 'scene':('scene_authoring.py','native-scene.md')}
+ 'knowledge':('knowledge.py','references/platform/knowledge-reliability.md'),'diagnosis':('project_diagnosis.py','references/workflows/project-diagnosis.md'),'asset_inspection':('asset_inspection.py','references/assets/asset-inspection.md'),
+ 'mcp':('mcp_service.py','docs/mcp.md'), 'asset_batch':('asset_batch.py','references/assets/image-to-primitives.md'),
+ 'native':('native_core.py','references/gil/native-maintenance.md'), 'storage':('storage_authoring.py','references/workflows/storage-authoring.md'),
+ 'protocol':('protocol_codegen.py','references/workflows/protocol-v2.md'), 'ui':('runtime_ui.lua','references/editor/lua/runtime-ui.md'),
+ 'assembly':('client_assembly.py','references/editor/lua/client-assembly.md'), 'simulation':('joint_simulator.py','references/workflows/joint-simulation.md'),
+ 'algorithms':('runtime_algorithms.lua','references/workflows/algorithms-experiments.md'), 'asset_fit':('asset_fit.py','references/assets/asset-fit.md'),
+ 'native_assets':('native_assets.py','references/assets/native-assets.md'),
+ 'production':('production_v2.py','references/workflows/produce.md'),'platform':('platform_profiles.py','references/platform/platform-profiles.md'),
+ 'project':('project_index.py','references/editor/project-index.md'),'native_changes':('native_changes.py','references/gil/native-changes.md'),
+ 'scene':('scene_authoring.py','references/editor/native-scene.md')}
 SUPPORT={
  'knowledge':{'operations':['api_lookup','source_integrity','declared_derived_unknown','conflict_notes','versioned_document_selection'],'authority':'bundled document provenance; no inferred host success'},
  'diagnosis':{'operations':['explicit_readonly_checks','JSON_or_text_report','artifact_bound_manual_records','AST_update_cost_hints'],'performance':'risk indications, not device measurement'},
@@ -32,7 +32,7 @@ SUPPORT={
                        'place_static_scene','duplicate_entities','arrange_instances','add_scene_points','set_scene_camera','set_scene_point','set_terrain_cells','set_fixed_environment_hour','set_point_light',
                        'set_native_class','native_skill','native_creature_graph','set_creature_skill_set','native_combat','native_unit_status','set_native_faction_relations','add_native_variables',
                        'set_native_player_group','add_respawn_points','set_native_revive','economy_config','native_economy_binding','create_native_drop','add_native_global_timer','native_hud','set_native_hud_control','append_client_ui'],
-           'gameplay_guide':'native-gameplay.md','graph_kinds':['ordinary','composite'],'guard':['base_sha256','unique_target','allowed_fields','protected_bytes','types','struct_identity','structure_declarations_and_defaults','dictionary_structure_references_and_defaults','custom_variable_declarations_and_defaults','graph_variable_declarations_and_defaults','static_graph_variable_accesses','storage_slot_references','dynamic_ports','flow_and_data_port_contracts','versions','mount_library','declaration_signature_references','composite_interfaces','GIA_dependencies','GIA_signal_roles_and_descriptors','GIA_signal_compilation_readback','composite_compilation_readback'],'composite_kernel_indices':'equal ordinals and calibrated structure update mappings','composite_execution':'not_implemented','optimizer_default':'disabled'},
+           'gameplay_guide':'references/editor/native-gameplay.md','graph_kinds':['ordinary','composite'],'guard':['base_sha256','unique_target','allowed_fields','protected_bytes','types','struct_identity','structure_declarations_and_defaults','dictionary_structure_references_and_defaults','custom_variable_declarations_and_defaults','graph_variable_declarations_and_defaults','static_graph_variable_accesses','storage_slot_references','dynamic_ports','flow_and_data_port_contracts','versions','mount_library','declaration_signature_references','composite_interfaces','GIA_dependencies','GIA_signal_roles_and_descriptors','GIA_signal_compilation_readback','composite_compilation_readback'],'composite_kernel_indices':'equal ordinals and calibrated structure update mappings','composite_execution':'not_implemented','optimizer_default':'disabled'},
  'storage':{'schema':[2,3],'fields':['integer','boolean','integer_list'],'operations':['native_declarations','slots','signals','Graph_Code','client_adapter','server_transport','read','write','readback','retry','exit_intent','record_version_guard','explicit_QX_migration_chain','migration_candidate_readback','schema3_migration_ticket_commit','logical_capacity_guard','codec','append_dictionary','achievement_request_and_confirmation','diagnose'],'schema3_operations':['open_session','expected_revision_guard','stale_session_guard','exact_duplicate_idempotency','stored_capacity_guard','session_slot_log_correlation','compatible_record_version_upgrade'],'host_quota':'not_checked'},
  'protocol':{'operations':['native_definitions','Lua_bridge','typed_readback','ordered_contiguous','snapshot_monotonic','revision','confirmation_set','roster_snapshot','barrier','checkpoint','session_isolation','membership_revision','withdraw_revision','validated_checkpoint_restore','final_client_direction_contract','final_native_protocol_layout'],'arbitrary_struct_transport':False},
  'ui':{'operations':['identity_pool','property_cache','cancel_queue','create_and_write_budget','foreground_priority','position_owner','drag_cancel','listener_scope','overlay_restore','pause_clock','keyed_list','native_fixed_anchor_layout','native_positive_xy_scale','final_layout_readback','final_parent_local_size_check'],'rendering':'host_required'},
@@ -67,7 +67,7 @@ CAPABILITY_GROUPS = {
         'scripts/knowledge-sources.json', 'scripts/knowledge.py', 'scripts/client_api_catalogue.py',
         'scripts/client_api.py', 'scripts/client_ast.cjs', 'scripts/client_check.py', 'scripts/client_references.py',
         'scripts/client_assembly.py', 'scripts/client_variables.py', 'scripts/client_signal_binding.py',
-        'skills/qianxing-editor/references/client-controls-api.md', 'scripts/client_simulator.py',
+        'references/platform/community/client-controls-api.md', 'scripts/client_simulator.py',
         'scripts/client_simulator.lua', 'scripts/joint_simulator.py', 'scripts/beyond_backend.py',
         'scripts/beyond_gil.py', 'scripts/beyond_worker.mjs', 'vendor/beyond/bundle.json',
     ),

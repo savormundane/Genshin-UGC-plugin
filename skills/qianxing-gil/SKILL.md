@@ -1,28 +1,18 @@
 ---
 name: qianxing-gil
-description: 检查、比较和安全修改千星奇域GIL/GIA容器，处理脚本嵌入、图与资源挂载、保护字段、组装及最终回读；不代替节点程序或编辑器配置设计。
+description: 比较、审计和安全修改千星奇域 GIL/GIA，审阅后另存，处理图、资源与脚本挂载及回读。
 ---
 
 # Qianxing GIL
 
-负责已识别容器、对象身份、引用和字节保留。先用 `qianxing.py native inspect` 或 [GIL工具](../../references/gil-tooling.md)读取实际输入；修改绑定基底摘要、唯一目标及允许范围，输出新文件。未知字段保留，不猜测改写。
-
-| 任务 | 按需资料与工具 |
+| 任务 | 入口 |
 | --- | --- |
-| 原生场景及物件局部写回 | [场景 GIA 与 GIL 修改](../../references/native-scene.md)；核对模型引用、位置与对象身份 |
-| 道具经济、职业技能、原生界面与存档写入 | [原生玩法制作](../../references/native-gameplay.md) |
-| 比较和局部修改 | [原生修改](../../references/native-changes.md)；`native diff/plan/apply` |
-| 图、信号、结构体、实体和模板挂载 | [原生维护](../../references/native-maintenance.md)、[详细操作](references/native-operations.md) |
-| Lua嵌入与最终脚本检查 | [最终Lua检查](../../references/client-check.md) |
-| 从图、信号和Lua组装 | [组装流程](../../references/workflows/qianxing-gil-assembly-pipeline/README.md)；优先build/produce，低层工具按需使用 |
-| 错接与隐式端口 | [数据流审计](../../references/native-dataflow-validation.md)；`native audit` |
-| 容器无法解释 | [低层诊断](references/gil-format-diagnostics.md)；只读字段探查不代表语义通过 |
-| 产物失配和重建 | [交付排障](../../references/workflows/qianxing-release-integrity-triage/README.md)、[portable](../../references/portable-delivery.md) |
+| 检查容器、字段或已知引用 | `native_inspect` 读取容器，`native_audit` 审计已识别的类型和引用。按名称查找对象用 `project_inspect`。 |
+| 比较现有文件 | `native_diff`。需要验证保护范围时传明确的允许字段。 |
+| 局部修改后另存 | `project_inspect` 定位 → `native_plan` 生成计划 → 审阅确认 → `native_apply` 写到新目录 → `native_diff` 核对。 |
 
-跨GIL迁移仅限工具明确支持的身份及引用，不直接复制带旧引用的字段，不承诺全工程ID重映射。最终文件审计覆盖新增消费者和挂载；编译回读、模型、编辑器导入和宿主运行按[验证边界](../../references/validation.md)分别报告。
+使用唯一对象键和实际字段范围。将 `project_inspect.inputs_sha256.input` 交给 `native_plan`。审阅 `result.difference` 后，`native_apply` 使用同一基底摘要和 `outputs_sha256["plan.json"]` 中的计划文件摘要。保留未知字段与受保护字节。 [审阅并另存](../../references/gil/native-changes.md#审阅并另存已有工程)
 
-使用 MCP 编辑现有工程时，以 `project_inspect` 的 `query` 查找对象，再用所选对象键精确定位。将 `inputs_sha256.input` 作为 `native_plan` 的 `sha256`，内联补丁可省略重复的基底摘要。验证受阻时从 `diagnostics` 定位引用。审阅后用 `outputs_sha256["plan.json"]` 调用 `native_apply`，再用 `native_diff` 核对允许范围。 [调用合同](../../references/local-mcp.md)
+脚本、图和资源挂载按已校准的容器和引用处理。编译、挂载或模拟需要绑定到同一交付的最终 GIL 时，用 [produce](../../references/workflows/produce.md) 接通这些阶段并核对产物。 [原生结构与挂载](../../references/gil/native-authoring.md) · [容器诊断](../../references/gil/gil-format-diagnostics.md)
 
-已摆放物件也可按 [三维实体变换](../../references/native-entity-transform.md) 核对模型、坐标和保护范围。
-
-有文件输出时，最终回复包含产物与改动、保存位置、使用方法和本次检查结果。 [交付反馈](../../references/validation.md#交付反馈)
+交付文件时写明变更、保存位置、使用方法和实际核对结果。编辑器导入及游戏运行按本次证据分别记录。 [交付反馈](../../references/workflows/validation.md#交付反馈)

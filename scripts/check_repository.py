@@ -153,7 +153,7 @@ def check(root: Path = ROOT) -> list[str]:
             errors.append(f"Beyond native Canvas distribution: {exc}")
 
     docs = list(root.glob("*.md"))
-    for directory in ("docs", "skills", "references", "scripts", ".github"):
+    for directory in ("docs", "skills", "references", "samples", "scripts", ".github"):
         docs.extend((root / directory).rglob("*.md"))
     provenance = root / "PUBLIC_SOURCES.json"
     raw_paths = set()
@@ -184,7 +184,7 @@ def check(root: Path = ROOT) -> list[str]:
             errors.append(f"PUBLIC_SOURCES.json: {exc}")
     for path in sorted(set(docs)):
         relative = path.relative_to(root).as_posix()
-        if (relative in raw_paths or relative.startswith(("references/official/", "references/platform/"))
+        if (relative in raw_paths or relative.startswith(("references/platform/official/", "references/platform/7.2/"))
                 or "vendor" in path.relative_to(root).parts or not path.is_file()):
             continue
         for raw in markdown_destinations(path.read_text(encoding="utf-8-sig")):

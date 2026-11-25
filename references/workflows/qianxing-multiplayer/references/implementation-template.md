@@ -10,4 +10,4 @@
 
 生成信号含session_key、round_id、sequence_id信封，字段顺序以wire为准；旧项目协议不自动迁移。客户端用生成桥注册和发送；服务端Graph Code根据生成定义接收并验证真实来源身份，业务状态更新与响应另由项目实现。快照不是任意Lua表通信。
 
-检查重复／缺口／旧修订、两端类型及最终回读；模型只证明声明逻辑。具体合同与类型见[协议schema 2](../../../protocol-v2.md)，组装见[组装流程](../../qianxing-gil-assembly-pipeline/README.md)。
+检查重复／缺口／旧修订、两端类型及最终回读；模型只证明声明逻辑。具体合同与类型见[协议schema 2](../../protocol-v2.md)，组装见[组装流程](../../qianxing-gil-assembly-pipeline/README.md)。

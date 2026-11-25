@@ -32,1537 +32,1537 @@
   },
   "permission_unverified_files": [
     {
-      "path": "references/l2d/01-前置-拆分.md",
+      "path": "references/assets/geimg/l2d/01-前置-拆分.md",
       "sha256": "35bfbafa4cf47253cb20372b070c140dc22b4921517ba82538e16743b88c3c5b",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/02-拟合-从PNG到图元.md",
+      "path": "references/assets/geimg/l2d/02-拟合-从PNG到图元.md",
       "sha256": "beeb9b04db219fc9d203ba60084576f89639dd378ff28a11e1bdc1c63f8784fe",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/03-数据格式-图元与导出.md",
+      "path": "references/assets/geimg/l2d/03-数据格式-图元与导出.md",
       "sha256": "5a35f065b7890d636cf28bba4bac972a3bc1f8c5045d013c4d6a57bd14f391bd",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/04-在游戏里重建.md",
+      "path": "references/assets/geimg/l2d/04-在游戏里重建.md",
       "sha256": "2f8a034c61a9eb008dbe0923581d9e558e775cef5625a5aaf74498a6fcaac9dc",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/05-动作与骨骼.md",
+      "path": "references/assets/geimg/l2d/05-动作与骨骼.md",
       "sha256": "885cd7c47cb972b8c5cdd91bd919c39465bc4f4d5c266949468db441d61d678a",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/06-边缘与画质.md",
+      "path": "references/assets/geimg/l2d/06-边缘与画质.md",
       "sha256": "f25d500aedb81ddefc6bcfac7d661128ecb721ecbc10d8861a0905fa64807fac",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/07-API速查与验证状态.md",
+      "path": "references/assets/geimg/l2d/07-API速查与验证状态.md",
       "sha256": "4cdb80c08910ec427ed31f804786f483d60311faef68cf713e8e346676fc87bd",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/08-踩坑清单.md",
+      "path": "references/assets/geimg/l2d/08-踩坑清单.md",
       "sha256": "3185c406f2cb13d97d89430bb536ae1f265d52489e97037a852da5c61a80e93d",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/09-端到端SOP与检查表.md",
+      "path": "references/assets/geimg/l2d/09-端到端SOP与检查表.md",
       "sha256": "b398d8c0366014459347b81636d239e524bcb7afe71627572382b31128a58037",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/10-补间动画-Tween.md",
+      "path": "references/assets/geimg/l2d/10-补间动画-Tween.md",
       "sha256": "ba156c2ad2b5178472362d3d75342789a4e24dd29c5087ea2466f9c1f46546da",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/11-层级与骨骼-父容器.md",
+      "path": "references/assets/geimg/l2d/11-层级与骨骼-父容器.md",
       "sha256": "eaf169e629eeff65a6bf2477dbd9ee04195f386551193ff74a1a024dae627607",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/attachments/l2d_build_anim.py",
+      "path": "references/assets/geimg/l2d/attachments/l2d_build_anim.py",
       "sha256": "a3337af9d88398a933875377f89f4be4cb7ef2fdd91c83e231f2ba36e09b0f7a",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/attachments/l2d_build_assembly.py",
+      "path": "references/assets/geimg/l2d/attachments/l2d_build_assembly.py",
       "sha256": "df49a8fccc7c80ce2dda83f1c25ecbb1e14942a98999f1571ac644b6f22a4ee0",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/attachments/l2d_build_kb.py",
+      "path": "references/assets/geimg/l2d/attachments/l2d_build_kb.py",
       "sha256": "ae0eb43c9337eb6e3705717785d55d3b2a05d20a9b10feed986b21becb287fde",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/attachments/l2d_build_showcase.py",
+      "path": "references/assets/geimg/l2d/attachments/l2d_build_showcase.py",
       "sha256": "c8ef30f0274d0f3efcc9b9196fbc838d30b6d19ab185b9124cb32753a17c0006",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/attachments/l2d_check_layers.py",
+      "path": "references/assets/geimg/l2d/attachments/l2d_check_layers.py",
       "sha256": "e526563c180f882959b051cc6f703780b848b10354eff408f096ea02bb6fb998",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/attachments/l2d_compose_layers.py",
+      "path": "references/assets/geimg/l2d/attachments/l2d_compose_layers.py",
       "sha256": "0a5a44c9999e20e06b214cb9f3633fd247f7b8ac51826a91809cbe93b87a8bf8",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/attachments/l2d_edge_clean.py",
+      "path": "references/assets/geimg/l2d/attachments/l2d_edge_clean.py",
       "sha256": "c63a5b99f0f99bcce862ff1fbcfaa5855d7cf46ae1d60922a81c5c0d0e5b5af0",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/attachments/l2d_edge_probe.py",
+      "path": "references/assets/geimg/l2d/attachments/l2d_edge_probe.py",
       "sha256": "e189d411c10e8a636bc41ead7b0cb24bb3e8e9f61b31c73dfc8fcc8249639301",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/attachments/l2d_fit_batch.py",
+      "path": "references/assets/geimg/l2d/attachments/l2d_fit_batch.py",
       "sha256": "fe350483220e41fdd5f868d4314f226c3e6ab6214219cdb66ae7f0fecd235ed1",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/attachments/l2d_hier_probe.lua",
+      "path": "references/assets/geimg/l2d/attachments/l2d_hier_probe.lua",
       "sha256": "c61cfe54ba9c4b15ad2f96d945a214b4fec5eeb82ff03c7a7b3af43057946400",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/attachments/l2d_raster.py",
+      "path": "references/assets/geimg/l2d/attachments/l2d_raster.py",
       "sha256": "21b080a4c0599a2fc84554df10fb212d804b722084470e341b06a269cd5a3d10",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/attachments/l2d_rig.json",
+      "path": "references/assets/geimg/l2d/attachments/l2d_rig.json",
       "sha256": "219c4acce3084fa86c8d7f6aa6c509d3913641d6d19445d9706e8c3899fb7e96",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/attachments/l2d_rig_breath.py",
+      "path": "references/assets/geimg/l2d/attachments/l2d_rig_breath.py",
       "sha256": "d2ef073948fa18e2b9594c6fde82db66366a7c2db4633ed2fe2403d3394d5d81",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/attachments/l2d_superfit.py",
+      "path": "references/assets/geimg/l2d/attachments/l2d_superfit.py",
       "sha256": "191e3ab0a204dd9bc0b75df00b6978d4901cbdcf5c80558434db8c5c482ee63e",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/attachments/l2d_tween_probe.lua",
+      "path": "references/assets/geimg/l2d/attachments/l2d_tween_probe.lua",
       "sha256": "b2084520093af998eafbea3e0dc9b31c5b0501570560eb80d3fdfb93d41cedea",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/attachments/l2d_verify_actions.py",
+      "path": "references/assets/geimg/l2d/attachments/l2d_verify_actions.py",
       "sha256": "c832cf4e5a205865be490fea652aa3906f021fd4c379d27347f29810040b84e1",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/attachments/l2d_verify_anim.py",
+      "path": "references/assets/geimg/l2d/attachments/l2d_verify_anim.py",
       "sha256": "0ddcc4d58527d0d9a6ee0d3d163a2314e37baaf8c7399152283028c73a7bad48",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/attachments/l2d_verify_theater_keys.py",
+      "path": "references/assets/geimg/l2d/attachments/l2d_verify_theater_keys.py",
       "sha256": "7a866f5e1b1396628f1ba3c2acd9ebff5731198e3cb06e76c1b6161ae02b667b",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/attachments/README.md",
+      "path": "references/assets/geimg/l2d/attachments/README.md",
       "sha256": "902cc0cf1a6d8cc88b7023d125a0643cee582a44aaf0566e861d77721e40bc60",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/attachments/templates/l2d_anim.template.lua",
+      "path": "references/assets/geimg/l2d/attachments/templates/l2d_anim.template.lua",
       "sha256": "928112c9440869478c68bf750ce2634541fd807d51b53d69a27f6da7368b53be",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/attachments/templates/l2d_export.template.lua",
+      "path": "references/assets/geimg/l2d/attachments/templates/l2d_export.template.lua",
       "sha256": "f3c14ce64daa54b6d2bab5d388ba897301e3e4929a42a8720371e2fa27e9a884",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/attachments/templates/l2d_showcase.template.html",
+      "path": "references/assets/geimg/l2d/attachments/templates/l2d_showcase.template.html",
       "sha256": "fdb89be97a141683dec875a9b10326f91610436d05bf960ac5acefc6469065d7",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/attachments/templates/l2d_ui.template.lua",
+      "path": "references/assets/geimg/l2d/attachments/templates/l2d_ui.template.lua",
       "sha256": "b5f2437f41a5ddf247e3a9f31887b811c33fba30b06752ae3fa5b8204af92866",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/l2d/README.md",
+      "path": "references/assets/geimg/l2d/README.md",
       "sha256": "bb7fdf1e52c03b417f977074534a1565731fb176265f6cc64bc9fb3ef780ef78",
       "group": "geimg_l2d",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/README.md",
+      "path": "references/platform/official/README.md",
       "sha256": "265602c0c1f100368c44475572d2b8e000bf6e6b7484d9960a2fa2ed892735a4",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/更新日志/更新日志__mhs2w008wf14.md",
+      "path": "references/platform/official/更新日志/更新日志__mhs2w008wf14.md",
       "sha256": "6ddb68146bc60413322a5097800666016517ccb5fc93c6e3e995b16966a63206",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/主镜头__mhfua005zpeg.md",
+      "path": "references/platform/official/概念介绍/主镜头__mhfua005zpeg.md",
       "sha256": "6f03e8fc3a3dcc82d2a2da8a79bd2149a8d8aa486f2ff0a2997836e9f43dc8de",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/交互按钮界面控件__mhwkfsitckrw.md",
+      "path": "references/platform/official/概念介绍/交互按钮界面控件__mhwkfsitckrw.md",
       "sha256": "ce57ca383a1d5e663b18c6a07be18b80eabccdb61a3c00ea49bf00d9c9bb2e8d",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/仇恨配置__mhw9ut96q96y.md",
+      "path": "references/platform/official/概念介绍/仇恨配置__mhw9ut96q96y.md",
       "sha256": "e6c3e8555beb03ab80e9086c4974e700974952aba7c7253c6d717ce8a263e9f7",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/元件组__mhzhzb9rw0uy.md",
+      "path": "references/platform/official/概念介绍/元件组__mhzhzb9rw0uy.md",
       "sha256": "331540d70a16db71f904a18b2ea2f497fb6596a83a6828453f2e9aa50be9c6c3",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/先行体验__mh8clk9nmkua.md",
+      "path": "references/platform/official/概念介绍/先行体验__mh8clk9nmkua.md",
       "sha256": "462d0bc8e18cc600e3bbf87ef7d8de546a8012474d6a6193991dcfb3f173bb5f",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/光标检测区域控件__mhd4fxr5v6la.md",
+      "path": "references/platform/official/概念介绍/光标检测区域控件__mhd4fxr5v6la.md",
       "sha256": "1e4f9c92f1010f30f55e3cfbcf59b2feddd5db482f566cb4466ab648d01e3b7a",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/光标碰撞盒__mhso200yz3h4.md",
+      "path": "references/platform/official/概念介绍/光标碰撞盒__mhso200yz3h4.md",
       "sha256": "b07f29581bb1a1da623f1609a3bb5ddf8093c6244d85e91e8323bdecf52a83c2",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/光源__mhgkan9wgil6.md",
+      "path": "references/platform/official/概念介绍/光源__mhgkan9wgil6.md",
       "sha256": "2678d2620d356b8a26c44b2135d63cfe342f0d4a1d948ea9631498b61215fca3",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/全局计时器__mhawd6rl5kpy.md",
+      "path": "references/platform/official/概念介绍/全局计时器__mhawd6rl5kpy.md",
       "sha256": "4a97342ea54dc030c9fa7ba7fd589650bb364f3cd08b4d6907d3d1201479d467",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/全屏界面动效控件__mhbn4i09l5ns.md",
+      "path": "references/platform/official/概念介绍/全屏界面动效控件__mhbn4i09l5ns.md",
       "sha256": "48a5d9a2d991a9a4a0fc84379b7c0e92ab64303a3b0aab98335a6920bb09004f",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/关卡__mh3pgiraqkiu.md",
+      "path": "references/platform/official/概念介绍/关卡__mh3pgiraqkiu.md",
       "sha256": "1c3b4f7e7f2f1d023ca993c29473ff05196415a10560103a35a953f29a750445",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/关卡结算__mhx1du08nhwo.md",
+      "path": "references/platform/official/概念介绍/关卡结算__mhx1du08nhwo.md",
       "sha256": "12e27a96793d187e6d16b2be5892dcc6317607f30a248125ad0abbe96185bbde",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/关键行为__mhapp3r8gkdq.md",
+      "path": "references/platform/official/概念介绍/关键行为__mhapp3r8gkdq.md",
       "sha256": "f53f0bf1beb46e63c9080cf7b4a4337002d2b58f468d579a01d9ec62387b399b",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/其它概念__mhh5zgirw9cc.md",
+      "path": "references/platform/official/概念介绍/其它概念__mhh5zgirw9cc.md",
       "sha256": "b8af411f3f58212611975685891f27c59ebb106821968882515af2bce94f941e",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/功能__mhjx2miruaos.md",
+      "path": "references/platform/official/概念介绍/功能__mhjx2miruaos.md",
       "sha256": "c57a6a26aab43ef12e3d6bb0b56571bdfed126d54fe9cfc4bfe7b58fcf7063e5",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/单位__mh2xoxrop0la.md",
+      "path": "references/platform/official/概念介绍/单位__mh2xoxrop0la.md",
       "sha256": "57421b9c32a1ede2682c1cc5408bb4530b70d67e2e64b07a0d11dd07b347c393",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/单位标签__mhzldmiwdgu4.md",
+      "path": "references/platform/official/概念介绍/单位标签__mhzldmiwdgu4.md",
       "sha256": "d77072cdfc09b332f289a1b9f6fcc88c55581bd28fbaeace2d7f6ffaea679eb5",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/单位状态__mh6rh59iil2i.md",
+      "path": "references/platform/official/概念介绍/单位状态__mh6rh59iil2i.md",
       "sha256": "2cb96cd0f0d381b64c0ff40869b663c452be5ac01435658d80458b173c048c6b",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/单位状态__mhd7nxrfa8im.md",
+      "path": "references/platform/official/概念介绍/单位状态__mhd7nxrfa8im.md",
       "sha256": "5acc556d3ff9b5b21d7b794e185e3d153ebb2681580c0b054e8576056fbe93ed",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/卡牌选择器界面控件__mh2teu0bmfbc.md",
+      "path": "references/platform/official/概念介绍/卡牌选择器界面控件__mh2teu0bmfbc.md",
       "sha256": "2cbed543478d12ca3ab402fecc7dfc53276ba1a196f85e1148c62c849fbeafa4",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/受击盒设置__mhvg40rc5w9i.md",
+      "path": "references/platform/official/概念介绍/受击盒设置__mhvg40rc5w9i.md",
       "sha256": "d8fd6ee94a1ba10fe741ad81f212296ff27493fdc4da9bef08b9f2d24d7b4a4a",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/变换、原生碰撞、可见性和创建设置__mhuqbn9yn5bu.md",
+      "path": "references/platform/official/概念介绍/变换、原生碰撞、可见性和创建设置__mhuqbn9yn5bu.md",
       "sha256": "d232daf8b68575940f12e15b73bdca7b4d9ab6b0a5512714289c17211cf4df81",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/命中检测__mh2pir0hat1s.md",
+      "path": "references/platform/official/概念介绍/命中检测__mh2pir0hat1s.md",
       "sha256": "d101a0c23aad14845b818fdef967089817eaa5bfdef9ed1ce09235ac4658225a",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/商店__mhi9s7isvp50.md",
+      "path": "references/platform/official/概念介绍/商店__mhi9s7isvp50.md",
       "sha256": "33afd5694e37dd1aa42aff7f9962f6ca2c42b6b8c526b5fde6ff9dc3d725be0c",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/商店组件__mho6gviqhsqs.md",
+      "path": "references/platform/official/概念介绍/商店组件__mho6gviqhsqs.md",
       "sha256": "23998a4b4a22ec9c0ccb602e963edb898697b8c7f86284850e0819f0af846311",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/图文输入框控件__mh496c08hooo.md",
+      "path": "references/platform/official/概念介绍/图文输入框控件__mh496c08hooo.md",
       "sha256": "7bfe9e94edd6ac47a611198f70ecec44fc9af5d971ff945051b9969ab2ae501c",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/图片控件__mh2oih9jou22.md",
+      "path": "references/platform/official/概念介绍/图片控件__mh2oih9jou22.md",
       "sha256": "95bdf67dc5e48fff502652d3bc11883b89fa1fcd54757409adbf9e8d56a67210",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/场景生成模板__mhjk3t996oiy.md",
+      "path": "references/platform/official/概念介绍/场景生成模板__mhjk3t996oiy.md",
       "sha256": "59857fd5ba0f1a5b6feca5437e8ebdc99aeb1690609dd7389e9ab2bc476d8c0b",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/基础信息__mh3oxo0ojgxk.md",
+      "path": "references/platform/official/概念介绍/基础信息__mh3oxo0ojgxk.md",
       "sha256": "9bbea7e3ce8699f05953942d7b7db39ec8f178a151bdee7e9938bdb809fdfa74",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/基础战斗属性__mhvyqz9xwu0q.md",
+      "path": "references/platform/official/概念介绍/基础战斗属性__mhvyqz9xwu0q.md",
       "sha256": "e73a43fe46a33050af7a64431c8b86f8dfd7f0fb940641da4577778a8369b0f1",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/基础概念__mhk23ora1wom.md",
+      "path": "references/platform/official/概念介绍/基础概念__mhk23ora1wom.md",
       "sha256": "7b3c5f9e5e0b868464cb8e6ce8cc51b88f9836de117a290035828fb9088e9680",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/基础运动器__mhnmcmipncrg.md",
+      "path": "references/platform/official/概念介绍/基础运动器__mhnmcmipncrg.md",
       "sha256": "7431184c9044d75d417cbb1bb9a1d36e380b5a45095932ef8b96c3d107dca7f8",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/复杂造物__mhb8nl0w8cao.md",
+      "path": "references/platform/official/概念介绍/复杂造物__mhb8nl0w8cao.md",
       "sha256": "b6d3c07597d7d92b0f6bab9568e71041d9fadc730ea3de81a51d3d06513b7f7a",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/复杂造物技能__mhftoirpwd46.md",
+      "path": "references/platform/official/概念介绍/复杂造物技能__mhftoirpwd46.md",
       "sha256": "79ce49f31ba06ae1dba0d50b8e28f2b07a1ba89c77a24900e93455fb01bd239b",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/复苏__mh796lr44x0e.md",
+      "path": "references/platform/official/概念介绍/复苏__mh796lr44x0e.md",
       "sha256": "16b03738e59ee383db133083ce5b849ae17a03eb8cbd779f5332666efedeed83",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/外围系统__mhjsw9rluwou.md",
+      "path": "references/platform/official/概念介绍/外围系统__mhjsw9rluwou.md",
       "sha256": "350df601e516d8942b221f04fb37dd0488e18d386ac0b3d85ee931a6d6e5033b",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/多语言文本__mhk59aiqtwyk.md",
+      "path": "references/platform/official/概念介绍/多语言文本__mhk59aiqtwyk.md",
       "sha256": "f88b8bef1becd81901ef3f82624d5e02f3bf2b9d00956d089245a3068e1aa0f9",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/奇匠订阅__mhzdzjixq98k.md",
+      "path": "references/platform/official/概念介绍/奇匠订阅__mhzdzjixq98k.md",
       "sha256": "1ba2d9b53b35672fa0aedea9f81db5aac4a13916a9a938092d1ba6e62ec93c47",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/奇域任务__mhv1zh9x9nbe.md",
+      "path": "references/platform/official/概念介绍/奇域任务__mhv1zh9x9nbe.md",
       "sha256": "954628780da5d5083e58345e8cb5750ff60a6fa6d021987f5b1ec0043d0dfb12",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/奇域礼盒__mhjdhpi4sd10.md",
+      "path": "references/platform/official/概念介绍/奇域礼盒__mhjdhpi4sd10.md",
       "sha256": "153f6b399396873115581d3f8588d913e9b9f8c572196a84fff19454c864d55e",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/定时器__mhufb90zbnts.md",
+      "path": "references/platform/official/概念介绍/定时器__mhufb90zbnts.md",
       "sha256": "afe57b4c3ef065c5ce06d5e77353030687c9cfd71cd50679d4ebdf8a25a6935f",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/实体布设组__mhqmrlr6h58e.md",
+      "path": "references/platform/official/概念介绍/实体布设组__mhqmrlr6h58e.md",
       "sha256": "6e5aa09d17d9015d217e8f79730d29a84350a6085c686d9bde7277843ecf4ba4",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/客户端控件和客户端脚本__mhbgxf0nynww.md",
+      "path": "references/platform/official/概念介绍/客户端控件和客户端脚本__mhbgxf0nynww.md",
       "sha256": "90b752ab09d29f8b35fe78f7e148034d8088ab4539b9bf7e8cdb047eed4acc29",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/客户端控件容器__mhlz2lrly3dq.md",
+      "path": "references/platform/official/概念介绍/客户端控件容器__mhlz2lrly3dq.md",
       "sha256": "3d938b0e474c650d308789d7d7bd6981a7f895eec6858ba26b7241c544f6865c",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/容器节点控件__mh3qqq9xc102.md",
+      "path": "references/platform/official/概念介绍/容器节点控件__mh3qqq9xc102.md",
       "sha256": "b9efbb72e2557d86e8e5c5c02460ccdc0f4202865d59e46ef75fe22a20f139b6",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/寻路阻挡__mh6c3uri84h2.md",
+      "path": "references/platform/official/概念介绍/寻路阻挡__mh6c3uri84h2.md",
       "sha256": "0b9ec9b942a09f943cd698141e907c8e843060aa57a932565399c6524af3b1c1",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/小地图标识__mh0pppib5eyc.md",
+      "path": "references/platform/official/概念介绍/小地图标识__mh0pppib5eyc.md",
       "sha256": "43c1621ba9fe05f0a8e969c262cc2642c82b6a5e62666a75f4d1e84f5511eae3",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/局内存档__mhzcw29qjjma.md",
+      "path": "references/platform/official/概念介绍/局内存档__mhzcw29qjjma.md",
       "sha256": "caad96715efd8c011cf72628a19e6df38e4ff4338bb38b11d42af342fd588a30",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/常规设置__mh3rgo0c16c8.md",
+      "path": "references/platform/official/概念介绍/常规设置__mh3rgo0c16c8.md",
       "sha256": "a3aef1eee4688f20913c359ef8ea2a6bc86c6e9b1495348617b7ce371cc61b04",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/弹窗界面控件__mhen7r0djxkg.md",
+      "path": "references/platform/official/概念介绍/弹窗界面控件__mhen7r0djxkg.md",
       "sha256": "8bdecdf3d638c77ad55d7dbc3fd5cf5378f7fc91ba34fb93d0f526c384e839fc",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/悬浮交互页控件__mh2u2e9o3jn6.md",
+      "path": "references/platform/official/概念介绍/悬浮交互页控件__mh2u2e9o3jn6.md",
       "sha256": "b0e5f07ee98d8c666f4acf1cab74bfab0f5b55f311bd892022f2afd1884e45c3",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/成就__mh65jrr2yj3i.md",
+      "path": "references/platform/official/概念介绍/成就__mh65jrr2yj3i.md",
       "sha256": "d9f68573ff11ca470f677224aa7a44c334406ce84b0caae30285faeb51bc0849",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/战利品__mh63ox06afy8.md",
+      "path": "references/platform/official/概念介绍/战利品__mh63ox06afy8.md",
       "sha256": "d797025ca8f837d713d8707bd225b42afd1c1fefe56ab1dfbd09b350356e9458",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/战斗设置__mha42r0cwx74.md",
+      "path": "references/platform/official/概念介绍/战斗设置__mha42r0cwx74.md",
       "sha256": "d1f0c119e217ff1a0d03980f673c4971861f6538d2dccdb0e0963daeed90fd79",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/扫描标签__mhfc0lr1tcke.md",
+      "path": "references/platform/official/概念介绍/扫描标签__mhfc0lr1tcke.md",
       "sha256": "7704243603a2ff58aa411988ffae387a5ff87c94b2ba4437be0bf0adbb90c6ef",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/技能__mho81frl33im.md",
+      "path": "references/platform/official/概念介绍/技能__mho81frl33im.md",
       "sha256": "7b8bbd3f71e020f8f719fae72ed4a1ee375978a3d8b8a4c74c09dadc3ce47a43",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/技能动画__mh57xz9afh7e.md",
+      "path": "references/platform/official/概念介绍/技能动画__mh57xz9afh7e.md",
       "sha256": "3cea7184734dc5b48a5315aa0940e61bba07e2e0911f05173802a7959631c4fd",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/技能变量__mhhzqw98264i.md",
+      "path": "references/platform/official/概念介绍/技能变量__mhhzqw98264i.md",
       "sha256": "048dd5e7f4bb7f4960157d0d1b1cf7c99a860ab3662d1f6e463597c7842ae8f8",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/技能属性组__mh0inr0jak34.md",
+      "path": "references/platform/official/概念介绍/技能属性组__mh0inr0jak34.md",
       "sha256": "3d48103e30c18964e6e3af6fa1a1ac47250cd2ae0fcab6372da3f34791578439",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/技能资源__mh6ate95agb6.md",
+      "path": "references/platform/official/概念介绍/技能资源__mh6ate95agb6.md",
       "sha256": "0ddefeb78f97e1b009c1ecc4109e594e1dd8ec6c121128a5ea66f0ef01bce063",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/技能预瞄准__mhr3pdi50u1g.md",
+      "path": "references/platform/official/概念介绍/技能预瞄准__mhr3pdi50u1g.md",
       "sha256": "ee563758e1a35d5c2de4d9da7e9ea5e45fa3551ed3cca3a656af168196b6a424",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/投射运动器__mhaqt9rgqv4u.md",
+      "path": "references/platform/official/概念介绍/投射运动器__mhaqt9rgqv4u.md",
       "sha256": "c532d2785473efdabd36e47b0e82cbaba4d56b5f23bbe70569350f31223bc02c",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/护盾__mhhl0gire830.md",
+      "path": "references/platform/official/概念介绍/护盾__mhhl0gire830.md",
       "sha256": "ff9cfe4ba7f24afb878365ba7fb5b2d29dd797b23773361ef7797214ec772395",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/按键提示控件__mh265urgupye.md",
+      "path": "references/platform/official/概念介绍/按键提示控件__mh265urgupye.md",
       "sha256": "93510a42f150a7d8f0b4dfda102918e51f5a38e825b5d3eb363a52177e320599",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/掉落物__mhkfj1iilnck.md",
+      "path": "references/platform/official/概念介绍/掉落物__mhkfj1iilnck.md",
       "sha256": "69029c98c947f34f1058e1c09f2e90ab1634c42c0809afe1ef605c342e59e1cf",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/排行榜__mho2rt9ir6ay.md",
+      "path": "references/platform/official/概念介绍/排行榜__mho2rt9ir6ay.md",
       "sha256": "6687641541c6ae035dd1684f89d6ced1fa02570dd1810fd20249fae15c10b5a4",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/操控运动器__mh1ytk9631fm.md",
+      "path": "references/platform/official/概念介绍/操控运动器__mh1ytk9631fm.md",
       "sha256": "93bc00193edb6ff1fcbfaf6756c33a44ca2db57c75cbc90be1810c4e320133d4",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/数据复制粘贴__mh6fj30p2cmo.md",
+      "path": "references/platform/official/概念介绍/数据复制粘贴__mh6fj30p2cmo.md",
       "sha256": "f68b5a2027ead1026c158fc0b3b57d32e128f56f7d138491324ac2e5e795097f",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/文本框界面控件__mhnltrr3g966.md",
+      "path": "references/platform/official/概念介绍/文本框界面控件__mhnltrr3g966.md",
       "sha256": "e4c5af36a94851ab831f333af89809aa259a6d846ebd02cb5e68c4ded8c39a9e",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/文本气泡__mhwtz297kp6a.md",
+      "path": "references/platform/official/概念介绍/文本气泡__mhwtz297kp6a.md",
       "sha256": "b51c9ae39860eeeb71384eae7f98b0c00f31f063ff18dacb233050725add7fcb",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/文本视窗控件__mhv38jig94kk.md",
+      "path": "references/platform/official/概念介绍/文本视窗控件__mhv38jig94kk.md",
       "sha256": "48ce945837767cb19e58ab438f67651a89562e4acd0dd39ddf17ba7bfda63e4a",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/本地投射物__mhciimiw86jg.md",
+      "path": "references/platform/official/概念介绍/本地投射物__mhciimiw86jg.md",
       "sha256": "a19913343763b61de1b38f89c0943c5686f8c1b147ad6cefcdbb0e24df5c5d65",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/概念介绍__mhdtk89yhd6q.md",
+      "path": "references/platform/official/概念介绍/概念介绍__mhdtk89yhd6q.md",
       "sha256": "2e4c69722c9b2df952a2bba2fe3d8ef90aff4a91c1724f8e9521d954aae2714e",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/模型__mhrutdio6904.md",
+      "path": "references/platform/official/概念介绍/模型__mhrutdio6904.md",
       "sha256": "e4ac6efab8530f19c8fe9ab06d7f8b4e923d039f4adf91a8144eef600b3c6971",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/模板引用控件__mhucb6reudwm.md",
+      "path": "references/platform/official/概念介绍/模板引用控件__mhucb6reudwm.md",
       "sha256": "d31e2486260245c04498bd39d3675b8b8ad9a1f4eafed6700ab8290bbbeb3dbe",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/水物件__mhx4d30ev2uo.md",
+      "path": "references/platform/official/概念介绍/水物件__mhx4d30ev2uo.md",
       "sha256": "019f5b7665f65dc84f2b626b37b7e8be4a3ccac72cdaad9d0d9e7f515ed9bdd8",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/消息队列控件__mhs1f7ibtc6c.md",
+      "path": "references/platform/official/概念介绍/消息队列控件__mhs1f7ibtc6c.md",
       "sha256": "4cf77cb6671e348ed12d8c0095e25d906173fa608843d52dcb1f4aa0f2eb8c30",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/物件__mhlh4n9m4i56.md",
+      "path": "references/platform/official/概念介绍/物件__mhlh4n9m4i56.md",
       "sha256": "568c61edf7c8a0ba1f77a41c7e1d32b1e78cead4ecb8045488a55c691244a35d",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/物件镜头__mhx9b60or59k.md",
+      "path": "references/platform/official/概念介绍/物件镜头__mhx9b60or59k.md",
       "sha256": "91f1744ae3ea5cd9a30d4a341d297e1abb5bd3344fd94f9f931cc8cb6cae4280",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/特化配置__mhtwkur42see.md",
+      "path": "references/platform/official/概念介绍/特化配置__mhtwkur42see.md",
       "sha256": "6c8dc42d3a344bf4f4b009f5323e075defe58c756930a63bd2b8b7102660221e",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/特效__mhe1030vx380.md",
+      "path": "references/platform/official/概念介绍/特效__mhe1030vx380.md",
       "sha256": "736e2fa4dd41fe646a1dd48a5d42c364035714cd3ae5274d04ddd4f5c0dc9466",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/特效器__mh4ejditwixg.md",
+      "path": "references/platform/official/概念介绍/特效器__mh4ejditwixg.md",
       "sha256": "2a637957a8813f4c0c0fab49d0c9b5fca90ccb16b5475c6955d036c4ae7ee9c6",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/特效播放__mh4ppo02m1o8.md",
+      "path": "references/platform/official/概念介绍/特效播放__mh4ppo02m1o8.md",
       "sha256": "14e372508ea22d507c40014d6186031d970cb2828df94b2d30206fffaf32d757",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/特殊数字控件__mhkwucr8awfq.md",
+      "path": "references/platform/official/概念介绍/特殊数字控件__mhkwucr8awfq.md",
       "sha256": "22aef9de1c65ec46a8fb9e01b701f2032ded0996df7a2ac326c29295a7f0a6cc",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/状态显示区控件__mh4ve00q4j14.md",
+      "path": "references/platform/official/概念介绍/状态显示区控件__mh4ve00q4j14.md",
       "sha256": "137ed2145cea7f486570b31b797e91d189814e2fedec2d6685b92abe3d6bd616",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/玩家__mhctmgi51lpo.md",
+      "path": "references/platform/official/概念介绍/玩家__mhctmgi51lpo.md",
       "sha256": "04e944f58412d64595247a2aeff509f0626718a6d2ff186581fd84234c6252d4",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/环境配置__mhdznsie9up8.md",
+      "path": "references/platform/official/概念介绍/环境配置__mhdznsie9up8.md",
       "sha256": "dfb3d07988349cda33c4feb150a74b10745e0fa50cf570fb1e856d9c330397bc",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/界面动效控件__mh2iyk9fa4gy.md",
+      "path": "references/platform/official/概念介绍/界面动效控件__mh2iyk9fa4gy.md",
       "sha256": "d63a643f97dfd82a1c8bd563a8d07d4d4b066f7435327eda8023d1ff9786259e",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/界面布局__mhozt0r74ng6.md",
+      "path": "references/platform/official/概念介绍/界面布局__mhozt0r74ng6.md",
       "sha256": "5452688db8b719a43a60c28e80f3f2e0e54f60ba6265bbe560eb2e6a71457d84",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/界面控件__mhnapxrumtzy.md",
+      "path": "references/platform/official/概念介绍/界面控件__mhnapxrumtzy.md",
       "sha256": "7a1f4784211d670a2b675823705f33e2a2e924b71871dd05ba78add167025f80",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/界面控件组__mhg1700h8bug.md",
+      "path": "references/platform/official/概念介绍/界面控件组__mhg1700h8bug.md",
       "sha256": "27431fd3ec24b86ca166815173afcb8965c2a415a333de95212248e0a2df32cf",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/界面控件组管理__mhewyi0fjfvs.md",
+      "path": "references/platform/official/概念介绍/界面控件组管理__mhewyi0fjfvs.md",
       "sha256": "f41c068bc7b13aa77520b33702a056d21f838b75cdfa5af9c293b6751b0cc0c8",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/白盒物件__mhs4glrkbr32.md",
+      "path": "references/platform/official/概念介绍/白盒物件__mhs4glrkbr32.md",
       "sha256": "931c60da91833a49576d945ae37d74648607f91adcb6ad4ea9e5176b6886b732",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/碰撞触发器__mh8w69rzuc3i.md",
+      "path": "references/platform/official/概念介绍/碰撞触发器__mh8w69rzuc3i.md",
       "sha256": "a1615a969d86cc27b2f761c311cfe1c7089bef9fb95440854b07b861037e819d",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/碰撞触发源__mhn95di01j84.md",
+      "path": "references/platform/official/概念介绍/碰撞触发源__mhn95di01j84.md",
       "sha256": "603047dd48c90c82f9d07c90d2c8cce6eb1ce89244e342b65ae9146c8ea80871",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/竞技段位__mhf45sisuup8.md",
+      "path": "references/platform/official/概念介绍/竞技段位__mhf45sisuup8.md",
       "sha256": "6e03e913b5d1915f5687c0bdc3a857ca8a58c9ef4158a76191286e5f16275906",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/素材库__mhwylormozcm.md",
+      "path": "references/platform/official/概念介绍/素材库__mhwylormozcm.md",
       "sha256": "cef88009db7b90554018c8a91234b8adeb0a8e644103705738b4c3f7fdf3bb02",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/网格视窗控件__mhfkrr0i7gds.md",
+      "path": "references/platform/official/概念介绍/网格视窗控件__mhfkrr0i7gds.md",
       "sha256": "b900207f2619a0558382cd779f85abe67c322bd485c8c610bbfc8c29f74298de",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/职业__mhodlcrpht3q.md",
+      "path": "references/platform/official/概念介绍/职业__mhodlcrpht3q.md",
       "sha256": "1b3425c74f0d8123cc1304286f90d64f72d10cdea8552141d1f9ca47401a900d",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/背包__mhogfq9bf86q.md",
+      "path": "references/platform/official/概念介绍/背包__mhogfq9bf86q.md",
       "sha256": "042b71490a184eef8630df13a672e3f3f49f5bb498f094c35d45a95b2340582d",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/背包组件__mh5y5001vqd4.md",
+      "path": "references/platform/official/概念介绍/背包组件__mh5y5001vqd4.md",
       "sha256": "b5ea8fe39017814e5fb197ebcd072bea4dcdf3a0fbf4c243c177ec4ee5f9a38d",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/背景音乐__mhq9b601kh9k.md",
+      "path": "references/platform/official/概念介绍/背景音乐__mhq9b601kh9k.md",
       "sha256": "32a15709b4dfb32f09ed512adbb2969db24b38582318cb3705b17322a356f63c",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/能力单元__mh0ucw9e76f6.md",
+      "path": "references/platform/official/概念介绍/能力单元__mh0ucw9e76f6.md",
       "sha256": "d09b29db8f1c2b410de092d811972c7c54b17db959f838914a2dec84b3f768f8",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/自定义变量__mhso1b9wjica.md",
+      "path": "references/platform/official/概念介绍/自定义变量__mhso1b9wjica.md",
       "sha256": "ee1f0652aa1aa2472a9ea4d1734cfb2dad35729c835ab5eb661aea524301204f",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/自定义小地图控件__mhls9miyjwjg.md",
+      "path": "references/platform/official/概念介绍/自定义小地图控件__mhls9miyjwjg.md",
       "sha256": "3a012e14bb4bb4d4323621b36af18ce866d3b1beb2e96fde38460923312ab75b",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/自定义开关控件__mhkrafr3w6um.md",
+      "path": "references/platform/official/概念介绍/自定义开关控件__mhkrafr3w6um.md",
       "sha256": "b1e649cdcf24c1c5960b33167d14aed7007cc284ef1e8b5fcaf1078d7fb9dd7f",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/自定义挂接点__mhmshmimtegs.md",
+      "path": "references/platform/official/概念介绍/自定义挂接点__mhmshmimtegs.md",
       "sha256": "770219176f37a8f64051a0e8ae1563b6855e2fc39749dbe883dab030719fbc49",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/自定义按钮控件__mhtpwgitsigc.md",
+      "path": "references/platform/official/概念介绍/自定义按钮控件__mhtpwgitsigc.md",
       "sha256": "415bfe70a8d41030288621184420c738d4b8771f8c66529cea6bfcf8b488beaf",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/节点图__mhjwjrr5n73i.md",
+      "path": "references/platform/official/概念介绍/节点图__mhjwjrr5n73i.md",
       "sha256": "c2a612b1e132121dbfd183ae72233aabe4ffda24ee9d72921045b0935030f6f0",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/节点图编辑指引__mhb3ho0k5l2w.md",
+      "path": "references/platform/official/概念介绍/节点图编辑指引__mhb3ho0k5l2w.md",
       "sha256": "5287c75512e92c2a83d9477c61ff28c074a9535f06d9cbe24d9614834118ef3d",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/装备__mhkl2yin0cxo.md",
+      "path": "references/platform/official/概念介绍/装备__mhkl2yin0cxo.md",
       "sha256": "b424bf60e21a9d9015121d6914b076bc49f234967a16972fc2327ea75f1c0f98",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/角色__mh3ecor1x5cm.md",
+      "path": "references/platform/official/概念介绍/角色__mh3ecor1x5cm.md",
       "sha256": "740e62ed36c02124232c235cdb4c92b3db87be1500705b9d11e36508d91b414f",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/角色扰动装置__mhstl890y7xe.md",
+      "path": "references/platform/official/概念介绍/角色扰动装置__mhstl890y7xe.md",
       "sha256": "9e5d09147a3657aa1df55a6a92ff297e8a162710b7c402dfb1fe161cdd9f3532",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/角色操控技能__mhj4a0rzu4pi.md",
+      "path": "references/platform/official/概念介绍/角色操控技能__mhj4a0rzu4pi.md",
       "sha256": "e1ad50b396edfa53d8874ad66d12a138c55d12d3b401a42724624d8289e4b819",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/计分板界面控件__mhesro0hyn5k.md",
+      "path": "references/platform/official/概念介绍/计分板界面控件__mhesro0hyn5k.md",
       "sha256": "ba3edeeec9647ea73e4c72cd3defa4ee8c40808fb22c7d34e158ee1c497b82c2",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/计时器界面控件__mhnrdor7uyra.md",
+      "path": "references/platform/official/概念介绍/计时器界面控件__mhnrdor7uyra.md",
       "sha256": "f14b9a199d88ffd3491ae59a5224501d4c7840b4b97444a2aaaf263aac07ad92",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/语音和文字聊天__mhaneb9qnvay.md",
+      "path": "references/platform/official/概念介绍/语音和文字聊天__mhaneb9qnvay.md",
       "sha256": "7c0a4965437f262d1d8abad98743176a2f387745b41ad0df548bd435cb4eb388",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/负载优化__mhlb1vivioys.md",
+      "path": "references/platform/official/概念介绍/负载优化__mhlb1vivioys.md",
       "sha256": "60e27f8b092d1f9d0a9b4b745e8a3668fabd6dd5623bd862618fcc4250794a18",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/货币__mh2cr30yeak0.md",
+      "path": "references/platform/official/概念介绍/货币__mh2cr30yeak0.md",
       "sha256": "322fdc7b4a4a447d64ffea777520848be1e0bbb5e95e44c2493caa436fb35fda",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/资产__mhmzm3rltetq.md",
+      "path": "references/platform/official/概念介绍/资产__mhmzm3rltetq.md",
       "sha256": "88b031d9382c328d80534ff72c8a272ace47f5eb3061a2b1c3854e01f8761c10",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/资源系统__mht8l59439d6.md",
+      "path": "references/platform/official/概念介绍/资源系统__mht8l59439d6.md",
       "sha256": "c42857b060087e953af5afd1db27bbff35eb0c876fc12037270bca75e9410609",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/跟随运动器__mhuts59m9gju.md",
+      "path": "references/platform/official/概念介绍/跟随运动器__mhuts59m9gju.md",
       "sha256": "18a78e232b66717e41c615ad710a456ebd31c8b5240627c06584402e1249b658",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/路径__mh333vim2h44.md",
+      "path": "references/platform/official/概念介绍/路径__mh333vim2h44.md",
       "sha256": "2636d9e902a87b62d56692e527651853a7be207545c8f07b93f7338ea4b048c3",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/进度条界面控件__mhwpzpixrad0.md",
+      "path": "references/platform/official/概念介绍/进度条界面控件__mhwpzpixrad0.md",
       "sha256": "cd72b68aa51152f57129c55b0aa0a9022216c6d8be8242ce3a6fc69f7036c005",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/选项卡__mh5jko05fzyw.md",
+      "path": "references/platform/official/概念介绍/选项卡__mh5jko05fzyw.md",
       "sha256": "e706d49b81acb50cfc3737ebb3ab981af10def486a1182a90d26d35a993b8db5",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/通用组件__mhei6orvcbkm.md",
+      "path": "references/platform/official/概念介绍/通用组件__mhei6orvcbkm.md",
       "sha256": "40ed627181c4a04cf85f4a834725b38d6b76021530574ed6bc35b500b66c76ce",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/造物__mhufqo0c0tqw.md",
+      "path": "references/platform/official/概念介绍/造物__mhufqo0c0tqw.md",
       "sha256": "e1ec6f0afc398f26e61b1f10072159243613f6421d53afcb1cf31b47ae6c5449",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/道具__mhbgx0rspbqu.md",
+      "path": "references/platform/official/概念介绍/道具__mhbgx0rspbqu.md",
       "sha256": "ac60d4c0c73a8e475e9a6dc62d51587f4d048c42948e11a235ca79f959ff2f18",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/道具展示界面控件__mhjja1ipq9ck.md",
+      "path": "references/platform/official/概念介绍/道具展示界面控件__mhjja1ipq9ck.md",
       "sha256": "9110d1b709cef19071aa38cc3be50ca0bc5e9bc6ee4ca4ea9f8f9aae936ffbd0",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/铭牌__mh5n160t2b6w.md",
+      "path": "references/platform/official/概念介绍/铭牌__mh5n160t2b6w.md",
       "sha256": "9ce75c74e1673f918233c3fe193dccae18e9388c589a6016639388af3dc93914",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/阵营__mhe1ixri46ta.md",
+      "path": "references/platform/official/概念介绍/阵营__mhe1ixri46ta.md",
       "sha256": "c2143f2107963e94da28b6b7d350562b8ff36658c047028031cd9ced72c77cdd",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/音效播放器__mhwiv89yra02.md",
+      "path": "references/platform/official/概念介绍/音效播放器__mhwiv89yra02.md",
       "sha256": "c8c00ee78a8286ee4eb554214448b6d1153ebce3c7a89304168c5512eeb7606d",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/预设按钮控件__mhdbkf04v6y8.md",
+      "path": "references/platform/official/概念介绍/预设按钮控件__mhdbkf04v6y8.md",
       "sha256": "f82d061d76210444183d35a69231787778b7c06af3968f274c4ce4c918c46ac6",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/预设点__mhfvn30ctm9c.md",
+      "path": "references/platform/official/概念介绍/预设点__mhfvn30ctm9c.md",
       "sha256": "e46b608f4005e2c19d4eb1d38c57381aaa1fe70ccdd50e83ddd909f4fbe21098",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/预设状态__mhw3s1ig4g0k.md",
+      "path": "references/platform/official/概念介绍/预设状态__mhw3s1ig4g0k.md",
       "sha256": "a78f5231e2742272a1f90605cc566954b28c4670fd98ebe36b693a8c8d096347",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/额外碰撞__mhuiob9dg1dm.md",
+      "path": "references/platform/official/概念介绍/额外碰撞__mhuiob9dg1dm.md",
       "sha256": "90ccaa63fd4554c30005e5e79b2e8594da3ef2bd1c7946bda43bc312c6f19147",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/概念介绍/高级概念__mheybl0mdcqo.md",
+      "path": "references/platform/official/概念介绍/高级概念__mheybl0mdcqo.md",
       "sha256": "80c84a7a449166bc0d186528654358f8fb8047a94188b353fa7fdea0424c974f",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/界面介绍/ID修改__mhsd6lrx3voe.md",
+      "path": "references/platform/official/界面介绍/ID修改__mhsd6lrx3voe.md",
       "sha256": "8de258a29712da6334ae7e7953ba1f08757908d42a5d4bfe018c767897571a20",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/界面介绍/元件库__mhwp5h9d4h3e.md",
+      "path": "references/platform/official/界面介绍/元件库__mhwp5h9d4h3e.md",
       "sha256": "007b6466043da4d5dae35435c9c1a482786c4259c2c3863777adc4bc4f0c77c2",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/界面介绍/关卡设置__mhn9vpia00qc.md",
+      "path": "references/platform/official/界面介绍/关卡设置__mhn9vpia00qc.md",
       "sha256": "4a1ac4fbed128a26529eed4c68b8b3a1125693a6c9b58637b187839c1018c998",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/界面介绍/千星沙箱__mho777i0ga90.md",
+      "path": "references/platform/official/界面介绍/千星沙箱__mho777i0ga90.md",
       "sha256": "7ad862d4a92fdf04b9ff28eac7b34a1a161cbaff822b6e5937bf8b0297da0f19",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/界面介绍/地形编辑__mhwe1n94b1x6.md",
+      "path": "references/platform/official/界面介绍/地形编辑__mhwe1n94b1x6.md",
       "sha256": "ac62ee485b0a239fa3db329b922004ef8fd5a4c477784a6db080db9061fbb0cc",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/界面介绍/多人试玩__mh9fj3rudd9q.md",
+      "path": "references/platform/official/界面介绍/多人试玩__mh9fj3rudd9q.md",
       "sha256": "9324af1f38332a7eed033d85036924f70811a9e88e31b252de78ffb24f41bde0",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/界面介绍/奇域资产中心__mhf66q9jc4uq.md",
+      "path": "references/platform/official/界面介绍/奇域资产中心__mhf66q9jc4uq.md",
       "sha256": "8a07dd84fefd6051a2f2ed2b225937b1e5a71f2dd4da4b8c76b1ab0cd3374755",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/界面介绍/实体摆放__mhnffmieeqbg.md",
+      "path": "references/platform/official/界面介绍/实体摆放__mhnffmieeqbg.md",
       "sha256": "6bf52d7a2573dc840baf3eb77367279e525024b9452405d21c8682397ce7c60b",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/界面介绍/战斗预设__mhexhcr1qjh2.md",
+      "path": "references/platform/official/界面介绍/战斗预设__mhexhcr1qjh2.md",
       "sha256": "4dc6769b762ccf98bbedbcc3225ac0fd97d2c97f0a355325aae9fe9386122fb7",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/界面介绍/撤销与还原__mhq6wdimcd84.md",
+      "path": "references/platform/official/界面介绍/撤销与还原__mhq6wdimcd84.md",
       "sha256": "43bee2b85319217be14d4e280c5ac2ff800d28f2b8fdf856f37435123c8700f0",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/界面介绍/整体界面__mhn4bsi5lb58.md",
+      "path": "references/platform/official/界面介绍/整体界面__mhn4bsi5lb58.md",
       "sha256": "7f1bf79dfd3c0087e12ad3e1727b8ef9aa4e139b9e843d8bd710b751f9dab99b",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/界面介绍/界面介绍__mhz71urk21nq.md",
+      "path": "references/platform/official/界面介绍/界面介绍__mhz71urk21nq.md",
       "sha256": "a7ec81b942d5bda551c95d337dd36e5c62a30fd6ef1508bf6c53c05f88162422",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/界面介绍/编辑工具__mhmegu0f0cso.md",
+      "path": "references/platform/official/界面介绍/编辑工具__mhmegu0f0cso.md",
       "sha256": "15ce82412bc3338728fe111154dfb0487135808b108cebc9d820f0584a57fb1f",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/界面介绍/试玩__mhie54ik9ovg.md",
+      "path": "references/platform/official/界面介绍/试玩__mhie54ik9ovg.md",
       "sha256": "7b1626bc37d66c69413e1d84cc9faeedcb574eb5421292d4abc6c5f7c7e56c17",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/界面介绍/资产导入导出__mhxbd59urbfu.md",
+      "path": "references/platform/official/界面介绍/资产导入导出__mhxbd59urbfu.md",
       "sha256": "72e2b0ccd2dc10562426f1a22aea0041eb0129aca1c566e67a86a6b87d7651d4",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/事件节点__mhn7ko01v3yw.md",
+      "path": "references/platform/official/节点介绍/事件节点__mhn7ko01v3yw.md",
       "sha256": "a247953ffe36a2580591cc5222c70138bb0a243b4933354e517fcd492886b154",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/其它节点__mh84c29jwjgy.md",
+      "path": "references/platform/official/节点介绍/其它节点__mh84c29jwjgy.md",
       "sha256": "88c6774f6381a9d82ddd238eb7f20cb327098c4755c12c663b489ba0c36963c2",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/其它节点__mhbbdr09w60g.md",
+      "path": "references/platform/official/节点介绍/其它节点__mhbbdr09w60g.md",
       "sha256": "2783738c141d1040bb52aaebc8e0a4b851deec3d488e8ef86601eaa410ea1acc",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/其它节点__mhbgxo0eavlk.md",
+      "path": "references/platform/official/节点介绍/其它节点__mhbgxo0eavlk.md",
       "sha256": "1f7ac2261d88f1ea32b43a800cc6484e6069c09de98e75efccf9fce00a00b182",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/其它节点__mhodmo0n3xg8.md",
+      "path": "references/platform/official/节点介绍/其它节点__mhodmo0n3xg8.md",
       "sha256": "cda56fe3f7cb870a67a5726f809b8b3d2ccb775bbae21ebaeac9fd785bba20a1",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/其它节点__mhor3u09y7u0.md",
+      "path": "references/platform/official/节点介绍/其它节点__mhor3u09y7u0.md",
       "sha256": "3172c14a5d5a25b10720de6363dedcf7f2bfcbb116e7053dbe03edcce7ade6bc",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/其它节点__mht31vila3ms.md",
+      "path": "references/platform/official/节点介绍/其它节点__mht31vila3ms.md",
       "sha256": "a7293bc1f8385632dfb94561c02b4825c0978b1fc8ad44852fb55953f1922270",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/客户端节点__mhlv230i3opc.md",
+      "path": "references/platform/official/节点介绍/客户端节点__mhlv230i3opc.md",
       "sha256": "2e34fd3d8cf8e1c742136bcab5c43d04c12dd08a866d7827245cb30ca5d6935b",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/执行节点__mh277t9fl4tm.md",
+      "path": "references/platform/official/节点介绍/执行节点__mh277t9fl4tm.md",
       "sha256": "920ee36ed49f71e93286fabbe8ff426c8a51d191a966ba6d9d63e7b5af41cdbe",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/执行节点__mh6obvipqv1g.md",
+      "path": "references/platform/official/节点介绍/执行节点__mh6obvipqv1g.md",
       "sha256": "bbfe6369e893b444c549cc2438c7ba9394737611d63d6ccbb940de975b243e26",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/执行节点__mhb09x012qu8.md",
+      "path": "references/platform/official/节点介绍/执行节点__mhb09x012qu8.md",
       "sha256": "0363e06d9c34248502ab3c213188efd8f9c0ceee26b164a094dff11eca43e84e",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/执行节点__mhf9gq9ssw9e.md",
+      "path": "references/platform/official/节点介绍/执行节点__mhf9gq9ssw9e.md",
       "sha256": "706079332736993041ca554f30e45b2634be49c3730277634b1a9dfdac71dbe9",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/执行节点__mhw66orrrfkm.md",
+      "path": "references/platform/official/节点介绍/执行节点__mhw66orrrfkm.md",
       "sha256": "f236a87a0d7f07e8e11a0204c522b6ed69cd34ab3087ae13631b4846ba140977",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/执行节点__mhz064iplia4.md",
+      "path": "references/platform/official/节点介绍/执行节点__mhz064iplia4.md",
       "sha256": "412f8684a555d0a39007c9bfda60a1cd4ff986a68eb70a518c1e6d697fac0474",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/服务器节点__mhuto3r800b2.md",
+      "path": "references/platform/official/节点介绍/服务器节点__mhuto3r800b2.md",
       "sha256": "f5207c8f2320de9d60b5a4cbfa93026d2d88374e3404c2f55a1e514a6f3e613c",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/查询节点__mh1w3z96rpne.md",
+      "path": "references/platform/official/节点介绍/查询节点__mh1w3z96rpne.md",
       "sha256": "f5d7eb329df34e13212f4ec51311ab9f9d600a53743263a774b12f43b9c065fb",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/查询节点__mh2crq9jzueq.md",
+      "path": "references/platform/official/节点介绍/查询节点__mh2crq9jzueq.md",
       "sha256": "80da24aedb8ba1f1e0faf8422d2f8dddbbd12d05fc8baa551a46638cbc749f3f",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/查询节点__mh65asiyhv2k.md",
+      "path": "references/platform/official/节点介绍/查询节点__mh65asiyhv2k.md",
       "sha256": "00109d11f66c2cf6cd7a53ea0aba315b1ec0efcb6c5b646272de0d9ada1fc4ee",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/查询节点__mhk4furvds12.md",
+      "path": "references/platform/official/节点介绍/查询节点__mhk4furvds12.md",
       "sha256": "4d453dd22ea5a82965f31aaf48680ec72b0f88518da3474022813b9db71d8af5",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/查询节点__mholjx05ji8w.md",
+      "path": "references/platform/official/节点介绍/查询节点__mholjx05ji8w.md",
       "sha256": "c9f167d3330c041ccb48c1bfde60c176cdde064730e84495e28f58e17e793bc4",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/查询节点__mhpw06rvah3a.md",
+      "path": "references/platform/official/节点介绍/查询节点__mhpw06rvah3a.md",
       "sha256": "374411cd9ba93b856c61dee0bb40df378d6a392106436f39ffe5505b1e82bdb2",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/查询节点__mhwbqlrw655q.md",
+      "path": "references/platform/official/节点介绍/查询节点__mhwbqlrw655q.md",
       "sha256": "e21b186e315015ae07682879ff6ada5399e79f07491cc4ca5656719ea02a118b",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/流程控制节点__mh21nw9b6f8i.md",
+      "path": "references/platform/official/节点介绍/流程控制节点__mh21nw9b6f8i.md",
       "sha256": "c5cddf218e5b6fb6fbcdc03898ddc33b32b69a8fadfc17f8780948d26cf7ec82",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/流程控制节点__mhe8yn9bysd6.md",
+      "path": "references/platform/official/节点介绍/流程控制节点__mhe8yn9bysd6.md",
       "sha256": "328ab77d543d28e8136f31435538d1fe46bd0429d0dd8feed60180d6e31f0da6",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/流程控制节点__mhk9zrrzshm6.md",
+      "path": "references/platform/official/节点介绍/流程控制节点__mhk9zrrzshm6.md",
       "sha256": "0bd28d02c5ae362759a96f5e3bd04f34833271189756d3c50a7498a43fb1bf93",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/流程控制节点__mhq1k3rzp6oe.md",
+      "path": "references/platform/official/节点介绍/流程控制节点__mhq1k3rzp6oe.md",
       "sha256": "cf8dc8f16ecab3fdd3a2da1099716b856bfc0bce1dcbb173a3a9cfb68092e387",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/流程控制节点__mhxc8ord091y.md",
+      "path": "references/platform/official/节点介绍/流程控制节点__mhxc8ord091y.md",
       "sha256": "05aff743164c2624e220d72bbe9bf6081bc22abddbbdcc283c1e3d30f13ba339",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/流程控制节点__mhxppurzujfq.md",
+      "path": "references/platform/official/节点介绍/流程控制节点__mhxppurzujfq.md",
       "sha256": "f617f954ead668ebf9c1eb83784656563e63986f28262819f81b35961ac03058",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/节点介绍__mhsok60iqlxk.md",
+      "path": "references/platform/official/节点介绍/节点介绍__mhsok60iqlxk.md",
       "sha256": "da9098e23fdfa37717e42ec0889598c8275971bc57db9807c72ae1fa9fd01e6c",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/角色技能节点图__mhuf56rvxhgm.md",
+      "path": "references/platform/official/节点介绍/角色技能节点图__mhuf56rvxhgm.md",
       "sha256": "b25a38e07198eaa6fcf32df89a926c99b217b525aeb7581f07fc371c6467e62f",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/角色操控技能节点图__mho2iu0eaia0.md",
+      "path": "references/platform/official/节点介绍/角色操控技能节点图__mho2iu0eaia0.md",
       "sha256": "4881e8ebc757b8a1f79c71f04f0ff029690271a720e1ed3d5b993cabced0d6cf",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/过滤器节点图__mhcnh29kjjua.md",
+      "path": "references/platform/official/节点介绍/过滤器节点图__mhcnh29kjjua.md",
       "sha256": "8b044dd55bb452e2bc9968c4e497e1137b3245d2b78c26bb18818aca930f13b0",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/运算节点__mh7ys59fhtvu.md",
+      "path": "references/platform/official/节点介绍/运算节点__mh7ys59fhtvu.md",
       "sha256": "5b3a43ee8f0bfa18968967b1ba6b06a6fe745d6cfdae3add1a9b44a6933f4d9a",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/运算节点__mhb5tu05hgfc.md",
+      "path": "references/platform/official/节点介绍/运算节点__mhb5tu05hgfc.md",
       "sha256": "3e5100dd843031bfeb2393b0e78c9f92989378953059cd662907ebb9fa1e22eb",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/运算节点__mhfmxw9fn6n6.md",
+      "path": "references/platform/official/节点介绍/运算节点__mhfmxw9fn6n6.md",
       "sha256": "7f513165c5463575efa17fcf6ac3560afd8b4fc85e6a7007911dcd71a577d1bf",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/运算节点__mhjyvxrqz2fy.md",
+      "path": "references/platform/official/节点介绍/运算节点__mhjyvxrqz2fy.md",
       "sha256": "1cca8568a6a5e81edc3ce825f2cbd79e6f513fc231eaa074e58f99c0d446e295",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/运算节点__mhnd4l069tk0.md",
+      "path": "references/platform/official/节点介绍/运算节点__mhnd4l069tk0.md",
       "sha256": "ae5619a7381bf8e81b9c2700a5766874ee015fe327e00c9754ebaa0166935e01",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/运算节点__mho82r0ip7v4.md",
+      "path": "references/platform/official/节点介绍/运算节点__mho82r0ip7v4.md",
       "sha256": "e3030de80c4295aafc360bde0eabf33edc498b81e718917e0d0fd66555b59ba2",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/运算节点__mhte5piu3it0.md",
+      "path": "references/platform/official/节点介绍/运算节点__mhte5piu3it0.md",
       "sha256": "22058e4d28dc745cf972c23563e47878ec4514af2f5cad0a199beeb86444ef58",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/造物技能节点图__mhlgj60615uw.md",
+      "path": "references/platform/official/节点介绍/造物技能节点图__mhlgj60615uw.md",
       "sha256": "babb453e12f1193af9f7aed0c4473fd6365f9b50babfe7378073743f0d1fa141",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/造物状态决策节点图__mhukp3r0c71q.md",
+      "path": "references/platform/official/节点介绍/造物状态决策节点图__mhukp3r0c71q.md",
       "sha256": "800251606969648fc81b00b14a7ed76fefe693e27734faca711c808f6e8bd2b3",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/节点介绍/造物状态节点图__mhchx59g4u96.md",
+      "path": "references/platform/official/节点介绍/造物状态节点图__mhchx59g4u96.md",
       "sha256": "c0f8fa4080ba1d95d37c9f127b2fa1a6b5cc5f41500aad39b5eba5f9746b1d8a",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/读前须知/读前须知__mh29wpicgvh0.md",
+      "path": "references/platform/official/读前须知/读前须知__mh29wpicgvh0.md",
       "sha256": "4f71f9b8802f8eab8e1542cc21c5069051a2ca4eae302704dd531ba4cdeb4e47",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/辅助功能/协作编辑__mhj3gr0ye4wg.md",
+      "path": "references/platform/official/辅助功能/协作编辑__mhj3gr0ye4wg.md",
       "sha256": "90dbdc62bc5df682e2bee78ee03ebb60120c418b3a578d59d3d51311372edadc",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/辅助功能/负载计算功能__mho2hirgodxi.md",
+      "path": "references/platform/official/辅助功能/负载计算功能__mho2hirgodxi.md",
       "sha256": "a5949a9e118ba651600bb5776316076a56dc6caccc87862a00fb75dc75a914bd",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/辅助功能/辅助功能__mhoyplr76zr2.md",
+      "path": "references/platform/official/辅助功能/辅助功能__mhoyplr76zr2.md",
       "sha256": "e88cdd060f4c4721a538fe19fb524a9c43e27808253bb025fc98ea7451dd76e1",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/辅助功能/风险检查功能__mh0xm3ryh9hq.md",
+      "path": "references/platform/official/辅助功能/风险检查功能__mh0xm3ryh9hq.md",
       "sha256": "dbd7d0a27e13232c978dea76d88e718d73a860be0ae60ff79b1e419e48360070",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/附录/信号__mhlaj0r9bldi.md",
+      "path": "references/platform/official/附录/信号__mhlaj0r9bldi.md",
       "sha256": "b6b289e7b6f54e973b1907ed913ee48ab0d227fbac7433d3379c2dc40e85a4be",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/附录/单位状态效果池__mhou93r2pxv2.md",
+      "path": "references/platform/official/附录/单位状态效果池__mhou93r2pxv2.md",
       "sha256": "a7a2c0cfc0a91bb97d18d58fc65bbd193c01305e116968e0683afd651959aee9",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/附录/复合节点__mhty17iqeht0.md",
+      "path": "references/platform/official/附录/复合节点__mhty17iqeht0.md",
       "sha256": "5fe4ddf774844b8c137be896fb054f982105571fb3c6a523e1a3ace3c711abdc",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/附录/复合节点图日志__mhip8yit341o.md",
+      "path": "references/platform/official/附录/复合节点图日志__mhip8yit341o.md",
       "sha256": "28c0d0c0591c7bbfb7d0f3bcbe2b9da237180ee4b4d530e21da0dfc5b5f518af",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/附录/字典__mhubgk9yy8gy.md",
+      "path": "references/platform/official/附录/字典__mhubgk9yy8gy.md",
       "sha256": "550f9588cb9c973c83ac9cd81ec43b8bd6e697aac48310e0a3a642e26521d763",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/附录/客户端控件API文档__mhtakr07vej4.md",
+      "path": "references/platform/official/附录/客户端控件API文档__mhtakr07vej4.md",
       "sha256": "501705133bac927f440d141dcdd8d098a280ab919b91e0906a47294470b82772",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/附录/客户端节点图日志__mhrnuz9izfne.md",
+      "path": "references/platform/official/附录/客户端节点图日志__mhrnuz9izfne.md",
       "sha256": "379a90025b87f066e1091340517de7614a538afce3d03088439572a85e3cec2f",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/附录/泛型引脚__mhkirfrna1fy.md",
+      "path": "references/platform/official/附录/泛型引脚__mhkirfrna1fy.md",
       "sha256": "37ff0f8f65076d884fbe644b44225c2197496d7d502f256864cca11176c47462",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/附录/经典模式角色编号一览__mh4imrrhzdzi.md",
+      "path": "references/platform/official/附录/经典模式角色编号一览__mh4imrrhzdzi.md",
       "sha256": "7068671615622d42bfc58f3571ea578bf124dfb5efeb59238b8b8eb225b04bac",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/附录/结构体__mh3fmi0t99ns.md",
+      "path": "references/platform/official/附录/结构体__mh3fmi0t99ns.md",
       "sha256": "97776ab04b6ae51af6585be981fcab03f9ae11baf0883ee21470a67fbdd64f50",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/附录/编辑项范围限制__mh74ae9fsg8i.md",
+      "path": "references/platform/official/附录/编辑项范围限制__mh74ae9fsg8i.md",
       "sha256": "ff917765dd8ff014cffbde375ec319465f6e0729dc1c34caaf21991613a633ad",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/附录/能力单元效果__mhrvqvioautg.md",
+      "path": "references/platform/official/附录/能力单元效果__mhrvqvioautg.md",
       "sha256": "552e24b180b0096d697305879f5c58cf67cc8f49875e50344b7bdfeb8af0140f",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/附录/节点图变量__mhtshailzs7w.md",
+      "path": "references/platform/official/附录/节点图变量__mhtshailzs7w.md",
       "sha256": "bb0b0d44a86b0c338fc5a3cbb41dd8679f65693c9754be8b28c14195bdb9916c",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/附录/节点图日志__mhu951iz7wz8.md",
+      "path": "references/platform/official/附录/节点图日志__mhu951iz7wz8.md",
       "sha256": "ad8939f2f94feae5db27ee1893db1e35cc4d315f26fbf86df2bfda96038e6864",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/附录/节点图高级特性__mhk7nlregm9q.md",
+      "path": "references/platform/official/附录/节点图高级特性__mhk7nlregm9q.md",
       "sha256": "1b3d7245d96f45abfe1ecc66cd081dd09d4d321eb464d45443b41a197e713093",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/附录/造物技能说明__mhzys1ic5eok.md",
+      "path": "references/platform/official/附录/造物技能说明__mhzys1ic5eok.md",
       "sha256": "e68c6884f7c0068014ca45e6b22f75f1b35ef98d9f7785f235abbc82902ae154",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/附录/造物行为模式图鉴__mhyg4i0inazs.md",
+      "path": "references/platform/official/附录/造物行为模式图鉴__mhyg4i0inazs.md",
       "sha256": "450571d6ad37b87bab400ea2b83f934672ba31086f95f241b1a191c61b5ffe59",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/附录/造物行为模式的未入战行为__mhpsmb91keka.md",
+      "path": "references/platform/official/附录/造物行为模式的未入战行为__mhpsmb91keka.md",
       "sha256": "e0d4a21cc542c306a828c369a8567be043ac9863b2b807020121260884f13ad8",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/official/附录/附录__mhsumxr9cf3y.md",
+      "path": "references/platform/official/附录/附录__mhsumxr9cf3y.md",
       "sha256": "5c6599d306634d218b3d5beb8c5c744ebfb714023b6fd1b60c8d460c4617b7c4",
       "group": "official_documents",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "references/pixel-import-guide.md",
+      "path": "references/assets/pixel-import-guide.md",
       "sha256": "2b2be3ed9c52f96b4e567a7b32139938f23bbf10f1b088f11181581ef6c52d82",
       "group": "pixel_guide",
       "status": "redistribution_permission_unverified"
@@ -1688,19 +1688,19 @@
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "skills/qianxing-editor/references/client-controls-api.md",
+      "path": "references/platform/community/client-controls-api.md",
       "sha256": "0a74b932020d11696c8bf68d963cee8a20c7969e2ad7d481808d33b26a6dd887",
       "group": "client_api_document",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "skills/qianxing-assets/references/geimg-manual.md",
+      "path": "references/assets/geimg/geimg-manual.md",
       "sha256": "107742e8696ba9a74caecb5b1417b18b992ec8b828e73e380eb859fcad3f24c8",
       "group": "geimg",
       "status": "redistribution_permission_unverified"
     },
     {
-      "path": "skills/qianxing-assets/references/geimg_kb_snapshot.json",
+      "path": "references/assets/geimg/geimg_kb_snapshot.json",
       "sha256": "5ab3e9e26c1691e3a07f2ac1028b53c0adde8a344930d41503a9c2b2a0ecb20b",
       "group": "geimg",
       "status": "redistribution_permission_unverified"

@@ -1,6 +1,6 @@
 # 工具导航
 
-终端从 [qianxing.py](qianxing.py) 进入。MCP 通过 [mcp_launcher.cjs](mcp_launcher.cjs)、[mcp_service.py](mcp_service.py) 和 [mcp_bridge.py](mcp_bridge.py) 调用同一套核心。[MCP 接入与参数](../references/local-mcp.md)
+终端从 [qianxing.py](qianxing.py) 进入。MCP 通过 [mcp_launcher.cjs](mcp_launcher.cjs)、[mcp_service.py](mcp_service.py) 和 [mcp_bridge.py](mcp_bridge.py) 调用同一套核心。[MCP 接入与参数](../docs/mcp.md)
 
 | 任务 | CLI | 核心源码 |
 | --- | --- | --- |
@@ -13,6 +13,6 @@
 | 整合与核验交付 | `produce`、`verify` | [production_core.py](production_core.py)、[production_v2.py](production_v2.py)、[portable_delivery.py](portable_delivery.py)、[delivery_verify.py](delivery_verify.py) |
 | 排障与本地模拟 | `diagnose`、`logs`、`simulate`、`beyond` | [project_diagnosis.py](project_diagnosis.py)、[joint_simulator.py](joint_simulator.py)、[beyond_backend.py](beyond_backend.py) |
 
-`capabilities` 查看实现范围及验证层，`doctor` 检查当前依赖。[能力与验证结果](../references/validation-evidence.md)
+`capabilities` 查看实现范围及验证层，`doctor` 检查当前依赖。[能力与验证结果](../references/workflows/validation-evidence.md)
 
 [配置开发环境和运行检查](../docs/contributing/development.md) · [打包与发布](../docs/contributing/maintenance.md)

@@ -75,9 +75,9 @@
     ]
   },
   "runtime_rules": [
-    "references/platform/**/*.md",
-    "skills/qianxing-editor/references/client-controls-api.md",
-    "references/official/**/*.md"
+    "references/platform/7.2/*.md",
+    "references/platform/community/client-controls-api.md",
+    "references/platform/official/*.md"
   ],
   "development_inputs": [
     "*.py",

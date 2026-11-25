@@ -2,7 +2,7 @@
 
 用于千星奇域工程的源码、生成物、清单、验证报告和工具依赖排障。工程的文件名、版本策略、原生允许修改字段与构建命令由当前配置决定，不套用其他项目的约定。
 
-先按[只读诊断](../../project-diagnosis.md)选择受影响对象；API疑问使用knowledge api，运行记录用[logs diagnose](../../log-diagnostics.md)。来源与产物不一致时才继续下述独立重建，不因普通错误自动运行produce或全量验收。按实际故障对象选择对应 Skill。
+先按[只读诊断](../project-diagnosis.md)选择受影响对象；API疑问使用knowledge api，运行记录用[logs diagnose](../log-diagnostics.md)。来源与产物不一致时才继续下述独立重建，不因普通错误自动运行produce或全量验收。按实际故障对象选择对应 Skill。
 
 ## 读取当前合同
 
@@ -50,4 +50,4 @@ python <plugin>/scripts/qianxing.py capabilities --evidence <checks.json>
 
 报告首个失败、受影响对象、证据依据、已修复内容、验证结果和剩余事项。静态、Lua模型、原生图模型、编译回读、软件预览、编辑器与实机分别记录；离线通过不能称为宿主通过或用户验收。
 
-参见[制作与交付](../../production-v2.md)、[可迁移重建](../../portable-delivery.md)、[验证证据闭环](../../validation-evidence.md)、[原生维护](../../native-maintenance.md)、[源码行号映射](../../client-assembly.md)。
+参见[制作与交付](../produce.md)、[可迁移重建](../portable-delivery.md)、[验证证据闭环](../validation-evidence.md)、[原生维护](../../gil/native-maintenance.md)、[源码行号映射](../../editor/lua/client-assembly.md)。

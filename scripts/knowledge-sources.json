@@ -2,7 +2,7 @@
   "schema": 1,
   "sources": {
     "client_api": {
-      "path": "skills/qianxing-editor/references/client-controls-api.md",
+      "path": "references/platform/community/client-controls-api.md",
       "kind": "provided_api_document",
       "sha256": "0a74b932020d11696c8bf68d963cee8a20c7969e2ad7d481808d33b26a6dd887",
       "version": null,
@@ -20,7 +20,7 @@
       }
     },
     "conflicts": {
-      "path": "references/sources-and-conflicts.md",
+      "path": "references/platform/sources-and-conflicts.md",
       "kind": "maintainer_analysis",
       "sha256": "c297e9cf66edd8fd373cd6e984c7d41226817f9e8689a3bfbfc75369a8c39313",
       "version": null,
@@ -30,7 +30,7 @@
       "official_origin_verified": false
     },
     "pixels": {
-      "path": "references/pixel-import-guide.md",
+      "path": "references/assets/pixel-import-guide.md",
       "kind": "provided_workflow",
       "sha256": "2b2be3ed9c52f96b4e567a7b32139938f23bbf10f1b088f11181581ef6c52d82",
       "version": null,
@@ -42,7 +42,7 @@
     "platform_catalogue": {
       "path": "scripts/platform-sources.json",
       "kind": "official_mirror_catalogue",
-      "sha256": "8ddec1e524a1bdd6eec48f54c2c9b9d8021f1f91650f90ee7ac97756e75da674",
+      "sha256": "6aa27cc265e5ff341b8893a8c95f3b015e87c1e49d1a18f3119de5639e0cd4a1",
       "version": null,
       "updated_at": null,
       "original_url": null,

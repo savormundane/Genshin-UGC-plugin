@@ -1,0 +1,15 @@
+# 领域与工具合同
+
+Skill负责选择任务及按需知识；References负责来源、约束和流程；Scripts负责可执行解析、生成、检查与报告。运行工具不依赖Skill目录是否存在。完整分工见[能力索引](skill-map.md)，更新与兼容见[长期维护](../../docs/contributing/platform-maintenance.md)。
+
+| 边界 | 交接内容 |
+| --- | --- |
+| 原生工程 → Qianxing Graph Code / Client Lua | 对象身份、目标平台与模式、变量／信号合同、已有配置约束 |
+| Qianxing Graph Code → Qianxing GIL | 图源码、编译输出、信号／结构体声明、目标挂载和审计范围 |
+| Client Lua → Qianxing GIL | 装配Lua、源码映射、显式API绑定与脚本目标 |
+| Qianxing Assets → Client Lua / Qianxing GIL | 来源摘要、坐标／颜色／图层、资源依赖、输出表示与预算 |
+| 任一领域 → 诊断／交付 | 实际输入和工具、产物摘要、执行检查及未覆盖范围 |
+
+已有合同读取并保留，新增业务协议由项目设计；没有现成协议不要求用户代写实现。未知平台身份或未校准字段不得猜造。GIL写入只使用工具明确支持的关联，不承诺完整未知格式重映射。
+
+完整关卡按[制作链](produce.md)组合已声明阶段；小改动按范围检查，不自动生成全套计划或重建包。模型、编译回读、编辑器、宿主和人工验收按[验证合同](validation.md)分别记录。

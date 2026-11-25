@@ -36,8 +36,8 @@ OWNERS={
     'production':(), 'platform':('editor',),'project':('editor',),'native_changes':('gil',),'scene':('editor','gil','assets')}
 WORKFLOWS={
     'multiplayer':{'domains':['graph','client'],'capabilities':['protocol','simulation'],'guide':'references/workflows/qianxing-multiplayer/README.md'},
-    'animation':{'domains':['client','assets'],'capabilities':['ui','assembly'],'guide':'references/workflows/qianxing-animation/README.md'},
-    'storage':{'domains':['editor','graph','client','gil'],'capabilities':['storage'],'guide':'references/storage-authoring.md'},
+    'animation':{'domains':['client','assets'],'capabilities':['ui','assembly'],'guide':'references/assets/animation.md'},
+    'storage':{'domains':['editor','graph','client','gil'],'capabilities':['storage'],'guide':'references/workflows/storage-authoring.md'},
     'gil-assembly':{'domains':['gil','graph','client'],'capabilities':['native','production'],'guide':'references/workflows/qianxing-gil-assembly-pipeline/README.md'},
     'catalog-merge':{'domains':['client','assets'],'capabilities':['assembly','native_assets'],'guide':'references/workflows/generated-lua-catalog-merge/README.md'},
     'diagnosis':{'domains':list(DOMAINS),'capabilities':['diagnosis','project','native_changes'],'guide':'references/workflows/qianxing-release-integrity-triage/README.md'}}
@@ -61,6 +61,6 @@ def describe():
     return {'schema':1,'domains':DOMAINS,'domain_tools':DOMAIN_TOOLS,'task_entrypoints':TASK_ENTRYPOINTS,
             'shared_tools':['knowledge','diagnose','logs','doctor','capabilities','produce','workflow','experiment','beyond','mcp'],
             'workflows':WORKFLOWS,'legacy_owners':LEGACY_OWNERS,
-            'capabilities':{key:{'domains':list(OWNERS[key]),'entry':'scripts/'+entry,'guide':'references/'+guide,
+            'capabilities':{key:{'domains':list(OWNERS[key]),'entry':'scripts/'+entry,'guide':guide,
                                  'operations':SUPPORT[key].get('operations',[])}for key,(entry,guide)in CAPABILITIES.items()},
             'scope':'implementation and task ownership only; no execution or host evidence'}
