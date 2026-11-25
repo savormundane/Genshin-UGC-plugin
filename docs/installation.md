@@ -8,9 +8,6 @@
 
 ### ChatGPT/Codex
 
-打开「插件」，从工作区市场选择 **Miliastra Wonderland** 并安装。 [ChatGPT/Codex 插件目录](https://learn.chatgpt.com/docs/plugins)
-
-工作区尚未添加该市场时，管理员可在「管理 → 插件 → 添加 → 导入市场」输入 `https://github.com/savormundane/miliastra-wonderland-plugin`，路径留空。导入完成后，成员可从工作区市场安装。 [导入 GitHub 市场](https://learn.chatgpt.com/docs/enterprise/plugin-management)
 
 ### Claude
 
