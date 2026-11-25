@@ -18,7 +18,7 @@
 
 ### DeepSeek Harness
 
-npm 包发布后，在「插件 → 添加插件」输入 `miliastra-wonderland`。 [DeepSeek Harness 插件管理](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/boot/plugin-manager/README.md)
+当前可[从 GitHub 仓库安装](#deepseek-harness-命令行)。npm 上架后，在「插件 → 添加插件」输入 `miliastra-wonderland`。 [DeepSeek Harness 插件管理](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/boot/plugin-manager/README.md)
 
 ### Agent Plugins
 
@@ -57,19 +57,27 @@ claude plugin install miliastra-wonderland@miliastra-wonderland
 
 ### DeepSeek Harness 命令行
 
-npm 包发布后，使用 `dsh` 安装到 Web 配置。
+在终端从 GitHub 仓库安装到 DSH 的 Web 配置。
 
 ```powershell
-dsh plugin --profile web add miliastra-wonderland
+dsh plugin --profile web add github:savormundane/miliastra-wonderland-plugin
 ```
-
-发布前可用 `dsh plugin --profile web add github:savormundane/miliastra-wonderland-plugin` 从仓库安装。
 
 ## 本地安装
 
 ### 从本地目录导入
 
-在 [GitHub Releases](https://github.com/savormundane/miliastra-wonderland-plugin/releases) 选择附有 Agent Plugins ZIP 的版本。客户端支持导入 Agent Plugins ZIP 时直接上传，支持目录导入时解压到独立目录并选择包含 `plugin.json` 的目录。只有源码附件的版本也可解压后导入目录。 [Agent Plugins 规范](https://agent-plugins.org/specification) · [本版发行说明](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/v1.2.0)
+在[本版发行页](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/v1.2.0)下载 **Agent Plugins Windows x64 ZIP**。客户端支持导入 ZIP 时直接上传，支持目录导入时解压到独立目录并选择包含 `plugin.json` 的目录。 [Agent Plugins 规范](https://agent-plugins.org/specification)
+
+### 用 PowerShell 安装本地 ZIP
+
+要用安装器为 Codex 或 Claude Code 登记本地运行环境，在解压目录的 PowerShell 中运行以下命令。保留原 ZIP，填入其路径和 GitHub 发布附件或本地打包输出提供的 SHA-256。Claude Code 使用 `-Agent claude-code`。
+
+```powershell
+.\install.ps1 -Agent codex -Archive '<ZIP 的绝对路径>' -Sha256 '<SHA-256>'
+```
+
+按提示选择已有工程和独立输出目录。安装完成后开启新会话，做[首次工具验证](#首次工具验证)。
 
 ### 自行打包 ZIP
 
@@ -129,8 +137,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-install.
 | Claude Chat 里有 Skill，调用不到节点查询 | Claude | 在 Cowork 新建任务并允许本地工具，再做[首次工具验证](#首次工具验证)。 |
 | 能看到 Skill，工具未连通 | 所有安装方式 | 确认插件已启用并允许本地 MCP，运行[安装自检](#安装自检)。 |
 | MCP 启动时缺少 Python 或依赖 | 所有安装方式 | 让客户端在 PATH 上能找到 uv，再重新打开客户端。已有专用 Python 时，可用[运行绑定](runtime-environment.md#桌面端首次绑定本机工程)指定解释器。 |
-| 安装器找不到 Python，或提示工程与输出路径冲突 | 用 `install.ps1` 准备本地 ZIP | 缺少 Python 时，给原安装命令加 `-Python '<解释器绝对路径>'`。目录冲突时，为 `-Project` 和 `-Outputs` 选择互不包含的目录。 |
-| 安装准备中断 | 用 `install.ps1` 准备本地 ZIP | 保留未完成的安装目录。按报错修复后，用同一安装命令加 `-Resume` 重跑。已进入 Claude 登记时，按错误提示核对客户端中的条目。 |
+| 安装器找不到 Python，或提示工程与输出路径冲突 | 用 [PowerShell 安装本地 ZIP](#用-powershell-安装本地-zip) | 缺少 Python 时，给原安装命令加 `-Python '<解释器绝对路径>'`。目录冲突时，为 `-Project` 和 `-Outputs` 选择互不包含的目录。 |
+| 安装准备中断 | 用 [PowerShell 安装本地 ZIP](#用-powershell-安装本地-zip) | 保留未完成的安装目录。按报错修复后，用同一安装命令加 `-Resume` 重跑。已进入 Claude 登记时，按错误提示核对客户端中的条目。 |
 | 工程目录未绑定，或找不到输入文件 | 所有安装方式 | 打开包含输入的本地工程并授权，或按[工程绑定说明](runtime-environment.md#连接-mcp-或切换工程)配置目录。核对输入文件的路径和扩展名。 |
 | 输出目录已存在 | 所有安装方式 | 在独立输出根目录下，给本次输出取一个尚未使用的目录名。 |
 | 无法识别千星奇域版本 | 所有安装方式 | 核对游戏内版本和报错列出的已收录版本。目标版本尚未收录时，可附版本号和资料来源反馈。 |
