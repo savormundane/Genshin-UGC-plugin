@@ -87,7 +87,11 @@ def server(bridge):
 
     @app.tool(structured_output=True)
     async def graph_build(spec: str, output: str, ctx: Context, sha256: str | None = None) -> dict[str, Any]:
-        """Compile Graph Code into independent GIA files. Returns the readback report and artifact digests for native_plan."""
+        """Compile Graph Code into independent GIA files.
+
+        To add one to an existing GIL, pass its GIA path as the source of an
+        append_graph operation in native_plan with allowed_top_level_fields=[10].
+        """
         return await call('graph_build', ctx, spec=spec, output=output, sha256=sha256)
     @app.tool(structured_output=True)
     async def resources_lookup(version:str,ctx:Context,query:str='',mode:str='beyond',limit:int=20,
@@ -139,7 +143,14 @@ def server(bridge):
                         spec_sha256:str|None=None,resume:str|None=None,resume_sha256:str|None=None,
                         initial:str|None=None,initial_sha256:str|None=None,
                         steps:StrictInt|None=None)->types.CallToolResult:
-        """Fit an image or ordered layer manifest within a control budget. A mount config emits a self-contained Lua and Beyond preview spec."""
+        """Fit an image or ordered layer manifest within a control budget.
+
+        With a GIL-bound mount, reuse result.mount.gil_binding.control_guid as
+        the bind_client_lua target in native_plan. Use mounted.lua as source and
+        catalog.json as fit_catalog, both in the returned output directory.
+        For a software preview, pass beyond.json from that directory and its
+        outputs_sha256 digest to simulate with preview=true.
+        """
         response = await call('asset_fit',ctx,input=input,spec=spec,output=output,sha256=sha256,
                               spec_sha256=spec_sha256,resume=resume,resume_sha256=resume_sha256,
                               initial=initial,initial_sha256=initial_sha256,steps=steps)
@@ -180,7 +191,15 @@ def server(bridge):
     @app.tool(structured_output=True)
     async def native_plan(input:str,sha256:str,output:str,ctx:Context,patch:dict[str,Any]|None=None,
                           spec:str|None=None,spec_sha256:str|None=None,summary:bool=False)->dict[str,Any]:
-        """Plan a GIL edit from an inline patch or a digest-bound spec. Review result.difference and use outputs_sha256 for native_apply."""
+        """Plan a GIL edit using a schema 2 inline patch or a digest-bound spec.
+
+        For Lua produced by a GIL-bound asset_fit, use allowed_top_level_fields
+        [9, 50] and a bind_client_lua operation with control_guid, source,
+        mapping (including .lua), and fit_catalog. Take control_guid from
+        result.mount.gil_binding in the fit response.
+        Review result.difference, then use outputs_sha256['plan.json'] for
+        native_apply with the same input and sha256.
+        """
         return await call('native_plan',ctx,input=input,sha256=sha256,output=output,patch=patch,spec=spec,spec_sha256=spec_sha256,summary=summary)
     @app.tool(structured_output=True)
     async def simulate(spec:str,sha256:str,output:str,ctx:Context,preview:bool=False)->dict[str,Any]:
