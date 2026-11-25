@@ -2,18 +2,13 @@
 from pathlib import Path
 import json
 import os
-import sys
 
-from authoring_io import DiagnosticError, PLUGIN, ProductionInputs, resolve, sha
+from authoring_io import DiagnosticError, ProductionInputs, resolve, sha
+from ayaya_bridge import NODE_IMPLEMENTATIONS, RUNTIME, SHARED_RESOURCES, resource_definition
 
 
 def merge_resources(roots, destination):
     """Build one project resource directory and return the inputs actually read."""
-    runtime = str(PLUGIN / 'vendor/ayaya')
-    if runtime not in sys.path:
-        sys.path.insert(0, runtime)
-    from engine.resources.definition_schema_view import _try_extract_id_and_payload_from_code
-
     inputs = ProductionInputs()
     paths, definitions, output = {}, {}, []
     resource_types = {'信号': ('SIGNAL', 'signal_name'), '结构体定义': ('STRUCT', 'struct_name')}
@@ -48,8 +43,8 @@ def merge_resources(roots, destination):
             kind = resource_types.get(relative.parts[1]) if len(relative.parts) >= 3 and relative.parts[0] == '管理配置' else None
             if kind is not None and path.suffix.lower() == '.py' and '校验' not in path.stem:
                 resource_type, name_field = kind
-                ident, payload = _try_extract_id_and_payload_from_code(path, id_name=resource_type+'_ID',
-                                                                       payload_name=resource_type+'_PAYLOAD')
+                ident, payload = resource_definition(path, id_name=resource_type+'_ID',
+                                                     payload_name=resource_type+'_PAYLOAD')
                 if ident is not None:
                     name = payload.get(name_field)
                     if isinstance(name,str):
@@ -60,8 +55,8 @@ def merge_resources(roots, destination):
                     role = relative.parts[2] if resource_type=='STRUCT' and len(relative.parts)>=4 and relative.parts[2] in roles else None
                     struct_type = None
                     if resource_type == 'STRUCT':
-                        struct_type, _ = _try_extract_id_and_payload_from_code(path, id_name='STRUCT_TYPE',
-                                                                              payload_name='STRUCT_PAYLOAD')
+                        struct_type, _ = resource_definition(path, id_name='STRUCT_TYPE',
+                                                            payload_name='STRUCT_PAYLOAD')
                     definition = (ident, payload, struct_type)
                     keys = [(resource_type,'id',ident)]
                     if isinstance(name, str) and name:
@@ -140,10 +135,9 @@ def prepare_check_context(job_path, workspace, inputs):
     project.mkdir(parents=True)
     receipt = merge_resources(roots,project)
     inputs.merge({path:digest for path,digest in receipt.items() if not Path(path).is_relative_to(generated)},'graph_context')
-    vendor = PLUGIN / 'vendor/ayaya'
-    copy_tree(vendor/'plugins/nodes',workspace/'plugins/nodes')
-    if (vendor/'assets/资源库/共享').exists():
-        copy_tree(vendor/'assets/资源库/共享',layout/'共享')
+    copy_tree(RUNTIME / NODE_IMPLEMENTATIONS, workspace / NODE_IMPLEMENTATIONS)
+    if (RUNTIME / SHARED_RESOURCES).exists():
+        copy_tree(RUNTIME / SHARED_RESOURCES, workspace / SHARED_RESOURCES)
     binding = resolve(graph_path.parent, graph['bindings']) if graph and graph.get('bindings') else None
     baseline = resolve(graph_path.parent, graph['base_gil']) if graph and graph.get('base_gil') else None
     return project, graphs, binding, baseline, bool(job.get('native') or job.get('level') or 'storage' in job)

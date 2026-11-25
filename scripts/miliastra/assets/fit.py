@@ -5,6 +5,7 @@ import argparse
 import json
 import math
 import random
+import re
 from typing import Any
 from PIL import Image, ImageDraw, ImageChops, ImageStat
 from authoring_io import read_json, write_json, sha, sha_file, canonical, output_directory, finish
@@ -99,11 +100,25 @@ def parameters(spec: object) -> dict[str, Any]:
         if 'mount' in cfg:
             mount = cfg['mount']
             if (
-                not isinstance(mount, dict) or set(mount) != {'template_index', 'width', 'height'}
-                or any(type(mount[key]) is not int or mount[key] <= 0 for key in mount)
-                or mount['template_index'] > 0x7fffffff
+                not isinstance(mount, dict)
+                or set(mount) not in (
+                    {'template_index', 'width', 'height'},
+                    {'gil', 'sha256', 'template', 'control', 'width', 'height'},
+                )
+                or any(type(mount[key]) is not int or mount[key] <= 0 for key in ('width', 'height'))
             ):
-                raise ValueError('mount requires a positive template index and positive integer width and height')
+                raise ValueError('mount 须指定模板索引或一份关卡的摘要和模板、控件，并给出正整数宽高')
+            if 'template_index' in mount and (
+                type(mount['template_index']) is not int or not 0 < mount['template_index'] <= 0x7fffffff
+            ):
+                raise ValueError('mount requires a positive template index within int32 range')
+            if 'gil' in mount and (
+                not isinstance(mount['gil'], str) or not mount['gil'].strip()
+                or not isinstance(mount['sha256'], str) or not re.fullmatch('[0-9a-f]{64}', mount['sha256'])
+            ):
+                raise ValueError('mount.gil 需要关卡文件路径及其 SHA-256')
+            if 'gil' in mount and mount['template'] is None:
+                raise ValueError('mount.template 须指定已有图片模板')
     return cfg
 
 
@@ -337,9 +352,15 @@ def build(
         raise ValueError('Choose resume or initial, not both')
     source = Path(source).resolve()
     sp = Path(spec_path).resolve()
-    cfg = parameters(read_json(sp))
+    configuration = sp.read_bytes()
+    cfg = parameters(json.loads(configuration.decode('utf-8-sig')))
     mount = cfg.pop('mount', None)
-    inputs = {str(sp): sha_file(sp)}
+    inputs = {str(sp): sha(configuration)}
+    gil_binding = None
+    if mount and 'gil' in mount:
+        from miliastra.assets.fit_mount import bind_gil
+
+        mount, gil_binding = bind_gil(mount, sp.parent, inputs)
     # A JSON source is an explicit layer manifest. Paths are relative to it, never discovered.
     if source.suffix.lower() == '.json':
         inputs[str(source)] = sha_file(source)
@@ -542,7 +563,7 @@ def build(
         if mount:
             from miliastra.assets.fit_mount import deliver
 
-            summary['mount'] = deliver(stage, catalog, mount, inputs)
+            summary['mount'] = deliver(stage, catalog, mount, inputs, gil_binding=gil_binding)
         write_json(stage / 'catalog.json', summary)
         return finish(
             stage,

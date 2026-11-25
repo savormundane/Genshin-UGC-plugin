@@ -162,6 +162,8 @@ def operation_sources(op):
         yield 'previous_bindings'
     if op['op']=='append_client_ui' and 'asset_data' in op:
         yield 'asset_data'
+    if op['op']=='bind_client_lua' and 'fit_catalog' in op:
+        yield 'fit_catalog'
 
 
 def arrangements(report):

@@ -31,7 +31,7 @@ def produce(
     job: dict[str, Any] | None = None,
     job_digest: str | None = None,
 ) -> dict[str, Any]:
-    from production_core import _produce as build_shared_stages
+    from production_core import build_stages
     from miliastra.native.bindings import Bindings, bindings_for_gil, read_bindings
 
     path = Path(path).resolve()
@@ -244,6 +244,9 @@ def produce(
                     if field == 'source' and op[field] == '@scene':
                         if scene_path is None or op['op'] != 'place_static_scene':
                             raise ValueError('@scene requires a scene stage and place_static_scene')
+                    elif field == 'source' and isinstance(op[field], str) and op[field].startswith('@asset:'):
+                        if op['op'] != 'bind_client_lua' or 'fit_catalog' in op:
+                            raise ValueError('@asset: requires bind_client_lua and a generated fit catalogue')
                     else:
                         track(resolve(np.parent, op[field]))
         if 'after_graphs' in native:
@@ -520,10 +523,9 @@ def produce(
         }
         if resource_job:
             resource_job['schema'] = 1
-            write_json(stage / 'resource-job.json', resource_job)
-            resource_report = build_shared_stages(
-                stage / 'resource-job.json', stage / 'resources', {}
-            )
+            phase_job = stage / 'resource-job.json'
+            write_json(phase_job, resource_job)
+            resource_report = build_stages(phase_job, resource_job, sha_file(phase_job), stage / 'resources', {})
             inputs.merge(
                 {
                     p: h
@@ -562,6 +564,22 @@ def produce(
                 sp = track(resolve(base, job['native']['spec']))
                 spec = read_json(sp)
                 for op in spec['operations']:
+                    source = op.get('source')
+                    if isinstance(source, str) and source.startswith('@asset:'):
+                        name = source.removeprefix('@asset:')
+                        if name not in fitted_assets:
+                            raise ValueError('找不到已生成的拟合素材 ' + name)
+                        catalogue = stage / fitted_assets[name]['report']
+                        mount = read_json(catalogue).get('mount') or {}
+                        binding = mount.get('gil_binding')
+                        if not binding:
+                            raise ValueError('拟合素材须先绑定实际 GIL 的图片模板和挂载容器 ' + name)
+                        control = binding['control_guid']
+                        if 'control_guid' in op and op['control_guid'] != control:
+                            raise ValueError('挂载目标与拟合素材绑定的控件不一致 ' + name)
+                        op.update(source=str(catalogue.parent / mount['script']),
+                                  fit_catalog=str(catalogue), control_guid=control)
+                        continue
                     for field in operation_sources(op):
                         if field == 'source' and op[field] == '@scene':
                             if scene_path is None or op['op'] != 'place_static_scene':
@@ -769,9 +787,12 @@ def produce(
         if raw is not None and 'gil' not in legacy:
             (stage / 'level.gil').write_bytes(raw)
         if len(legacy) > 1:
-            write_json(stage / 'legacy-job.json', legacy)
-            r = build_shared_stages(
-                stage / 'legacy-job.json',
+            phase_job = stage / 'legacy-job.json'
+            write_json(phase_job, legacy)
+            r = build_stages(
+                phase_job,
+                legacy,
+                sha_file(phase_job),
                 stage / 'build',
                 {},
                 include_runtime=set(legacy) != {'schema', 'graphs'},

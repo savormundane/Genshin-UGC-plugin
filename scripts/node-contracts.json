@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "nodes": [
+    {
+      "scope": "server",
+      "call": "创建实体",
+      "platform_version": "7.1",
+      "document_id": "mhw66orrrfkm",
+      "section": "## **2. 创建实体**",
+      "inputs": [
+        ["目标GUID", "GUID"],
+        ["单位标签索引列表", "整数列表"]
+      ],
+      "outputs": [],
+      "value_output_diagnostic": "graph_entity_create_output"
+    }
+  ]
+}

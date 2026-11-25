@@ -3,9 +3,10 @@ from pathlib import Path
 import ast,collections,hashlib,json,os,re,shutil,subprocess,sys,tempfile
 from level_inventory import inspect_file,container,fields,vals,unique
 from graph_validation import GraphBuildError
+from ayaya_bridge import FILE_TOOLS, FILE_TOOLS_RUNNER, RUNTIME, compiler_nodes
+from node_contracts import calibrated_ports, node_contracts, port_evidence
 
 PLUGIN=Path(__file__).resolve().parents[1]
-RUNTIME=PLUGIN/'vendor/ayaya'
 SCHEMA=1
 
 def digest(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
@@ -54,36 +55,30 @@ def route(kind='game',interface='lua',multiplayer=False,output='gil',task_mode=N
 def node_definitions(query='',scope='all'):
     normalized=query.casefold().strip()
     items=[];terms=normalized.split()
-    for folder in ['client','server'] if scope=='all' else [scope]:
-        for p in sorted((RUNTIME/'plugins/nodes'/folder).rglob('*.py')):
-            t=ast.parse(p.read_text(encoding='utf-8-sig'))
-            for func in [n for n in t.body if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef))]:
-                for dec in func.decorator_list:
-                    if not isinstance(dec,ast.Call) or getattr(dec.func,'id','')!='node_spec':continue
-                    meta={}
-                    for kw in dec.keywords:
-                        try:meta[kw.arg]=ast.literal_eval(kw.value)
-                        except (ValueError,TypeError):continue
-                    if folder=='server'and meta.get('name')=='创建实体':
-                        # Official execution-node contract has no value output.
-                        # Preserve vendor source; do not expose its mock return
-                        # as a calibrated platform port.
-                        meta['outputs']=[p for p in meta.get('outputs',[])if p[1]=='流程']
-                    text=json.dumps(meta,ensure_ascii=False).casefold()+' '+func.name.casefold()
-                    if terms and not all(term in text for term in terms):continue
-                    names=(str(meta.get('name','')).casefold(),func.name.casefold())
-                    aliases=meta.get('aliases') or []
-                    if isinstance(aliases,str):aliases=[aliases]
-                    if normalized in names:
-                        rank=0
-                    elif normalized and any(s.casefold().startswith(normalized) for s in (*names,*aliases) if isinstance(s,str)):
-                        rank=1
-                    else:
-                        rank=2
-                    items.append((rank,{'scope':folder,'call':func.name,'signature':ast.unparse(func.args),
-                                       **{k:meta[k] for k in ['name','category','semantic_id','inputs','outputs','description','aliases','dynamic_port_type'] if k in meta},
-                                       'implementation':p.relative_to(PLUGIN).as_posix(),
-                                       'implementation_line':dec.lineno}))
+    for folder, call, signature, metadata, source, line in compiler_nodes(scope):
+        meta = calibrated_ports(folder, call, metadata)
+        text = json.dumps(meta, ensure_ascii=False).casefold() + ' ' + call.casefold()
+        if terms and not all(term in text for term in terms):
+            continue
+        names = (str(meta.get('name', '')).casefold(), call.casefold())
+        aliases = meta.get('aliases') or []
+        if isinstance(aliases, str):
+            aliases = [aliases]
+        if normalized in names:
+            rank = 0
+        elif normalized and any(name.casefold().startswith(normalized)
+                                for name in (*names, *aliases) if isinstance(name, str)):
+            rank = 1
+        else:
+            rank = 2
+        selected_fields = ('name', 'category', 'semantic_id', 'inputs', 'outputs',
+                           'description', 'aliases', 'dynamic_port_type')
+        items.append((rank, {
+            'scope': folder, 'call': call, 'signature': signature,
+            **{key: meta[key] for key in selected_fields if key in meta},
+            'implementation': source.relative_to(PLUGIN).as_posix(),
+            'implementation_line': line,
+        }))
     items.sort(key=lambda match:match[0])
     return [item for _,item in items]
 
@@ -99,31 +94,15 @@ def catalog(query='',scope='all',limit=20):
                             'line':node['implementation_line'],'sha256':digest(PLUGIN/source)},
                     platform_version=None, platform_applicability='not_checked',
                     editor='not_checked', host='not_checked')
-        if (node['scope'],node.get('name'))==('server','创建实体'):
-            from platform_profiles import show
-
-            document=show('7.1','mhw66orrrfkm')
-            lines=document['content'].splitlines()
-            section=lines.index('## **2. 创建实体**')
-            end=next(index for index in range(section+1,len(lines)) if lines[index].startswith('## '))
-            ports=re.findall(r'^\|\s*(入参|出参)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|',
-                             '\n'.join(lines[section:end]),re.M)
-            if ports!=[
-                ('入参','目标GUID','GUID'),('入参','单位标签索引列表','整数列表'),
-            ]:
-                raise ValueError('7.1 创建实体 port evidence differs from the calibrated scope')
-            node['port_evidence']={
-                **{key:document[key] for key in ('id','path','sha256','source_kind','official_url','source_version')},
-                'line':section+1, 'scope':'documented_value_ports',
-                'documented_inputs':[{'name':name,'type':kind} for _,name,kind in ports],
-                'documented_outputs':[],
-            }
+        key = node['scope'], node['call']
+        if key in node_contracts():
+            node['port_evidence'] = port_evidence(*key)
     result={'matches':len(items),'nodes':nodes}
     if not items:
         result['hint']='Try a shorter node name, a catalog alias, or scope=all.'
     return result
 
-def metadata(path, code=None):
+def metadata(path, code=None, *, inputs=None):
     try:
         tree=ast.parse(path.read_text(encoding='utf-8-sig') if code is None else code,filename=str(path))
     except SyntaxError as exc:
@@ -137,14 +116,36 @@ def metadata(path, code=None):
     if result['graph_type'] not in ('server','client'):
         message='Graph Code graph_type must be server or client'
         raise GraphBuildError(message+': '+str(path),[{'code':'graph_scope','severity':'error','message':message,'source':str(path)}])
-    if result['graph_type']=='server':
-        parents={child:parent for parent in ast.walk(tree)for child in ast.iter_child_nodes(parent)}
-        for call in ast.walk(tree):
-            if isinstance(call,ast.Call)and isinstance(call.func,ast.Name)and call.func.id=='创建实体'and not isinstance(parents.get(call),ast.Expr):
-                message='创建实体 has no value output in the bundled 7.1 node reference; call it as a statement and query the GUID separately'
-                raise GraphBuildError(f'{message}: {path}:{call.lineno}',[
-                    {'code':'graph_entity_create_output','severity':'error','message':message,'source':str(path),'line':call.lineno},
-                ])
+    contracts = node_contracts()
+    verified = {}
+    parents = {child: parent for parent in ast.walk(tree) for child in ast.iter_child_nodes(parent)}
+    for call in ast.walk(tree):
+        if not isinstance(call, ast.Call) or not isinstance(call.func, ast.Name):
+            continue
+        key = result['graph_type'], call.func.id
+        contract = contracts.get(key)
+        if contract is None:
+            continue
+        if key not in verified:
+            evidence = verified[key] = port_evidence(*key)
+            if inputs is not None:
+                inputs.bind(PLUGIN / evidence['path'], evidence['sha256'], 'graph_node_contract')
+                source = evidence['contract']
+                inputs.bind(PLUGIN / source['path'], source['sha256'], 'graph_node_contract')
+        else:
+            evidence = verified[key]
+        if evidence['documented_outputs'] or isinstance(parents.get(call), ast.Expr):
+            continue
+        message = (f"{call.func.id} has no value output in the bundled {evidence['source_version']} "
+                   'node reference; call it as a statement')
+        raise GraphBuildError(f'{message}: {path}:{call.lineno}', [{
+            'code': contract['value_output_diagnostic'],
+            'severity': 'error',
+            'message': message,
+            'source': str(path),
+            'line': call.lineno,
+            'port_evidence': evidence,
+        }])
     return result
 
 def normalize_new_graph_variables(path,expected):
@@ -190,7 +191,7 @@ def normalize_new_graph_variables(path,expected):
 
 def build(spec_path,out_dir,preserve_container_order=False,structure_bindings=(),*,resolved_bindings=None):
     spec_path=Path(spec_path).resolve();base=spec_path.parent
-    from authoring_io import sha
+    from authoring_io import ProductionInputs, sha
     from miliastra.native.bindings import Bindings, bindings_for_gil, expand_graph, read_bindings
     spec_bytes=spec_path.read_bytes()
     job=json.loads(spec_bytes.decode('utf-8-sig'))
@@ -219,7 +220,7 @@ def build(spec_path,out_dir,preserve_container_order=False,structure_bindings=()
     output=Path(out_dir).resolve()
     if output.exists():raise ValueError('输出目录已存在，请指定新目录，避免覆盖已有产物')
     if output.is_relative_to(PLUGIN):raise ValueError('Build output must be outside the plugin')
-    inputs={str(spec_path):sha(spec_bytes)}
+    inputs=ProductionInputs({str(spec_path):sha(spec_bytes)})
     if baseline:inputs[str(baseline)]=digest(baseline)
     bindings=resolved_bindings if resolved_bindings is not None else Bindings()
     if job.get('bindings'):
@@ -231,7 +232,7 @@ def build(spec_path,out_dir,preserve_container_order=False,structure_bindings=()
         source=resolve_input(item['source'],base)
         if source.is_symlink() or not source.is_file():raise ValueError('Graph source must be a regular file')
         raw=source.read_bytes();code=raw.decode('utf-8-sig')
-        meta=metadata(source,code);scope=item.get('scope',meta['graph_type'])
+        meta=metadata(source,code,inputs=inputs);scope=item.get('scope',meta['graph_type'])
         if scope not in ['server','client'] or scope!=meta['graph_type']:raise ValueError('Scope does not match Graph Code metadata')
         category=item.get('category','技能节点图' if scope=='client' else '')
         if category not in ['','技能节点图','布尔过滤器节点图','整数过滤器节点图','状态节点图']:raise ValueError('Unsupported graph category')
@@ -280,7 +281,7 @@ def build(spec_path,out_dir,preserve_container_order=False,structure_bindings=()
                 raise GraphBuildError(label+' failed:\n'+diagnostic,rows or [
                     {'code':'graph_build_stage_failed','stage':label,'message':diagnostic},
                 ])
-        runner=runtime/'private_extensions/run_ugc_file_tools.py';up_out=runtime/'private_extensions/ugc_file_tools/out'
+        runner=runtime/FILE_TOOLS_RUNNER;up_out=runtime/FILE_TOOLS/'out'
         for index,path in enumerate(paths):
             call('validate-'+str(index),[PLUGIN/'scripts/graph_validation.py','--worker',path,runtime],validation=True)
             call('model-'+str(index),[runner,'tool','export_graph_model_json_from_graph_code','--graph-code',path,'--output-json','model_'+str(index)+'.json'])

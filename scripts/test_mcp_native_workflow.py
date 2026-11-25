@@ -406,6 +406,62 @@ class NativeWorkflowTests(unittest.TestCase):
 
         asyncio.run(run())
 
+    def test_compiled_graph_continues_into_reviewed_gil_edit(self):
+        from level_inventory import inspect_file
+
+        source = self.project / 'graph.py'
+        source.write_text(
+            '"""\ngraph_id: server_mcp_delivery_test\ngraph_name: EntryLog\ngraph_type: server\n"""\n'
+            'from app.runtime.engine.graph_prelude_server import *\n'
+            'class EntryLog:\n'
+            '    def __init__(self, game, owner_entity):\n'
+            '        self.game = game\n'
+            '        self.owner_entity = owner_entity\n'
+            '    def on_实体创建时(self, 事件源实体, 事件源GUID):\n'
+            '        打印字符串(self.game, 字符串="ready")\n'
+            '    def register_handlers(self):\n'
+            '        return\n',
+            encoding='utf-8',
+        )
+        job = {"schema": 1, "graphs": [{"source": source.name}], "formats": ["gia"]}
+        write_json(self.project / "build.json", job)
+        write_json(self.project / "gil-build.json", {**job, "formats": ["gia", "gil"]})
+
+        async def run():
+            async with Client(self.server) as client:
+                rejected = await self.call(client, "graph_build", {
+                    "spec": "gil-build.json", "output": "blocked",
+                }, "failed")
+                self.assertIsNone(rejected["output"])
+                self.assertFalse((self.outputs / "blocked").exists())
+                compiled = await self.call(client, "graph_build", {
+                    "spec": "build.json", "output": "compiled",
+                })
+                gia, = compiled["result"]["gia"]
+                compiled_file = Path(compiled["output"]) / gia
+                self.assertEqual(sha_file(compiled_file), compiled["outputs_sha256"][gia])
+                self.assertEqual(compiled["inputs_sha256"]["spec"], sha_file(self.project / "build.json"))
+
+                base = {"input": "entrance.gil", "sha256": sha_file(self.project / "entrance.gil")}
+                plan = await self.call(client, "native_plan", {
+                    **base, "output": "review",
+                    "patch": {
+                        "schema": 2, "allowed_top_level_fields": [10],
+                        "operations": [{"op": "append_graph", "source": str(compiled_file)}],
+                    },
+                })
+                applied = await self.call(client, "native_apply", {
+                    **base, "output": "updated", "plan": str(Path(plan["output"]) / "plan.json"),
+                    "plan_sha256": plan["outputs_sha256"]["plan.json"],
+                })
+                exported = Path(applied["output"]) / "level.gil"
+                inventory = inspect_file(exported)
+                self.assertIn("EntryLog", {graph["name"] for graph in inventory["graphs"]})
+                self.assertEqual(sha_file(exported), applied["outputs_sha256"]["level.gil"])
+                self.assertEqual((self.project / "entrance.gil").read_bytes(), self.raw)
+
+        asyncio.run(run())
+
     def test_trace_preview_write_and_verify(self):
         async def run():
             async with Client(self.server) as client:

@@ -14,11 +14,107 @@ from PIL import Image, PngImagePlugin
 
 from miliastra.assets.fit import build, fit, parameters
 from miliastra.assets.fit_residual import residual_index
-from authoring_io import PLUGIN, inventory, write_json
+from authoring_io import PLUGIN, inventory, read_json, sha, write_json
 from delivery_verify import verify
 
 
 class ReleaseBehaviorTests(unittest.TestCase):
+    @unittest.skipUnless(find_spec('lupa') and find_spec('lupa.lua53'), 'Lua compile check requires lupa.lua53')
+    def test_gil_bound_fit_creates_reviewed_mount(self):
+        from joint_simulator import script_from_gil
+        from level_authoring import compile_spec
+        from miliastra.native.changes import apply_plan, plan
+        from portable_delivery import collect
+        from production_core import produce
+
+        sample = PLUGIN / 'samples/creator-demos/png'
+        png = sample / 'checkpoint-marker.png'
+        with tempfile.TemporaryDirectory(prefix='miliastra mounted fit ') as temporary:
+            root = Path(temporary)
+            existing = 'function OnStart() end\n'
+            (root / 'existing.lua').write_bytes(existing.encode('utf-8'))
+            raw, initial = compile_spec({
+                'schema': 'qianxing-level-spec/v1', 'id': 'existing', 'map_size': [2, 2],
+                'root_script': 'existing.lua',
+                'scripts': [{'name': 'existing.lua', 'source': 'existing.lua'}],
+                'templates': [{'name': 'MarkerRect', 'kind': 'image', 'size': [24, 24]},
+                              {'name': 'WrongKind', 'kind': 'container', 'size': [24, 24]}],
+            }, root)
+            gil = root / 'original.gil'
+            gil.write_bytes(raw)
+            control = min(row['control_guid'] for row in initial['script_bindings'])
+            source_sha = sha(raw)
+            config = read_json(sample / 'fit.json')
+            config['mount'] = {'gil': gil.name, 'sha256': source_sha,
+                               'control': control, 'template': 'MarkerRect', 'width': 144, 'height': 144}
+            fit_file, fit_output = root / 'fit.json', root / 'fitted'
+            for patch, message in (
+                ({'sha256': '0' * 64}, '关卡摘要已变化'),
+                ({'control': 'Root'}, '挂载控件须唯一匹配'),
+                ({'template': 'WrongKind'}, '图片模板须有唯一'),
+            ):
+                write_json(fit_file, {**config, 'mount': {**config['mount'], **patch}})
+                with self.assertRaisesRegex(ValueError, message):
+                    build(png, fit_file, fit_output)
+                self.assertFalse(fit_output.exists())
+            write_json(fit_file, config)
+            result = build(png, fit_file, fit_output)
+            mount = result['mount']
+            self.assertEqual(mount['gil_binding']['control_guid'], control)
+            self.assertEqual(mount['gil_binding']['template_index'], initial['template_indices']['MarkerRect'])
+            self.assertEqual(result['inputs'][str(gil)], source_sha)
+            self.assertEqual(mount['preview_binding'], 'explicit_software_template')
+            self.assertEqual(read_json(fit_output / 'beyond.json')['scripts'][0]['sha256'], mount['sha256'])
+            self.assertGreater(sum(layer['controls'] for layer in result['layers']), 0)
+            self.assertLessEqual(sum(layer['controls'] for layer in result['layers']), 20)
+
+            mapping = 'marker.lua'
+            attach = {'op': 'bind_client_lua', 'control_guid': control, 'mapping': mapping,
+                      'source': 'fitted/mounted.lua', 'fit_catalog': 'fitted/catalog.json'}
+            patch = {'schema': 2, 'base_sha256': source_sha, 'allowed_top_level_fields': [9, 50],
+                     'operations': [attach]}
+            sealed = plan(raw, patch, root, root)
+            self.assertEqual(set(sealed['inputs']), {'@input:0', '@input:0:fit_catalog'})
+            edited, report = apply_plan(raw, sealed, root)
+            self.assertTrue(report['protected_fields_unchanged'])
+            self.assertEqual({int(row['key']) for row in sealed['difference']['top_level_fields']}, {9, 50})
+            self.assertEqual(gil.read_bytes(), raw)
+            embedded, after = script_from_gil(edited, mapping)
+            self.assertEqual(sha(embedded.encode('utf-8')), mount['sha256'])
+            self.assertEqual(script_from_gil(edited, 'existing.lua')[0], existing)
+            script = next(row for row in after['scripts'] if row['name'] == mapping)
+            self.assertIn({'control_guid': control, 'control_name': mount['gil_binding']['control_name'],
+                           'script_guid': script['id'], 'mapping_found': True}, after['script_bindings'])
+            with self.assertRaisesRegex(ValueError, '脚本映射已存在'):
+                plan(raw, {**patch, 'operations': [{**attach, 'mapping': 'existing.lua'}]}, root, root)
+
+            input_image = root / png.name
+            shutil.copyfile(png, input_image)
+            patch_file, job_file, delivered = root / 'patch.json', root / 'job.json', root / 'delivered'
+            write_json(patch_file, {**patch, 'operations': [
+                {'op': 'bind_client_lua', 'mapping': mapping, 'source': '@asset:marker'},
+            ]})
+            write_json(job_file, {
+                'schema': 2, 'assets': [{'name': 'marker', 'kind': 'fit', 'source': input_image.name,
+                                          'spec': fit_file.name}],
+                'native': {'base': gil.name, 'spec': patch_file.name},
+            })
+            _, _, _, configs, bindings, _ = collect(job_file, {})
+            self.assertEqual(configs[fit_file][0], 'fit_spec')
+            self.assertTrue(any(path == fit_file and key == 'gil' and value == gil
+                                for path, _, key, value in bindings))
+            produce(job_file, delivered)
+            final = (delivered / 'level.gil').read_bytes()
+            self.assertEqual(final, edited)
+            self.assertEqual(gil.read_bytes(), raw)
+            operation, = read_json(delivered / 'native-report.json')['operations']
+            self.assertEqual(operation['control_guid'], control)
+            self.assertEqual(operation['lua_sha256'], mount['sha256'])
+
+            (fit_output / 'mounted.lua').write_text('function OnStart() end\n', encoding='utf-8')
+            with self.assertRaisesRegex(ValueError, 'plan input digest changed'):
+                apply_plan(raw, sealed, root)
+
     @unittest.skipUnless(find_spec('lupa') and find_spec('lupa.lua53'), 'checkpoint sample requires lupa.lua53')
     def test_checkpoint_marker_sample_mounts_and_reuses_rectangles(self):
         from lupa.lua53 import LuaError, LuaRuntime

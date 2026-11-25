@@ -3,6 +3,7 @@ from functools import lru_cache
 from miliastra.native.core import get,slot,ref,definition_id,node_catalog,node_records,put
 from level_inventory import fields,vals
 from authoring_io import PLUGIN,read_json
+from ayaya_bridge import native_semantic_mapping
 
 
 SERVER_BUILTIN = (10001, 20000, 22000, 0)
@@ -188,7 +189,7 @@ def flow_catalog():
         if key in declarations and declarations[key]!=shape:
             raise ValueError('Ambiguous node flow declaration '+str(key))
         declarations[key]=shape
-    mapping=read_json(PLUGIN/'vendor/ayaya/private_extensions/ugc_file_tools/graph_ir/node_type_semantic_map.json')
+    mapping=native_semantic_mapping()
     return {int(ident):declarations[(item.get('scope'),item.get('graph_generater_node_name'))]
             for ident,item in mapping.items()
             if (item.get('scope'),item.get('graph_generater_node_name'))in declarations}

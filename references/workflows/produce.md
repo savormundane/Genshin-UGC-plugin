@@ -22,6 +22,8 @@ schema 2支持client、level、storage、native、assets、protocol、protocol_n
 
 `assets` 中的 `kind:"batch"` 从[预算试算报告](../assets/image-to-primitives.md#多素材共用控件预算)生成 `asset-batches/<name>/`。要将已生成的批量数据写进已有 GIL，用 [`append_client_ui`](../gil/native-authoring.md#追加客户端界面模块) 的 `asset_data` 引用该目录中的 `data.json`。
 
+已有 GIL 的拟合交付可在同一配置中接续挂载。声明一个具名 `kind:"fit"` 素材，拟合配置的 `mount` 绑定 `native.base` 的实际摘要、图片模板和目标容器。在 `native.spec` 的 `bind_client_lua` 操作中用 `"source":"@asset:NAME"` 引用该拟合素材，指定新增的 `mapping`，并允许顶层字段 `9` 和 `50`。制作链取用生成的 Lua、拟合目录和已绑定的目标控件，回读新映射和挂载。 [拟合挂载合同](../assets/asset-fit.md#生成可挂载的-lua-和软件预览)
+
 ### 按名称连接制作阶段
 
 给原生实体、模板、经济配置、拾取模板及 HUD 控件指定 `key`。控件组使用 `group_key`。制作链把具名键、工程对象键和实际 ID 写入交付根目录的 schema 2 `bindings.json`，同时登记交付 GIL 的 `gil_sha256`。同一具名键只能绑定一个对象。声明应出现在引用之前。

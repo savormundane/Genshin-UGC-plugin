@@ -60,6 +60,7 @@ CAPABILITY_GROUPS = {
         'scripts/miliastra/native/scene_settings.py',
     ),
     'graph': (
+        'scripts/node_contracts.py', 'scripts/node-contracts.json', 'scripts/ayaya_bridge.py',
         'scripts/node_build.py', 'scripts/graph_validation.py', 'scripts/graph_resources.py',
         'scripts/miliastra/native/bindings.py', 'scripts/miliastra/native/build.py', 'scripts/protocol_codegen.py',
         'scripts/miliastra/native/model.py', 'scripts/miliastra/native/timers.py', 'vendor/ayaya/VENDORED.json',
@@ -71,6 +72,7 @@ CAPABILITY_GROUPS = {
         'references/platform/community/client-controls-api.md', 'scripts/client_simulator.py',
         'scripts/client_simulator.lua', 'scripts/joint_simulator.py', 'scripts/beyond_backend.py',
         'scripts/log_diagnostics.py', 'scripts/runtime_rectangle_mount.lua',
+        'scripts/beyond-revision.json',
         'scripts/beyond_gil.py', 'scripts/beyond_worker.mjs', 'vendor/beyond/bundle.json',
     ),
     'gil': (
@@ -78,6 +80,7 @@ CAPABILITY_GROUPS = {
         'scripts/miliastra/native/ports.py', 'scripts/native-client-ports.json', 'scripts/miliastra/native/resources.py', 'scripts/miliastra/native/signals.py',
         'scripts/miliastra/native/structures.py', 'scripts/miliastra/native/variables.py', 'scripts/miliastra/native/prefabs.py', 'scripts/miliastra/native/gameplay.py',
         'scripts/miliastra/native/economy.py', 'scripts/miliastra/native/hud.py', 'scripts/miliastra/native/client_ui.py', 'scripts/miliastra/native/gia.py', 'scripts/miliastra/storage.py',
+        'scripts/miliastra/native/client_lua.py',
         'scripts/miliastra/storage_v3.py', 'scripts/authoring_io.py', 'scripts/production_core.py', 'scripts/miliastra/production.py',
         'scripts/delivery_verify.py', 'scripts/portable_trust.py', 'scripts/portable_delivery.py',
     ),

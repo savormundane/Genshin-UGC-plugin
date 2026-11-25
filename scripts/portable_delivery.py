@@ -87,7 +87,7 @@ def collect(path,options,*,snapshot_root=None,inputs=None):
             for item in value.get('assets',[]):
                 source_kind='asset_batch' if item.get('kind')=='batch' else 'fit_layers' if item.get('kind')=='fit' and Path(item['source']).suffix.lower()=='.json' else None
                 reference(source,item,'source',source_kind)
-                if 'spec'in item:reference(source,item,'spec')
+                if 'spec'in item:reference(source,item,'spec','fit_spec' if item.get('kind')=='fit' else None)
             for item in value.get('animation',{}).get('frames',[]):reference(source,item,'asset')
         elif kind in('assembly','level','graphs'):
             key={'assembly':'sources','level':'scripts','graphs':'graphs'}[kind]
@@ -98,6 +98,9 @@ def collect(path,options,*,snapshot_root=None,inputs=None):
                     if value.get(key):reference(source,value,key)
         elif kind=='fit_layers':
             for layer in value['layers']:reference(source,layer,'source')
+        elif kind=='fit_spec':
+            mount=value.get('mount')
+            if isinstance(mount,dict) and 'gil'in mount:reference(source,mount,'gil')
         elif kind=='asset_batch':
             for item in value['assets']:reference(source,item,'source')
         elif kind=='native':

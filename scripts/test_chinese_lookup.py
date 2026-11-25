@@ -168,8 +168,17 @@ class ChineseLookupTests(unittest.TestCase):
         self.assertEqual(ports['scope'], 'documented_value_ports')
         self.assertEqual([port['name'] for port in ports['documented_inputs']], ['目标GUID', '单位标签索引列表'])
         self.assertEqual(ports['documented_outputs'], [])
+        self.assertEqual(ports['contract']['sha256'], sha((PLUGIN / ports['contract']['path']).read_bytes()))
+        self.assertEqual(create['inputs'][1:], [('目标GUID', 'GUID'), ('单位标签索引列表', '整数列表')])
         self.assertIsNone(create['platform_version'])
         self.assertTrue(all(port[1] == '流程' for port in create['outputs']))
+        document = show('7.1', 'mhw66orrrfkm')
+        content = document['content'].replace('| 目标GUID | GUID |', '| 目标GUID | 实体 |')
+        self.assertNotEqual(content, document['content'])
+        with patch('platform_profiles.show', return_value={**document, 'content': content}):
+            with self.assertRaisesRegex(ValueError, 'port evidence differs'):
+                catalog('创建实体', 'server', 1)
+            self.assertEqual(catalog('启动定时器', 'server', 1)['nodes'][0]['name'], '启动定时器')
 
         for version in ('7.1', '7.2'):
             with self.subTest(version=version):

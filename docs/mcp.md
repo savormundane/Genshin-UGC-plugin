@@ -21,6 +21,7 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 | docs_search | version、query：检索固定版本资料 |
 | nodes_lookup | query、scope、limit 均可选。查询 Graph Code 调用、作用域、签名和端口。scope 为 all、client 或 server，limit 默认 20，范围 1 到 100 |
 | graph_check | input 指向一张 Graph Code 源文件。可给 job 载入制作任务，或给 bindings 提供具名绑定。sha256、job_sha256、bindings_sha256 可选，工具返回直接输入和实际读取的项目依赖摘要 |
+| graph_build | spec、output，可选 sha256。使用 schema 1 配置编译独立 GIA，并返回产物及摘要。用于已有 GIL 时，把 GIA 交给 native_plan 审阅，再用 native_apply 另存 |
 | resources_lookup | version 必填。可选 query、mode（默认 beyond）、limit（默认 20）、catalogue、catalogue_sha256。默认查询模型和模板 ID，设置 resource_type 可查音效 `sound` 或特效 `effect` |
 | native_inspect / native_audit | input，可选 sha256。读取或审计指定原生文件 |
 | scene_preview | input、output，可选 sha256。绘制场景草案 JSON 或 GIL 的点位及可识别轮廓。GIL 可用 before 和 before_sha256 对照 |
@@ -28,7 +29,7 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 | scene_build | spec、sha256、output。按已审阅的布景配置和样本证据生成静态 scene.gia，校验回读 |
 | asset_preview | input、output，可选 sha256、max_controls、step。试算单张 PNG 的矩形图元方案，返回各方案的控件数、误差、预算结果及预览路径，附 `report.json` 的摘要 |
 | asset_generate | input、sha256、report、report_sha256、candidate、output。用已选候选生成矩形图元或试算报告指定的素材，返回参考 PNG、实际控件数和产物摘要 |
-| asset_fit | input、spec、output。用内置拟合处理图片或分层清单，返回误差、边缘检查和控件数。可选 sha256、spec_sha256、steps、resume、resume_sha256、initial、initial_sha256。配置 mount 可生成 Lua 和 Beyond 预览配置 |
+| asset_fit | input、spec、output。用内置拟合处理图片或分层清单，返回误差、边缘检查和控件数。可选 sha256、spec_sha256、steps、resume、resume_sha256、initial、initial_sha256。配置 mount 可用实际 GIL 解析模板和目标控件，并生成 Lua 和软件预览配置 |
 | project_inspect | input，可选 sha256、scope。用 query、kind、limit 搜索对象，用 selector、transitive 查精确目标和关系，或用 summary 查看对象数。`scope="scene"` 查询 3D，`scope="gameplay"` 查询玩法资源 |
 | client_check | input，可选 sha256、mapping、contract、contract_sha256。编译 Lua 正文，可选择单个 GIL 映射或检查 API 合同 |
 | produce | spec、sha256、output，可选 summary。执行已有制作配置并校验交付 |

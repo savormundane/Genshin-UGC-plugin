@@ -1,13 +1,47 @@
-"""Optional pinned external simulator; explicit project and final-source bindings."""
+"""Run the maintained preview backend with explicit project and final-source bindings."""
 from pathlib import Path
-import argparse,json,subprocess,tempfile,shutil
-from authoring_io import read_json,sha,schema,resolve,output_directory,write_json,finish
+import argparse,json,re,subprocess,tempfile,shutil
+from authoring_io import read_json,sha,sha_file,schema,resolve,output_directory,write_json,finish
 from beyond_native import LOCK_NAME, native_canvas_environment, native_library_path, read_native_lock
 PIN='02a5ea2cd38bb5bcf7a7ce6dd745be3bb1ae655c'
 BUNDLED=Path(__file__).resolve().parent.parent/'vendor/beyond'
+REVISION_PIN = Path(__file__).with_name('beyond-revision.json')
 # npm-compatible Git installations omit these upstream ignore rules.
 NON_RUNTIME_GITIGNORE={'dsh-plugin/.gitignore','client/lua-runtime/.gitignore',
                        'node_modules/qxqy-lua-runtime/.gitignore'}
+
+
+def read_bundle_revision(backend, pin_path=REVISION_PIN):
+    pin = read_json(pin_path)
+    fields = ('schema', 'upstream_commit', 'bundle_sha256')
+    schema(pin, fields, fields, version=1)
+    raw = (backend / 'bundle.json').read_bytes()
+    if not re.fullmatch('[0-9a-f]{40}', pin['upstream_commit']) or sha(raw) != pin['bundle_sha256']:
+        raise ValueError('Beyond bundle differs from the plugin revision pin')
+    manifest = json.loads(raw)
+    if manifest['commit'] != pin['upstream_commit']:
+        raise ValueError('Beyond bundle upstream basis differs from the plugin revision pin')
+    return pin, manifest
+
+
+def verify_bundle_files(backend, manifest, native_lock, *, allowed_changes=frozenset()):
+    changes = {}
+    for name, digest in manifest['files'].items():
+        if native_lock and name in native_lock['files']:
+            continue
+        target = (backend / name).resolve()
+        if name in NON_RUNTIME_GITIGNORE and not target.exists():
+            continue
+        if not target.is_relative_to(backend) or not target.is_file():
+            raise ValueError('Bundled backend integrity failure: ' + name)
+        actual = sha_file(target)
+        if actual != digest:
+            if name not in allowed_changes:
+                raise ValueError('Bundled backend integrity failure: ' + name)
+            changes[name] = actual
+    return changes
+
+
 def run(path,backend,out,*,final_gil=None,preview=False):
     path=Path(path).resolve();backend=Path(backend or BUNDLED).resolve()
     spec_bytes=path.read_bytes()
@@ -33,19 +67,18 @@ def run(path,backend,out,*,final_gil=None,preview=False):
             if not isinstance(check['name'],str) or not check['name'] or len(check)==1:raise ValueError('Named render expectation required')
     if Path(out).exists():raise ValueError('Output exists; use a new directory')
     bundle=backend/'bundle.json';native_lock=None
+    bundle_sha256 = None
     if bundle.is_file():
-        manifest=read_json(bundle);revision=manifest['commit']
+        pin, manifest = read_bundle_revision(backend)
+        revision = pin['upstream_commit']
+        bundle_sha256 = pin['bundle_sha256']
         native_lock=read_native_lock(backend)
-        for name,digest in manifest['files'].items():
-            if native_lock and name in native_lock['files']:continue
-            target=(backend/name).resolve()
-            if name in NON_RUNTIME_GITIGNORE and not target.exists():continue
-            if not target.is_relative_to(backend) or not target.is_file() or sha(target.read_bytes())!=digest:raise ValueError('Bundled backend integrity failure: '+name)
+        verify_bundle_files(backend, manifest, native_lock)
     else:
         revision=subprocess.run(['git','-C',str(backend),'rev-parse','HEAD'],capture_output=True,text=True,check=True).stdout.strip()
         dirty=subprocess.run(['git','-C',str(backend),'status','--porcelain','--untracked-files=no'],capture_output=True,text=True,check=True).stdout
         if dirty:raise ValueError('Modified backend source refused')
-    if revision!=PIN:raise ValueError('Unsupported backend commit')
+        if revision!=PIN:raise ValueError('Unsupported backend commit')
     if not isinstance(spec['case'],dict):raise ValueError('Beyond case must be an object')
     if not preview and not spec['case'].get('asserts'):raise ValueError('Nonempty assertions required')
     inputs={str(path):sha(spec_bytes)};scripts=[]
@@ -77,7 +110,9 @@ def run(path,backend,out,*,final_gil=None,preview=False):
             mounted.add(pair);scripts.append({'control_guid':pair[0],'path':item['path'],'source':code})
         else:scripts.append({k:item[k]for k in ('controlId','controlAsset','path')}|{'source':code})
     if gil and mounted!={(b['control_guid'],b['script_guid']) for b in gil['bindings']}:raise ValueError('Every selected native script mount must be supplied')
-    if bundle.is_file():inputs[str(bundle)]=sha(bundle.read_bytes())
+    if bundle_sha256:
+        inputs[str(bundle)] = bundle_sha256
+        inputs[str(REVISION_PIN)] = sha_file(REVISION_PIN)
     if native_lock:inputs[str(backend/LOCK_NAME)]=sha((backend/LOCK_NAME).read_bytes())
     # Refuse hidden embedded scripts: every executed source must be digest-bound.
     def embedded(v):
@@ -103,6 +138,7 @@ def run(path,backend,out,*,final_gil=None,preview=False):
         destination=Path(out).resolve()
         if not passed:destination=destination.with_name(destination.name+'.diagnostics')
         report={'status':status,'backend_commit':revision,'final_gil_bindings':bound,'gil_binding':gil_binding,'layer':'external_lua_model',
+                'backend_bundle_sha256':bundle_sha256,
                 'report':result,'checks':result['checks'],'diagnostics':result['diagnostics'],'logs':result['logs'],
                 'editor':'not_checked','host':'not_checked',
                 'rendering':result['checks']['render_assertions']['status'],
@@ -120,7 +156,8 @@ def run(path,backend,out,*,final_gil=None,preview=False):
             for name in ('preview.png','render.json','converted-project.json'):
                 if (td/name).is_file():shutil.copy2(td/name,stage/name)
             write_json(stage/'external-simulation.json',report)
-            manifest=finish(stage,inputs,kind='external-simulation',status=status,backend_commit=revision)
+            manifest=finish(stage,inputs,kind='external-simulation',status=status,backend_commit=revision,
+                            backend_bundle_sha256=bundle_sha256)
         if preview:
             return {**report,'inputs':inputs,'output':str(destination) if passed else None,
                     'diagnostics_output':str(destination) if not passed else None}

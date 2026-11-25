@@ -7,6 +7,7 @@
 | 查询节点、平台与 Lua API | `nodes`、`docs`、`platform`、`knowledge` | [node_build.py](node_build.py)、[platform_profiles.py](platform_profiles.py)、[knowledge.py](knowledge.py) |
 | 阅读工程和定位对象 | `project`、`resources`、`ids` | [project_index.py](project_index.py)、[resource_catalogue.py](resource_catalogue.py)、[id_registry.py](id_registry.py) |
 | 编译节点图 | `build` | [node_build.py](node_build.py)、[ayaya_bridge.py](ayaya_bridge.py) |
+| 维护已校准的节点规则 | `nodes`、`graph check` | [版本证据](node-contracts.json)、[规则加载](node_contracts.py) |
 | 修改和回读 GIL/GIA | `native`、`level` | [miliastra/native](miliastra/native)、[level_authoring.py](level_authoring.py) |
 | 装配和静态检查 Lua | `client` | [miliastra/client](miliastra/client) |
 | 转换和检查素材 | `assets` | [miliastra/assets](miliastra/assets)、[矩形 GIA 封装](miliastra/native/assets.py) |

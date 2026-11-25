@@ -1,3 +1,4 @@
+import asyncio
 import json
 from pathlib import Path
 import os
@@ -9,7 +10,7 @@ import unittest
 from unittest.mock import patch
 import zipfile
 
-from authoring_io import sha, sha_file
+from authoring_io import PLUGIN, read_json, sha, sha_file, write_json
 from beyond_native import (
     LOCK_NAME, NATIVE_BINARY, NATIVE_FILES, extract_native_archive,
     native_library_path, read_native_lock,
@@ -85,6 +86,105 @@ class BeyondNativeTests(unittest.TestCase):
         (self.backend / 'bundle.json').write_text('{"files":{}}', encoding='utf-8')
         with self.assertRaisesRegex(ValueError, 'differs from the bundled file manifest'):
             read_native_lock(self.backend)
+
+    def test_offline_revision_prepares_only_the_declared_source_changes(self):
+        from beyond_backend import PIN, read_bundle_revision, verify_bundle_files
+        from prepare_beyond_revision import prepare
+
+        source = self.backend.parents[1]
+        old = self.backend / 'studio/index.js'
+        old.parent.mkdir()
+        old.write_bytes(b'export const value = 1;\n')
+        license_path = self.backend / 'LICENSE'
+        license_path.write_bytes(b'License text fixture\n')
+        manifest = self.backend / 'bundle.json'
+        write_json(manifest, {
+            'commit': PIN,
+            'files': {**self.lock['files'], 'studio/index.js': sha_file(old), 'LICENSE': sha_file(license_path)},
+        })
+        scripts = source / 'scripts'
+        scripts.mkdir()
+        pin = scripts / 'beyond-revision.json'
+        original_digest = sha_file(manifest)
+        write_json(pin, {'schema': 1, 'upstream_commit': PIN, 'bundle_sha256': original_digest})
+        write_json(source / 'PUBLIC_SOURCES.json', {'distribution_changes': []})
+        old.write_bytes(b'export const value = 2;\n')
+        destination = self.root / 'review'
+        license_path.write_bytes(b'Unreviewed license change\n')
+        with self.assertRaisesRegex(ValueError, 'integrity failure: LICENSE'):
+            prepare(source, destination, ['studio/index.js'], 'Maintained behavior fixture')
+        self.assertFalse(destination.exists())
+        license_path.write_bytes(b'License text fixture\n')
+
+        result = prepare(source, destination, ['studio/index.js'], 'Maintained behavior fixture')
+        self.assertEqual(result['sources'], ['studio/index.js'])
+        self.assertNotEqual(result['bundle_sha256'], original_digest)
+        self.assertEqual(sha_file(manifest), original_digest)
+        shutil.copyfile(destination / 'vendor/beyond/bundle.json', manifest)
+        with self.assertRaisesRegex(ValueError, 'revision pin'):
+            read_bundle_revision(self.backend, pin)
+        new_pin, new_manifest = read_bundle_revision(self.backend, destination / 'scripts/beyond-revision.json')
+        self.assertEqual(new_pin['bundle_sha256'], result['bundle_sha256'])
+        self.assertEqual(verify_bundle_files(self.backend, new_manifest, read_native_lock(self.backend)), {})
+        changes = read_json(destination / 'PUBLIC_SOURCES.json')['distribution_changes']
+        self.assertEqual({row['path'] for row in changes}, {
+            'vendor/beyond/studio/index.js', 'vendor/beyond/bundle.json',
+        })
+
+    def test_failed_beyond_mcp_preview_retains_diagnostics(self):
+        from mcp import Client, StdioServerParameters
+
+        archive = os.environ.get('MILIASTRA_TEST_BEYOND_ARCHIVE')
+        backend = PLUGIN / 'vendor/beyond'
+        lock = read_native_lock(backend)
+        if archive:
+            cache = self.data / 'beyond-native'
+            cache.mkdir(parents=True)
+            extract_native_archive(lock, Path(archive), cache / lock['sha256'])
+        elif not (backend / NATIVE_BINARY).is_file():
+            self.skipTest('Provide MILIASTRA_TEST_BEYOND_ARCHIVE or a bundled Windows Canvas payload')
+
+        project = self.root / 'preview project'
+        shutil.copytree(PLUGIN / 'samples/beyond-button', project)
+        spec = project / 'preview.json'
+        changed = read_json(spec)
+        changed['case']['asserts'][0]['contains'] = 'Missing assertion marker'
+        write_json(spec, changed)
+        outputs = self.root / 'outputs'
+        outputs.mkdir()
+        env = {key: value for key, value in os.environ.items() if not key.startswith('MILIASTRA_WONDERLAND_')}
+        env['MILIASTRA_WONDERLAND_PLUGIN_DATA'] = str(self.data)
+        server = StdioServerParameters(
+            command=sys.executable,
+            args=['-X', 'utf8', '-B', str(PLUGIN / 'scripts/qianxing.py'), 'mcp', 'serve',
+                  '--project', str(project), '--output-root', str(outputs)],
+            env=env,
+        )
+
+        async def run():
+            async with Client(server) as client:
+                args = {'spec': spec.name, 'sha256': sha_file(spec), 'output': 'preview', 'preview': True}
+                outcome = await client.call_tool('simulate', args)
+                self.assertFalse(outcome.is_error, outcome)
+                response = outcome.structured_content
+                self.assertEqual(response['status'], 'failed')
+                self.assertIsNone(response['output'])
+                self.assertFalse((outputs / 'preview').exists())
+                self.assertEqual(response['diagnostics'][0]['code'], 'beyond_assertion_failed')
+                output = Path(response['diagnostics_output'])
+                self.assertEqual(output, outputs / 'preview.diagnostics')
+                for name in ('preview.png', 'external-simulation.json', 'manifest.json'):
+                    self.assertEqual(response['diagnostics_sha256'][name], sha_file(output / name))
+                report = read_json(output / 'external-simulation.json')
+                self.assertEqual(report['status'], 'failed')
+                self.assertIn('Button clicked', json.dumps(report['logs']))
+                self.assertNotIn('qianxing-mcp-', json.dumps(response))
+                retry = (await client.call_tool('simulate', args)).structured_content
+                self.assertIsNone(retry['output'])
+                self.assertEqual(retry['diagnostics'][-1]['code'], 'diagnostics_output_unavailable')
+                self.assertEqual(response['diagnostics_sha256']['manifest.json'], sha_file(output / 'manifest.json'))
+
+        asyncio.run(run())
 
     def test_worker_hydrates_only_in_its_native_cache(self):
         project = self.backend.parents[1]

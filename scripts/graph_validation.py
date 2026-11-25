@@ -1,16 +1,15 @@
 """Read-only adapter for Ayaya's strict Graph Code parser and validation rules."""
 import argparse
-import ast
 from contextlib import redirect_stdout
 import json
 import os
 from pathlib import Path
-import re
 import subprocess
 import sys
 import tempfile
 
-from authoring_io import DiagnosticError, ProductionInputs, read_json, sha
+from authoring_io import DiagnosticError, PLUGIN, ProductionInputs, read_json, sha
+from ayaya_bridge import RUNTIME, validate_rules
 
 
 class GraphBuildError(ValueError):
@@ -19,112 +18,8 @@ class GraphBuildError(ValueError):
         self.diagnostics = diagnostics
 
 
-def signal_literal_diagnostics(source, workspace):
-    from engine.graph.common import SIGNAL_NAME_PORT_NAME
-    from engine.signal import get_default_signal_repository
-    from engine.validate.context import ValidationContext
-    from engine.validate.node_semantics import SEMANTIC_SIGNAL_SEND, is_semantic_node_call
-    from engine.validate.rules.ast_utils import get_cached_module, infer_graph_scope, iter_class_methods
-    from engine.validate.rules.code_structure.signal_param_names import (
-        _collect_module_constant_strings, _extract_signal_name_from_value,
-    )
-
-    # The exporter resolves these dynamic ports after the ordinary port rules.
-    literal_types={'整数':(int,),'浮点数':(int,float),'布尔值':(bool,),'字符串':(str,)}
-    context=ValidationContext(workspace_path=workspace,file_path=source)
-    tree=get_cached_module(context)
-    scope=infer_graph_scope(context)
-    names=_collect_module_constant_strings(tree)
-    repo=get_default_signal_repository()
-    for _,method in iter_class_methods(tree):
-        for node in ast.walk(method):
-            if not isinstance(node,ast.Call) or not isinstance(node.func,ast.Name):
-                continue
-            if not is_semantic_node_call(workspace_path=workspace,scope=scope,call_name=node.func.id,
-                                         semantic_id=SEMANTIC_SIGNAL_SEND):
-                continue
-            keywords={kw.arg:kw.value for kw in node.keywords}
-            name=_extract_signal_name_from_value(keywords.get(SIGNAL_NAME_PORT_NAME),names)
-            signal_id=repo.resolve_id_by_name(name)
-            if not signal_id:
-                continue  # The regular signal-name rule owns unresolved definitions.
-            payload=repo.get_payload(signal_id)
-            for field in payload.get('parameters') or ():
-                port,expected=field['name'],field['parameter_type']
-                value=keywords.get(port)
-                is_list=expected.endswith('列表')
-                types=literal_types.get(expected.removesuffix('列表'))
-                if value is None or types is None:
-                    continue
-                try:
-                    actual=ast.literal_eval(value)
-                except (TypeError,ValueError):
-                    continue  # The ordinary parser owns types of connected expressions.
-                valid=(type(actual) is list and all(type(item) in types for item in actual)
-                       if is_list else type(actual) in types)
-                if not valid:
-                    yield {'code':'graph.signal_literal_type','severity':'error',
-                           'message':f"Signal {name!r} port {port!r} expects {expected}",
-                           'source':str(source),'line':value.lineno,'port':port,'expected':expected,
-                           'actual':type(actual).__name__,'signal':name}
-
-
-def validate_rules(source, runtime, cache=None, workspace=None):
-    sys.path.insert(0, str(runtime))
-    from engine.configs.settings import settings
-    from engine.graph.graph_code_parser import GraphParseError
-    from engine.utils.workspace import init_settings_for_workspace
-    from engine.validate.api import validate_files
-    from engine.validate.node_graph_validation_utils import _parse_line_span, strict_parse_file
-
-    root = workspace if workspace is not None else runtime
-    init_settings_for_workspace(workspace_root=root, load_user_settings=False)
-    if workspace is not None:
-        from engine.utils.runtime_scope import set_active_package_id
-        from engine.resources.definition_schema_view import set_default_definition_schema_view_active_package_id
-        from engine.resources.level_variable_schema_view import set_default_level_variable_schema_view_active_package_id
-        from engine.resources.ingame_save_template_schema_view import set_default_ingame_save_template_schema_view_active_package_id
-
-        set_active_package_id('BuildProject')
-        set_default_definition_schema_view_active_package_id('BuildProject')
-        set_default_level_variable_schema_view_active_package_id('BuildProject')
-        set_default_ingame_save_template_schema_view_active_package_id('BuildProject')
-    if cache is not None:
-        settings.RUNTIME_CACHE_ROOT = str(cache)
-    diagnostics = []
-    try:
-        strict_parse_file(source)
-    except GraphParseError as exc:
-        diagnostics.append({'code':'strict_graph_parse','severity':'error','message':str(exc),
-                            'source':str(source),'line':exc.line_number})
-    except SyntaxError as exc:
-        diagnostics.append({'code':'graph_syntax','severity':'error','message':exc.msg,
-                            'source':str(source),'line':exc.lineno})
-    else:
-        for issue in validate_files([source], root, use_cache=False).issues:
-            item = {'code':issue.code or 'graph_validation','severity':issue.level,
-                    'message':issue.message,'source':issue.file or str(source)}
-            span = _parse_line_span(issue.line_span)
-            if span:
-                item.update(line=span.start, end_line=span.end)
-            if issue.port:
-                item['port'] = issue.port
-            if issue.code=='PORT_TYPE_MISMATCH':
-                types = re.search(r"期望类型『([^』]+)』，实际传入类型『([^』]+)』", issue.message)
-                if types:
-                    item.update(expected=types[1],actual=types[2])
-                port = re.search(r"输入端口 '([^']+)'", issue.message)
-                if port:
-                    item['port'] = port[1]
-            diagnostics.append(item)
-        if not any(d['severity']=='error' for d in diagnostics):
-            diagnostics.extend(signal_literal_diagnostics(source,root))
-    return {'status':'failed' if any(d['severity']=='error' for d in diagnostics) else 'passed',
-            'diagnostics':diagnostics}
-
-
 def check(source, bindings_path=None, job_path=None):
-    from node_build import RUNTIME, metadata
+    from node_build import metadata
     from miliastra.native.bindings import Bindings, expand_graph, read_bindings
 
     source = Path(source).resolve()
@@ -139,7 +34,7 @@ def check(source, bindings_path=None, job_path=None):
         digest = sha(original)
         inputs.bind(source,digest,'graph_check')
         code = original.decode('utf-8-sig')
-        meta = metadata(source,code)
+        meta = metadata(source,code,inputs=inputs)
         with tempfile.TemporaryDirectory(prefix='qianxing-graph-check-') as cache:
             cache = Path(cache)
             workspace = None
@@ -182,7 +77,7 @@ def check(source, bindings_path=None, job_path=None):
                 compiled.write_bytes(expanded.encode('utf-8'))
             worker = [sys.executable,'-X','utf8','-B',__file__,'--worker',str(compiled),str(RUNTIME),str(cache),*workspace_args]
             if os.environ.get('MILIASTRA_WONDERLAND_BUILD_BOUNDARY'):
-                worker.insert(4,str(RUNTIME.parents[1]/'scripts/dependency_runner.py'))
+                worker.insert(4,str(PLUGIN/'scripts/dependency_runner.py'))
             proc = subprocess.run(worker,cwd=RUNTIME,capture_output=True,text=True,encoding='utf-8',timeout=180)
             if not proc.stdout.strip():
                 raise ValueError(proc.stderr.strip()[-3000:].replace(str(compiled),str(source)) or

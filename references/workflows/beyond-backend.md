@@ -1,6 +1,6 @@
-# 可选外部模拟器后端
+# Beyond 界面预览
 
-能力名：beyond-backend。插件提供固定提交 02a5ea2cd38bb5bcf7a7ce6dd745be3bb1ae655c 的 miliastra-beyond-simulator 源码及 GPL-3.0-only 许可证。需要 Windows x64 和 Node 22+。完整 Windows ZIP 已携带 Canvas 原生模块和 ICU 数据，有可用的插件运行环境时可以离线预览。Git 市场和 Cordis 安装在首次使用 Beyond 时下载这两个文件，校验 ZIP 和每个文件的 SHA-256 后写入用户数据目录，后续复用经过校验的缓存。 [原生资产锁定清单](../../vendor/beyond/native-canvas.json)
+界面预览由随包 Beyond 后端执行。需要 Windows x64 和 Node 22+。完整 Windows ZIP 携带 Canvas 原生模块和 ICU 数据，插件运行环境就绪后可以离线预览。Git 市场和 Cordis 安装在首次使用 Beyond 时下载这两个文件，校验后复用缓存。 [原生资产锁定清单](../../vendor/beyond/native-canvas.json)
 
 ```text
 python scripts/qianxing.py simulate preview samples/beyond-button/preview.json --out NEW_PREVIEW
@@ -9,9 +9,11 @@ python scripts/qianxing.py beyond SPEC.json --out NEW_DIRECTORY
 
 先用[按钮示例](../../samples/beyond-button/README.md)看 PNG、控件树和点击日志。`simulate preview` 始终请求软件画面，可省略断言。已声明的断言仍执行，失败时返回非零。可取得的画面和报告写入独立的 `NEW_PREVIEW.diagnostics`，报告包含首项失败的预期与观测值。原 `beyond` 和制作链入口用于正式场景检查，要求执行断言。
 
-MCP 中用 `simulate`，传同一份配置的路径和摘要并设 `preview=true`。通过时提交 PNG 和报告，失败时返回诊断。 `asset_fit` 配置 `mount` 后会生成可直接传入的配置以及显式的软件图片模板。 [拟合预览示例](../../samples/creator-demos/png/README.md#拟合并预览可挂载的-lua)
+MCP 中用 `simulate`，传同一份配置的路径和摘要并设 `preview=true`。通过时从 `output` 打开画面和报告。失败时从 `diagnostics_output` 打开已取得的画面和报告，用 `diagnostics_sha256` 核对文件。路径已存在时改用新名称。 `asset_fit` 配置 `mount` 后会生成可直接传入的配置以及显式的软件图片模板。 [拟合预览示例](../../samples/creator-demos/png/README.md#拟合并预览可挂载的-lua)
 
 可用 --backend PATH 指定同一提交的干净独立检出；缺依赖时失败，不自动安装。默认加载 vendor/beyond 并核对随包文件摘要。
+
+即使关闭 PNG 输出，Beyond 的文字布局和部分交互仍需要 Canvas。只验证插件模型覆盖的逻辑时，使用 [联合模拟](joint-simulation.md)。
 
 ## GIL 控件转换及渲染
 
@@ -45,3 +47,15 @@ render:true 生成透明背景 preview.png 和 render.json；render_checks 按�
 路径相对配置目录。已有输出、摘要不符、断言失败、依赖损坏和 45 秒超时不提交正式结果。报告区分 external_lua_model、software_preview、native_graph_model、editor、host；编辑器和实机始终待验。不运行浏览器、游戏 GUI 自动化或截图识别。
 
 软件预览用于检查控件布局和渲染。涉及最终 GIL 时，按交付报告核对输入摘要。[第三方声明](../../THIRD_PARTY_NOTICES.md)
+
+## 后端维护
+
+随包源码以 GPL-3.0-only 分发。报告的 `backend_commit` 记录上游基线，`backend_bundle_sha256` 记录实际加载的本项目修订。每次运行都会核对修订及文件摘要。 [后端源码清单](../../vendor/beyond/bundle.json) · [修订锁定](../../scripts/beyond-revision.json)
+
+在插件源码中编辑已有的 Beyond JavaScript 文件，再执行下方命令。将路径换成本次实际修改的文件，可列多个。待审目录需要位于源码外。
+
+```text
+python -B scripts/prepare_beyond_revision.py studio/play/session.js --reason "说明本次维护变更" --out ../beyond-review
+```
+
+检查待审目录生成的 `bundle.json`、`beyond-revision.json` 和 `PUBLIC_SOURCES.json`，审核后应用到同一提交。用 [按钮样例](../../samples/beyond-button/README.md)核对成功和失败的画面、日志与断言，也要核对随包 Canvas 摘要。 [本地检查](../../docs/contributing/development.md)

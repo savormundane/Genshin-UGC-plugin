@@ -84,6 +84,11 @@ def server(bridge):
         """Validate a Graph Code file with optional production-job declarations. Returns diagnostics and input digests."""
         return await call('graph_check',ctx,input=input,sha256=sha256,job=job,job_sha256=job_sha256,
                           bindings=bindings,bindings_sha256=bindings_sha256)
+
+    @app.tool(structured_output=True)
+    async def graph_build(spec: str, output: str, ctx: Context, sha256: str | None = None) -> dict[str, Any]:
+        """Compile Graph Code into independent GIA files. Returns the readback report and artifact digests for native_plan."""
+        return await call('graph_build', ctx, spec=spec, output=output, sha256=sha256)
     @app.tool(structured_output=True)
     async def resources_lookup(version:str,ctx:Context,query:str='',mode:str='beyond',limit:int=20,
                                catalogue:str|None=None,catalogue_sha256:str|None=None,

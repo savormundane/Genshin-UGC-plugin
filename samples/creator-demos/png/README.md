@@ -55,6 +55,8 @@ python -X utf8 -B scripts/qianxing.py assets generate --from-preview "$markerOut
 
 本次用 20 个矩形，实测误差约 0.04499，目标为 0.035。Beyond 日志确认创建 20 个矩形，控件树和拟合图在 144 × 144 的显示区域逐像素核对通过。简单图标也可用上面的 11 控件网格方案。 [拟合配置和局部细化](../../../references/assets/asset-fit.md#生成可挂载的-lua-和软件预览)
 
+已有导出的 GIL 时，可说「将这张 PNG 拟合到这个关卡的 CheckpointMarker 容器，使用现有 MarkerRect 图片模板，最多 20 个控件。先预览，确认后另存」。工具按实际文件解析模板和容器，并将拟合结果交给同一关卡的挂载计划。检查点样例的拟合与回读回归确认 Lua 正文一致，原文件保持原字节。软件预览模拟同一份 Lua，关卡的实际画面在编辑器及游戏中确认。 [从 GIL 绑定拟合](../../../references/assets/asset-fit.md#生成可挂载的-lua-和软件预览) · [审阅并应用挂载](../../../references/gil/native-authoring.md#将生成的-lua-挂到现有关卡)
+
 ## 接下来怎么用
 
 [checkpoint-marker.lua](checkpoint-marker.lua) 已包含 `grid-25` 的 11 个矩形和绘制代码。将它保存到本机，先在一张测试关卡里接入。

@@ -1,21 +1,39 @@
 """Assemble fitted rectangle data and an identically bound software preview."""
 
-from authoring_io import PLUGIN, sha_file, write_json
+from authoring_io import PLUGIN, resolve, sha, sha_file, write_json
 from miliastra.assets.pipeline import lua
 
 RENDERER = PLUGIN / 'scripts/runtime_rectangle_mount.lua'
 PLATFORMS = ('KEYBOARD', 'TOUCHSCREEN', 'CONTROLLER_CONSOLE', 'CONTROLLER_MOBILE')
 
 
-def deliver(stage, layers, mount, inputs):
+def bind_gil(mount, base, inputs):
+    from miliastra.native.client_lua import resolve_mount
+
+    source = resolve(base, mount['gil'])
+    data = source.read_bytes()
+    if sha(data) != mount['sha256']:
+        raise ValueError('挂载关卡摘要已变化。请重新核对模板和目标控件后试算。')
+    inputs[str(source)] = mount['sha256']
+    binding = resolve_mount(data, mount['control'], mount['template'])
+    return {'template_index': binding['template_index'], 'width': mount['width'],
+            'height': mount['height']}, binding
+
+
+def deliver(stage, layers, mount, inputs, *, gil_binding=None):
     data = [
         (stage / row['name'] / 'data.lua').read_text(encoding='utf-8').strip()
         for row in layers
     ]
     inputs[str(RENDERER)] = sha_file(RENDERER)
     source = stage / 'mounted.lua'
-    source.write_text(
+    note = (
+        '-- The template index is resolved from the bound GIL.\n'
+        if gil_binding else
         '-- Set template_index to the rectangular image template in the target level.\n'
+    )
+    source.write_text(
+        note
         + 'local MOUNT = ' + lua(mount) + '\n'
         + 'local LAYERS = {\n'
         + ''.join('(function()\n' + code + '\nend)(),\n' for code in data)
@@ -26,6 +44,8 @@ def deliver(stage, layers, mount, inputs):
     )
     report = {'script': source.name, 'sha256': sha_file(source), **mount,
               'mount_point': 'client container', 'template_kind': 'rectangular image'}
+    if gil_binding:
+        report['gil_binding'] = gil_binding
     # The project declares one local software rectangle. Its bitmap identity
     # is defined by the pinned renderer and is not a template ID claim.
     canvas = 'pc-16-9'

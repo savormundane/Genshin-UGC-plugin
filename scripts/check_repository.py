@@ -151,12 +151,17 @@ def check(root: Path = ROOT) -> list[str]:
 
     backend = root / "vendor/beyond"
     if (backend / "native-canvas.json").exists():
+        from beyond_backend import read_bundle_revision, verify_bundle_files
         from beyond_native import read_native_lock, verify_native_files
 
         try:
-            verify_native_files(backend, read_native_lock(backend))
+            native_lock = read_native_lock(backend)
+            verify_native_files(backend, native_lock)
+            pin = root / "scripts/beyond-revision.json"
+            _, manifest = read_bundle_revision(backend, pin)
+            verify_bundle_files(backend, manifest, native_lock)
         except (OSError, ValueError, KeyError, TypeError) as exc:
-            errors.append(f"Beyond native Canvas distribution: {exc}")
+            errors.append(f"Beyond distribution: {exc}")
 
     docs = list(root.glob("*.md"))
     for directory in ("docs", "skills", "references", "samples", "scripts", ".github"):

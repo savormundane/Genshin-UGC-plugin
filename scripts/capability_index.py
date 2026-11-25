@@ -11,7 +11,7 @@ TASK_ENTRYPOINTS = {
     'editor': {'cli': ['project search INPUT QUERY', 'docs search --version VERSION QUERY'],
                'mcp': ['project_inspect', 'docs_search', 'scene_catalogue', 'scene_preview', 'scene_build']},
     'nodes': {'cli': ['nodes QUERY', 'graph check SOURCE.py', 'build SPEC.json --out DIR'],
-              'mcp': ['nodes_lookup', 'graph_check']},
+              'mcp': ['nodes_lookup', 'graph_check', 'graph_build']},
     'lua': {'cli': ['knowledge api SYMBOL', 'client check INPUT'], 'mcp': ['api_lookup', 'client_check']},
     'gil': {'cli': ['project search INPUT QUERY', 'native plan INPUT --spec PATCH.json --out PLAN.json',
                     'native apply INPUT --plan PLAN.json --out EDITED.gil', 'native diff INPUT EDITED.gil'],

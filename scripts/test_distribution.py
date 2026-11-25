@@ -192,10 +192,11 @@ class ReleaseTests(unittest.TestCase):
             for path,digest in bundle['files'].items():
                 self.assertEqual(hashlib.sha256((restored/'vendor/beyond'/path).read_bytes()).hexdigest(),digest)
             sources = read_json(restored/'PUBLIC_SOURCES.json')
+            latest = {change['path']: change['sha256'] for change in sources['distribution_changes']}
             for change in sources['distribution_changes']:
                 if 'excluded_files_sha256' not in change:
                     continue
-                self.assertEqual(hashlib.sha256((restored/change['path']).read_bytes()).hexdigest(), change['sha256'])
+                self.assertEqual(hashlib.sha256((restored/change['path']).read_bytes()).hexdigest(), latest[change['path']])
                 for path, digest in change['excluded_files_sha256'].items():
                     self.assertFalse((restored/path).exists(), path)
                     self.assertNotIn(path.removeprefix('vendor/beyond/'), bundle['files'])

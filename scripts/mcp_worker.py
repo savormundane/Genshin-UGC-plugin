@@ -77,6 +77,22 @@ def main():
         elif op=='graph_check':
             from graph_validation import check
             result=check(args['input'],args.get('bindings'),args.get('job'))
+        elif op == 'graph_build':
+            from authoring_io import finish
+            from node_build import build
+
+            spec = read_json(args['spec'])
+            if (not isinstance(spec, dict) or type(spec.get('schema')) is not int
+                    or spec['schema'] != 1 or spec.get('formats', ['gia']) != ['gia']):
+                raise ValueError('graph_build 使用 schema 1 构建配置，输出格式为 ["gia"]。写入 GIL 请审阅修改计划后执行。')
+            output = Path(args['output'])
+            build_result = build(args['spec'], output)
+            report = read_json(output / 'build-report.json')
+            gia_files = sorted(name for name in report['files_sha256']
+                               if name.startswith('gia/') and name.endswith('.gia'))
+            result = finish(output, report['inputs_sha256'], kind='graph-build',
+                            graphs=build_result['graphs'], stored_nodes=build_result['stored_nodes'],
+                            gia=gia_files, report='build-report.json')
         elif op in('native_inspect','native_audit','project_inspect'):
             path=Path(args['input'])
             if op=='project_inspect':

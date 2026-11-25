@@ -321,19 +321,26 @@ def replace_lua(data: bytes, mapping: str, code: bytes) -> bytes:
 
 
 def _produce(spec_path, out, evidence, *, include_runtime=True, fallback_gil=None):
-    """Run shared build stages, with dispatch for schema 2 jobs."""
-    from miliastra.assets.pipeline import lua
-    from authoring_io import ProductionInputs, require_active_baseline
-
+    """Dispatch the saved public job by version."""
     path = Path(spec_path).resolve()
-    base = path.parent
     job_bytes = path.read_bytes()
     job = json.loads(job_bytes.decode('utf-8-sig'))
+    job_digest = sha(job_bytes)
     if job.get('schema') == 2:
         from miliastra.production import produce as produce_v2
 
         evidence['v3_pipeline'] = {'status': 'not_checked', 'reason': 'in_progress'}
-        return produce_v2(path, out, evidence, job=job, job_digest=sha(job_bytes))
+        return produce_v2(path, out, evidence, job=job, job_digest=job_digest)
+    return build_stages(path, job, job_digest, out, evidence, include_runtime=include_runtime,
+                        fallback_gil=fallback_gil)
+
+
+def build_stages(path, job, job_digest, out, evidence, *, include_runtime=True, fallback_gil=None):
+    """Run the shared asset, graph and Lua phases of an already loaded job."""
+    from miliastra.assets.pipeline import lua
+    from authoring_io import ProductionInputs, require_active_baseline
+
+    base = path.parent
     keys(
         job,
         (
@@ -361,7 +368,7 @@ def _produce(spec_path, out, evidence, *, include_runtime=True, fallback_gil=Non
             + '；可用 produce --next 创建新编号目录，或指定新的 --out；原目录不会被覆盖'
         )
     evidence['specification'] = {'status': 'passed', 'reason': ''}
-    inputs = ProductionInputs({str(path): sha(job_bytes)})
+    inputs = ProductionInputs({str(path): job_digest})
     stages = []
 
     def read(value):
@@ -653,7 +660,9 @@ def _produce(spec_path, out, evidence, *, include_runtime=True, fallback_gil=Non
 
 def produce_summary(report):
     files = report.get('files', report.get('files_sha256', {}))
-    selected = ('level.gil', 'bindings.json', 'scene/scene.gia', 'whitebox/whitebox.gia')
+    selected = ['level.gil', 'bindings.json', 'scene/scene.gia', 'whitebox/whitebox.gia', 'beyond/preview.png']
+    selected.extend(name for name in files if name.startswith('fitted-assets/')
+                    and name.endswith(('/mounted.lua', '/catalog.json')))
     inputs = report.get('inputs', report.get('source_sha256', {}))
     spec = report.get('specification')
     return {

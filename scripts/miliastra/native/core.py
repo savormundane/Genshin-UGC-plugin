@@ -20,13 +20,8 @@ from level_inventory import (
     graph_library_ids,
 )
 from level_authoring import msg, integer, pack, set_section
-from authoring_io import PLUGIN, sha, read_json, schema, resolve, write_json
-
-
-@lru_cache(maxsize=1)
-def node_catalog():
-    v = read_json(PLUGIN / 'vendor/ayaya/private_extensions/ugc_file_tools/node_data/index.json')
-    return {x['ID']: x for x in v['NodesList']}, {x['Expression']: x['ID'] for x in v['TypesList']}
+from authoring_io import sha, read_json, schema, resolve, write_json
+from ayaya_bridge import native_node_catalogue as node_catalog
 
 
 def get(b, n, w=2, default=None):
@@ -1193,6 +1188,7 @@ def apply(data, spec, base, *, bindings=None):
         'add_native_movers',
         'set_native_preset_state',
         'append_client_ui',
+        'bind_client_lua',
     }
     guarded = placement or bool(scene_ops & (scoped_authoring | gameplay_edits.keys()))
     if guarded:
@@ -1201,6 +1197,8 @@ def apply(data, spec, base, *, bindings=None):
             if placement
             else 'Entity transform'
             if 'set_entity_transform' in scene_ops
+            else 'Client Lua'
+            if 'bind_client_lua' in scene_ops
             else 'Native gameplay'
             if scene_ops & gameplay_edits.keys()
             else 'Native scene'
@@ -1318,6 +1316,12 @@ def apply(data, spec, base, *, bindings=None):
             from miliastra.native.client_ui import append_client_ui
 
             data, detail = append_client_ui(data, op, base)
+            logs.append({'op': kind, **detail})
+            continue
+        if kind == 'bind_client_lua':
+            from miliastra.native.client_lua import attach
+
+            data, detail = attach(data, op, base, base_sha256=digest)
             logs.append({'op': kind, **detail})
             continue
         m = model(data)

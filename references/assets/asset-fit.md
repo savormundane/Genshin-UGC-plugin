@@ -28,11 +28,17 @@ Schema 2 的 `refinement` 报告标出拟合丢失的前景像素数、透明区
 
 ## 生成可挂载的 Lua 和软件预览
 
-在 schema 2 的拟合配置中加入 `"mount":{"template_index":1073744001,"width":144,"height":144}`。宽高为显示框的设计单位，图元等比居中。分层输入应使用同尺寸画布并按由底到顶声明，所有层装入一份 Lua。用当前关卡的实物图片根模板索引填写 `template_index`，模板使用可着色的白色实心矩形图片。
+用当前关卡已有的客户端容器和可着色的白色实心图片模板。在 schema 2 的拟合配置中补入 `mount`。关卡路径相对该配置文件，`sha256` 来自工程检查，`template` 和 `control` 用准确名称或整数标识。
 
-`asset_fit` 或 CLI `assets fit` 产出 `mounted.lua`、`beyond.json` 和 `beyond-project.json`。把 Lua 映射并挂到客户端容器节点。需要预览时，传拟合结果的 `beyond.json` 路径及摘要，调用 MCP `simulate` 并设 `preview=true`。CLI 可用 `simulate preview FIT_OUT/beyond.json --out NEW_DIRECTORY`。
+```json
+{"mount":{"gil":"level.gil","sha256":"工程检查返回的关卡摘要","template":"MarkerRect","control":"CheckpointMarker","width":144,"height":144}}
+```
 
-Beyond 在软件布局中声明一个同索引的矩形图片模板，执行摘要绑定的原样 Lua。看 `preview.png`、`render.json` 和 `external-simulation.json` 确认控件、画面和日志。修改 Lua 后须用新的源码摘要更新预览配置。实际关卡的模板、挂载和画面需在编辑器和游戏中核对。 [检查点样例](../../samples/creator-demos/png/README.md#拟合并预览可挂载的-lua)
+工具从 GIL 回读实际图片模板索引和容器，遇到同名目标或无法回读的关联时请求准确标识。宽高是显示框的设计单位，图元等比居中。分层输入使用同尺寸画布，按由底到顶的顺序装入一份 Lua。已有独立拟合流程仍可传入 `mount: {template_index, width, height}`。
+
+`asset_fit` 或 CLI `assets fit` 产出 `mounted.lua`、`beyond.json` 和 `beyond-project.json`。绑定 GIL 时，把拟合输出的 `catalog.json` 和 Lua 交给 [GIL 挂载计划](../gil/native-authoring.md#将生成的-lua-挂到现有关卡)，审阅后另存新关卡。需要预览时，传拟合结果的 `beyond.json` 路径及摘要，调用 MCP `simulate` 并设 `preview=true`。CLI 可用 `simulate preview FIT_OUT/beyond.json --out NEW_DIRECTORY`。
+
+Beyond 在软件布局中声明一个同索引的矩形图片模板，执行摘要绑定的原样 Lua。看 `preview.png`、`render.json` 和 `external-simulation.json` 确认控件、画面和日志。图片模板的原生引用与挂载按 GIL 回读核对，贴图表现和画面需在编辑器与游戏中核对。 修改 Lua 后须用新的源码摘要更新预览配置。 [检查点样例](../../samples/creator-demos/png/README.md#拟合并预览可挂载的-lua)
 
 `catalog.json` 和交付清单汇总各层的误差、矩形数、`stop_reason` 与 `target_reached`。顶层 `quality` 列出未达目标的层。制作链在 `evidence.asset_fit_quality` 引用同一结论和各素材报告。预算内的近似结果可按检查点继续迭代。制作任务的拟合条目可声明 `"require_target": true`。任一图层未达到误差目标时，制作返回该层的实际误差与停止原因，并取消交付。
 

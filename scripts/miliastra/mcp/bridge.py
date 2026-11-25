@@ -6,7 +6,7 @@ from miliastra.mcp.workspace import data_directory, linked, workspace as project
 
 OPERATIONS={'doctor':(), 'capabilities':(), 'docs_search':('version','query'),'api_lookup':('symbol',),'nodes_lookup':(),'resources_lookup':('version',),'diagnose':('spec','sha256'),
             'native_inspect':('input',),'native_audit':('input',),
-            'project_inspect':('input',),'client_check':('input',),'graph_check':('input',),
+            'project_inspect':('input',),'client_check':('input',),'graph_check':('input',),'graph_build':('spec','output'),
             'native_diff':('input','other'), 'scene_preview':('input','output'), 'asset_preview':('input','output'),
             'scene_catalogue':('input','sha256','version','mode','output'),
             'scene_build':('spec','sha256','output'), 'asset_fit':('input','spec','output'),
@@ -23,6 +23,7 @@ READ_FILE_OPERATIONS={
     'native_diff':('sha256','other_sha256','allowed_top_level_fields'),
     'client_check':('sha256','contract','contract_sha256','mapping'),
     'graph_check':('sha256','job','job_sha256','bindings','bindings_sha256'),
+    'graph_build':('sha256',),
     'resources_lookup':('query','mode','limit','catalogue','catalogue_sha256','resource_type'),
     'scene_preview':('sha256','before','before_sha256'),
     'asset_preview':('sha256','max_controls','step'),
@@ -110,7 +111,7 @@ class Bridge:
         return resolved
 
     async def call(self,operation,arguments,progress=None,*,roots=()):
-        build=operation in ('produce','native_apply','asset_fit') or operation=='verify' and arguments.get('rebuild')
+        build=operation in ('produce','native_apply','asset_fit','graph_build') or operation=='verify' and arguments.get('rebuild')
         try:
             return await asyncio.wait_for(self._call(operation,arguments,progress,roots),self.timeouts['build' if build else 'ordinary'])
         except asyncio.TimeoutError:
@@ -235,11 +236,29 @@ class Bridge:
                 response={'schema':2,'operation':operation,'status':status,'result':result,'output':None}
                 if 'error' in result:response['error']=result['error']
                 if 'diagnostics' in result:response['diagnostics']=result['diagnostics']
+                if operation == 'simulate' and args.get('preview'):
+                    delivery = scratch / 'delivery.diagnostics'
+                    manifest = delivery / 'manifest.json'
+                    if manifest.is_file():
+                        diagnostics = destination.with_name(destination.name + '.diagnostics')
+                        try:
+                            self.path(str(diagnostics), project, output_root, output=True)
+                            hashes = {**read_json(manifest)['files'], 'manifest.json': sha_file(manifest)}
+                            os.rename(delivery, diagnostics)
+                        except (ValueError, FileExistsError) as error:
+                            response.setdefault('diagnostics', []).append({
+                                'code': 'diagnostics_output_unavailable',
+                                'message': f'无法保存预览诊断。请为预览指定新的输出路径。{error}',
+                                'path': str(diagnostics),
+                            })
+                        else:
+                            response['diagnostics_output'] = str(diagnostics)
+                            response['diagnostics_sha256'] = hashes
                 return response
             output_hashes=None
             if destination:
                 delivery=scratch/'delivery'
-                if operation in ('native_plan','native_apply','asset_generate','asset_fit','scene_build','scene_catalogue') or (
+                if operation in ('native_plan','native_apply','asset_generate','asset_fit','scene_build','scene_catalogue','graph_build') or (
                     operation == 'simulate' and args.get('preview')
                 ):
                     manifest=delivery/'manifest.json'

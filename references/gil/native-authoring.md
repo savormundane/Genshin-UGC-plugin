@@ -72,6 +72,16 @@ python scripts/qianxing.py level bind CURRENT.gil --control CONTROL_GUID --scrip
 
 两个模板分别注册到现有客户端原型库。脚本可用 `game.InstantiateClientUIControl(qx_templates.container, script.object)` 和 `qx_templates.button` 创建界面实例。可用 `templates_as` 更换模板表名称。可选的 `asset_data` 接受[批量素材](../assets/image-to-primitives.md#多素材共用控件预算)生成的 `data.json`，在脚本中通过 `qx_assets.<素材键>` 使用。Lua 源和素材数据都纳入密封计划。应用报告给出新模板和脚本映射，可用 `simulate check RESULT.gil --mapping panel.lua` 验证启动。
 
+## 将生成的 Lua 挂到现有关卡
+
+用 [图片拟合](../assets/asset-fit.md#生成可挂载的-lua-和软件预览) 从目标关卡读取图片模板和客户端容器，再用 `native_plan` 审阅挂载。把返回的 `mount.gil_binding.control_guid` 用在操作中。原生补丁使用相同的关卡摘要，允许顶层字段 `9`、`50`。
+
+```json
+{"op":"bind_client_lua","control_guid":1073745924,"source":"fitted/mounted.lua","mapping":"marker.lua","fit_catalog":"fitted/catalog.json"}
+```
+
+应用计划时会重验关卡、目标控件、图片模板和 Lua 的摘要。已有同名映射时拒绝新增。申请独立的 Lua 挂载时可省略 `fit_catalog`，仍需确认唯一客户端容器和完整的 `.lua` 映射名。应用后检查另存的 `level.gil` 和报告里的控件、脚本标识及正文摘要。
+
 ## 精确替换与错误定位
 
 replace-lua / produce.gil.mapping均按完整字符串相等匹配，含.lua后缀。例如main不匹配main.lua。匹配失败会列出实际映射名；不自动按子串猜选，避免覆盖错误脚本。
