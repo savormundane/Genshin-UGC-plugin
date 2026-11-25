@@ -8,6 +8,7 @@
 
 ### ChatGPT/Codex
 
+参见[首页安装说明](../README.md#安装)或 [Codex CLI 安装](#codex-cli)。
 
 ### Claude
 
@@ -68,7 +69,7 @@ dsh plugin --profile web add github:savormundane/miliastra-wonderland-plugin
 
 ### 用 PowerShell 安装本地 ZIP
 
-要用安装器为 Codex 或 Claude Code 登记本地运行环境，在解压目录的 PowerShell 中运行以下命令。保留原 ZIP，填入其路径和 GitHub 发布附件或本地打包输出提供的 SHA-256。Claude Code 使用 `-Agent claude-code`。
+要用安装器为 Codex 或 Claude Code 登记本地运行环境，在解压目录的 PowerShell 中运行以下命令。保留原 ZIP，填入其路径和 GitHub 发行附件的 SHA-256。Claude Code 使用 `-Agent claude-code`。
 
 ```powershell
 .\install.ps1 -Agent codex -Archive '<ZIP 的绝对路径>' -Sha256 '<SHA-256>'
@@ -76,19 +77,18 @@ dsh plugin --profile web add github:savormundane/miliastra-wonderland-plugin
 
 按提示选择已有工程和独立输出目录。安装完成后开启新会话，做[首次工具验证](#首次工具验证)。
 
-### 自行打包 ZIP
-
-从干净解压的源码目录运行以下命令。打包器写出 ZIP 和 SHA-256，缺少 Beyond 原生文件时会下载并校验锁定资产。已有资产可传 `--beyond-native-archive <路径>`。 [正式发行流程](contributing/maintenance.md)
-
-```powershell
-python -B scripts/package_release.py --source . --out ../miliastra-wonderland-agent-plugins-windows-x64.zip --layout agent-plugins
-```
-
 ## 首次工具验证
 
-启用插件后，在支持本地工具的会话里[查询第一个节点](../README.md#查询第一个节点)。看到 `nodes_lookup` 和端口结果即可确认本地 MCP 已启动。Claude 的 Chat 可使用 Skill，本地 MCP 在 Cowork 或 Claude Code 中验证。 [Claude 本地工具支持](https://support.claude.com/en/articles/13837440-use-plugins-in-claude)
+启用插件后，在支持本地 MCP 的会话中[查询「创建实体」](../README.md#当知识库使用)。看到 `nodes_lookup` 匹配一条服务端记录并返回以下端口，表示工具已连通。
 
-节点查询无需工程文件。处理关卡或素材时，在客户端打开并授权工程目录。 [工程绑定](runtime-environment.md#连接-mcp-或切换工程)
+- 输入为「流程入」「目标GUID（GUID）」和「单位标签索引列表（整数列表）」。
+- 输出为「流程出」。
+
+该节点按 GUID 创建场景中预先布设的实体。`source` 指向随包编译器定义，`port_evidence` 对应 7.1 版官方文档的两项值输入。 [官方《执行节点》](../references/platform/official/节点介绍/执行节点__mhw66orrrfkm.md#2-创建实体)
+
+Claude 的 Chat 可使用 Skill。本地 MCP 在 Cowork 或 Claude Code 中验证。 [Claude 本地工具支持](https://support.claude.com/en/articles/13837440-use-plugins-in-claude)
+
+处理关卡或素材时，在客户端打开并授权工程目录。[工程绑定](runtime-environment.md#连接-mcp-或切换工程)
 
 ## 回退与卸载
 

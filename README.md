@@ -2,7 +2,7 @@
 
 Miliastra Wonderland 是面向原神「千星奇域」创作者的非官方 AI 插件。用中文对话查询资料、检查或制作工程文件，再将产物导入千星奇域编辑器或接入项目。
 
-[安装](#安装) · [快速开始](#快速开始) · [使用产物](#使用产物)
+[安装](#安装) · [快速开始](#快速开始) · [更多文档](#更多文档)
 
 ## 可以做什么
 
@@ -31,32 +31,38 @@ Miliastra Wonderland 是面向原神「千星奇域」创作者的非官方 AI �
 
 ## 快速开始
 
-### 查询第一个节点
+启用插件后，在支持本地工具的会话里选一种方式开始。
 
-启用插件后，在支持本地 MCP 的会话里发送下面的请求。查询节点无需准备工程文件。 [首次工具验证](docs/installation.md#首次工具验证)
+### 当知识库使用
 
-> 请使用千星奇域插件查询服务端「创建实体」节点，列出输入和输出端口，用中文解释它的用途，并注明资料依据。版本依据不明确的部分请直接说明。
+直接问节点、Lua API 或平台规则，无需准备工程文件。
 
-本机实际调用 `nodes_lookup`，在服务端节点库中匹配到 1 条结果。
+> 千星奇域的服务端「创建实体」节点怎么用？请列出输入和输出端口，注明适用版本和资料来源。
 
-- 输入为「流程入」「目标GUID（GUID）」和「单位标签索引列表（整数列表）」，输出只有「流程出」。
-- 用途是按 GUID 创建已预先布设在场景里的实体。`source` 指向随包编译器定义。`port_evidence` 对应 7.1 版官方文档的两项值输入。 [官方《执行节点》](references/platform/official/节点介绍/执行节点__mhw66orrrfkm.md#2-创建实体)
+### 从零开始做原型
 
-看到实际工具调用和上述端口结果，表示本地工具已连通。接下来可以[跟做中文教程](samples/creator-demos/README.md)。
+打开一个空目录作为工程，用一句话说清要做的玩法和玩家的操作，就可以开始做第一版。
 
-### 只读查看已有的关卡
+> 帮我从零做一个单人挑战原型，点「开始挑战」后显示开始提示，直接生成可编辑的原型文件和软件预览。
 
-打开包含关卡的工程目录，给助手 `.gil` 路径和要找的对象。用公开样例跟做[只读检查](samples/creator-demos/README.md)，找不到输入时核对[工程绑定](docs/runtime-environment.md#连接-mcp-或切换工程)。
+### 审计、理解和修改已有项目
+
+打开已有工程，提供关卡文件或源码，告诉助手你想弄清楚什么、准备改什么。
+
+> 先只读检查这份 GIL，说明入口机关和节点图、脚本的关系，再为把入口机关的等待值改为 12 准备修改计划，等我确认后另存并核对差异。
 
 ## 参与项目
 
-[反馈问题](https://github.com/savormundane/miliastra-wonderland-plugin/issues/new/choose) · [交流与建议](https://github.com/savormundane/miliastra-wonderland-plugin/discussions) · [参与贡献](CONTRIBUTING.md) · [安全问题报告](SECURITY.md)
+- 分享做法、交流项目经验或提出新想法。[交流与建议](https://github.com/savormundane/miliastra-wonderland-plugin/discussions)
+- 遇到报错、结果不符或资料有误，附上插件版本和能复现问题的步骤。[反馈问题](https://github.com/savormundane/miliastra-wonderland-plugin/issues/new/choose)
+- 欢迎补充平台资料、制作公开样例、纠正文档或提交代码。[参与贡献](CONTRIBUTING.md)
+- 发现安全问题，可以通过私密渠道报告。[安全问题报告](SECURITY.md)
 
 ## 更多文档
 
-- **MCP**。查看本地工具签名、输入摘要和文件路径规则。[MCP 工具](docs/mcp.md)
-- **终端工具**。在终端直接编译节点图、检查 GIL 或复现工具报错。[在终端运行工具](docs/runtime-environment.md#只用-cli)
-- **插件开发**。查看源码入口、按改动选择本地检查。[本地开发与检查](docs/contributing/development.md)
+- **使用文档**。查工程绑定、产物用法、MCP 和终端工具。[文档目录](docs/README.md)
+- **公开样例**。跟做按钮预览、关卡审阅、Lua 排错或图片转图元。[样例目录](samples/README.md)
+- **技术参考**。查平台资料来源、格式、工具流程和验证范围。[参考目录](references/README.md)
 
 ## 致谢
 

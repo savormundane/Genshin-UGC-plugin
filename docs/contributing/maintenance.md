@@ -4,13 +4,7 @@
 2. 从候选运行[本地检查](development.md)，用 `npm pack` 核对 DSH 包清单。发行前核对 [PUBLIC_SOURCES.json](../../PUBLIC_SOURCES.json) 的分组、摘要和许可状态。
 3. 正式发布时快进推送候选提交，用同一提交创建标签和 Release，核对 Latest、附件摘要与安装入口。npm 包发布后查询公开注册表确认版本可用。
 
-Windows x64 离线包可从干净的候选提交生成。将 `NOTES` 和 `NEW_DIRECTORY` 换成发行说明文件和源码目录外的新输出路径。
-
-```powershell
-python -B scripts/prepare_release.py --notes NOTES --output NEW_DIRECTORY
-```
-
-附件名为 `Miliastra-Wonderland-<version>-agent-plugins-windows-x64.zip`。ZIP 根目录包含 `plugin.json`、`mcp.json` 和 `skills/`。核对 Windows x64 Canvas 文件，以及下载后 ZIP 的 SHA-256。
+定版流程从候选提交生成 `Miliastra-Wonderland-<version>-agent-plugins-windows-x64.zip`。检查 ZIP 根目录的 `plugin.json`、`mcp.json` 和 `skills/`，核对 Windows x64 Canvas 文件和公开下载的 SHA-256。
 
 留存定版源码、包摘要、依赖锁和运行绑定供回退。验证新安装时检查文件清单、解释器及实际 stdio 调用。 [回退与卸载](../installation.md#回退与卸载)
 
