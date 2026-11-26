@@ -4,8 +4,8 @@
 
 | 类型名 | 说明 | 示例 |
 |--------|------|------|
-| `整数` | 32位整数 | `0`, `100`, `-1` |
-| `浮点数` | 64位浮点 | `0.0`, `3.14` |
+| `整数` | 整数值 | `0`, `100`, `-1` |
+| `浮点数` | 浮点值 | `0.0`, `3.14` |
 | `布尔值` | 真/假 | `True`, `False` |
 | `字符串` | 文本 | `"hello"`, `"信号名"` |
 | `实体` | 游戏实体引用 | 通过获取实体类节点获得 |
@@ -53,7 +53,7 @@ scope: server                           # server 或 client
 ```python
 # 算术运算
 结果: "整数" = 加法运算(self.game, 左值=1, 右值=1)
-差值: "浮点数" = 减法运算(self.game, 被减数=10.0, 减数=3.5)
+差值: "浮点数" = 减法运算(self.game, 左值=10.0, 右值=3.5)
 
 # 变量操作
 值: "整数" = 获取自定义变量(self.game, 目标实体=self.owner_entity, 变量名="变量名")
@@ -66,55 +66,22 @@ scope: server                           # server 或 client
 # 信号
 发送信号(self.game, 信号名="信号名")
 
-# 实体操作
-位置: "三维向量" = 获取实体位置(self.game, 目标实体=实体)
-设置实体位置(self.game, 目标实体=实体, 位置=新位置)
+# 服务端实体位置与旋转查询
+位置, 旋转 = 获取实体位置与旋转(self.game, 目标实体=self.owner_entity)
 ```
 
 ## 语法糖映射
 
-编译器会将支持的 Python 表达式转换为对应节点。
+编译器按图的作用域和已识别的参数类型改写支持的表达式。直接调用改写所得节点时，用 `nodes_lookup` 核对该端的端口。
 
-```python
-# 算术运算符
-a + b       → 加法运算(self.game, 左值=a, 右值=b)
-a - b       → 减法运算(self.game, 被减数=a, 减数=b)
-a * b       → 乘法运算(self.game, 左值=a, 右值=b)
-a / b       → 除法运算(self.game, 被除数=a, 除数=b)
-a % b       → 模运算(self.game, 被模数=a, 模数=b)
--a          → 取负(self.game, 值=a)
-
-# 比较运算符（返回布尔值）
-a == b      → 等于判断(self.game, 左值=a, 右值=b)
-a != b      → 对“是否相等”的结果取反
-a > b       → 大于判断(self.game, 左值=a, 右值=b)
-a >= b      → 大于等于判断(self.game, 左值=a, 右值=b)
-a < b       → 小于判断(self.game, 左值=a, 右值=b)
-a <= b      → 小于等于判断(self.game, 左值=a, 右值=b)
-
-# 逻辑运算符
-a and b     → 与运算(self.game, 左值=a, 右值=b)
-a or b      → 或运算(self.game, 左值=a, 右值=b)
-not a       → 非运算(self.game, 值=a)
-
-# 列表操作
-列表[1:4]       → 整数列表_切片(self.game, 输入列表=列表, 起始=1, 结束=4)
-len(列表)       → 整数列表_长度(self.game, 输入列表=列表)
-
-# 聚合函数
-sum(列表)       → 整数列表_求和(self.game, 输入列表=列表)
-any(列表)       → 布尔值列表_任意为真(self.game, 输入列表=列表)
-all(列表)       → 布尔值列表_全部为真(self.game, 输入列表=列表)
-
-# 三元表达式
-值A if 条件 else 值B  → 三元表达式_整数(self.game, 条件=条件, 真值=值A, 假值=值B)
-
-# 增强赋值
-x += 1        → 局部变量更新
-
-# 三维向量常量
-(0.0, 1.0, 2.0)  → 当端口类型为"三维向量"时自动转换
-```
+| 表达式 | 包内编译器行为 |
+| --- | --- |
+| `a + b`、`a - b`、`a * b`、`a / b` | 加法、减法、乘法和除法节点。四种节点的入参均为 `左值` 和 `右值`。 |
+| `a == b`、`a > b` | 使用相等或数值比较节点。`a > b` 在服务端为 `数值大于`，在客户端为 `是否大于`。 |
+| `a and b`、`a or b`、`not a` | 逻辑与、或、非节点，端口名称随作用域变化。 |
+| `列表[序号]`、`len(列表)` | `获取列表对应值` 与 `获取列表长度`，端口名称随作用域变化。 |
+| 列表切片、`sum`、`any`、`all`、三元表达式 | 部分可推导类型的写法依赖已登记的共享复合节点。用 `graph check` 核对当前图能否改写。 |
+| `(0.0, 1.0, 2.0)` | 用在已知三维向量端口，按向量常量解析。 |
 
 ## 控制流
 
@@ -154,12 +121,16 @@ break
 
 ### 常用事件
 
-| 事件名 | 参数 | 说明 |
-|--------|------|------|
-| `实体创建时` | `事件源实体, 事件源GUID` | 实体初始化时触发 |
-| `实体销毁时` | `事件源实体, 事件源GUID` | 实体被销毁时触发 |
-| `自定义变量变更时` | `事件源实体, 事件源GUID, 变量名: "字符串"` | 自定义变量改变时触发 |
-| `信号触发时` | `事件源实体, 事件源GUID, 信号来源实体, ...` | 收到信号时触发（参数由信号定义决定） |
+以下为包内服务端节点定义的部分端口。编写回调前用 `nodes_lookup` 查询完整签名；信号的附加端口以工程声明为准。
+
+| 事件节点 | 数据输出 |
+| --- | --- |
+| `实体创建时` | `事件源实体`、`事件源GUID` |
+| `实体销毁时` | `事件源实体`、`事件源GUID`、`位置`、`朝向`等 |
+| `自定义变量变化时` | `事件源实体`、`事件源GUID`、`变量名`、`变化前值`、`变化后值`，容器类型无前后值 |
+| `监听信号` | `事件源实体`、`事件源GUID`、`信号来源实体`，随后是所选信号定义的字段 |
+
+显式声明 `事件源GUID` 时，其类型为 `"GUID"`。
 
 ### 注册事件
 
@@ -168,8 +139,8 @@ def register_handlers(self):
     # 基础注册
     self.game.register_event_handler("实体创建时", self.on_实体创建时, owner=self.owner_entity)
     
-    # 带条件的信号监听
-    self.game.register_event_handler("信号名", self.on_信号名, owner=self.owner_entity)
+    # 用项目中已声明的信号 ID 选择监听目标
+    self.game.register_event_handler("signal_example_move", self.on_signal_example_move, owner=self.owner_entity)
 ```
 
 ## 复合节点引脚声明
@@ -220,31 +191,30 @@ GRAPH_VARIABLES: list[GraphVariableConfig] = [
 ## 信号定义文件
 
 ```python
-SIGNAL_ID = "signal_唯一标识"
+SIGNAL_ID = "signal_example_move"
 SIGNAL_PAYLOAD = {
-    "signal_id": SIGNAL_ID,
-    "signal_name": "信号显示名",
+    "signal_name": "移动请求",
     "parameters": [
-        {"name": "参数名", "parameter_type": "整数", "description": "参数说明"},
+        {"name": "参数甲", "parameter_type": "整数"},
     ],
-    "description": "信号描述",
 }
 ```
 
 ## 结构体定义文件
 
 ```python
-STRUCT_ID = "struct_唯一标识"
+STRUCT_ID = "200001"
 STRUCT_PAYLOAD = {
-    "struct_id": STRUCT_ID,
-    "struct_name": "结构体显示名",
+    "type": "Struct",
+    "struct_name": "结构体示例",
+    "struct_ype": "basic",
     "fields": [
-        {"field_name": "字段名", "param_type": "整数", "default_value": 0},
-        {"field_name": "字段名2", "param_type": "字符串", "default_value": ""},
+        {"field_name": "计数", "param_type": "整数", "default_value": {"value": 0}},
     ],
-    "description": "结构体描述",
 }
 ```
+
+此示例采用已通过基础结构体写回测试的声明格式。`struct_ype` 是该格式中的字段名。实际 ID 必须来自工程并确认为可用。信号、基础结构体及局内存档结构体的导出或写回从顶层声明读取数据。 [构建与项目资源](node-graph-workflow.md#构建描述-schema-1)
 
 ## 完整文件示例
 
@@ -252,27 +222,26 @@ STRUCT_PAYLOAD = {
 
 ```python
 """
-graph_id: server_项目名_功能描述
-graph_name: 显示名称
+graph_id: server_example_counter
+graph_name: 计数示例
 graph_type: server
-description: 功能说明
+description: 初始化节点图变量
 """
 
 from app.runtime.engine.graph_prelude_server import *
 
 GRAPH_VARIABLES: list[GraphVariableConfig] = [
-    GraphVariableConfig(name="变量名", variable_type="整数", default_value=0),
+    GraphVariableConfig(name="计数", variable_type="整数", default_value=0),
 ]
 
-class 节点图类名:
+class Counter:
     def __init__(self, game, owner_entity):
         self.game = game
         self.owner_entity = owner_entity
 
-    def on_实体创建时(self, 事件源实体, 事件源GUID):
+    def on_实体创建时(self, 事件源实体: "实体", 事件源GUID: "GUID"):
         结果: "整数" = 加法运算(self.game, 左值=1, 右值=1)
-        设置自定义变量(self.game, 目标实体=self.owner_entity,
-            变量名="变量名", 变量值=结果)
+        设置节点图变量(self.game, 变量名="计数", 变量值=结果, 是否触发事件=False)
 
     def register_handlers(self):
         self.game.register_event_handler("实体创建时", self.on_实体创建时, owner=self.owner_entity)

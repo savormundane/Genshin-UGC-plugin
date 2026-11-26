@@ -1,40 +1,38 @@
 # 审阅并另存一次 GIL 局部修改
 
-下载[原始 entrance.gil](entrance.gil)。它是合成关卡，只含用于演示的模板、实例和变量。将它复制到 AI 对话可读的工程目录。只读查找需要工程的读取权限，另存还需要独立输出位置。 [工程绑定](../../../docs/runtime-environment.md#连接-mcp-或切换工程)
+将合成样例 [entrance.gil](entrance.gil) 复制到本机会话能读取的工程目录。另存还需独立输出位置。 [工程绑定](../../../docs/runtime-environment.md#连接-mcp-或切换工程)
 
 ## 只读查找关卡对象
 
 > 请用千星奇域插件只读查看当前工程的 entrance.gil。查找 ActivationDelay，告诉我变量定义属于哪个模板、场景中哪个实例继承它，以及识别到的引用关系。
 
-`project_inspect` 先查变量名，再沿模板和实例的引用回读。可用结果里的模板 ID **1086324737** 和实例 ID **1077936129** 在后续对话中指定对象。样例查询核对了继承关系和输入 SHA-256。
+`project_inspect` 先查变量名，再定位模板和继承实例。结果应包含模板 ID **1086324737**（`0x40C00001`）、实例 ID **1077936129**（`0x40400001`）、继承关系和输入文件的 SHA-256。
 
 ## 审阅并另存
 
-下面的修改计划、另存文件和差异报告来自 [v1.0.0](https://github.com/savormundane/miliastra-wonderland-plugin/tree/v1.0.0) 的实测。
+> 请把当前工程 entrance.gil 中入口机关模板的 ActivationDelay 默认值改为 12。先定位变量、所属模板和继承它的实例，给出待审计划和允许修改的范围。等我确认后再另存。
 
-> 请查看当前工程的 entrance.gil。我想把入口机关模板的 ActivationDelay 默认值改为 12。先定位变量、所属模板和继承它的场景实例，再做待审计划。告诉我现在的值、拟改值和保护范围。等我确认后再另存。
-
-实际调用先用 `project_inspect` 找到模板 `1086324737`（`0x40C00001`）和继承实例 `1077936129`（`0x40400001`）。随后 `native_plan` 生成[待审计划](review/plan.json)，将唯一的操作绑定到输入摘要，允许修改的顶层字段为 `4`。第一轮索引给出了值摘要，具体旧值后来由应用报告读出。
+定位后用 `native_plan` 生成本次的 `plan.json`，绑定输入 SHA-256。审阅计划时确认只有一项操作，允许修改的顶层字段为 `4`。 [待审计划样例](review/plan.json)
 
 确认计划只涉及所需变量后，再继续。
 
-> 我已审阅并确认刚才的计划。请用这份计划把 entrance.gil 另存为 edited/level.gil。核对原文件摘要、前后差异和新文件里的变量值，再说明怎么用另存文件。
+> 我确认刚才的计划。请按这份计划把 entrance.gil 另存为 edited/level.gil。核对原文件的 SHA-256、前后差异和写入值，并告诉我怎么用另存文件。
 
 ## 看到了什么
 
-`native_apply` 生成了[另存的 level.gil](edited/level.gil)，应用报告记录 `ActivationDelay` 从 **7 改为 12**。随后实际调用了 `native_diff` 和 `project_inspect`。
+`native_apply` 应生成另存的 `level.gil`，应用报告记录 `ActivationDelay` 从 **7 改为 12**。用 `native_diff` 核对字段差异，再以 `project_inspect` 重新读取变量和继承关系。 [另存文件样例](edited/level.gil)
 
 | 检查项 | 结果 |
 | --- | --- |
 | 输入文件 | 原始 `entrance.gil` 的 SHA-256 与应用前一致 |
-| 另存文件 | 摘要与待审计划预计的结果摘要一致 |
+| 另存文件 | SHA-256 与待审计划预计的结果一致 |
 | [前后差异](diff.json) | 顶层只变动字段 `4`，保护范围内的字节一致 |
 | 新文件回读 | 变量值摘要与差异报告一致，继承实例仍指向该模板变量 |
 
-从 `native_plan.outputs_sha256["plan.json"]` 取得计划文件的 SHA-256，供 `native_apply` 核对文件。计划内部的 `plan_sha256` 是计划内容的摘要，需与应用报告中的内容摘要核对。本例的文件摘要和内容摘要均通过校验。
+用 `native_plan` 返回的 `outputs_sha256["plan.json"]` 给 `native_apply` 的 `plan_sha256` 参数提供文件校验值。计划和应用报告中名为 `plan_sha256` 的字段记录计划内容的校验值。 [MCP 路径和校验值](../../../docs/mcp.md#文件路径和校验值)
 
 ## 接下来怎么用
 
-下载另存的 GIL 副本，按[关卡复核步骤](../../../references/gil/native-changes.md#人工再导出核对)在编辑器导入并核对实际挂载。复现时用自己这次查询返回的对象标识、输入摘要和计划文件摘要，并选一个新的输出目录。 [工具调用顺序](../../../references/gil/native-changes.md#审阅并另存已有工程)
+将自己这次另存的 GIL 导入编辑器，检查变量值和实际挂载。复现时使用本次工具返回的标识和校验值，选择一个新的输出目录。 [关卡复核步骤](../../../references/gil/native-changes.md#人工再导出核对) · [工具调用顺序](../../../references/gil/native-changes.md#审阅并另存已有工程)
 
-本次结果来自静态回读和差异检查。千星奇域编辑器导入及游戏内运行待实测。
+随附的计划、另存文件和差异报告保留 [v1.0.0](https://github.com/savormundane/miliastra-wonderland-plugin/tree/v1.0.0) 的文件回读与差异检查记录。编辑器导入和游戏内运行按自己的关卡另行验证。

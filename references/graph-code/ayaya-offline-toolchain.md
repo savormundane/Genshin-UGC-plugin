@@ -1,19 +1,19 @@
 # Graph Code、HTML UI 与 GIL/GIA 底层工具链
 
-完整节点图制作优先使用 [统一构建工作流](node-graph-workflow.md)。以下入口用于单步诊断、资源转换及 HTML UI 分支。
+编译、挂载和回读普通节点图用 [统一构建工作流](node-graph-workflow.md)。本页用于单步诊断、资源转换及 HTML UI 排版。
 
 包内 `vendor/ayaya` 可离线生成节点图和 UI 文件，无需另行安装 Ayaya 编辑器或提供上游仓库路径。内嵌 Lua 的精确定位和替换使用 `gil-toolkit.mjs`，节点图和资源转换使用本页入口。
 
 ## 接入与环境
 
-上游 [Ayaya_Miliastra_Editor](https://github.com/AyayaXiaowang/Ayaya_Miliastra_Editor) 声明 GPLv3，各第三方组件保留各自的许可。插件内提供所需的上游 GPLv3 源码、节点定义、静态 Workbench 页面和用于文件写回的校准样本。上游游戏项目资源库由原仓库提供。源码改动、原文件和分发文件的摘要见 `vendor/ayaya/VENDORED.json`，许可证和署名见同目录的 `LICENSE`、`LICENSES` 和 `NOTICE.md`。
+上游 [Ayaya_Miliastra_Editor](https://github.com/AyayaXiaowang/Ayaya_Miliastra_Editor) 声明 GPLv3，各第三方组件保留各自的许可。插件内提供所需的上游 GPLv3 源码、节点定义、静态 Workbench 页面和用于文件写回的校准样本。上游游戏项目资源库由原仓库提供。源码改动、原文件和分发文件的校验值见 [集成清单](../../vendor/ayaya/VENDORED.json)，许可证和署名见同目录的 `LICENSE`、`LICENSES` 和 `NOTICE.md`。
 
 将命令中的 `PYTHON` 替换为实际的 Python 可执行文件，将 `PLUGIN` 替换为插件根目录。输入和输出使用绝对路径。完整插件环境见 [运行要求](../../docs/compatibility.md#运行要求)。接入脚本、文件解析、图校验以及 GIL/GIA 生成只用 Python 标准库。HTML 浏览器排版所需的依赖单独安装。运行文件转换前，可用对应入口的帮助确认依赖。接入脚本不会安装依赖、启动 GUI、调用 OCR、识别截图或操作游戏窗口。
 
     PYTHON PLUGIN/scripts/ayaya_bridge.py doctor
     PYTHON PLUGIN/scripts/ayaya_bridge.py --tool export_project_graphs_to_gia tool -- --help
 
-默认只输出 JSON 命令计划。在操作名之前加 `--execute` 才会执行。指定其他解释器时使用 `--python Python可执行文件`。`doctor` 只核对目录入口，依赖和导出功能需另行检查。`--input`、`--output`、`--project`、`--tool` 和 `--package-id` 放在操作名之前，上游参数放在操作名之后。
+默认只输出 JSON 命令计划，可先查看工作目录、输入和输出。在操作名之前加 `--execute` 才会执行。未经独立暂存的上游命令可能在所选工具树内写入缓存、中间文件和输出。需要运行这类命令时，用 `--repo` 指向有权限写入的工具副本，并指定独立项目或输出；插件的普通 `build` 会自动管理作业工作区。指定其他解释器时使用 `--python Python可执行文件`。`doctor` 只核对目录入口，依赖和导出功能需另行检查。`--input`、`--output`、`--project`、`--tool` 和 `--package-id` 放在操作名之前，上游参数放在操作名之后。
 
 ## Graph Code 到节点图
 
@@ -56,11 +56,11 @@ HTML 是本链路 UI 源码，修改后重新生成 bundle；不直接维护过�
 
     PYTHON PLUGIN/scripts/ayaya_bridge.py --execute --tool export_ui_workbench_bundles_from_html tool -- --project-root 项目存档目录 --html 页面.html --pc-canvas-size 1920x1080
 
-工具将 bundle 写到项目 UI 源码目录下的 `__workbench_out__`。浏览器排版需要 Playwright 和 Chromium，运行时无需 OCR，也不会操作游戏窗口。其他节点图、GIL 和 GIA 流程可以独立使用。HTML/CSS 支持范围以 Workbench 导出的控件类型为准。
+工具将 bundle 写到项目 UI 源码目录下的 `__workbench_out__`。HTML/CSS 支持范围以 Workbench 导出的控件类型为准。
 
 生成 bundle 后，通过上述项目写回命令将 UI 控件资源写入新的 GIL。界面资源的 GIA 封装按当前 GIA 类型与模板处理，不将节点图 Graph IR 转换器用于 UI 控件模板。变量绑定、多状态控件、UI GUID 映射和信号派发必须回读核对；HTML 控件资源不是客户端 Lua 脚本控件，不混用 API。
 
-Playwright 与 Chromium 仅用于 HTML/CSS 布局计算。可选依赖见 `vendor/ayaya/requirements-headless.txt`，其中保留上游对 Python 3.10–3.12 的说明。核心文件流程无需浏览器依赖，也不会安装 PyQt、RapidOCR、ONNX、OpenCV、`keyboard` 或鼠标控制库。
+Playwright 与 Chromium 仅用于 HTML/CSS 布局计算。可选依赖见 [上游无界面依赖清单](../../vendor/ayaya/requirements-headless.txt)，其中保留上游对 Python 3.10–3.12 的说明。核心文件流程无需浏览器依赖，也不会安装 PyQt、RapidOCR、ONNX、OpenCV、`keyboard` 或鼠标控制库。
 
 ## 验证层次
 

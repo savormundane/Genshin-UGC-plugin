@@ -91,4 +91,4 @@ python scripts/qianxing.py assets batch generate REVIEW/report.json --out GENERA
 
 客户端负责创建实际模板、换算坐标并接入数据，动画使用帧或分层数据。GIA/GIL 封装和挂载需按已确认的文件结构另行处理。查看布局可用 `qianxing.py assets layouts SOURCE.gil`。
 
-旧pixel_to_lua.py以及assets text/info/layouts继续兼容，矩形和文本算法已共用asset_core；旧入口保留各自既有参数与产物，不作为新任务的首选流程。格式细节见 [富文本数据](rich-text-assets.md)，动画见 [点阵运行时](../editor/lua/pixel-runtime.md)。
+`pixel_to_lua.py` 和 `assets text/info/layouts` 保留各自的参数与产物。矩形和富文本转换共用 [素材核心](../../scripts/miliastra/assets/core.py)。 [富文本数据](rich-text-assets.md) · [点阵帧动画](animation.md#点阵帧)

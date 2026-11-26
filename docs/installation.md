@@ -8,11 +8,11 @@
 
 ### ChatGPT/Codex
 
-参见[首页安装说明](../README.md#安装)或 [Codex CLI 安装](#codex-cli)。
+在提供 Codex 插件目录的客户端中打开「插件」，选择 **Miliastra Wonderland** 市场并安装。需要先登记 GitHub 市场时，运行 [Codex CLI](#codex-cli) 中的第一条命令，然后重新打开插件目录。会话能启动本机 MCP 时即可[验证工具](#首次工具验证)。 [ChatGPT 插件说明](https://learn.chatgpt.com/docs/plugins)
 
 ### Claude
 
-在「自定义 → 插件 → 添加市场」选择从仓库添加，输入 `savormundane/miliastra-wonderland-plugin`，然后安装 **Miliastra Wonderland**。 [Claude 插件市场](https://support.claude.com/en/articles/13837440-use-plugins-in-claude)
+在「自定义 → 插件 → 添加市场」选择从仓库添加，输入 `savormundane/miliastra-wonderland-plugin`，然后安装 **Miliastra Wonderland**。组织账号若限制可添加的市场，由管理员在插件设置中开放。Chat 可使用 Skill，调用本地文件工具时请使用能连接本机的 Cowork 会话或 [Claude Code](#claude-code)。 [Claude 插件市场](https://support.claude.com/en/articles/13837440-use-plugins-in-claude) · [Claude 插件能力范围](https://claude.com/docs/plugins/platform-support)
 
 ### DeepSeek Harness
 
@@ -22,7 +22,7 @@
 https://github.com/savormundane/miliastra-wonderland-plugin
 ```
 
-此方式从仓库默认分支安装。支持的 DSH 版本见 [`package.json` 中的 `engines.dsh`](https://github.com/savormundane/miliastra-wonderland-plugin/blob/main/package.json)。
+此方式安装仓库默认分支当时的内容。 [DSH 运行要求](compatibility.md#运行要求) · [更新方法](#回退与卸载)
 
 ### Agent Plugins
 
@@ -67,7 +67,7 @@ claude plugin install miliastra-wonderland@miliastra-wonderland
 
 ### 用 PowerShell 安装本地 ZIP
 
-要用安装器为 Codex 或 Claude Code 登记本地运行环境，在解压目录的 PowerShell 中运行以下命令。保留原 ZIP，填入其路径和 GitHub 发行附件的 SHA-256。Claude Code 使用 `-Agent claude-code`。
+已安装兼容的 Python 和目标客户端时，可在解压目录用 PowerShell 安装并登记。保留原 ZIP，填入它的路径和发行附件公布的 SHA-256。Claude Code 使用 `-Agent claude-code`。安装器会为该版本配置专用 Python 环境，首次准备依赖可能需要联网。 [运行要求](compatibility.md#运行要求)
 
 ```powershell
 .\install.ps1 -Agent codex -Archive '<ZIP 的绝对路径>' -Sha256 '<SHA-256>'
@@ -77,20 +77,22 @@ claude plugin install miliastra-wonderland@miliastra-wonderland
 
 ## 首次工具验证
 
-启用插件后，在支持本地 MCP 的会话中[查询「创建实体」](../README.md#作为知识库使用)。如果 `nodes_lookup` 找到一条服务端节点记录并列出以下端口，说明工具已连通。
+启用插件后，在可启动本地 MCP 的会话中发送下面这句话。查询随包资料无需提供工程文件。
+
+> 请使用千星奇域插件查询服务端「创建实体」节点，列出输入和输出端口，并说明它的用途和资料来源。
+
+如果 `nodes_lookup` 找到服务端节点并列出以下端口，说明工具已连通。
 
 - 输入为「流程入」「目标GUID（GUID）」和「单位标签索引列表（整数列表）」。
 - 输出为「流程出」。
 
 该节点按 GUID 创建场景中预先布设的实体。`source` 指向随包编译器定义，`port_evidence` 对应 7.1 版官方文档的两项值输入。 [官方《执行节点》](../references/platform/official/节点介绍/执行节点__mhw66orrrfkm.md#2-创建实体)
 
-Claude 的 Chat 可使用 Skill。本地 MCP 在 Cowork 或 Claude Code 中验证。 [Claude 本地工具支持](https://support.claude.com/en/articles/13837440-use-plugins-in-claude)
-
-处理关卡或素材时，在客户端打开并授权工程目录。[工程绑定](runtime-environment.md#连接-mcp-或切换工程)
+接下来可跟做[创作者教程](../samples/creator-demos/README.md)。处理关卡或素材时，先[授权工程目录](runtime-environment.md#连接-mcp-或切换工程)。
 
 ## 回退与卸载
 
-- **市场安装**在各客户端的插件页管理。更新后开启新会话，确认工具能正常调用。
+- **市场安装**在各客户端的插件页管理。市场从登记的来源同步，发行 ZIP 则对应选定版本。更新后开启新会话，确认工具能正常调用。
 - **DeepSeek Harness** 从 GitHub 地址直装后，已安装详情不会检查新版。更新时卸载该插件，再用[同一仓库地址](#deepseek-harness)重新安装并启用。 [DSH 更新说明](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.3-alpha.2/packages/client/ui-plugin-manager/README.md#updating-a-registry-bundle)
 - **CLI 安装**使用同一客户端的插件命令管理。Codex CLI 可用 `codex plugin marketplace upgrade miliastra-wonderland` 刷新已登记的市场。
 - **市场或 CLI 安装**遇到同版本重新发布且客户端仍加载旧缓存时，请按原安装方式卸载并重装。保留现有运行配置，或用 `MILIASTRA_WONDERLAND_RUNTIME_CONFIG` 指定原配置文件，即可继续使用原工程和解释器。
@@ -107,7 +109,7 @@ Claude 的 Chat 可使用 Skill。本地 MCP 在 Cowork 或 Claude Code 中验�
 
 当前版本的 Python 无法启动时，回退会尝试目标版本保留的解释器，再查找系统中兼容的 Python。也可以给回退或卸载命令加上 `-Python '<可用 Python 的绝对路径>'`。回退在目标版本的运行环境通过自检后才切换登记。
 
-卸载保留项目、输出和各版本的运行环境。在 PowerShell 中重新启用已保留的同版本时，可复制安装器提示中的回退命令，使用原安装文件和运行配置。清理旧版本目录前，确认其他客户端已停用该版本，并且无需回退。
+PowerShell 卸载保留项目、输出和各版本的运行环境。重新启用已保留的同版本时，可复制安装器提示中的回退命令，继续使用原安装文件和运行配置。清理旧版本目录前，确认其他客户端已停用该版本，并且无需回退。
 
 ## 安装自检
 
@@ -119,9 +121,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-install.
 
 能运行 Node 时，也可以直接执行 `node .\scripts\mcp_launcher.cjs --check`。
 
-自检会核对启动文件、Node.js、现有 Python 的版本和依赖，以及 PATH 上的 uv。处理报告指出的问题后，重启客户端并[验证工具](#首次工具验证)。 [解释器选择](runtime-environment.md#启动时选择-python)
+自检会核对启动文件、Node.js、现有 Python 的版本和依赖，以及 PATH 上的 uv。如果结果只有 uv 可用，可先[准备 Python 环境](runtime-environment.md#提前准备-python-环境)。处理报告指出的问题后，重启客户端并[验证工具](#首次工具验证)。
 
-自检读取当前终端的 PATH、`MILIASTRA_WONDERLAND_PYTHON` 和 `MILIASTRA_WONDERLAND_RUNTIME_CONFIG` 等环境变量。客户端单独配置了解释器或绑定文件时，把同样的值设置到自检终端。使用 WinGet 的用户可运行 `winget install --id=astral-sh.uv -e` 安装 uv，再打开新终端检查 `uv --version`。 [uv 的 WinGet 安装说明](https://docs.astral.sh/uv/getting-started/installation/#winget)
+自检使用当前终端的 PATH 和环境变量。客户端单独配置了 Python 或运行绑定文件时，在自检终端使用同样的值。 [解释器选择](runtime-environment.md#启动时选择-python)
 
 ## 失败后续装
 

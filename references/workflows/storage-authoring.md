@@ -52,4 +52,4 @@ schema 3 可声明 `compatible_record_version` 指定一个较低版本，用于
 
 diagnose可额外接收slot、session、expected_revision、revision。使用任一新字段时必须同时提供slot和session；按玩家、槽位、会话、请求和交付摘要分组，避免重连后请求号复用混淆日志。旧日志格式继续可读，日志内容不会作为命令执行。
 
-开发验证入口为development/test_storage_v3.py：用两套测试配置编译生成最终 GIL，验证防重放、重复幂等、异常旧档保护、容量、回读失败和模型重进，并连接两个独立Lua实例注入丢包、重复与迟到回复。这项证据覆盖编译回读和离线模型。
+用 `storage inspect` 查看最终 GIL 的存档声明，按 [联合模型](joint-simulation.md) 检查实际执行的保存路径、重复或迟到回复与隔离。试玩中用 `storage diagnose` 对照同一玩家、槽位和交付文件的记录。真实持久化按[证据等级](validation.md)记录。

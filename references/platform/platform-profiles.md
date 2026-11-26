@@ -1,6 +1,6 @@
 # 平台版本与配置检查
 
-能力名为 `platform-profiles`。通过 `qianxing.py` 的 `docs`、`platform` 和 `capabilities` 命令使用。查询资料和检查配置只需 Python 标准库及随包的资料和规则，无需联网或读取游戏文件。结果仅说明配置声明是否符合规则。GIL 的平台版本、组件写入和游戏内行为须另行验证。
+能力名为 `platform-profiles`。通过 `qianxing.py` 的 `docs`、`platform` 和 `capabilities` 命令使用。查询资料和检查配置只需 Python 标准库及随包的资料和规则，无需联网或读取游戏文件。默认只检查配置声明。显式提供 GIL 和 `native_bindings` 时，可额外核对已校准的定时器常量。导入和游戏内表现需另行验证。
 
 ## 资料查询和版本选择
 
@@ -12,7 +12,7 @@ python scripts/qianxing.py docs diff --from 7.1 --to 7.2 --id mhnmcmipncrg
 python scripts/qianxing.py platform profile --version 7.2 --mode classic
 ```
 
-显式选择已登记的平台版本，目前有 7.1 和 7.2。模式为 classic（经典）或 beyond（超限）。search 按标题和正文匹配所有查询词，--limit 为 1 至 100。show 返回正文。diff 按文档 ID 和内容摘要比较，指定 --id 时附全文差异。
+显式选择已登记的平台版本，目前有 7.1 和 7.2。模式为 `classic`（经典）或 `beyond`（超限）。`search` 先在标题和正文可见文本中匹配全部空格分隔词，未命中再按中文词片、标题匹配和相关度排序查找。`--limit` 接受 1 至 100。无结果时可按 `retry_hint` 换短词或正式名称。`show` 返回正文。`diff` 按文档 ID 和内容校验值比较，指定 `--id` 时附全文差异。
 
 scripts/platform-sources.json 将文档 ID 映射到包内原文、来源类型、官方链接和摘要。资料沿 `base` 逐级回溯，取最近版本的声明。结果提供 requested_version、source_version 和 inherited。读取已选正文时检查文件和摘要，父级缺失或循环直接报错。diff 两侧保留来源，正文摘要相同时仍为 unchanged。正文差异包括排版变化。
 
@@ -73,7 +73,7 @@ python scripts/qianxing.py platform check platform.json
 
 可选native_bindings将已声明timer对象关联到最终普通节点图，例如`"native_bindings":{"timer-a":{"graph":1073741900,"node":1,"entity":42,"name":"clock"}}`。键必须对应timer对象，graph/node必须唯一；同一逻辑entity不能绑定到不同实体编号。当前只支持已校准的开启定时器节点79，不以对象名称推断图或节点。
 
-独立检查使用`docs check CONFIG.json --gil FINAL.gil`。produce的platform配置含native_bindings时，必须存在最终level.gil，并在所有原生修改及Lua写回后生成platform-native-report.json；任何绑定失败或not_checked均阻止提交。portable沿现有platform配置输入闭包携带绑定。
+独立检查使用`platform check CONFIG.json --gil FINAL.gil`。produce的platform配置含native_bindings时，必须存在最终level.gil，并在所有原生修改及Lua写回后生成platform-native-report.json；任何绑定失败或not_checked均阻止提交。portable沿现有platform配置输入闭包携带绑定。
 
 原生报告逐项核对目标实体常量、定时器名称常量和序列常量。序列按声明数值编码为float32后精确比较，不把二进制浮点误差当成不同配置；平台规则本身仍按原声明检查。输入端或输出端记录了数据连接时不使用残留常量冒充实际值，报告connected_timer_inputs/not_checked。节点缺失、歧义、引用错误或常量漂移失败；其他常量表示保持not_checked。
 
@@ -96,7 +96,7 @@ python scripts/qianxing.py platform check platform.json
 
 level.json使用[原生结构生成](../gil/native-authoring.md)的合同。platform在资源生成之前检查；failed或not_checked阻止正式输出提交。通过后输出platform-configuration.json和platform-report.json，记录配置、资料目录及所用原文依赖。配置正文属于交付产物并逐字节比较；检查报告属于证据。portable收纳配置、规则和资料，支持原输入目录不可用后的独立重建。
 
-本阶段只检查配置声明。向 `level.gil` 写入对象和将配置 ID 绑定到原生 GUID 属于其他阶段。组件生成、资源 ID 支持、生命周期和详细节点签名列为未检查。最终 GIL 仍须经过原生审计，平台字段是否实际写入也应另行核对。
+该阶段负责检查规则和已选绑定。对象写入及原生 GUID 分配交由制作中的相应阶段。其余字段是否写入以及引用是否正确，由最终 GIL 的原生审计核对。
 
 ## 分层能力证据
 
@@ -105,7 +105,7 @@ python scripts/qianxing.py capabilities --platform 7.2 --mode classic
 python scripts/qianxing.py capabilities --platform 7.2 --mode classic --evidence CHECKS_DIRECTORY/checks.json
 ```
 
-每项能力提供rules、generation、readback、lua_model、native_graph_model、editor和host七层。implementation表示是否登记实现；status表示本轮证据状态。没有登记的层为not_registered/not_checked，不根据其他层通过推断成功。
+`implementation` 表示该能力在相应验证层级的登记情况，`status` 表示本轮证据状态。软件预览、编辑器导入、游戏内运行和用户验收各有单独的层级，报告按实际证据填写。
 
 通过证据必须满足[验证证据闭环](../workflows/validation-evidence.md)并实际执行该层required_cases。scope限定其覆盖范围，例如原生图模型仅覆盖已实现节点，不包含复合调用执行。选择平台仅附加配置上下文，platform_version_verified仍为false；编辑器和宿主不会由离线用例升级为通过。
 

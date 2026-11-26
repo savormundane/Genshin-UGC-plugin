@@ -19,12 +19,10 @@
 
 原文、整理说明和实测结果分别记录。用 `docs search/show/diff` 查看官方资料的版本、原始链接和 SHA-256 校验值。7.2 沿用的旧资料标为未重新验证。资料冲突时，保留双方依据，结论限于资料明确支持的范围。标准 Lua 或其他引擎的行为只适用于各自环境。
 
-来源索引将 `client_api` 整理稿关联到官方文档 `mhtakr07vej4` 的 7.1 镜像。2026-09-23 是该文档在 7.1 指南更新日志中的日期。签名查询、快照和静态检查读取同一份已核验整理稿。平台更新时先用 `docs show mhtakr07vej4 --version VERSION` 找到所选原文，在候选中审阅整理稿，再用 `knowledge snapshot/diff` 核对签名、字段、枚举和回调变化。
-
-维护时先比较来源正文，再检查签名、枚举、生命周期及适用环境。确认变化依据后，更新 `scripts/knowledge-sources.json` 的 SHA-256 校验值和元数据，随后执行 API 与来源专项检查。保留原始资料和署名，指南通过链接指向现有 API 资料。
+来源索引将 `client_api` 整理稿关联到官方文档 `mhtakr07vej4` 的 7.1 镜像。2026-09-23 是该文档在 7.1 指南更新日志中的日期。签名查询、快照和静态检查读取同一份已核对校验值的整理稿。 [平台资料更新与兼容](../../docs/contributing/platform-maintenance.md)
 
 图片资源 ID 用于标识资源。本地 PNG 能否加载，应以目标版本的加载接口说明和实测为依据。官方数量上限、工程预算与设备性能各有对应依据。编辑器导入、游戏内运行和用户验收按人工记录确认，写明产物的 SHA-256 校验值、实际环境和覆盖范围。
 
 查询使用随包提供的 API 资料和来源索引。静态 Lua 检查还需要 Node 和 luaparse。`knowledge api game.GetUICanvasSize` 返回原文声明，`knowledge api game.LoadAnyLocalPNG` 返回未确认。原文的 SHA-256 校验值与登记值不符时，工具会拒绝查询。查询为只读操作。
 
-增量维护使用knowledge snapshot与knowledge diff，见[平台更新与兼容](../../docs/contributing/platform-maintenance.md)。旧api文本检索保留输入输出字段，并附来源完整性与检索范围；它不替代签名查询。
+兼容入口 `python scripts/qianxing.py api QUERY` 返回文本匹配位置和来源完整性；按符号核对正式签名和参数时用 `knowledge api`。

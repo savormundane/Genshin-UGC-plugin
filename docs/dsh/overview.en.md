@@ -13,8 +13,6 @@ Look for a `nodes_lookup` call that lists Target GUID as an input and Flow out a
 - **Inspect a level.** Give the assistant a GIL or GIA file and the object you want to find. Review any edit plan before saving a separate copy.
 - **Build gameplay and interfaces.** Check node ports and Lua, create static scenes, or fit an image to primitives and preview the generated script in Beyond.
 
-Native writes use samples calibrated for the target version. Test the exported files in the game to confirm their behavior.
+## Local tools
 
-## Local requirements
-
-The full toolset targets Windows x64. It supports DeepSeek Harness 0.2.2-rc.5 and 0.2.3-alpha.2. Use the Node.js version required by your DSH release, with a minimum of 24.9 for the plugin. Use CPython 3.11–3.14 with the required packages or uv on PATH. Preparing Python dependencies on first use may require a network connection. [Installation checks](https://github.com/savormundane/miliastra-wonderland-plugin/blob/main/docs/installation.md#安装自检) · [Creator tutorials](https://github.com/savormundane/miliastra-wonderland-plugin/tree/main/samples/creator-demos)
+The full toolset targets Windows x64. Setting up dependencies for the first time may require a network connection. [Supported versions and requirements](https://github.com/savormundane/miliastra-wonderland-plugin/blob/main/docs/compatibility.md#运行要求) · [Installation checks](https://github.com/savormundane/miliastra-wonderland-plugin/blob/main/docs/installation.md#安装自检) · [Creator tutorials](https://github.com/savormundane/miliastra-wonderland-plugin/tree/main/samples/creator-demos)

@@ -1,6 +1,6 @@
 # 客户端UI运行支持
 
-`runtime-ui` 是位于 `scripts/runtime_ui.lua` 的可内联 Lua 5.3 模块，通过 `client assemble` 的 `modules:{name:ui,as:UI}` 接入客户端。调用方按实际 API 提供创建、重置、销毁和控件操作。本模块不含预设页面、主题或游戏文案。
+`runtime-ui` 是位于 `scripts/runtime_ui.lua` 的可内联 Lua 5.3 模块，通过 `client assemble` 在配置中加入 `"modules": [{"name": "ui", "as": "UI"}]` 接入客户端。调用方按实际 API 提供创建、重置、销毁和控件操作。 [Lua 源码装配](client-assembly.md)
 
 - properties()：write(control,method,...)通过官方控件方法提交变化的参数并返回是否实际写入；相同参数不重复写。参数表按值快照，须为无环值；控件复用或外部修改后forget(control)使缓存失效。
 - pool(create,reset,destroy,capacity,properties?)：acquire(owner)返回带generation的句柄，release只接受当前句柄，valid检查对象身份，close销毁全部控件。传入属性缓存时复用和释放同步失效。

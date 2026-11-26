@@ -84,7 +84,7 @@ python scripts/qianxing.py level bind CURRENT.gil --control CONTROL_GUID --scrip
 
 ## 精确替换与错误定位
 
-replace-lua / produce.gil.mapping均按完整字符串相等匹配，含.lua后缀。例如main不匹配main.lua。匹配失败会列出实际映射名；不自动按子串猜选，避免覆盖错误脚本。
+[`replace-lua`](gil-tooling.md) 和 `produce` 的 `gil.mapping` 都要求完整映射名，含 `.lua` 后缀。例如 `main` 无法匹配 `main.lua`。匹配失败时查看工具列出的实际映射名。
 
 inspect单文件返回schema=qianxing-inspect/v2、file/graphs/client_bindings等顶层字段；目录返回同一schema及files数组。统一CLI的--collection可显式保留单文件files数组结构。绑定报告schema为qianxing-client-bindings/v1，含scripts、controls、templates、script_bindings和diagnostics。
 
@@ -98,10 +98,6 @@ inspect单文件返回schema=qianxing-inspect/v2、file/graphs/client_bindings�
 
 ## 安全重跑与验证层级
 
-```text
-python scripts/qianxing.py produce JOB.json --out OUTPUT --next
-```
-
-默认输出已存在即拒绝并显示解决方法。--next自动选择OUTPUT-2、OUTPUT-3等新目录，不删除或覆盖原输出，实际目录写入production-report的output_directory。失败仍回滚本次临时目录。
+用 `produce --next` 另存下一轮。命名、失败诊断和产物清单见 [`produce` 工作流](../workflows/produce.md)。
 
 生成结果的确定性、字段引用完整性、脚本回读和 Lua 模型断言均为离线证据。编辑器能否导入、宿主启动时能否加载脚本、素材显示和真机性能须分别验收。平台固定配置取自已核验格式校准，未知版本/宿主规则不靠虚构字段补齐。完整游戏模板不参与生成，也不进入发布包。

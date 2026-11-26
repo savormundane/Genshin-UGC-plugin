@@ -20,7 +20,7 @@ python scripts/qianxing.py simulate run SCENE.json --timeout 30 --out NEW_REPORT
 python scripts/qianxing.py simulate replay NEW_REPORT.json --out REPLAY_REPORT.json
 ```
 
-MCP `simulate` 的 `spec` 也接受包含 `replay` 的报告，或单独保存的 `replay` 对象。仍需提供报告文件 SHA-256。输入字节变化时会在执行前拒绝。Beyond 软件预览失败时，已生成的画面仍写入诊断目录。`artifacts.screenshot` 指向其中的截图。
+MCP `simulate` 的 `spec` 也接受包含 `replay` 的报告，或单独保存的 `replay` 对象。仍需提供报告文件 SHA-256。输入字节变化时会在执行前拒绝。软件预览的诊断输出见 [Beyond](beyond-backend.md)。
 
 ## 纯原生场景
 
@@ -82,7 +82,7 @@ MCP `simulate` 的 `spec` 也接受包含 `replay` 的报告，或单独保存�
 
 UnregisterCustomVariableChangedHandler取消该范围/名称的监听；脚本销毁清除监听并拒绝后续同步。原生实体移除后拒绝读取其同步快照。不同客户端使用独立Lua表，修改客户端快照不会写回服务器；需要写入仍通过项目声明的原生信号。报告variable_syncs记录同步时间、目标、范围和通知策略，不能当作宿主复制时序证据。
 
-test_joint_variables覆盖PlayerSelf/AvatarSelf两套配置、服务端实际图写变量、初值、玩家隔离、监听/取消、销毁及非法选择，并以produce读取最终GIL。证据为Lua/原生子图模型和离线构建；编辑器与实机仍待验。
+可用两个客户端检查 `PlayerSelf` 与 `AvatarSelf` 的初值、玩家隔离和监听清理。配置 `produce` 的模拟阶段时，确认检查所用的是最终 GIL。
 
 ## 盒形触发路线
 

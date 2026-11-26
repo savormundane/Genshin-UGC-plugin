@@ -2,68 +2,55 @@
 
 ## 什么时候用 produce
 
-需要把多个阶段接到同一份关卡时，用 `produce` 执行已确定的制作配置。例如先布设机关，再用本轮实际产生的对象标识编译并挂载节点图，最后写入 Lua。需要按同一配置复跑，或要验证本轮最终 GIL 与软件模拟使用的是同一份产物，也从这里进入。
-
-单项任务从[任务入口](../README.md)直接调用工具。比如 PNG 的试算和生成有独立入口，GIL 的局部修改用可审阅的[修改计划](../gil/native-changes.md)。已有工程以用户选定的基底为准，先确定目标平台版本和模式、需要的产物和允许修改的范围。完整新玩法可由 Editor 按[阶段式制作](staged-production.md)协调，先验证进入、操作、结果和重开，再按实际需求接入多人、存档和自定义资源。
-
-用终端可执行下方命令。有本地 MCP 的客户端也可调用 `produce`，传入已保存的配置、配置文件摘要和新输出目录。检查实际产物与清单，用 `verify` 核对交付。需要把交付移到其他位置重建时，见[可迁移交付](portable-delivery.md)。
-
-## 制作配置
-
-新制作配置使用 schema 2，工具按所选阶段检查依赖。已有 [Schema 1 制作配置](produce-schema1.md)在 1.x 仍可独立执行，计划在 V2.0.0 移除该入口。
-
-schema 2 配置至少包含 `client`、`level`、`storage`、`native`、`assets`、`protocol`、`protocol_native`、`animation`、`graphs`、`gil`、`simulation`、`experiment`、`platform`、`project` 中的一项。可添加 `portable` 启用[可迁移制作与重建](portable-delivery.md)。`client` 选择 `source` 或 `assembly`。其他阶段的 `spec` 路径指向相应指南中的配置。`native` 需要 `base`，并在 `spec` 与[摘要绑定的 `plan`](../gil/native-changes.md) 中择一使用。`native` 与新建关卡的 `level` 互斥。相对路径以各自配置文件为基准，输出必须是新目录。
-
-可选 `scene` 阶段见[原生 3D 场景](../editor/native-scene.md)，以 `spec` 引用布局并生成独立 GIA。制作清单记录布局、目录、原生样本和产物摘要。
-
-原生创作可在 `native.spec` 使用 `place_static_scene` 和 `"source":"@scene"` 把本次布局写到 GIL。用 `graphs.include_sources:true` 保留可编辑图源码。挂载使用图名、`section` 和 `entity_id`。实例也可用 `entity_key` 定位，或用 `"entity_id":{"ref":"entity:gate"}` 引用本轮布设的对象。
-
-对于需要多次调整的布局，`native.spec` 或 `native.plan` 可使用 [`arrange_instances`](../editor/native-scene.md#重复布设)。后续图挂载沿用布局的 `entity:` 键。交付中的 `layout-bindings.json` 只记录布局实例，并关联挂图和后续编辑完成后的 `level.gil`。下轮用 `level.gil` 作基底，用 `layout-bindings.json` 作上一轮的实例映射。布局和上一轮映射都会列入交付输入记录，也会收入可迁移交付目录。
-
-`assets` 中的 `kind:"batch"` 从[预算试算报告](../assets/image-to-primitives.md#多素材共用控件预算)生成 `asset-batches/<name>/`。要将已生成的批量数据写进已有 GIL，用 [`append_client_ui`](../gil/native-authoring.md#追加客户端界面模块) 的 `asset_data` 引用该目录中的 `data.json`。
-
-已有 GIL 的拟合交付可在同一配置中接续挂载。声明一个具名 `kind:"fit"` 素材，拟合配置的 `mount` 绑定 `native.base` 的实际摘要、图片模板和目标容器。在 `native.spec` 的 `bind_client_lua` 操作中用 `"source":"@asset:NAME"` 引用该拟合素材，指定新增的 `mapping`，并允许顶层字段 `9` 和 `50`。制作链从拟合目录读取生成的 Lua，将它挂到已绑定的目标控件。随后回读新增的脚本映射和挂载。 [拟合挂载合同](../assets/asset-fit.md#生成可挂载的-lua-和软件预览)
-
-### 按名称连接制作阶段
-
-给原生实体、模板、经济配置、拾取模板及 HUD 控件指定 `key`。控件组使用 `group_key`。制作链把具名键、工程对象键和实际 ID 写入交付根目录的 schema 2 `bindings.json`，同时登记交付 GIL 的 `gil_sha256`。同一具名键只能绑定一个对象。声明应出现在引用之前。
-
-- 场景原型、复制来源、元件摆放、图挂载、商店物品和价格、持有物品与拾取模板可用 `{"ref":"类型:键"}`。例如商店价格的 `currency` 用 `{"ref":"currency:coin"}`。白盒导出可用 `"source":"@level","template_id":{"ref":"template:sign"}`。
-- Graph Code 中使用 `native_id("currency:coin")`。编译副本解析为整数，交付保留原始源码。在图构建 JSON 中填写 `bindings` 路径时，构建核对当前基底摘要、对象类别、工程对象键和 ID。
-- 基底变化后，从 `project inspect BASE.gil --scope gameplay` 查目标对象键。将 `{"currency:coin":"level/currency/1115684865"}` 这样的键映射写入选择器文件，运行 `graph bind BASE.gil --spec SELECTORS.json --out bindings.json`。无 GIL 上下文的快检和独立 GIA 构建仍可用 schema 1 表，报告绑定身份为待检查。
-- 路径相对各自配置解析。手工填入的数字 ID 继续可用。补丁末尾的 `native.after_graphs` 可以使用前序键，并给新技能登记 `skill` 键。编译阶段使用该阶段已经存在的绑定。 [图编译与校验](../graph-code/node-graph-workflow.md)
-
-`native.after_graphs` 可引用第二份 schema 2 补丁，使用 `base_sha256:"@level"` 绑定本轮编译和初始挂载后的 GIL。适用于创建引用刚编译技能图的原生技能。该阶段仍声明 `allowed_top_level_fields`，生成 `native-final-report.json` 和 `native-final-diff.json`，随后执行最终容器及引用检查。可用 `scene.whitebox` 从外部 GIL 或 `@level` 导出闭合的白盒几何 GIA。 [原生玩法制作](../editor/native-gameplay.md)
-
-存档可选择 `transport:"server"`、`host_section:4`，将存档图挂到玩家模板并输出服务端信号定义。纯原生图和原生存档任务按实际产物判断 Lua 依赖。 [服务端存档](storage-authoring.md#原生服务端存档)
-
-可选 `beyond` 阶段以 spec 指定场景，可用 `@level` 绑定本轮最终 GIL，随包后端支持可迁移交付。外部 Lua 模型和软件预览分别记录实际结果。GIL 摘要和选中的脚本挂载核对通过后，相关报告的 `artifact_scope` 为 `final_gil`，并记录 `final_gil_status`。使用独立项目预览时，仍可在外部证据中查看结果。任一必需断言失败不提交输出。 [模拟器后端](beyond-backend.md)
-
-最终GIL在模拟前自动执行[工程对象与引用检查](../editor/project-index.md)，核对已校准客户端层级、脚本及原生引用。project.spec可以声明其它GIL/GIA和必需关系；存在最终GIL时清单必须恰有一个@level输入，不能只验证无关参考文件。失败不提交；未索引引用仍在报告中列出，不证明任意ID迁移安全。
-
-随后执行[最终Lua检查](../editor/lua/client-check.md)：编译最终GIL全部脚本映射及交付目录Lua，包含没有单独导出的脚本。缺少必需Lua 5.3编译器、非法正文编码或语法错误阻止提交；没有脚本时为not_applicable。client-check.json属于静态证据，不代表API/引用交叉检查或宿主运行通过。
-
-platform通过spec执行[平台版本与配置检查](../platform/platform-profiles.md)，未通过或未检查阻止生成提交。通过仅证明显式配置规则，报告artifact_verified=false，不代替最终GIL的平台配置回读；配置、目录和原文摘要纳入依赖，portable支持独立迁移。
-
-执行顺序为输入核对→源码与资源→原生基底→严格图构建／替换→Lua嵌入→最终原生审计→声明的模拟／实验→清单。生成存储时将同源图和资源纳入图构建；已有图替换通过build schema 2声明。`gil` 使用 `mapping` 精确选择映射，读取最近产出的 GIL。如果图阶段只输出 GIA，后续继续使用这个阶段的输入 GIL。图、存档或 Lua 阶段显式指定基底时，其 SHA-256 必须与当前 GIL 一致。基底冲突或输入变化时，报告失败阶段、路径和两份摘要，并且不创建正式输出目录。
+用 `produce` 把相互依赖的产物接到同一份交付。例如先布设机关，再用本轮对象标识编译并挂载节点图，最后嵌入 Lua 和检查最终 GIL。查询、单张图元转换和审阅现有工程修改可直接走[对应任务](../README.md)。从零设计玩法时先按[阶段式制作](staged-production.md)确定实现与验收，再写实际配置。
 
 ```text
-python scripts/qianxing.py doctor --compare PLUGIN_ROOT
-python scripts/qianxing.py capabilities
 python scripts/qianxing.py produce JOB.json --out NEW_DIRECTORY --summary
 python scripts/qianxing.py verify NEW_DIRECTORY
 ```
 
-报告绑定源配置、Lua、工具、必要编译后端及产物摘要。普通交付可用同一 JOB 和新输出目录再次执行 `produce`，按清单中 `artifacts` 的交付角色核对摘要。只检查已归档产物时用 `verify NEW_DIRECTORY --artifacts-only`，结果中的来源与重建为 `not_checked`。可迁移交付先执行 `verify NEW_DIRECTORY --portable` 获取输入闭包摘要，再执行 `verify NEW_DIRECTORY --portable --rebuild --trusted-inputs-sha256 DIGEST`。重建使用随附输入闭包。路径和耗时属于当轮证据，模型、编译回读、软件预览与宿主结果各有状态。 [可迁移交付](portable-delivery.md)
+MCP 的 `produce` 接收同一配置的路径、SHA-256 校验值和新输出目录，参数及回执见 [MCP 工具](../../docs/mcp.md)。普通构建可以用同一配置和新的输出目录复跑。需要迁移交付后重建时，使用[可迁移交付](portable-delivery.md)。
 
-`environment.json` 记录生成前的依赖和各能力组指纹。`dependency-graph.json` schema 3 的 `external_and_tool_inputs` 集中登记输入和工具摘要。每阶段通过 `inputs_added` 引用新增输入，并记录依赖边和产物变化。最终 `client.lua` 须与指定 GIL 映射正文相同。
+## 制作配置
 
-内置联合模拟可用 `@level` 读取本轮最终 GIL。`simulation.json` 的 `inputs` 及客户端、服务端模型证据的 `source` 中，`level.gil` 相对于交付目录解析。外部输入仍使用实际绝对路径。报告记录所用文件的 SHA-256，Lua 另记录脚本映射。该类输入均与最终 GIL 绑定时，对应 `lua_model` 或 `native_graph_model` 才记录最终产物状态。外部或混合输入的实际模型结果保留在 `model_status` 与 `simulation.json` 中，最终产物状态为 `not_checked`。整个场景的 `simulation.artifact_scope` 需要所有参与者都绑定最终 GIL 才能标为 `final_gil`。必需阶段失败、已有输出路径或输入变化均拒绝提交。
+新任务使用顶层 `"schema":2`，按需声明至少一个制作阶段。各子配置有独立 schema，路径相对各自配置文件解析。旧任务见 [顶层 schema 1 配置](produce-schema1.md)。
 
-两套集成测试配置分别使用单整数槽与双槽布尔／列表布局，并按用例调整模板别名、记录版本、素材数量、开发集和保留集。失败用例包括未知schema、缺环境、源变更、输出已存在、原生审计错误及最终场景断言失败。独立重建比对交付正文，运行报告中的路径和耗时分别保留。
+| 阶段 | 字段与入口 |
+| --- | --- |
+| 客户端 | `client.source` 指向单文件，或用 `client.assembly` [装配脚本](../editor/lua/client-assembly.md)。`client_check.spec` 可声明额外的 [Lua API 和绑定检查](../editor/lua/client-check.md)。 |
+| 关卡基底 | `level.spec` [创建新关卡](../gil/native-authoring.md)，或用 `native.base` 和 `native.spec`／`native.plan` [修改已有 GIL](../gil/native-changes.md)。`native` 与 `level` 互斥，`spec` 与 `plan` 二选一。 |
+| 图、协议与存档 | `graphs.spec` [编译或替换节点图](../graph-code/node-graph-workflow.md)；`graphs.include_sources:true` 交付可编辑图源码。`protocol` 声明[信号合同](protocol-v2.md)，用 `protocol_native:true` 生成原生声明。`storage.spec` [生成存档](storage-authoring.md)，可选客户端或服务端传输。 |
+| 场景与素材 | `scene.spec` 创建[静态场景 GIA](../editor/native-scene.md)，`scene.whitebox` 导出白盒。`assets` 可生成[单件或批量图元](../assets/image-to-primitives.md)、[拟合素材](../assets/asset-fit.md)或导入 [GIA 素材](../assets/native-assets.md)。`animation` 负责[帧数据](../assets/animation.md)。 |
+| Lua 写回与界面 | `gil.mapping` 选择最终脚本的唯一映射名。Lua 写回以最近产出的 GIL 为基底；图阶段只输出 GIA 时沿用它的输入 GIL。`ui.spec` 声明[原生界面检查或调整](../editor/native-ui-layout.md)。 |
+| 检查与观察 | `platform.spec`、`project.spec` 和 `resources.spec` 分别执行[平台规则](../platform/platform-profiles.md)、[工程对象和引用](../editor/project-index.md)及[资源](../platform/resource-catalogue.md)检查。`simulation.spec`、`beyond.spec`、`experiment.spec` 分别接入[联合模型](joint-simulation.md)、[Beyond](beyond-backend.md)和[观察实验](algorithms-experiments.md)。 |
 
-`capabilities` 默认报告可用实现和适用范围。用 `--evidence` 指定 `checks.json` 时，只有源码、规则、测试支撑文件、后端及实际执行的必需用例全部匹配，才显示相应的离线证据。证据schema 3及失败规则见[验证证据闭环](validation-evidence.md)。doctor 的 `plugin.path`、`plugin.version` 和 `plugin.capability_sha256` 可确认当前源码或安装缓存的执行身份。依赖检查覆盖当前 Python、Node、Pillow、Lua 和后端入口。
+```json
+{
+  "schema": 2,
+  "native": {"base": "entrance.gil", "plan": "reviewed-plan.json"},
+  "graphs": {"spec": "graphs.json", "include_sources": true}
+}
+```
 
-开发侧run_validation.py默认检查自用并执行完整相关套件，--changed接受改动路径，按Python导入关系与公共边界选择受影响检查。最终版本验收仍运行全套。新增输出、日志和失败记录进入development，不写冻结releases或已安装缓存。
+图、存档或 Lua 阶段若显式指定基底，其 SHA-256 校验值必须和当前 GIL 一致。构建失败时核对报告指出的阶段、路径和摘要，再用新输出目录重跑。
 
-人工验收时，在千星奇域导入本轮最终 GIL，核对节点图和 UI 的挂载。启用客户端日志，检查首次操作、重开与关闭。涉及存档时，使用同一玩家和同一发布关卡，核对首次读取、实际进度、写入回读、结算与重进后的读取。记录文件摘要、设备及实际结果，未执行项标为 `not_checked`。
+### 按名称连接制作阶段
+
+给实体、模板、经济配置、拾取模板及 HUD 控件指定 `key`，控件组用 `group_key`。制作链在根目录的 schema 2 `bindings.json` 写入具名键、工程对象键、实际 ID 和最终 GIL 的 `gil_sha256`。具名键必须唯一，且对象须在引用阶段前创建。
+
+- 支持具名引用的配置字段可用 `{"ref":"类型:键"}`。例如挂图目标用 `{"ref":"entity:gate"}`，白盒模板用 `{"ref":"template:sign"}`。Graph Code 用 `native_id("currency:coin")`，编译副本解析为整数，交付保留原始源码。数字 ID 仍可用。编译器检查基底、对象类别和实际身份。 [图绑定与校验](../graph-code/node-graph-workflow.md)
+- 基底变化时，从目标工程读取对象键或[重绑已有绑定](../graph-code/node-graph-workflow.md)。无 GIL 的快检和独立 GIA 构建可用 schema 1 绑定表，绑定身份为待查。
+- `place_static_scene` 的 `source:"@scene"` 指向本轮布景 GIA；重复布设与下一轮基底的 `layout-bindings.json` 用法见[原生场景](../editor/native-scene.md#重复布设)。
+- 拟合阶段用 `kind:"fit"` 命名并绑定基底、图片模板与容器。随后在 `bind_client_lua` 用 `source:"@asset:NAME"` 接入生成的 Lua，声明新增的 `mapping` 及允许改动的字段 `9`、`50`。批量素材用 `kind:"batch"` 接续预算试算，结果在 `asset-batches/<name>/`。导入 GIL 时，`append_client_ui.asset_data` 指向其中的 `data.json`。 [拟合挂载合同](../assets/asset-fit.md#生成可挂载的-lua-和软件预览) · [追加客户端界面](../gil/native-authoring.md#追加客户端界面模块)
+
+`native.after_graphs` 可引用第二份 schema 2 补丁，其 `base_sha256:"@level"` 绑定初次写入和编译后的 GIL。用它给新编译的技能图追加原生技能等后置资源。仍须声明 `allowed_top_level_fields`。结果见 `native-final-report.json` 和 `native-final-diff.json`。 [原生玩法](../editor/native-gameplay.md)
+
+## 写入、模拟与交付
+
+工具核对输入与环境，生成源码和素材，再处理原生基底、严格编译与挂载、Lua 嵌入及最终检查。声明的模型和实验随后运行。任一必需阶段失败、输入变化或输出路径冲突都会阻止提交正式目录。
+
+生成最终 GIL 后，工程检查读取本轮 `level.gil` 的已校准引用。若声明了 `project.spec`，配置中应有且仅有一个 `@level` 输入。最终 Lua 语法检查覆盖 GIL 的全部映射和交付目录中的 Lua，结果写入 `client-check.json`。语法错误、非法正文编码或缺少必需的 Lua 5.3 编译器会阻止提交。额外 API 和引用检查由 `client_check` 声明。平台配置检查的 `artifact_verified=false` 表示只核对了声明，GIL 配置另做回读。
+
+`simulation` 与 `beyond` 可用 `@level` 指向最终 GIL，相关报告写明匹配的文件摘要和脚本映射。仅当所需参与者均与最终 GIL 同源时，场景的 `artifact_scope` 才为 `final_gil`。外部或混合输入的模型结果仍可查，相应最终产物状态保留为 `not_checked`。联合场景的 `simulation.json` 将本轮 `level.gil` 记录为相对交付目录的路径，外部输入仍记录实际绝对路径。
+
+`environment.json` 记录依赖与能力组指纹。`dependency-graph.json` 的 `external_and_tool_inputs` 登记输入和工具摘要，各阶段记录新增输入、依赖和产物变化。交付文件和其角色以 `manifest.json` 为准。用 [verify](portable-delivery.md#验证与边界) 核对清单，再按[交付反馈](validation.md#交付反馈)报告实际检查范围。

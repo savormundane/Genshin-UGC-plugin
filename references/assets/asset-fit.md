@@ -22,7 +22,7 @@ python scripts/qianxing.py assets fit icon.png --spec fit.json --resume PARTIAL/
 
 分层清单示例为 `{"schema":1,"layers":[{"name":"base","source":"base.png"},{"name":"detail","source":"detail.png"}]}`。列表顺序决定绘制顺序。图片路径相对于清单所在目录，且不能越出该目录。各层共用参数和锚点，分别记录预算、误差和检查点。
 
-每层输出 `primitives.json`、`preview.png`、`asset.json` 和 `data.lua`，顶层输出 `catalog.json`、`state.json` 和摘要清单。Lua 沿用矩形数据格式，可按 [点阵运行支持](../editor/lua/pixel-runtime.md) 接入调用方的控件模板。工具先把拟合曲线栅格化，再将结果无损合并为矩形。预览与矩形数据一致，原图的拟合误差和宿主的矢量能力需另行判断。
+每层输出 `primitives.json`、`preview.png`、`asset.json` 和 `data.lua`，顶层输出 `catalog.json`、`state.json` 和摘要清单。Lua 沿用矩形数据格式，可按 [点阵帧动画](animation.md#点阵帧) 接入调用方的控件模板。工具先把拟合曲线栅格化，再将结果无损合并为矩形。预览与矩形数据一致，原图的拟合误差和宿主的矢量能力需另行判断。
 
 Schema 2 的 `refinement` 报告标出拟合丢失的前景像素数、透明区域外溢像素数和误差最高的五块区域。先看 `preview.png`，再按 `worst_regions[].box` 选择要细化的区域。把该框写入 `regions`，用上一次的 `state.json` 作为 `initial` 另存。框坐标仍是源图像素。
 
@@ -48,7 +48,7 @@ schema 2 的制作配置可在 `assets` 中添加 `{"name":"icon","kind":"fit","
 
 ## Schema 2：交付预算与残差搜索
 
-新任务使用 schema 2。Schema 1 拟合配置的启动和恢复从 V1.2.0 起列为弃用，计划在 V2.0.0 移除。旧检查点可用 `--initial` 将已有图元作为 schema 2 搜索的起点。
+新任务使用 schema 2。旧检查点可用 `--initial` 将已有图元作为 schema 2 搜索的起点。 [旧配置的退出版本](../../docs/contributing/development.md#旧配置的退出版本)
 
 ```json
 {"schema":2,"shapes":["rect","ellipse","circle","line"],"budget":80,"max_controls":1000,"max_total_controls":1500,"work":4000,"seed":7,"target_error":0.001,"gia":true}
@@ -64,7 +64,7 @@ schema 2 检查点绑定算法、Pillow 版本、配置、输入和初始数据�
 
 Lua与GIA仍使用已校准矩形表达，preview是软件重建。原生曲线、任意旋转、编辑器和设备表现继续待验。
 
-## V3.7.2 一致区域候选
+## 一致区域候选
 
 schema 2新任务使用residual-budget-2：每四次尝试中的非局部候选，可沿采样点扩展轴对齐矩形，要求区域允许、Alpha一致且RGB各通道与采样点差不超过32；颜色取区域均值。它占用原work的一次尝试，仍经过完整误差、透明区域和矩形预算检查，不改变原图或添加量化后处理。只在允许rect时启用。
 

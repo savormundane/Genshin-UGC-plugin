@@ -1,13 +1,15 @@
 # 能力与验证结果
 
-查看当前源码实现的操作、适用范围及状态。
+MCP `capabilities` 返回轻量的任务和工具索引。CLI 可查看详细的实现、来源路径、覆盖规则和证据状态。需要判断当前执行的是源码还是安装缓存时，用 `doctor` 核对 `plugin.path`、`plugin.version` 和 `plugin.capability_sha256`。
 
 ```text
+python scripts/qianxing.py doctor --compare PLUGIN_ROOT
 python scripts/qianxing.py capabilities
+python scripts/qianxing.py capabilities --evidence CHECKS.json --tests-root TEST_DIRECTORY
 ```
 
-工具把规则、生成、回读和模型的证据分别列在 `layers` 中。`not_checked` 表示对应能力缺少与当前输入匹配的证据。`not_registered` 表示该层尚未登记验证规则。用 `--platform` 和 `--mode` 可选择平台资料上下文。
+`--platform` 和 `--mode` 选择资料配置，结果中的 `platform_version_verified` 仍为 `false`。`layers` 分开记录规则、生成、回读和模型等验证层。 `not_registered` 表示该能力层没有验证规则，`not_checked` 表示缺少足以判定该层的证据。
 
-`--evidence` 读取开发验证入口生成的 schema 3、`scope: public` 报告。校验默认使用插件源码旁 `development/` 中的专项用例和验证合同，会核对源码、环境、依赖摘要及必需用例。`--tests-root` 可指定开发测试目录。校验通过前，结果保持 `not_checked`。原生编辑器导入和实际游戏运行各自需要对应的观察记录。
+`--evidence` 接受开发验证入口生成的 schema 3、`scope: public` 报告。检查会比对实际源码和支撑文件、验证合同、环境及后端指纹、测试执行与所需用例。默认从插件源码旁的 `development/` 读取开发合同和专项用例，其他位置用 `--tests-root` 指定。缺项或摘要不一致时，从 `evidence_problems` 查原因；对应层仍为 `not_checked`。
 
-日常贡献可直接从 GitHub 源码运行[本地检查](../../docs/contributing/development.md)。对实际产物的静态检查、离线预览与编辑器验证见[验收说明](validation.md)。
+日常贡献从[公开仓库的本地检查](../../docs/contributing/development.md)开始。旧报告按原适用范围保存；复查使用新报告并写明变更和覆盖。编辑器导入、实际游戏运行和玩家验收用[对应产物的验证记录](validation.md)判定。

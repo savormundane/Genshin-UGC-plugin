@@ -1,10 +1,30 @@
-# 结构化日志诊断
+# 试玩日志诊断
 
-`python scripts/qianxing.py logs diagnose diagnostic.json --out diagnosis.json`
+用 `logs_diagnose` 读取编辑器导出的二进制调试日志，或关联项目自行记录的 JSONL 事件。将输入放进已授权的工程目录，MCP 调用传诊断配置的路径和 SHA-256 校验值。CLI 输出可另存到新文件。
 
-用这个入口分析交付后采集的运行日志。按文件摘要、构建 ID 和脚本映射关联实际交付的 Lua 或 GIL，再按玩家、会话、槽位和请求分组。工具只读输入，输出文件须使用未占用的路径。无需访问宿主文件系统或调用 `require`。日志中的代码和命令只作为数据读取。
+```text
+python scripts/qianxing.py logs diagnose DIAGNOSTIC.json --out NEW_REPORT.json
+```
+
+工具通过文件分析日志，日志中出现的代码、命令和打印文字按数据处理。采集客户端脚本日志的操作见[开启日志](client-simulation.md#开启客户端脚本日志)。
+
+## 读取编辑器调试日志
+
+```json
+{
+  "schema": 2,
+  "logs": [{"path": "playtest.bytes", "format": "editor-debug-log", "offset": 0, "limit": 100}],
+  "bindings": []
+}
+```
+
+每个二进制日志最多 64 MiB。`offset` 从 0 开始，按识别出的打印记录分页，`limit` 可为 1 至 1000，用 `editor_logs[].next_offset` 取下一页。报告保留客户端 Lua 或节点图的打印原文、记录位置，以及记录中可读的图 ID、实体 ID 和时间。未识别项计入 `ignored_record_count`，图轨迹中的字符串不计作打印。
+
+二进制格式依据社区对双长度封套及 1.22.2、1.23.2 字段路径的观察。插件用合成样本检查读取、分页和拒绝条件。二进制日志可以帮助定位打印，但构建归属、严重程度、编辑器导入与游戏内验收标为 `not_checked`。 [社区格式观察](https://github.com/8itlab/genshin-miliastra-mcp/blob/70470757d6fcb319c5afec13b178c87f2d8d54b3/src/debug-log.mjs)
 
 ## 配置与接入点
+
+JSONL 用于把事件和交付的 Lua 或 GIL 关联。每个路径相对诊断配置目录。
 
 ```json
 {
@@ -16,29 +36,25 @@
 }
 ```
 
-路径相对配置目录。上例绑定装配后的单文件 Lua。要绑定 GIL，将 `artifact` 改为最终 `level.gil`，并在 `mapping` 填写其中唯一匹配的脚本映射名，例如 `main.lua`。同一文件的不同映射分别绑定。可省略 `source_map`，也可使用 `client assemble` 生成、且摘要与实际脚本正文匹配的行号映射。GIL 的映射名须与 `client check` 所读取的内嵌映射一致。
+上例绑定装配后的单文件 Lua。要绑定 GIL，使用最终 `level.gil`，并在 `mapping` 填写唯一匹配的脚本映射名，可从 `client check` 获取。同一 GIL 的不同映射需要分别绑定。`source_map` 可省略。声明时使用 `client assemble` 生成、SHA-256 与实际脚本正文匹配的行号映射。
 
-每行一个JSON事件：
+每行记录一个 JSON 事件。
 
 ```json
-{"build_id":"neutral-build","artifact_sha256":"替换为最终文件的64位小写SHA256","mapping":null,"line":12,"message":"write timeout","level":"error","player":"p1","session":"s1","slot":0,"request":7,"phase":"write","graph_instance":"graph-a/entity-1","revision":3,"fields":{}}
+{"build_id":"neutral-build","artifact_sha256":"替换为最终文件的小写 SHA-256","mapping":null,"line":12,"message":"write timeout","level":"error","player":"p1","session":"s1","slot":0,"request":7,"phase":"write","graph_instance":"graph-a/entity-1","revision":3,"fields":{}}
 ```
 
-必需字段为build_id、artifact_sha256、mapping、message。line是最终Lua正文的正整数行号；level可用debug/info/warning/error。关联字段允许字符串或整数；fields为数据对象。不同玩家、会话、构建、文件或映射不会合并。请求分组缺少字段时保持缺失，不推断玩家或请求身份。
+必需字段为 `build_id`、`artifact_sha256`、`mapping`、`message`。`line` 为最终 Lua 正文的正整数行号，`level` 可为 `debug`、`info`、`warning` 或 `error`。关联字段允许字符串或整数，`fields` 为数据对象。分组按明确声明的构建、文件、映射、玩家、会话、槽位、请求等字段进行。缺失的身份不推测。
 
 ## 结果与边界
 
-- `passed`仅表示所有事件可解析且绑定匹配；错误日志仍计入observed_error_count，不能据此声称游戏通过。
-- 不匹配摘要、未知构建、无法解析的行或空日志返回not_checked；未解析文本原样保留。不自动尝试执行或修复日志。
-- 错误字段、未知schema、陈旧行号映射直接拒绝。输入摘要在结束时再次核对。
-- 每个绑定和事件分别报告artifact_syntax；编译检查只编译正文，不执行。语法失败不阻止对失败产物的日志归因。
-- `origin` 为空时无法定位原模块行号，例如日志行对应装配时生成的包装代码。
-- editor和host始终not_checked。请求聚合不证明保存成功；真实保存回读、旧值确认与跨次重进继续使用storage diagnose及人工证据。
-
-依赖与client check一致，包括Lua 5.3编译后端。构建阶段由 `produce` 检查最终脚本正文。`logs diagnose` 用于交付后只读分析已采集的日志。
-
-按本页格式导出项目事件，并用对应交付的源映射定位代码。宿主原始日志可保留在项目中供对照。
+- `passed` 表示 JSONL 事件可解析且绑定匹配，错误日志仍计入 `observed_error_count`。
+- 校验值不匹配、未知构建、无法解析的行或空日志得到 `not_checked`。未解析文本原样保留。
+- 错误字段、未知 schema 或过期行号映射会被拒绝。分析结束后再次核对输入 SHA-256。
+- 绑定报告 `syntax`，事件报告 `artifact_syntax`。只编译 Lua 5.3 正文，语法失败仍可分析已有日志。
+- `origin` 为空时无法定位原模块行号，例如日志对应装配时生成的包装代码。
+- `editor` 和 `host` 均为 `not_checked`。保存、回读及重进分别用[存储诊断](storage-authoring.md)和对应的实际记录确认。
 
 ## 实例与修订关联
 
-可选graph_instance必须为非空字符串，由项目提供稳定且唯一的实例标识；revision为非负整数，不接受布尔。二者直接参与分组，不从fields中猜测。不同实例或修订绝不合并；相同身份的多个阶段仍属于同组。缺少任一字段的旧事件仍可归属产物，但instance_revision_correlation为not_checked，correlation_missing列出缺失项。显式身份不证明已与原生图自动匹配。
+可选的 `graph_instance` 为项目提供的非空、稳定实例标识，`revision` 为非负整数。二者直接参与分组，无需从 `fields` 提取。不同实例或修订单独分组。缺少任一字段的旧事件仍可关联产物，此时 `instance_revision_correlation` 为 `not_checked`，`correlation_missing` 列出缺失项。将实例身份与原生图对照属于后续核查。

@@ -14,7 +14,7 @@ description: 查原神千星奇域（UGC）的奇匠学院资料和平台规则�
 | 查 Lua API、检查或修复 Lua | `api_lookup` 查正式符号与来源，`client_check` 定位并复检。已有 GIL 可按 `mapping` 检查其中一个脚本。 |
 | 装配多段 Lua | CLI `client assemble` 输出合并后的脚本和源码映射。 [装配方法](../../references/editor/lua/client-assembly.md) |
 | 布设或核对场景、原生界面 | `project_inspect` 查实体和挂载。用 `scene_catalogue` 从样本提取布景模板，`scene_preview` 看草案，审阅后用 `scene_build` 另存静态场景 GIA。 [原生场景](../../references/editor/native-scene.md) · [UI 矩形布局](../../references/editor/native-ui-layout.md) |
-| 预览 Lua 或检查试玩输出 | `simulate` 传 Beyond 配置和 `preview=true`，看画面、控件和日志。查看编辑器导出用 `logs_diagnose`。 [软件预览](../../references/workflows/beyond-backend.md) · [调试日志](../../references/workflows/client-simulation.md#读取编辑器调试日志) |
+| 预览 Lua 或检查试玩输出 | `simulate` 传 Beyond 配置和 `preview=true`，看画面、控件和日志。查看编辑器导出用 `logs_diagnose`。 [软件预览](../../references/workflows/beyond-backend.md) · [调试日志](../../references/workflows/log-diagnostics.md#读取编辑器调试日志) |
 
 ## 原生工程
 

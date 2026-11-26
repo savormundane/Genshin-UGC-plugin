@@ -1,8 +1,15 @@
 # 通用算法与观察实验
 
-`algorithms-experiments` 提供通用算法和观察实验。可用 `client assemble` 内联 `scripts/runtime_algorithms.lua`。`scripts/experiments.py` 在独立 Lua 模型中执行实验，游戏策略、课程和经济参数由项目提供。
+通用算法与观察实验是当前可用的本地工具。可用 `client assemble` 内联 `scripts/runtime_algorithms.lua`。`scripts/experiments.py` 在独立 Lua 模型中执行实验，游戏策略、课程和经济参数由项目提供。
 
-Lua接口：rng(seed)及next/integer/restore；heap及push/pop（同优先级稳定）；shortest(start,goal,neighbors)返回路径、代价、工作量，neighbors返回有序{to,cost}；grid(width,height,blocked)提供四邻接适配；segment_distance、in_circle、in_rect；reservations的claim/release/expire；machine(initial,transitions)；clock的tick与paused；replay按非递减时间投递；cache(capacity,load,release)提供LRU与close。
+| Lua 接口 | 用途 |
+| --- | --- |
+| `rng(seed)` | 独立随机流，支持 `next`、`integer` 与 `restore`。 |
+| `heap` | 稳定优先队列，同优先级按入队顺序处理。 |
+| `shortest(start, goal, neighbors)`、`grid(width, height, blocked)` | 计算路径、代价与工作量。邻接由调用方给出有序的 `{to, cost}` 项，网格适配器提供四邻接。 |
+| `segment_distance`、`in_circle`、`in_rect` | 基础几何检查。 |
+| `reservations`、`machine(initial, transitions)` | 用 `claim`、`release`、`expire` 管理预约，按声明执行状态切换。 |
+| `clock`、`replay`、`cache(capacity, load, release)` | 推进或暂停时钟，按非递减时间投递记录，维护可关闭的 LRU 缓存。 |
 
 路径邻接、障碍、预约存活条件、状态转换和随机流归属均由项目输入。RNG状态范围1..2147483646；每条业务随机流单独保存，测试策略不消耗权威流。最短路拒绝负代价，不承诺解决任意连续碰撞与多人避让问题。
 

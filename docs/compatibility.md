@@ -6,12 +6,13 @@
 
 | 项目 | 要求 |
 | --- | --- |
-| 操作系统 | 完整工具面向 Windows x64。发行 ZIP 包含 Beyond 的 Windows 原生模块。通过 Git 或 Cordis 安装时，首次使用 Beyond 会下载并校验原生模块。 |
-| Python | CPython 3.11–3.14。启动器优先使用已装好依赖的环境，找不到合适环境时使用 PATH 上的 uv。 |
-| Node.js | 插件 MCP 启动器需要 22+。DeepSeek Harness 接入需要 24.9+，也须满足所用 DSH 版本自身的 Node.js 要求。 |
-| 客户端 | 文件和素材工具需要支持本地 stdio MCP 的会话。也可在终端运行 CLI。 |
+| 操作系统 | 完整工具面向 Windows x64。 |
+| Python | CPython x64 3.11–3.14。MCP 启动器可复用已装好依赖的环境，或通过 PATH 上的 uv 准备环境。PowerShell 安装器需要已有兼容的 Python。 |
+| Node.js | MCP 启动器与 Beyond 预览需要 x64 Node.js 22 或以上。DeepSeek Harness 接入需要 24.9 或以上，并须满足所用 DSH 版本自身的 Node.js 要求。 |
+| DeepSeek Harness | 支持版本以 [`engines.dsh`](../package.json) 为准。 |
+| 客户端 | 在支持本地 stdio MCP 的会话中调用工具，或在终端运行 CLI。能载入 Skill 的客户端也可用随包说明辅助创作。 |
 
-Python 依赖由 `pyproject.toml` 和 `uv.lock` 锁定。详见[解释器选择](runtime-environment.md#启动时选择-python)和[工程绑定](runtime-environment.md#连接-mcp-或切换工程)。
+Python 版本和依赖以 [`pyproject.toml`](../pyproject.toml) 与 [`uv.lock`](../uv.lock) 为准。发行 ZIP 内含 Beyond 的 Windows 原生模块。通过 Git 或 Cordis 安装时，Beyond 首次使用会查找已校验的本地模块，缺少时下载。 [启动配置](runtime-environment.md) · [Beyond 首次下载](runtime-environment.md#beyond-首次下载代理)
 
 ## 安装协议与客户端
 

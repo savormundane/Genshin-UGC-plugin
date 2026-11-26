@@ -16,7 +16,7 @@
 
 工具依次返回「原尺寸参考」`original`（155 个控件，超预算）、「首选推荐」`grid-25`（11 个控件，预算内）和「更省控件」`grid-12.5`（5 个控件，预算内）。
 
-在关闭终端工具的 Codex 会话中验证了这两步。对选中的 `grid-25`，从生成的 Lua 中读回了 11 个矩形。用同一份试算报告在命令行生成，五个交付文件逐字节一致。
+确认 `asset_generate` 的结果包含 `data.lua`、`asset.json`、预览图和实际控件数。以 `grid-25` 生成后，从 Lua 中应能读回 **11 个矩形**。此前在仅使用 MCP 的 Codex 会话中完成过这两步，同一报告用 CLI 生成时五个交付文件逐字节一致。
 
 ## 用终端复现
 
@@ -51,7 +51,7 @@ python -X utf8 -B scripts/qianxing.py assets generate --from-preview "$markerOut
 
 1. 用 `asset_fit` 传入原图和 `fit.json`，输出到新目录。查看 `image/preview.png`、`catalog.json` 里的实际误差和建议细化区域。
 2. 用 `simulate` 传入交付的 `beyond.json` 绝对路径和对应摘要，设 `preview=true`。打开 `preview.png` 查看画面，读 `render.json` 和 `external-simulation.json` 核对控件及日志。
-3. 将 `mounted.lua` 中的 `template_index` 设置为当前关卡图片模板索引，按下面的挂载步骤映射该文件。样例配置中的索引用于随输出生成的软件模板。
+3. 如果要手动挂载，复制 `mounted.lua`，将副本中的 `template_index` 设置为当前关卡的图片模板索引，再按下方步骤映射。样例配置的索引对应随输出生成的软件模板。变更索引后需重新检查这份 Lua 和实际挂载。
 
 本次用 20 个矩形，实测误差约 0.04499，目标为 0.035。Beyond 日志确认创建 20 个矩形，控件树和拟合图在 144 × 144 的显示区域逐像素核对通过。简单图标也可用上面的 11 控件网格方案。 [拟合配置和局部细化](../../../references/assets/asset-fit.md#生成可挂载的-lua-和软件预览)
 

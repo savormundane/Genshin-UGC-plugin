@@ -4,7 +4,10 @@
 
 ## 点阵帧
 
-已有调色板和矩形数据时，按[点阵帧动画接入](../editor/lua/pixel-runtime.md)处理锚点、控件池和切帧。根据项目的玩法状态选择要显示的帧。从 PNG 开始时，先按[素材 Skill](../../skills/miliastra-assets/SKILL.md#点阵图片处理)试算和生成图元。
+1. **准备数据和模板。** 从 PNG 开始时先[试算并生成图元](image-to-primitives.md)。准备一个父容器以及可复用的矩形控件模板。使用已有数据时，核对每帧的矩形范围、调色板索引和模板。
+2. **换算坐标。** 矩形记录 `{x, y, w, h, paletteIndex}` 的调色板索引从 1 开始。相对锚点的中心为 `x + w/2 - anchorX` 和 `anchorY - y - h/2`，两轴再乘显示比例。镜像只反转局部 X。碰撞范围由项目规则定义。
+3. **复用控件。** 按矩形最多的一帧分配控件池，分批初始化。切帧时更新已有图块并隐藏多余项，移动角色时只移动父容器。装配完成后显示整组，禁用装饰图块的命中。分开处理可见与激活状态，分配失败时记录已有句柄和状态再恢复。 [UI 运行支持](../editor/lua/runtime-ui.md) · [客户端 API](../platform/community/client-controls-api.md)
+4. **核对实际表现。** 根据项目玩法状态选择素材已有动作，核对透明边缘、图层、触控行为、首次建池和切帧耗时。控件销毁级联与设备性能在目标游戏环境验证。图元与 Lua 需要和节点图一起交付时，使用 [`produce`](../workflows/produce.md)。
 
 ## 分层图元与拟L2D
 
@@ -18,7 +21,7 @@
 
 插件的现行拟合入口是 [`assets fit`](asset-fit.md)，覆盖透明轮廓、区域细化、续算、显式分层输入和矩形预览。矩形 Lua 与已校准 GIA 按各自工具接入。GEIMG 专有的拟合策略、GUI、账号与云端功能以 [原工具手册](geimg/geimg-manual.md) 和原工具为准。旧 `shapes`、`manifest`、`metrics` 及模板供格式对照和历史重建分析。[原拟 L2D 资料与附件](geimg/l2d/README.md)
 
-使用历史附件时先复制到工作区，核对依赖与 `--help` 后显式指定输入和输出。部分脚本需要独立的 Python 3.10+、Pillow、NumPy，Lua 验证另需 `lupa` 和 `luaparser`。其中 `l2d_fit_batch.py`、`l2d_superfit.py` 依赖外部 GE，前者会写入 parts 目录，后者按原案例部件编号分预算并运行多个 worker。`l2d_build_showcase.py` 和 `l2d_build_anim.py` 含案例画布、部件和骨骼绑定。使用模板时由对应脚本替换占位符。按当前素材与工作副本核对实际预算，案例数值留作参考。 [附件说明](geimg/l2d/attachments/README.md) · [原工具拟合](geimg/l2d/02-拟合-从PNG到图元.md) · [API 速查](geimg/l2d/07-API速查与验证状态.md) · [原案例检查](geimg/l2d/09-端到端SOP与检查表.md)
+需要复现原案例时，从工作副本使用附件，按附件说明配置依赖。部分旧拟合脚本需要另备 GE 可执行文件；预算、画布和骨骼来自各自案例。 [附件说明](geimg/l2d/attachments/README.md) · [原工具拟合](geimg/l2d/02-拟合-从PNG到图元.md) · [原案例检查](geimg/l2d/09-端到端SOP与检查表.md)
 
 ## 共享参考的读取时机
 

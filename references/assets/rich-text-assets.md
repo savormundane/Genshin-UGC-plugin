@@ -2,7 +2,7 @@
 
 ## 选择路线
 
-新任务用 [内置素材生成](image-to-primitives.md) 的 `assets generate`，选择矩形或 `text` 输出。旧脚本 `assets_text.py` 继续接受原参数，生成彩色方块富文本和文本框数据。转换算法由 `asset_core` 提供。已有项目继续使用约定的交付格式，变更格式前应征得用户同意。播放已有数据按动画流程接入，写入 GIL 则按存档流程操作。
+新任务用 [内置素材生成](image-to-primitives.md) 的 `assets generate`，选择矩形或 `text` 输出。旧脚本 `assets_text.py` 继续接受原参数，生成彩色方块富文本和文本框数据。转换算法由 [素材核心](../../scripts/miliastra/assets/core.py) 提供。已有项目继续使用约定的交付格式，变更格式前应征得用户同意。播放已有数据按动画流程接入，写入 GIL 则按存档流程操作。
 
 ## 使用
 

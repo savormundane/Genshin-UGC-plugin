@@ -5,10 +5,10 @@
 ```text
 python scripts/qianxing.py client assemble CLIENT.json --out NEW_DIRECTORY
 python scripts/qianxing.py client locate source-map.json 120
-python scripts/qianxing.py client locate source-map.json 120 --gil FINAL.gil
+python scripts/qianxing.py client locate source-map.json 120 --gil FINAL.gil --script-mapping main.lua
 ```
 
-CLIENT为schema=2，sources是有序{id,source,requires?}数组。source相对配置文件；依赖必须在此前出现，重复ID和错误顺序拒绝，不自动重排片段。modules是可选{name,as}数组，支持runtime、ui、algorithms、multiplayer、storage；as是非关键字Lua变量名，不能重复。
+配置使用 schema 2。`sources` 按装配顺序列出 `id`、`source` 和可选 `requires`。`source` 相对配置文件所在目录。依赖必须已经出现，重复 ID 或顺序错误会被拒绝。`modules` 可省略，支持 `runtime`、`ui`、`algorithms`、`multiplayer`、`sessions`、`storage`、`migration` 和 `assets`。每项填写模块 `name` 和局部变量名 `as`，别名不能重复或使用 Lua 关键字。
 
 每个模块包装成局部函数，立即调用并取返回值。业务源码按配置顺序拼接，并记录各片段的实际行号。源文件只读。模块间作用域与业务片段的局部变量可见性由源码决定；不能直接拼接任意带顶层return的独立模块，需使用modules或自行声明明确的封装。
 
@@ -18,7 +18,20 @@ produce schema 2使用client:{assembly:路径}，兼容client:{source:路径}。
 
 可编辑项为源码顺序、依赖和模块别名。测试覆盖两种源码内容、依赖逆序、重复、Lua执行与行号回查；宿主错误日志解析只处理数据，不执行日志文本。
 
-清单示例为 {schema:2,modules:[{name:ui,as:UI}],sources:[{id:state,source:state.lua},{id:view,source:view.lua,requires:[state,UI]}]}；另一配置可将algorithms命名为Algorithms并装配两个观察片段。正式JSON需给字符串加双引号。把view移到state之前会直接失败；locate对生成包装行返回null，对原始行返回文件与从1开始的行号。最终源码语法仍由Lua5.3检查，装配器不推测顶层return或自动改变作用域。
+下面的配置先内联 UI 模块，再装配 `state.lua` 和 `view.lua`。两个 Lua 文件需位于配置同目录。
+
+```json
+{
+  "schema": 2,
+  "modules": [{"name": "ui", "as": "UI"}],
+  "sources": [
+    {"id": "state", "source": "state.lua"},
+    {"id": "view", "source": "view.lua", "requires": ["state", "UI"]}
+  ]
+}
+```
+
+把 `view` 移到 `state` 之前会导致装配失败。`locate` 对应原始片段时返回文件和从 1 开始的行号，生成的包装行返回 `null`。
 
 ## 项目生成的 Lua 数据目录
 

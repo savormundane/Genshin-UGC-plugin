@@ -8,11 +8,11 @@ python scripts/qianxing.py resources search 10000002 --version 7.2
 python scripts/qianxing.py resources check uses.json --out resource-report.json
 ```
 
-search按名称、ID或类型搜索，可多次提供`--catalogue custom.json`追加显式资源目录。check的输出文件必须不存在，所有来源只读。
+`search` 按名称、ID、类型或类别匹配，支持 `--type` 和 `--mode` 过滤，可多次传 `--catalogue custom.json` 追加项目目录。`check` 的输出文件必须是新路径，来源文件均只读。
 
 ## 查询音效和特效
 
-`resources_lookup` 的 `resource_type` 取 `sound` 或 `effect`。查询词可用空格分隔，例如「界面音效 按钮点击」或「循环特效 光环」。纯数字查询按完整 ID 匹配。
+用 `resources_lookup` 查音效时设 `resource_type="sound"`，查特效时设 `resource_type="effect"`。查询词可用空格分隔，例如「界面音效 按钮点击」或「循环特效 光环」。纯数字查询按完整 ID 匹配。
 
 ```text
 python scripts/qianxing.py resources search "界面音效 按钮点击" --type sound --version 7.1

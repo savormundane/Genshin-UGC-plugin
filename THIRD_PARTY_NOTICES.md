@@ -1,13 +1,13 @@
 # 第三方声明
 
-根目录GPL-3.0-only适用于本项目自有代码。以下内容保留原作者权利；不得将整仓库理解为所有文件都已获得同一许可。
+本项目自有代码采用 GPL-3.0-only。第三方代码、资料和素材适用各自声明的权利和许可。
 
 ## 随包代码
 
 | 内容 | 来源与许可 | 本项目中的使用 |
 | --- | --- | --- |
 | Ayaya | [上游](https://github.com/AyayaXiaowang/Ayaya_Miliastra_Editor)，[GPLv3](vendor/ayaya/LICENSE) | 选定的无界面子集；修改和文件摘要见[NOTICE](vendor/ayaya/NOTICE.md)与[VENDORED](vendor/ayaya/VENDORED.json) |
-| Beyond | [上游](https://github.com/1475505/miliastra-beyond-simulator)，[GPL-3.0-only](vendor/beyond/LICENSE) | 固定提交02a5ea2cd38bb5bcf7a7ce6dd745be3bb1ae655c；所选源码、依赖及原字节摘要见[bundle](vendor/beyond/bundle.json) |
+| Beyond | [上游](https://github.com/1475505/miliastra-beyond-simulator)，[GPL-3.0-only](vendor/beyond/LICENSE) | 无界面预览源码。上游提交见[修订锁](scripts/beyond-revision.json)，随包文件及其校验值见[bundle](vendor/beyond/bundle.json) |
 | luaparse | Oskar Schöldström，[MIT](vendor/luaparse/LICENSE) | Lua语法解析器 |
 | Genshin-Impact-UGC-File-Converter | にゃが，[MIT](vendor/ayaya/LICENSES/Genshin-Impact-UGC-File-Converter.MIT.txt) | Ayaya保留的转换器版权声明 |
 | genshin-ts | josStorer，[MIT](vendor/ayaya/LICENSES/genshin-ts.MIT.txt) | Ayaya定义与报告相关来源 |
@@ -48,8 +48,8 @@
 | sprintf-js | 1.1.3 | BSD-3-Clause | [LICENSE](vendor/beyond/node_modules/sprintf-js/LICENSE) |
 | tmp | 0.2.7 | MIT | [LICENSE](vendor/beyond/node_modules/tmp/LICENSE) |
 
-Python依赖按scripts/runtime-requirements.lock安装，不把所需依赖冒称随包包含；其各自许可仍然适用。
+Python 依赖按安装器的锁文件安装，适用各自的许可。 [依赖锁](scripts/runtime-requirements.lock)
 
 如需更正署名、来源或许可记录，请通过仓库Issue提供对应文件和依据。
 
-Beyond 的 `.gitattributes` 保留原始字节，避免 Git 换行转换影响依赖校验。Windows ZIP 和 Cordis 使用同一份无界面运行源码和依赖。运行清单、移出条目的原始摘要和来源见 [PUBLIC_SOURCES.json](PUBLIC_SOURCES.json) 的 `distribution_changes`。
+分发变更、移出条目的原 SHA-256、随包 Node 版本与许可文件路径由来源清单登记。 [PUBLIC_SOURCES.json](PUBLIC_SOURCES.json) · [上游维护与发行](docs/contributing/maintenance.md)

@@ -1,33 +1,33 @@
-# 使用文档
+# 文档目录
 
 [插件首页](../README.md) · [中文任务教程](../samples/creator-demos/README.md) · [技术参考](../references/README.md)
 
+## 安装和使用
+
 | 想做什么 | 入口 |
 | --- | --- |
-| 安装、更新、卸载或排查启动问题 | [安装指南](installation.md) |
-| 核对 Windows 依赖和客户端协议 | [运行要求](compatibility.md) |
-| 指定工程目录和输出目录，或在终端使用 CLI | [运行环境](runtime-environment.md) |
-| 查看 MCP 参数、SHA-256 校验值和文件路径规则 | [MCP 工具](mcp.md) |
-| 核对平台资料、文件格式和支持范围 | [来源判断](../references/platform/knowledge-reliability.md) · [验证分层](compatibility.md#验证分层) |
-| 修改源码、维护平台资料或参与发行 | [参与贡献](../CONTRIBUTING.md) |
+| 安装、升级、卸载或做安装自检 | [安装指南](installation.md) |
+| 核对操作系统、运行依赖和客户端协议 | [兼容性](compatibility.md) |
+| 配置解释器、工程和输出目录 | [运行环境](runtime-environment.md) |
+| 调用工具，查参数、路径和输出规则 | [MCP 工具](mcp.md) |
+| 跟做资料查询、原型或已有工程任务 | [公开样例](../samples/README.md) · [创作者教程](../samples/creator-demos/README.md) |
 
 ## 使用产物
 
-从助手返回的文件路径打开产物。需要选择保存位置时，见[工程与输出绑定](runtime-environment.md#连接-mcp-或切换工程)。
+从工具结果中的保存位置打开交付。编辑器中的工作步骤按产物类型查对应指南。
 
-- **关卡与节点图**。导入另存的 GIL 并核对改动。独立 GIA 按资源类型导入后挂到目标对象。[关卡复核](../references/gil/native-changes.md#人工再导出核对) · [图制作与回写](../references/graph-code/node-graph-workflow.md)
-- **Lua 与图元素材**。按交付说明将 Lua 挂到对应控件。对照预览检查图元素材的效果，并核对控件数是否超出预算。[Lua 接入](../references/editor/lua/client-assembly.md) · [图片转图元](../references/assets/image-to-primitives.md)
+- **关卡与节点图**。导入另存的 GIL，按修改摘要核对对象及引用。独立 GIA 导入后挂到目标对象。 [关卡复核](../references/gil/native-changes.md#人工再导出核对) · [图制作与写回](../references/graph-code/node-graph-workflow.md)
+- **Lua 与图元素材**。按交付说明挂载脚本，核对控件、坐标和控件数，再对照预览检查效果。 [Lua 装配](../references/editor/lua/client-assembly.md) · [图片转图元](../references/assets/image-to-primitives.md)
 
-## 仓库目录
+## 开发与维护
 
-| 目录 | 内容 |
+| 想了解什么 | 入口 |
 | --- | --- |
-| `docs/` | 使用指南、开发文档和 DeepSeek Harness 的中英文插件说明。 |
-| [samples/](../samples/) | 创作者教程、公开样例及可复现的输入输出。 |
-| [references/](../references/) | 平台原文、API 和文件格式参考，以及各工具的组合用法。 |
-| [skills/](../skills/) | 编辑器、节点图、GIL 和素材四个 Skill 的任务指引。 |
-| [scripts/](../scripts/) | MCP、CLI 和实现模块。两种入口复用相同的处理逻辑。 |
-| [vendor/](../vendor/) | 随包运行的编译和预览依赖。锁定版本、许可与来源见[第三方声明](../THIRD_PARTY_NOTICES.md)。 |
-| [assets/](../assets/) 和 [locale/](../locale/) | 插件图标与客户端语言资源。 |
+| 任务入口、源码分工与上游集成边界 | [工程架构](contributing/architecture.md) · [源码索引](../scripts/README.md) |
+| 开发环境、当前检查与旧配置退出计划 | [本地开发](contributing/development.md) |
+| 维护版本资料、API 合同和用例 | [平台资料维护](contributing/platform-maintenance.md) |
+| 更新上游、检查成品和定版发行 | [维护与发行](contributing/maintenance.md) |
+| 提交 Issue、样例或代码改动 | [参与贡献](../CONTRIBUTING.md) |
+| 接续开发或协助维护的约定 | [AGENTS.md](../AGENTS.md) |
 
-根目录存放各客户端的插件清单、MCP 配置、依赖锁文件和安装器。[定版与发行](contributing/maintenance.md)
+当前实现以源码和配置为准。正式发布的版本记录见 [CHANGELOG](../CHANGELOG.md)。原文、版本及第三方资料的归属见 [技术参考](../references/README.md) 和 [第三方声明](../THIRD_PARTY_NOTICES.md)。

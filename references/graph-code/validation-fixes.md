@@ -30,41 +30,36 @@ else:
 设置节点图变量(self.game, 变量名="当前修订", 变量值=2, 是否触发事件=False)
 ```
 
-## 3. `on_` 方法名必须精确匹配 `signal_id`
+## 3. 信号回调使用已登记的 ID 或完整显示名
 
-`register_event_handler` 注册的回调方法名用 `"on_" + signal_id` 构成。方法名中的标识必须是信号 ID。
+假设当前工程定义的 `signal_id` 是 `signal_example_move`，`signal_name` 是 `移动请求`。`on_signal_example_move` 与 `on_移动请求` 均可编译，`on_收到移动请求` 会因未登记被拒绝。示例采用稳定 ID；使用显示名时应填写完整名称，并保证它在当前资源范围内可明确解析。`register_handlers` 中直接传信号字符串及 `self.on_…`，让导出器静态识别绑定。
 
 ```python
-# 错误 — 用了中文名
-self.game.register_event_handler("signal_example_move", self.on_提交请求)
-def on_提交请求(self, ...):
-
-# 正确 — 用 signal_id
-self.game.register_event_handler("signal_example_move", self.on_signal_example_move)
-def on_signal_example_move(self, ...):
+def register_handlers(self):
+    self.game.register_event_handler("signal_example_move", self.on_signal_example_move,
+                                     owner=self.owner_entity)
 ```
 
-## 4. 信号处理函数必须包含 3 个自动注入的实体参数
+## 4. 信号处理函数的前三项来自固定端口
 
-引擎调用信号处理函数时，为前三个参数传入 `事件源实体`、`事件源GUID` 和 `信号来源实体`。函数签名必须声明这三个参数并标注类型，否则校验会报错。
+包内服务端「监听信号」登记的前三个参数是 `事件源实体`、`事件源GUID` 和 `信号来源实体`。声明顺序按固定端口，随后声明信号自身的字段。固定端口显式标注时应与节点定义一致。
 
 ```python
-# 错误 — 只有信号自身定义的参数
-def on_signal_example_move(self, 席位号: "整数", 参数甲: "整数", 参数乙: "整数"):
+# 错误，缺少三个固定端口
+def on_signal_example_move(self, 参数甲: "整数"):
+    pass
 
-# 正确 — 前 3 个为引擎注入参数，带类型标注
-def on_signal_example_move(self, 事件源实体: "实体", 事件源GUID: "整数", 信号来源实体: "实体",
-                            参数甲: "整数", 参数乙: "整数"):
+# 正确，固定端口在前，信号字段在后
+def on_signal_example_move(self, 事件源实体: "实体", 事件源GUID: "GUID", 信号来源实体: "实体",
+                           参数甲: "整数"):
+    打印字符串(self.game, 字符串="收到移动请求")
 ```
 
-实体事件（如 `实体创建时`）同理，参数也需标注类型：
+「实体创建时」只含 `事件源实体` 和 `事件源GUID` 两个数据输出，可按已知端口名称推导类型，也可显式标注。其他事件用 `nodes_lookup` 查询各自签名。
 
 ```python
-# 错误
-def on_实体创建时(self, 事件源实体, 事件源GUID):
-
-# 正确
-def on_实体创建时(self, 事件源实体: "实体", 事件源GUID: "整数"):
+def on_实体创建时(self, 事件源实体: "实体", 事件源GUID: "GUID"):
+    pass
 ```
 
 ## 5. `发送信号` 关键字参数名必须匹配信号定义
@@ -73,20 +68,17 @@ def on_实体创建时(self, 事件源实体: "实体", 事件源GUID: "整数")
 
 ```python
 # 信号定义
+SIGNAL_ID = "signal_example_state"
 SIGNAL_PAYLOAD = {
-    "signal_id": "signal_example_state",
+    "signal_name": "状态通知",
     "parameters": [
         {"name": "当前修订", "parameter_type": "整数"},
         {"name": "状态值", "parameter_type": "整数"},
-        ...
-    ]
+    ],
 }
 
-# 错误 — 参数名不匹配
-发送信号(self.game, 信号名="signal_example_state", 修订=1, 值=8)
-
-# 正确 — 参数名与定义一致
-发送信号(self.game, 信号名="signal_example_state", 当前修订=1, 状态值=8, ...)
+# 在图回调中调用时，参数名须与上面的声明一致
+发送信号(self.game, 信号名="状态通知", 当前修订=1, 状态值=8)
 ```
 
 ## 6. 不能将比较结果赋值给类型变量
@@ -104,19 +96,7 @@ if 参数甲 == 0 and 当前 == 1:
     ...
 ```
 
-## 7. `register_event_handler` 第一个参数必须是 `signal_id`
-
-事件名使用信号的 `signal_id`（如 `"signal_example_move"`），不是 `signal_name`（如 `"中性示例_提交请求"`）。
-
-```python
-# 错误 — 用了 signal_name
-self.game.register_event_handler("中性示例_提交请求", self.on_signal_example_move)
-
-# 正确 — 用 signal_id
-self.game.register_event_handler("signal_example_move", self.on_signal_example_move)
-```
-
-## 8. 风格建议：复合条件拆为 early return
+## 7. 风格建议：复合条件拆为 early return
 
 `if not X and Y:` 这类复合布尔条件通过校验后仍可能难以阅读。可先逐项检查前置条件，在不满足时提前返回。
 

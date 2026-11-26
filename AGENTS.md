@@ -1,6 +1,6 @@
 # Miliastra Wonderland 开发约定
 
-- 仓库根目录是 Codex、Claude、DeepSeek Harness 和通用 Agent Plugins 共用的插件入口。安装 ID 使用 `miliastra-wonderland`。四个 Skill 使用 `miliastra-editor`、`miliastra-graph-code`、`miliastra-gil` 和 `miliastra-assets`。面向创作者的入口见 [README](README.md)。
+- 仓库根目录是 Codex、Claude、DeepSeek Harness 和通用 Agent Plugins 共用的插件入口。安装 ID 使用 `miliastra-wonderland`。四个 Skill 使用 `miliastra-editor`、`miliastra-graph-code`、`miliastra-gil` 和 `miliastra-assets`。接手时从 [README](README.md) 定位任务，读取[工程架构](docs/contributing/architecture.md)和涉及领域的参考，再核对实际入口与当前 Git 版本。
 - Editor 管工程语义与 Client Lua，Graph Code 管节点编写和编译，GIL 管容器与回读，Assets 管原生模型和图元。CLI 与 MCP 复用相同实现。历史修改计划、具名绑定及交付清单按原合同读取。
 - 插件维护任务入口、平台规则、工程对象语义、交付合同和回归样本。上游代码按编译、渲染或基础库的职责接入，调用集中在所属实现边界。维护修改需保留上游基线、许可和可复验的源码摘要。
 - 原生写入须绑定输入摘要和唯一对象，输出到新路径并核对保护范围。平台规则、离线模型、编辑器和实机结果分别记录。代码或指南涉及新平台事实时，核对可用资料及具体版本。

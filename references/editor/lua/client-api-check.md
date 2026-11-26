@@ -15,7 +15,7 @@ check.json使用schema 2，scripts逐一列出被检查的映射：
 {"schema":2,"scripts":[{"mapping":null,"source_sha256":"正文的64位SHA256","bindings":[]}]}
 ```
 
-Lua文件的mapping为null；GIL使用精确映射名，默认必须覆盖全部映射。source_sha256计算方式为原始正文以UTF-8-sig解码后重新编码UTF-8的SHA256，保留CRLF，不做换行归一化。可从不带contract的client check报告中读取text_sha256。版本未知、正文摘要不符、映射遗漏或重复均会导致检查失败。合同摘要用于校验输入一致性。数字签名验证独立于这项检查。
+Lua 文件设置 `mapping` 为 `null`。GIL 使用完整的精确映射名。合同须恰好覆盖本次检查的映射，默认覆盖全部，使用 `--mapping` 时只填选中的映射。source_sha256计算方式为原始正文以UTF-8-sig解码后重新编码UTF-8的SHA256，保留CRLF，不做换行归一化。可从不带contract的client check报告中读取text_sha256。版本未知、正文摘要不符、映射遗漏或重复均会导致检查失败。合同摘要用于校验输入一致性。数字签名验证独立于这项检查。
 
 bindings可为局部变量或函数参数声明补充类型，例如`{"range":[6,13],"type":"ClientUITextBoxControl"}`。range是最终解码正文重新编码UTF-8后的零起始字节区间，右端不包含；必须准确命中唯一声明。字符串参数可声明value以解析动态成员名；integer参数也可声明Lua 5.3有符号64位整数value，以检查明确绑定的模板索引，布尔值/浮点数/越界整数拒绝。与已推断类型/值冲突的绑定拒绝；基类控件可显式细化为具体控件类型。声明是项目提供的静态前提，不证明运行时实参或控件类型，不能替代模型或宿主证据。
 

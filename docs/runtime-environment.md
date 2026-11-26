@@ -6,13 +6,19 @@ CLI 和插件 MCP 使用同一套本地工具。可复用已有 Python 或使用
 
 ## 启动时选择 Python
 
-客户端用 Node 运行 `scripts/mcp_launcher.cjs`。启动器收到 `MILIASTRA_WONDERLAND_PYTHON` 时，只检查该绝对路径。否则按顺序检查运行绑定中的解释器、当前虚拟环境、插件安装根内的解释器和 PATH 上的 `python.exe`，再用 Windows 的 `py.exe` 查找兼容版本。
+客户端用 Node 运行 `scripts/mcp_launcher.cjs`。设了 `MILIASTRA_WONDERLAND_PYTHON` 时，启动器只检查该绝对路径。否则按以下顺序检查解释器的版本、架构和依赖。
 
-找不到已装好所需版本依赖的 Python 时，启动器使用 PATH 上的 uv 创建独立环境。环境保存在插件安装根目录，首次缺少缓存时需要联网。可用 `MILIASTRA_WONDERLAND_INSTALL_ROOT` 指定安装根目录的绝对路径。 [安装自检](installation.md#安装自检) · [uv 安装说明](https://docs.astral.sh/uv/getting-started/installation/)
+1. 运行绑定中的 `python`。
+2. `VIRTUAL_ENV` 指向的虚拟环境。
+3. 安装根目录内各版本保留的 Python。
+4. 此锁文件对应的已准备环境。
+5. PATH 上的 `python.exe`，再查 Windows 的 `py.exe`。
+
+均不可用时，启动器通过 PATH 上的 uv 在安装根目录内准备锁定环境。默认根目录为 `%LOCALAPPDATA%\Miliastra Wonderland`，可通过 `MILIASTRA_WONDERLAND_INSTALL_ROOT` 改为其他绝对路径。缺少本地依赖缓存时需要联网。 [安装自检](installation.md#安装自检) · [uv 安装说明](https://docs.astral.sh/uv/getting-started/installation/)
 
 ## 提前准备 Python 环境
 
-在插件目录运行以下命令。启动器会检查现有 Python，或用 uv 按锁文件准备环境。完成后再打开客户端，MCP 可直接复用准备好的 Python。指定了 `MILIASTRA_WONDERLAND_INSTALL_ROOT` 时，准备环境和启动客户端应使用相同的根目录。
+在插件目录运行以下命令，提前检查或准备 Python。随后打开客户端进行[首次工具验证](installation.md#首次工具验证)。若自定义了安装根目录，准备环境和启动客户端都应使用同一路径。
 
 ```powershell
 node .\scripts\mcp_launcher.cjs --setup
@@ -30,11 +36,11 @@ $miliastraPython = Join-Path $miliastraVenv 'Scripts\python.exe'
   -r .\scripts\runtime-requirements.lock -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
-安装成功后，将 `$miliastraPython` 的实际路径填入 [运行绑定](#桌面端首次绑定本机工程)的 `python`。如果宿主会向 MCP 传递自定义变量，也可设置 `MILIASTRA_WONDERLAND_PYTHON`。镜像须提供锁定的版本和对应的 Windows wheel。
+安装成功后，将 `$miliastraPython` 的实际路径填入[运行绑定](#桌面端首次绑定本机工程)的 `python`，或在客户端给 MCP 启动器设置 `MILIASTRA_WONDERLAND_PYTHON`。镜像须提供锁定的版本和对应的 Windows wheel。
 
 ### Beyond 首次下载代理
 
-从源码安装时，Beyond 首次预览可能需要从 GitHub 下载 Canvas。可在启动客户端前设置 `HTTPS_PROXY`，并按需设置 `HTTP_PROXY` 和 `NO_PROXY`。这些变量需要由宿主传给 MCP。若已有解包后的锁定文件，可设置绝对路径 `MILIASTRA_WONDERLAND_BEYOND_NATIVE_ROOT`。目录内的相对路径和 SHA-256 以 `vendor/beyond/native-canvas.json` 为准。
+已装好 Python 后，Beyond 首次预览仍可能需要单独下载 Canvas。可在启动客户端前设置 `HTTPS_PROXY`、`HTTP_PROXY` 或 `NO_PROXY`，由客户端传给 MCP。若已解包对应版本的 Canvas 文件，可将 `MILIASTRA_WONDERLAND_BEYOND_NATIVE_ROOT` 设为其绝对路径。目录内的相对路径和 SHA-256 以[锁定清单](../vendor/beyond/native-canvas.json)为准。
 
 ## 复用 PowerShell 安装器配置的环境
 
@@ -66,13 +72,18 @@ uv run --locked --no-build python -B .\scripts\qianxing.py --help
 
 ## 连接 MCP 或切换工程
 
-手动连接 MCP 时，按[客户端适配](contributing/development.md#客户端适配)配置启动器。查询节点、API、平台文档和内置资源无需工程目录。文件工具按顺序查找手动指定的工程路径、会话通过 MCP Roots 提供的已授权目录，以及 `runtime.json` 中的目录。会话提供多个工程目录时，用输入文件的绝对路径选定其中一个。
+手动连接 MCP 时，参见[启动与客户端配置](mcp.md#依赖与启动)。查询随包的节点、API、平台文档和资源无需工程目录。本地文件工具按以下规则选择工程和输出位置。
 
-插件从数据目录读取 `runtime.json`。也可用 `MILIASTRA_WONDERLAND_RUNTIME_CONFIG` 指定配置文件的绝对路径。修改 `project_root` 或 `output_root` 后，下一次工具调用会读取新值。通过 `MILIASTRA_WONDERLAND_PROJECT_ROOT`、`MILIASTRA_WONDERLAND_OUTPUT_ROOT` 或对应的 CLI 参数指定的目录优先使用。只读任务可以省略输出目录。未指定输出目录时，生成的文件默认按工程分别保存在插件数据目录中。用 `doctor` 查看目录、配置来源、候选路径和缺失项。
+| 目录 | 选择顺序 |
+| --- | --- |
+| 工程 | CLI 参数或 `MILIASTRA_WONDERLAND_PROJECT_ROOT` → 会话通过 MCP Roots 提供的已授权目录 → 运行绑定的 `project_root`。多个已授权目录时，用输入的绝对路径选定其中一个。 |
+| 输出 | CLI 参数或 `MILIASTRA_WONDERLAND_OUTPUT_ROOT` → 适用于该工程的 `output_root` → 插件数据目录下按工程生成的 `outputs` 子目录。只读任务可省略。 |
+
+插件数据目录优先使用客户端提供的插件数据目录，其次使用安装根目录。调用 `doctor` 可查看选中的目录、配置来源及缺失项。 [文件路径约定](mcp.md#文件路径和校验值)
 
 ### 桌面端首次绑定本机工程
 
-需要固定解释器或工程目录时，可给本机启动器配置 `runtime.json`。用 UTF-8 保存下列 JSON，将三个路径换成你的绝对路径。输出目录需要预先创建，并与工程目录和插件源码互不包含。
+需要固定解释器或工程目录时，用 UTF-8 保存下列 JSON 并替换绝对路径。手动指定的输出根目录需预先创建，并与工程目录和插件源码互不包含。只需绑定解释器时可省略两个目录字段。
 
 ```json
 {
@@ -83,8 +94,10 @@ uv run --locked --no-build python -B .\scripts\qianxing.py --help
 }
 ```
 
-插件连通后，可从 `doctor` 的 `python_executable` 字段复制当前解释器路径。把配置文件保存到客户端为插件分配的数据目录。客户端允许向 MCP 传递自定义环境变量时，也可用 `MILIASTRA_WONDERLAND_RUNTIME_CONFIG` 指向该文件。然后调用 `doctor`，核对 `project_context.source`、`project_root` 和 `output_root`，再选一个工程文件做只读检查。可用[安装自检](installation.md#安装自检)核对 Python 及其依赖。
+将文件保存到客户端分配的插件数据目录，或用 `MILIASTRA_WONDERLAND_RUNTIME_CONFIG` 指明绝对路径。无客户端数据目录时，工具可从安装根目录读取 `runtime.json` 的工程设置。要让启动器也读取该文件的解释器设置，显式指定该配置文件。
+
+修改 `project_root` 或 `output_root` 后，下一次工具调用读取新值。修改解释器或启动环境变量后需重新启动客户端。用 `doctor` 核对 `python_executable` 和 `project_context`，再挑一个工程文件做只读检查。
 
 ### 从终端启动客户端
 
-从工程目录启动客户端，让会话提供已授权的工程目录。客户端不提供工程目录时，使用上面的 `runtime.json`。Codex 的 MCP 子进程继承宿主允许和插件声明的环境变量。本插件声明了 Python 绑定、安装根目录、Beyond 原生文件目录、代理和插件任务时限。手动配置 MCP 时，可参考 [Codex 示例](mcp.md#调整客户端超时)传递这些设置。 [Codex 环境变量配置](https://developers.openai.com/codex/mcp/)
+从工程目录启动客户端。会话支持 MCP Roots 时可直接选择并授权当前目录，否则配置上面的 `runtime.json`。终端中的环境变量需由客户端传给 MCP 子进程，可参考 [Codex 手动配置示例](mcp.md#调整客户端超时)。

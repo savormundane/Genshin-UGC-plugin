@@ -1,20 +1,24 @@
 # 本地开发与检查
 
-按任务从[工具导航](../../scripts/README.md)定位模块。修改工具时核对 CLI、MCP 和包内引用。更新平台资料时核对[来源与摘要](../../references/platform/knowledge-reliability.md)。
+开始前读 [AGENTS.md](../../AGENTS.md)，从 [工程架构](architecture.md) 和 [工具导航](../../scripts/README.md) 找到负责模块。日常开发依据当前检出的源码和配置，正式发行以对应 Git 标签为准。 `plugin.json` 中的版本由定版流程同步，尚未发行的行为记录在 CHANGELOG 的 `Unreleased`。 [变更记录](../../CHANGELOG.md)
 
-从仓库根运行以下命令。只改文档时，系统 Python 就能运行仓库检查。
+## 配置开发环境
+
+从仓库根运行以下命令。只修改文档时，可直接用支持的系统 Python 运行仓库检查。
 
 ```powershell
 python -B scripts/check_repository.py
 ```
 
-需要运行插件、修改 MCP 或调试生成工具时，用支持的 Windows、Python 和 Node.js 环境。已有插件专用 Python 可直接复用，也可在检出目录创建专用环境。[运行要求](../compatibility.md) · [复用已安装的环境](../runtime-environment.md)
+需要运行工具时，用支持的 Windows x64、Python 和 Node.js 环境。已有插件专用 Python 可直接复用，或在仓库根创建锁定的专用环境。 [兼容性](../compatibility.md) · [复用已安装的环境](../runtime-environment.md)
 
 ```powershell
 uv sync --locked --no-build
 $miliastraPython = (Resolve-Path .\.venv\Scripts\python.exe).Path
 & $miliastraPython -B scripts/qianxing.py doctor
 ```
+
+检出路径过深时，可用 `git -c core.longpaths=true clone` 并选择较短的目标目录。修改 Python 源码时，可用 Ruff 0.15.0 对本次涉及的文件执行 `ruff format --check`。
 
 ## 按改动选检查
 
@@ -23,51 +27,42 @@ $miliastraPython = (Resolve-Path .\.venv\Scripts\python.exe).Path
 | 文档、安装链接、清单 | `python -B scripts/check_repository.py` |
 | Python 脚本 | `python -m compileall -q scripts` |
 | GIL 容器和 Lua 替换 | `node scripts/test_gil.mjs` |
-| MCP、原生修改计划 | [复现已有工程的修改流程](#复现已有工程的修改流程) |
+| MCP、原生修改计划和便携重建 | `& $miliastraPython -B scripts/test_mcp_native_workflow.py -v` |
+| 图编译、信号与结构体写回 | `& $miliastraPython -B -m unittest discover -s scripts -p test_release_behaviors.py -v` |
+| Beyond 原生资源、预览和失败诊断 | `& $miliastraPython -B scripts/test_beyond_native.py -v` |
 | 中文 API 检索、资料与节点查询 | `& $miliastraPython -B scripts/test_chinese_lookup.py -v` |
-| 三维物件读取、变换与字段保护 | `& $miliastraPython -B scripts/test_native_entity_transform.py -v` |
-| 安装器与各客户端配置 | `& $miliastraPython -B scripts/test_agent_protocols.py -v`、`& $miliastraPython -B scripts/test_distribution.py -v` |
-| 打包和版本校验 | `python -B scripts/test_release.py -v` |
+| 物件变换与字段保护 | `& $miliastraPython -B scripts/test_native_entity_transform.py -v` |
+| 安装器、声明和打包 | `& $miliastraPython -B scripts/test_agent_protocols.py -v`、`& $miliastraPython -B scripts/test_distribution.py -v`、`python -B scripts/test_release.py -v` |
 
-使用已有专用 Python 时，将 `$miliastraPython` 设为该解释器的绝对路径。公开测试会生成自己的输入。 [验证分层](../compatibility.md#验证分层)
+`$miliastraPython` 为有锁定依赖的解释器绝对路径。完整公开 Python 用例可使用 `& $miliastraPython -B -m unittest discover -s scripts -v`。Beyond 测试可通过 `MILIASTRA_TEST_BEYOND_ARCHIVE` 指向已锁定的本地 Canvas ZIP。运行分发测试前按打包条件准备资产。测试输入用公开样例或由测试生成。 [Canvas 锁](../../vendor/beyond/native-canvas.json) · [公开验证清单](../../scripts/validation-contract.json) · [验证层级](../compatibility.md#验证分层)
 
-## Python 格式化
+### 复现已有工程的修改流程
 
-用 Ruff 0.15.0 检查本次修改的 Python 文件。
+运行上述 MCP 测试。用例经真实 stdio 把模板参数 `ActivationDelay` 改为 `12`，核对相关引用和保护字段，并检查过期输入会被拒绝。 [输入与断言](../../scripts/test_mcp_native_workflow.py) · [工具调用顺序](../../references/gil/native-changes.md#审阅并另存已有工程)
 
-```powershell
-ruff format --check '<本次修改的 Python 文件>'
-```
+## 客户端适配
+
+通用 Agent Plugins 读取根 `plugin.json` 和 `mcp.json`。Codex 读取 `.codex-plugin/plugin.json` 及其引用的 MCP 文件。Claude Code 读取 `.claude-plugin/plugin.json` 和 `.mcp.json`。DSH 通过 `package.json` 和 `cordis.patch.yml` 加载四个 Skill 和 MCP。 `locale/` 下的中英文资源及 `docs/dsh/` 下的详情用于 DSH 插件介绍。
+
+修改客户端声明时，检查生成清单、包内路径和实际工具发现。在 Claude Code 可用 `claude plugin validate <目录>` 做清单校验。Claude 账户市场使用单独的客户端入口。运行参数及日常安装由各自的文档维护。 [市场与安装](../installation.md) · [运行环境](../runtime-environment.md) · [维护与发行](maintenance.md)
+
+## 文档维护
+
+| 信息 | 维护位置 |
+| --- | --- |
+| 安装入口、更新与排障 | [安装指南](../installation.md)。版本和依赖要求集中在 [兼容性](../compatibility.md)，解释器和目录绑定集中在 [运行环境](../runtime-environment.md)。 |
+| 调用参数和结果 | [MCP 工具](../mcp.md) 和各领域参考，核对工具定义、CLI 帮助和回归。样例展示完成任务的方法。 |
+| 平台原文、版本、许可与样本依据 | 原文按供应版本保留，[平台资料维护](platform-maintenance.md) 负责更新流程，来源清单以内容和路径绑定证据。 |
+| 工具边界、开发协作和历史决策 | [工程架构](architecture.md)、[AGENTS.md](../../AGENTS.md)、本页的退出计划及 [CHANGELOG](../../CHANGELOG.md)。 |
+| 更新上游与发布 | [维护与发行](maintenance.md)。各次发布与本机安装的结果随对应候选和版本留证。 |
+
+在用页面迁移时，先查 Markdown 链接和代码中的路径或锚点引用，再更新调用方。长期入口可保留指向新位置的短说明。来源正文、旧发布和回归记录用于追溯对应版本。参数名、版本和证据状态引用工具实际值。正文使用 SHA-256 校验值、读回校验、客户端、编辑器、游戏环境等具体名称。
 
 ## 旧配置的退出版本
 
 | 从 V1.2.0 起列为弃用的入口 | 计划移除 | 现有配置如何处理 |
 | --- | --- | --- |
-| `produce` 顶层 schema 1 任务 | V2.0.0 | 按 schema 2 改写任务并核对 GIL 映射和交付摘要。[制作指南](../../references/workflows/produce.md) |
-| `assets fit` 的 schema 1 配置和续跑 | V2.0.0 | 使用 schema 2 参数，可通过 `--initial` 导入旧检查点中的图元。[拟合指南](../../references/assets/asset-fit.md) |
+| `produce` 顶层 schema 1 任务 | V2.0.0 | 按 schema 2 改写任务并核对 GIL 映射和交付校验值。 [制作指南](../../references/workflows/produce.md) |
+| `assets fit` 的 schema 1 配置和续跑 | V2.0.0 | 使用 schema 2 参数，可通过 `--initial` 导入旧检查点中的图元。 [拟合指南](../../references/assets/asset-fit.md) |
 
-schema 2 的制作流程复用资源、图编译和 Lua 写回阶段。移除顶层 schema 1 前，先核对这些阶段的调用，再用现有样例复测。
-
-## 复现已有工程的修改流程
-
-```powershell
-& $miliastraPython -B scripts/test_mcp_native_workflow.py -v
-```
-
-脚本生成一个继承模板参数 `ActivationDelay=7` 的最小工程。它通过 stdio 查询引用、生成修改计划，将参数值改为 `12` 后另存关卡。测试核对受保护字段的原始字节，并检查过期输入或来源变化时是否会拒绝写入。 [输入与断言](../../scripts/test_mcp_native_workflow.py) · [工具调用顺序](../../references/gil/native-changes.md#审阅并另存已有工程)
-
-## Windows 长路径
-
-检出目录较深时，可用 `git -c core.longpaths=true clone https://github.com/savormundane/miliastra-wonderland-plugin.git` 并选用较短的目标路径，例如 `C:\src\miliastra-wonderland-plugin`。
-
-## 客户端适配
-
-客户端启动 Node 和 `scripts/mcp_launcher.cjs`。解释器选择与工作目录绑定见[独立运行环境](../runtime-environment.md)。
-
-- 通用接入读取根 `plugin.json` 和 `mcp.json`。Codex 的附加环境变量声明由 `.codex-plugin/plugin.json` 指向 `.codex-plugin/mcp.json`。
-- Claude Code 读取 `.claude-plugin/plugin.json` 和 `.mcp.json`。可用 `claude plugin validate <目录>` 检查声明。
-- DeepSeek Harness 从插件根目录的 `package.json` 和 `cordis.patch.yml` 加载 Skills 与 MCP。
-
-`locale/en.json` 和 `locale/zh.json` 提供插件的英文及中文标题和简介。安装器和 MCP 启动器使用中文说明，详细原因保留操作系统和依赖的原始报错。
-
-宿主安装步骤见[安装指南](../installation.md)。维护其他接入方式时，可核对 [Agent Plugins 规范](https://agent-plugins.org/specification) · [Claude Code 插件参考](https://code.claude.com/docs/en/plugins-reference) · [DeepSeek Harness Bundle 参考](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.2-rc.5/packages/preset/agent-preset/skills/dsh-doc/references/host-plugin.md)。
+两种旧入口当前仍可执行。schema 2 的制作流程复用资源、图编译和 Lua 写回阶段。调整旧入口前使用原配置与公开样例复测。
