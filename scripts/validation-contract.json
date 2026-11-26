@@ -3,7 +3,8 @@
   "runtime_rules": [
     "references/platform/7.2/*.md",
     "references/platform/community/client-controls-api.md",
-    "references/platform/official/*.md"
+    "references/platform/official/*.md",
+    "skills/miliastra-assets/SKILL.md"
   ],
   "development_inputs": [
     "*.py",

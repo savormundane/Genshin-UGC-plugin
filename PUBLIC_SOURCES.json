@@ -18,11 +18,6 @@
       "license_file": "references/assets/geimg/LICENSE.txt",
       "note": "Author-provided text, scripts and templates are covered by the maintainer's permission. Upstream chapter and attachment names correspond; local digests identify the bundled copies."
     },
-    "pixel_guide": {
-      "author": null,
-      "url": null,
-      "note": "Supplied workflow; original authorship and redistribution permission not established."
-    },
     "client_api_document": {
       "author": null,
       "url": "https://act.mihoyo.com/ys/ugc/tutorial/detail/mhtakr07vej4",
@@ -1577,12 +1572,6 @@
       "path": "references/platform/official/附录/附录__mhsumxr9cf3y.md",
       "sha256": "5c6599d306634d218b3d5beb8c5c744ebfb714023b6fd1b60c8d460c4617b7c4",
       "group": "official_documents",
-      "status": "redistribution_permission_unverified"
-    },
-    {
-      "path": "references/assets/pixel-import-guide.md",
-      "sha256": "2b2be3ed9c52f96b4e567a7b32139938f23bbf10f1b088f11181581ef6c52d82",
-      "group": "pixel_guide",
       "status": "redistribution_permission_unverified"
     },
     {

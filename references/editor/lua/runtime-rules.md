@@ -27,7 +27,7 @@
 
 运行环境与生命周期：三、运行环境，1–2；全局函数、Color、Script、game：3–6；Tween、TweenSequence、ServerSignal：7–9；枚举：10–11；控件继承与基类：12–13；具体控件及光标事件数据：14–25；按键输入：26。
 
-审查脚本时优先指出可复现的接口、权限、生命周期和参数错误，给出最小修复和文档依据。编辑器配置和点阵绘制另查[平台资料](../../platform/README.md)和[像素指南](../../assets/pixel-import-guide.md)。
+审查脚本时优先指出可复现的接口、权限、生命周期和参数错误，给出最小修复和文档依据。编辑器配置和点阵绘制另查[平台资料](../../platform/README.md)和[素材 Skill](../../../skills/miliastra-assets/SKILL.md#点阵图片处理)。
 
 ## 调试和交付
 

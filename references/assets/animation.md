@@ -4,7 +4,7 @@
 
 ## 点阵帧
 
-已有调色板和矩形数据时，直接按 [点阵运行时](../editor/lua/pixel-runtime.md) 接入。以矩形最多的一帧为准建立固定控件池，再分批初始化。切换帧时更新已有控件并隐藏多余控件，镜像变换使用同一个锚点。根据项目的玩法状态选择要显示的帧。需要从图片生成数据时，先 [把 PNG 转成图元](image-to-primitives.md)。点阵数据的来源和格式见 [点阵指南](pixel-import-guide.md)。
+已有调色板和矩形数据时，按[点阵帧动画接入](../editor/lua/pixel-runtime.md)处理锚点、控件池和切帧。根据项目的玩法状态选择要显示的帧。从 PNG 开始时，先按[素材 Skill](../../skills/miliastra-assets/SKILL.md#点阵图片处理)试算和生成图元。
 
 ## 分层图元与拟L2D
 

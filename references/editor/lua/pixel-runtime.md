@@ -1,6 +1,6 @@
 # 点阵帧动画接入
 
-使用已生成的调色板和矩形数据接入帧动画。素材拟合和转换见[点阵像素指南](../../assets/pixel-import-guide.md)，接口见[客户端 API](../../platform/community/client-controls-api.md)。
+使用已生成的调色板和矩形数据接入帧动画。素材拟合和转换见[素材 Skill](../../../skills/miliastra-assets/SKILL.md#点阵图片处理)，接口见[客户端 API](../../platform/community/client-controls-api.md)。
 
 按矩形最多的一帧建立控件池，分帧初始化。切帧时更新并复用已有图块，隐藏多余控件。移动角色时只移动父容器。不能每次切帧销毁重建控件。
 

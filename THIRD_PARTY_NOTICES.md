@@ -24,7 +24,6 @@
 
 | 内容 | 已知来源 | 当前状态 |
 | --- | --- | --- |
-| 点阵像素图处理与导入指南 | 原始下载出处待核 | 作者与许可待核，不冒称原创或GPL |
 | 客户端API整理文档 | [相关官方页面](https://act.mihoyo.com/ys/ugc/tutorial/detail/mhtakr07vej4) | 本地整理稿来源与再分发许可待核 |
 | 官方正文及版本镜像 | 米哈游；[Miliastra-knowledge](https://github.com/1475505/Miliastra-knowledge) | 平台资料权利与工具代码许可分开；未确认镜像正文的再分发许可 |
 

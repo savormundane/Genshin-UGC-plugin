@@ -5,7 +5,16 @@ description: 将 PNG 或分层图片转成千星奇域图元，比较候选预�
 
 # Miliastra Assets
 
-单张 PNG 先用 `asset_preview` 给出候选预览、误差和控件数。选定候选后调用 `asset_generate`。复用同一 PNG、试算报告以及工具返回的两份摘要，输出到新目录。 [图片转图元](../../references/assets/image-to-primitives.md#单张-png-试算与生成)
+## 点阵图片处理
+
+1. 从工程内的原始 PNG 开始，确认目标显示尺寸和控件预算。每个矩形占用一个图元控件，父容器和界面其他控件单独计入工程预算。
+2. 用 `asset_preview` 比较候选画面、误差和实际控件数。先看主体轮廓、高对比线条和透明边缘，再选预算内的方案。超预算时比较较小网格，细节损失明显时用 `asset_fit` 分层处理。需要调整透明阈值或色数时用终端的 [图片转图元](../../references/assets/image-to-primitives.md) 参数。
+3. 选定候选后用 `asset_generate` 生成。沿用原 PNG，`report` 指向试算目录的 `report.json`。用 `inputs_sha256.input` 填 `sha256`，用 `outputs_sha256["report.json"]` 填 `report_sha256`。传入所选 `candidate` 和新输出目录，再核对 `data.lua`、控件数和预览。
+4. 挂载时使用当前 GIL 中确认可实例化的图片控件模板。矩形在 `data.lua` 中从左上角按网格定位，调色板索引从 1 开始。按目标容器的锚点和显示比例换算位置与尺寸。动画以矩形最多的一帧确定池大小，分批创建，切帧时更新已有图块并隐藏多余控件，镜像绕帧锚点处理。
+
+[检查点图标样例](../../samples/creator-demos/png/README.md) · [点阵帧动画接入](../../references/editor/lua/pixel-runtime.md)
+
+## 其他素材任务
 
 | 任务 | 工具 |
 | --- | --- |

@@ -22,7 +22,7 @@
     "conflicts": {
       "path": "references/platform/sources-and-conflicts.md",
       "kind": "maintainer_analysis",
-      "sha256": "58a850fe4921101084aac813486f8526fe212cefc165bd68bdc542328602bc3f",
+      "sha256": "763d77efae4ec00f972b5272715f83d7181d40f5f7fa0492e474c7ad3e64fe5f",
       "version": null,
       "updated_at": null,
       "original_url": null,
@@ -30,9 +30,9 @@
       "official_origin_verified": false
     },
     "pixels": {
-      "path": "references/assets/pixel-import-guide.md",
-      "kind": "provided_workflow",
-      "sha256": "2b2be3ed9c52f96b4e567a7b32139938f23bbf10f1b088f11181581ef6c52d82",
+      "path": "skills/miliastra-assets/SKILL.md",
+      "kind": "maintainer_workflow",
+      "sha256": "d183165a32553085fe1313c0e86f8d05f251019736ada4bf301a80cd425ee839",
       "version": null,
       "updated_at": null,
       "original_url": null,
