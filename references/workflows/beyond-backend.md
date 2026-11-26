@@ -7,7 +7,7 @@ python scripts/qianxing.py simulate preview samples/beyond-button/preview.json -
 python scripts/qianxing.py beyond SPEC.json --out NEW_DIRECTORY
 ```
 
-先用[按钮示例](../../samples/beyond-button/README.md)看 PNG、控件树和点击日志。`simulate preview` 始终请求软件画面，可省略断言。已声明的断言仍执行，失败时返回非零。失败前已生成的画面和报告保存在独立的 `NEW_PREVIEW.diagnostics` 目录。报告记录首个失败断言的预期值和实际值。`beyond` 和制作链入口用于正式场景检查，需要提供断言。
+先用[按钮示例](../../samples/beyond-button/README.md)看 PNG、控件树和点击日志。`simulate preview` 始终请求软件画面，可省略断言。报告的 `checks.lua` 单独记录脚本挂载和运行错误。Lua 出错或已声明的断言失败时，命令返回非零，已生成的画面、控件树和日志保存在 `NEW_PREVIEW.diagnostics`。失败断言会记录预期值和实际值。`beyond` 和制作链入口用于正式场景检查，需要提供断言。
 
 MCP 中用 `simulate`，传同一份配置的路径和摘要并设 `preview=true`。通过时从 `output` 打开画面和报告。失败时从 `diagnostics_output` 找到已生成的画面和报告，用 `diagnostics_sha256` 核对文件。路径已存在时改用新名称。为 `asset_fit` 配置 `mount` 后，会生成可直接用于 `simulate` 的配置和供软件预览使用的图片模板。 [拟合预览示例](../../samples/creator-demos/png/README.md#拟合并预览可挂载的-lua)
 

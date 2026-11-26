@@ -131,7 +131,7 @@ class BeyondNativeTests(unittest.TestCase):
             'vendor/beyond/studio/index.js', 'vendor/beyond/bundle.json',
         })
 
-    def test_failed_beyond_mcp_preview_retains_diagnostics(self):
+    def test_beyond_mcp_preview_reports_assertion_and_lua_failures(self):
         from mcp import Client, StdioServerParameters
 
         archive = os.environ.get('MILIASTRA_TEST_BEYOND_ARCHIVE')
@@ -148,6 +148,8 @@ class BeyondNativeTests(unittest.TestCase):
         shutil.copytree(PLUGIN / 'samples/beyond-button', project)
         spec = project / 'preview.json'
         changed = read_json(spec)
+        button = project / 'button.lua'
+        button_script = button.read_text(encoding='utf-8')
         changed['case']['asserts'][0]['contains'] = 'Missing assertion marker'
         write_json(spec, changed)
         outputs = self.root / 'outputs'
@@ -177,12 +179,86 @@ class BeyondNativeTests(unittest.TestCase):
                     self.assertEqual(response['diagnostics_sha256'][name], sha_file(output / name))
                 report = read_json(output / 'external-simulation.json')
                 self.assertEqual(report['status'], 'failed')
+                self.assertEqual(report['checks']['lua']['status'], 'passed')
                 self.assertIn('Button clicked', json.dumps(report['logs']))
                 self.assertNotIn('qianxing-mcp-', json.dumps(response))
                 retry = (await client.call_tool('simulate', args)).structured_content
                 self.assertIsNone(retry['output'])
                 self.assertEqual(retry['diagnostics'][-1]['code'], 'diagnostics_output_unavailable')
                 self.assertEqual(response['diagnostics_sha256']['manifest.json'], sha_file(output / 'manifest.json'))
+
+                startup = 'function OnStart()\n    error("startup failed")\nend\n'
+                click = changed['case']['events']
+                static_assertion = [{'kind': 'control', 'name': 'Action', 'field': 'name', 'equals': 'Action'}]
+                signal = (
+                    'function OnStart()\n'
+                    '    script:RegisterServerSignalHandler("Probe", function()\n'
+                    '        error("signal failed")\n'
+                    '    end)\n'
+                    'end\n'
+                )
+                signal_events = [
+                    {'t': 0, 'kind': 'view', 'playerIndex': 2},
+                    {'t': 0, 'kind': 'serverSend', 'name': 'Probe', 'target': 'PlayerSelf'},
+                    {'t': 0, 'kind': 'view', 'playerIndex': 1},
+                ]
+                ordinary_logs = button_script.replace(
+                    'print("Button clicked")', 'print("lua-error info text")\n        printerr("lua-error error text")',
+                )
+                for name, source, players, events, asserts, message in (
+                    ('startup', startup, 1, [], [], 'startup failed'),
+                    ('startup-static', startup, 1, [], static_assertion, 'startup failed'),
+                    ('signal-other-player', signal, 2, signal_events, static_assertion, 'signal failed'),
+                    ('ordinary-logs', ordinary_logs, 1, click, static_assertion, None),
+                ):
+                    with self.subTest(name=name):
+                        button.write_text(source, encoding='utf-8', newline='\n')
+                        changed['scripts'][0]['sha256'] = sha_file(button)
+                        write_json(spec, {**changed, 'case': {
+                            **changed['case'], 'playerCount': players, 'events': events, 'asserts': asserts,
+                        }})
+                        outcome = await client.call_tool('simulate', {
+                            **args, 'sha256': sha_file(spec), 'output': name,
+                        })
+                        self.assertFalse(outcome.is_error, outcome)
+                        response = outcome.structured_content
+                        expected = 'failed' if message else 'passed'
+                        self.assertEqual(response['status'], expected, response)
+                        destination = outputs / name
+                        diagnostics = destination.with_name(name + '.diagnostics')
+                        output = diagnostics if message else destination
+                        self.assertEqual(destination.exists(), message is None)
+                        self.assertEqual(diagnostics.exists(), message is not None)
+                        report = read_json(output / 'external-simulation.json')
+                        self.assertEqual(report['status'], expected)
+                        self.assertEqual(report['checks']['assertions']['status'], 'passed' if asserts else 'not_checked',
+                                         report['diagnostics'])
+                        lua = report['checks']['lua']
+                        self.assertEqual(lua['status'], expected)
+                        if message:
+                            self.assertIsNone(response['output'])
+                            self.assertEqual(Path(response['diagnostics_output']), diagnostics)
+                            self.assertEqual([item['code'] for item in response['diagnostics']], ['beyond_lua_error'])
+                            error, = lua['errors']
+                            self.assertIn(message, error['message'])
+                            self.assertEqual(error['player_index'], 2 if players == 2 else 1)
+                            if name.startswith('startup'):
+                                self.assertIn(message, lua['mount_error'])
+                                self.assertTrue(any(row['level'] == 'lua-error' and message in row['text']
+                                                    for row in report['logs']))
+                            else:
+                                self.assertIsNone(lua['mount_error'])
+                                self.assertFalse(any(message in row['text'] for row in report['logs']))
+                            for artifact in ('preview.png', 'render.json', 'external-simulation.json', 'manifest.json'):
+                                self.assertEqual(response['diagnostics_sha256'][artifact], sha_file(output / artifact))
+                            self.assertTrue(read_json(output / 'render.json')['tree'])
+                        else:
+                            self.assertEqual(Path(response['output']), destination)
+                            self.assertEqual(lua['errors'], [])
+                            self.assertEqual(report['diagnostics'], [])
+                            logs = [(row['level'], row['text']) for row in report['logs']]
+                            self.assertIn(('info', 'lua-error info text'), logs)
+                            self.assertIn(('error', 'lua-error error text'), logs)
 
         asyncio.run(run())
 

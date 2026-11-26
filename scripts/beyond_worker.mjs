@@ -1,6 +1,29 @@
 import {readFileSync,writeFileSync} from 'node:fs';
 import {pathToFileURL} from 'node:url';
 import {dirname,join} from 'node:path';
+
+function checkLuaExecution(studio) {
+ const current = studio.playGet();
+ const errors = [];
+ if (!current.running) return {status: 'not_checked', mount_error: null, errors};
+
+ // Logs are per player, while the session also exposes the first mount error.
+ try {
+  for (let player = 1; player <= current.playerCount; player++) {
+   const snapshot = player === current.viewPlayerIndex ? current : studio.playSetView(player);
+   for (const log of snapshot.logs) {
+    if (log.level === 'lua-error') errors.push({message: log.text, player_index: player, time: log.time});
+   }
+  }
+ } finally {
+  if (current.playerCount > 1) studio.playSetView(current.viewPlayerIndex, {observe: false});
+ }
+ if (current.mountError && !errors.some(error => error.message === current.mountError)) {
+  errors.unshift({message: current.mountError});
+ }
+ return {status: errors.length ? 'failed' : 'passed', mount_error: current.mountError, errors};
+}
+
 const job=JSON.parse(readFileSync(process.argv[2],'utf8'));
 const {createStudio}=await import(pathToFileURL(job.entry).href);
 const directory=dirname(process.argv[3]);
@@ -39,6 +62,20 @@ try {
  }
  const assertions={status:failedIndex>=0?'failed':result.results.length?'passed':'not_checked',
   executed:result.results.length};
+ let lua = {status: 'not_checked', mount_error: null, errors: []};
+ try {
+  lua = checkLuaExecution(studio);
+  if (lua.status === 'passed' && !result.snapshot) lua.status = 'not_checked';
+ } catch (error) {
+  diagnostics.push({code: 'beyond_lua_check_failed', message: error.message});
+ }
+ if (lua.status === 'failed') {
+  diagnostics.push({
+   code: 'beyond_lua_error',
+   message: lua.errors[0].message,
+   error_count: lua.errors.length,
+  });
+ }
  let rendering='not_checked';
  let previewGenerated=false;
  if(job.render){
@@ -81,7 +118,7 @@ try {
  }
  result.passed=result.passed && diagnostics.length===0;
  result.diagnostics=diagnostics;
- result.checks={assertions,render_assertions:{status:rendering},preview:{generated:previewGenerated}};
+ result.checks={assertions,lua,render_assertions:{status:rendering},preview:{generated:previewGenerated}};
  result.logs??=result.snapshot?.logs||[];
  writeFileSync(process.argv[3],JSON.stringify(result),{flag:'wx'});
 } finally {studio.playStop();}

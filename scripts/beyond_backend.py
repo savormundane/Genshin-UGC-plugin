@@ -133,7 +133,7 @@ def run(path,backend,out,*,final_gil=None,preview=False):
         result=read_json(td/'result.json')
         passed=result.get('passed') is True
         if not preview and (not passed or result['checks']['assertions']['executed']==0):
-            raise ValueError('External assertions failed: '+json.dumps(result,ensure_ascii=False))
+            raise ValueError('Beyond scenario checks failed: '+json.dumps(result,ensure_ascii=False))
         status='passed' if passed else 'failed'
         destination=Path(out).resolve()
         if not passed:destination=destination.with_name(destination.name+'.diagnostics')
