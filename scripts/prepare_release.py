@@ -120,8 +120,10 @@ def package_npm(tree: Path, output: Path, version: str) -> dict:
     prefixes, excluded = distribution_exclusions(tree, required=True)
     native_lock = json.loads((tree / "vendor/beyond/native-canvas.json").read_text(encoding="utf-8"))
     excluded.extend(f"vendor/beyond/{path}" for path in native_lock["files"])
-    from check_public_scope import POLICY, check_entries, read_policy
+    from check_public_scope import POLICY, check_entries, content_kinds, read_policy, shown_name
     policy = tree / POLICY
+    if tree.resolve() == ROOT and not policy.is_file():
+        raise ValueError("Missing approved public file list")
     approved = read_policy(policy.read_bytes()) if policy.is_file() else None
     required = {
         "package.json", "cordis.patch.yml", "plugin.json", "README.md", "LICENSE",
@@ -146,8 +148,13 @@ def package_npm(tree: Path, output: Path, version: str) -> dict:
                 raise ValueError(f"Unexpected npm archive member: {entry.name}")
             source = tree / relative
             archived = archive.extractfile(entry)
-            if archived is None or not source.is_file() or archived.read() != source.read_bytes():
+            if archived is None or not source.is_file():
                 raise ValueError(f"npm member differs from source snapshot: {relative}")
+            data = archived.read()
+            if data != source.read_bytes():
+                raise ValueError(f"npm member differs from source snapshot: {relative}")
+            if approved is not None and content_kinds(data):
+                raise ValueError("Restricted npm file content: " + shown_name(relative))
         missing = required.difference(names)
         if missing:
             raise ValueError(f"Missing npm archive members: {', '.join(sorted(missing))}")
@@ -189,7 +196,7 @@ def prepare(
                     raise ValueError("Unsafe or linked source entry: " + member.filename)
             archive.extractall(tree)
         from check_public_scope import POLICY, check_tree
-        if (source / POLICY).is_file():
+        if source == ROOT or (source / POLICY).is_file():
             problems = check_tree(tree)
             if problems:
                 raise ValueError("\n".join(problems))

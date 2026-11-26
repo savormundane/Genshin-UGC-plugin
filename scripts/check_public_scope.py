@@ -135,6 +135,8 @@ def main() -> int:
     import json
 
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--redact-paths", action="store_true",
+                        help="Report only totals in shared logs")
     modes = parser.add_mutually_exclusive_group(required=True)
     modes.add_argument("--tree", type=Path)
     modes.add_argument("--commit")
@@ -160,10 +162,14 @@ def main() -> int:
             ).strip()
             failures = check_git(revision)
     except (OSError, ValueError, tarfile.TarError, subprocess.CalledProcessError) as exc:
-        print(exc, file=sys.stderr)
+        print(type(exc).__name__ if args.redact_paths else exc, file=sys.stderr)
         return 1
     if failures:
-        print("\n".join(failures), file=sys.stderr)
+        if args.redact_paths:
+            print(f"Public scope check blocked {len(failures)} findings. Run the check locally for paths.",
+                  file=sys.stderr)
+        else:
+            print("\n".join(failures), file=sys.stderr)
         return 1
     print("Public scope check passed")
     return 0

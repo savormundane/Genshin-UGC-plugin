@@ -39,17 +39,17 @@ jobs:
         with:
           version: '0.13.10'
           enable-cache: false
-      - run: python -B scripts/check_repository.py
       - name: Verify the public file scope and outgoing commit trees
         shell: bash
         env:
           PRIVACY_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
-          python -B scripts/check_public_scope.py --commit HEAD
+          python -B scripts/check_public_scope.py --commit HEAD --redact-paths
           if [[ "$PRIVACY_BASE" =~ ^[0-9a-f]{40}$ && "$PRIVACY_BASE" != 0000000000000000000000000000000000000000 ]]; then
             git cat-file -e "$PRIVACY_BASE^{commit}"
-            python -B scripts/check_public_scope.py --outgoing "$PRIVACY_BASE" HEAD
+            python -B scripts/check_public_scope.py --outgoing "$PRIVACY_BASE" HEAD --redact-paths
           fi
+      - run: python -B scripts/check_repository.py
       - run: python -m compileall -q scripts
       - run: node scripts/test_gil.mjs
       - name: Verify both Python locks represent the same dependencies
@@ -70,6 +70,7 @@ jobs:
 
   windows:
     name: Windows and Python ${{ matrix.python }}
+    needs: repository
     runs-on: windows-2025
     timeout-minutes: 40
     strategy:
@@ -217,7 +218,7 @@ jobs:
         run: |
           $PSNativeCommandUseErrorActionPreference = $true
           $scratch = New-Item -ItemType Directory "$env:RUNNER_TEMP/dsh-candidate"
-          python -B scripts/check_public_scope.py --commit HEAD
+          python -B scripts/check_public_scope.py --commit HEAD --redact-paths
           python -B -c "import json,sys; from pathlib import Path; sys.path.insert(0,'scripts'); from prepare_release import package_npm; root=Path.cwd(); package_npm(root, Path(sys.argv[1]), json.loads((root/'plugin.json').read_bytes())['version'])" $scratch.FullName
           $archive = (Get-ChildItem -LiteralPath $scratch.FullName -Filter '*.tgz').FullName
           $dsh = "$env:RUNNER_TEMP/dsh/node_modules/@deepseek-ai/dsh/lib/bin.js"
