@@ -1,4 +1,5 @@
 import asyncio
+from base64 import b64decode
 import json
 from pathlib import Path
 import os
@@ -132,7 +133,7 @@ class BeyondNativeTests(unittest.TestCase):
         })
 
     def test_beyond_mcp_preview_reports_assertion_and_lua_failures(self):
-        from mcp import Client, StdioServerParameters
+        from mcp import Client, StdioServerParameters, types
 
         archive = os.environ.get('MILIASTRA_TEST_BEYOND_ARCHIVE')
         backend = PLUGIN / 'vendor/beyond'
@@ -163,6 +164,14 @@ class BeyondNativeTests(unittest.TestCase):
             env=env,
         )
 
+        def assert_diagnostic_image(outcome, digest):
+            self.assertEqual([item.type for item in outcome.content], ['text', 'image', 'text', 'text'])
+            self.assertIn('预览失败', outcome.content[2].text)
+            image, = [item for item in outcome.content if isinstance(item, types.ImageContent)]
+            self.assertEqual(image.mime_type, 'image/png')
+            self.assertEqual(sha(b64decode(image.data, validate=True)), digest)
+            self.assertFalse(image.data in json.dumps(outcome.structured_content))
+
         async def run():
             async with Client(server) as client:
                 args = {'spec': spec.name, 'sha256': sha_file(spec), 'output': 'preview', 'preview': True}
@@ -177,15 +186,24 @@ class BeyondNativeTests(unittest.TestCase):
                 self.assertEqual(output, outputs / 'preview.diagnostics')
                 for name in ('preview.png', 'external-simulation.json', 'manifest.json'):
                     self.assertEqual(response['diagnostics_sha256'][name], sha_file(output / name))
+                preview_digest = response['diagnostics_sha256']['preview.png']
+                assert_diagnostic_image(outcome, preview_digest)
                 report = read_json(output / 'external-simulation.json')
                 self.assertEqual(report['status'], 'failed')
                 self.assertEqual(report['checks']['lua']['status'], 'passed')
                 self.assertIn('Button clicked', json.dumps(report['logs']))
                 self.assertNotIn('qianxing-mcp-', json.dumps(response))
-                retry = (await client.call_tool('simulate', args)).structured_content
+                old_preview = b'previous diagnostics image'
+                (output / 'preview.png').write_bytes(old_preview)
+                retry_outcome = await client.call_tool('simulate', args)
+                self.assertFalse(retry_outcome.is_error, retry_outcome)
+                retry = retry_outcome.structured_content
                 self.assertIsNone(retry['output'])
+                self.assertIsNone(retry.get('diagnostics_output'))
                 self.assertEqual(retry['diagnostics'][-1]['code'], 'diagnostics_output_unavailable')
                 self.assertEqual(response['diagnostics_sha256']['manifest.json'], sha_file(output / 'manifest.json'))
+                self.assertEqual((output / 'preview.png').read_bytes(), old_preview)
+                assert_diagnostic_image(retry_outcome, preview_digest)
 
                 startup = 'function OnStart()\n    error("startup failed")\nend\n'
                 click = changed['case']['events']
@@ -251,6 +269,8 @@ class BeyondNativeTests(unittest.TestCase):
                                 self.assertFalse(any(message in row['text'] for row in report['logs']))
                             for artifact in ('preview.png', 'render.json', 'external-simulation.json', 'manifest.json'):
                                 self.assertEqual(response['diagnostics_sha256'][artifact], sha_file(output / artifact))
+                            assert_diagnostic_image(outcome, response['diagnostics_sha256']['preview.png'])
+                            self.assertIn(message, outcome.content[2].text)
                             self.assertTrue(read_json(output / 'render.json')['tree'])
                         else:
                             self.assertEqual(Path(response['output']), destination)

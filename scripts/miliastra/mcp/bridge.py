@@ -258,9 +258,10 @@ class Bridge:
             output_hashes=None
             if destination:
                 delivery=scratch/'delivery'
-                if operation in ('native_plan','native_apply','asset_generate','asset_fit','scene_build','scene_catalogue','graph_build') or (
-                    operation == 'simulate' and args.get('preview')
-                ):
+                if operation in (
+                    'native_plan', 'native_apply', 'asset_generate', 'asset_fit',
+                    'scene_preview', 'scene_build', 'scene_catalogue', 'graph_build',
+                ) or (operation == 'simulate' and args.get('preview')):
                     manifest=delivery/'manifest.json'
                     field = 'files_sha256' if operation == 'asset_generate' else 'files'
                     output_hashes={**read_json(manifest)[field],'manifest.json':sha_file(manifest)}
@@ -288,6 +289,5 @@ def main(argv=None):
         server(bridge).run(transport='stdio');return 0
     request=read_json(args.request);schema(request,('schema','operation','arguments'),('operation','arguments'))
     result=asyncio.run(bridge.call(request['operation'],request['arguments']))
-    if request['operation'] in ('asset_preview', 'asset_generate', 'asset_fit'):
-        result.get('result', {}).pop('_inline_previews', None)
+    result.get('result', {}).pop('_inline_previews', None)
     print(json.dumps(result,ensure_ascii=False));return 1 if result['status']in('failed','not_checked')else 0

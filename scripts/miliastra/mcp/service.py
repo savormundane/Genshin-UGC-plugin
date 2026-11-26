@@ -2,7 +2,7 @@
 from importlib.metadata import version
 import asyncio
 import json
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 from mcp import types
 from mcp.server import MCPServer
 from mcp.server.mcpserver import Context
@@ -14,15 +14,20 @@ from miliastra.mcp.bridge import BUILTIN_OPERATIONS
 from runtime_policy import REQUIREMENTS
 
 
-def _asset_result(response):
+def _preview_result(response, *, summary=None, error_on_failure=True):
     previews = response.get('result', {}).pop('_inline_previews', [])
-    content = [types.TextContent(type='text', text=json.dumps(response, ensure_ascii=False))]
+    json_text = types.TextContent(type='text', text=json.dumps(response, ensure_ascii=False))
+    content = [] if summary else [json_text]
     for preview in previews:
         content.extend([
             types.TextContent(type='text', text=preview['caption']),
             types.ImageContent(type='image', mime_type='image/png', data=preview['data']),
         ])
-    return types.CallToolResult(content=content, structured_content=response, is_error=response['status'] == 'failed')
+    if summary:
+        content.extend([types.TextContent(type='text', text=summary), json_text])
+    return types.CallToolResult(
+        content=content, structured_content=response, is_error=error_on_failure and response['status'] == 'failed',
+    )
 
 
 def server(bridge):
@@ -106,11 +111,21 @@ def server(bridge):
         return await call('native_inspect',ctx,input=input,sha256=sha256)
 
     @app.tool(structured_output=True)
-    async def scene_preview(input:str,output:str,ctx:Context,before:str|None=None,
-                            sha256:str|None=None,before_sha256:str|None=None)->dict[str,Any]:
-        """Draw a scene draft or native GIL layout. Compare an optional earlier GIL at the same scale."""
-        return await call('scene_preview',ctx,input=input,output=output,before=before,
-                          sha256=sha256,before_sha256=before_sha256)
+    async def scene_preview(
+        input: str, output: str, ctx: Context, before: str | None = None,
+        sha256: str | None = None, before_sha256: str | None = None,
+    ) -> Annotated[types.CallToolResult, dict[str, Any]]:
+        """Draw a scene draft or GIL layout, optionally comparing an earlier file at the same scale.
+
+        Show the attached top and side views first, then the result and next step.
+        """
+        response = await call('scene_preview', ctx, input=input, output=output, before=before,
+                              sha256=sha256, before_sha256=before_sha256)
+        summary = None
+        if response['status'] == 'passed':
+            count = response['result']['objects']
+            summary = f'布局预览已生成，报告记录了 {count} 个已定位对象。请核对点位和轮廓后再继续调整。'
+        return _preview_result(response, summary=summary, error_on_failure=False)
 
     @app.tool(structured_output=True)
     async def scene_catalogue(input:str,sha256:str,version:str,mode:str,output:str,ctx:Context)->dict[str,Any]:
@@ -128,7 +143,7 @@ def server(bridge):
         """Compare PNG conversions. Show the original, recommended and cheaper viable previews when available, with counts and digests for asset_generate."""
         response = await call('asset_preview', ctx, input=input, output=output, sha256=sha256,
                               max_controls=max_controls, step=step)
-        return _asset_result(response)
+        return _preview_result(response)
 
     @app.tool(structured_output=True)
     async def asset_generate(input: str, sha256: str, report: str, report_sha256: str,
@@ -136,7 +151,7 @@ def server(bridge):
         """Generate the selected candidate into a new directory. Use asset_preview inputs_sha256.input and outputs_sha256['report.json'] for the digests."""
         response = await call('asset_generate', ctx, input=input, sha256=sha256, report=report,
                               report_sha256=report_sha256, candidate=candidate, output=output)
-        return _asset_result(response)
+        return _preview_result(response)
 
     @app.tool(structured_output=True)
     async def asset_fit(input:str,spec:str,output:str,ctx:Context,sha256:str|None=None,
@@ -154,7 +169,7 @@ def server(bridge):
         response = await call('asset_fit',ctx,input=input,spec=spec,output=output,sha256=sha256,
                               spec_sha256=spec_sha256,resume=resume,resume_sha256=resume_sha256,
                               initial=initial,initial_sha256=initial_sha256,steps=steps)
-        return _asset_result(response)
+        return _preview_result(response)
 
     @app.tool(structured_output=True)
     async def native_audit(input:str,ctx:Context,sha256:str|None=None)->dict[str,Any]:
@@ -202,9 +217,28 @@ def server(bridge):
         """
         return await call('native_plan',ctx,input=input,sha256=sha256,output=output,patch=patch,spec=spec,spec_sha256=spec_sha256,summary=summary)
     @app.tool(structured_output=True)
-    async def simulate(spec:str,sha256:str,output:str,ctx:Context,preview:bool=False)->dict[str,Any]:
-        """Run or replay a joint scenario. With preview=true, run a Beyond spec and save the software PNG, control tree and logs."""
-        return await call('simulate',ctx,spec=spec,sha256=sha256,output=output,preview=preview)
+    async def simulate(
+        spec: str, sha256: str, output: str, ctx: Context, preview: bool = False,
+    ) -> Annotated[types.CallToolResult, dict[str, Any]]:
+        """Run a joint scenario, or with preview=true run a Beyond spec and attach its generated PNG.
+
+        For a preview, show the image first, then the check results or failure reason and next step.
+        A failed preview can include an image. Use structured status to judge the result.
+        """
+        response = await call('simulate', ctx, spec=spec, sha256=sha256, output=output, preview=preview)
+        summary = None
+        if preview and response['status'] == 'passed':
+            checks = response['result']['checks']
+            labels = {'passed': '通过', 'failed': '失败', 'not_checked': '未检查'}
+            results = '，'.join(f"{name}{labels[checks[key]['status']]}" for key, name in (
+                ('lua', 'Lua 执行'), ('assertions', '行为断言'), ('render_assertions', '绘制断言'),
+            ))
+            summary = f'{results}。请核对画面后再继续调整。'
+        elif preview:
+            reasons = '\n'.join(row['message'] for row in response.get('diagnostics', []))
+            reasons = reasons or response.get('error', '未生成预览。')
+            summary = f'预览失败。\n{reasons}\n处理报错后，用新的输出名称重试。'
+        return _preview_result(response, summary=summary, error_on_failure=False)
     @app.tool(structured_output=True)
     async def experiment_run(spec:str,sha256:str,output:str,ctx:Context)->dict[str,Any]:
         """Run the corresponding CLI core with digest-bound inputs and exclusive outputs."""

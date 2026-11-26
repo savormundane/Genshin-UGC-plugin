@@ -24,7 +24,7 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 | graph_build | spec、output，可选 sha256。使用 schema 1 配置编译独立 GIA，并返回产物及摘要。用于已有 GIL 时，把 GIA 交给 native_plan 审阅，再用 native_apply 另存 |
 | resources_lookup | version 必填。可选 query、mode（默认 beyond）、limit（默认 20）、catalogue、catalogue_sha256。默认查询模型和模板 ID，设置 resource_type 可查音效 `sound` 或特效 `effect` |
 | native_inspect / native_audit | input，可选 sha256。读取或审计指定原生文件 |
-| scene_preview | input、output，可选 sha256。绘制场景草案 JSON 或 GIL 的点位及可识别轮廓。GIL 可用 before 和 before_sha256 对照 |
+| scene_preview | input、output，可选 sha256。附上场景草案 JSON 或 GIL 布局的俯视图、侧视图及产物摘要。GIL 可用 before 和 before_sha256 对照 |
 | scene_catalogue | input、sha256、version、mode、output。从实际 GIL/GIA 提取布景模板和样本摘要，生成 models.json |
 | scene_build | spec、sha256、output。按已审阅的布景配置和样本证据生成静态 scene.gia，校验回读 |
 | asset_preview | input、output，可选 sha256、max_controls、step。试算单张 PNG 的矩形图元方案，返回各方案的控件数、误差、预算结果及预览路径，附 `report.json` 的摘要 |
@@ -36,7 +36,7 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 | native_diff | input、other，可选 sha256、other_sha256、allowed_top_level_fields。给出允许范围时，核对其余字段的原始字节 |
 | experiment_compare | input、sha256、other、other_sha256。比较两份实验观察结果 |
 | native_plan | input、sha256、output 加一个 patch 对象，或加 spec 和 spec_sha256 文件参数。可选 summary。输出可审阅的 plan.json 和文件摘要 |
-| simulate | spec、sha256、output。默认执行联合场景或复跑此前失败。传 preview=true 时执行 Beyond 配置并返回软件 PNG、控件树、日志和产物摘要 |
+| simulate | spec、sha256、output。默认执行联合场景或复跑此前失败。传 preview=true 时附上 Beyond 生成的 PNG，失败时一并说明原因 |
 | experiment_run | spec、sha256、output：观察实验，开发／保留种子合同不变；失败不提交 |
 | logs_diagnose | spec、sha256。只读解析 JSONL 或支持的编辑器二进制调试日志，并返回可核对的关联证据 |
 | verify | input 指向交付 manifest.json，sha256 必填。artifacts_only、portable、rebuild 默认为 false。仅产物校验独立运行。重建还需 portable=true 和 trusted_inputs_sha256 |
@@ -47,6 +47,8 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 带可选摘要的工具在省略时自行计算，并在 `inputs_sha256` 按参数名返回。编辑既有 GIL 时可把 `inputs_sha256.input` 交给 `native_plan`。配置诊断、修改计划、原生写入和重建继续使用各自的必填摘要。
 
 调用步骤见 [PNG 试算与生成](../references/assets/image-to-primitives.md#单张-png-试算与生成) · [拟合与预览](../references/assets/asset-fit.md#生成可挂载的-lua-和软件预览) · [静态布景](../references/editor/native-scene.md) · [诊断日志](../references/workflows/client-simulation.md#读取编辑器调试日志) · [审阅并另存已有工程](../references/gil/native-changes.md#审阅并另存已有工程)。
+
+在对话中先展示预览图，再说明检查结果和下一步。需要打开或核对文件时，从结构化结果读取路径和 SHA-256。Beyond 失败时，即使附上画面也以 `status` 为准。 [Beyond 诊断产物](../references/workflows/beyond-backend.md)
 
 ## CLI 与 MCP 共同合同
 

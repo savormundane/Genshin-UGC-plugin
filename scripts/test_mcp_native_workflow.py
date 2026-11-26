@@ -16,7 +16,7 @@ from lupa.lua53 import LuaRuntime
 from mcp import Client, StdioServerParameters, types
 from PIL import Image
 
-from authoring_io import PLUGIN, read_json, sha_file, write_json
+from authoring_io import PLUGIN, read_json, sha, sha_file, write_json
 from level_authoring import initial_level, integer, msg, set_section, text
 
 TEMPLATE = 0x40C00001
@@ -107,14 +107,25 @@ class NativeWorkflowTests(unittest.TestCase):
                 self.assertIn((output / 'image/data.lua').read_text(encoding='utf-8').strip(), code)
                 LuaRuntime().compile(code)
                 if archive:
-                    preview = await self.call(client, 'simulate', {
+                    outcome = await client.call_tool('simulate', {
                         'spec': str(preview_spec), 'sha256': sha_file(preview_spec),
                         'output': 'preview', 'preview': True,
                     })
+                    self.assertFalse(outcome.is_error, outcome)
+                    preview = outcome.structured_content
+                    self.assertEqual(preview['status'], 'passed', preview)
                     rendered = Path(preview['output'])
                     report = preview['result']
                     self.assertEqual(report['inputs'][str(mounted)], mounted_sha256)
                     self.assertEqual(report['render_layer'], 'software_preview')
+                    self.assertEqual([item.type for item in outcome.content], ['text', 'image', 'text', 'text'])
+                    self.assertIn('Lua 执行通过', outcome.content[2].text)
+                    thumbnail, = [item for item in outcome.content if isinstance(item, types.ImageContent)]
+                    self.assertEqual(thumbnail.mime_type, 'image/png')
+                    digest = sha_file(rendered / 'preview.png')
+                    self.assertEqual(preview['outputs_sha256']['preview.png'], digest)
+                    self.assertEqual(sha(b64decode(thumbnail.data, validate=True)), digest)
+                    self.assertFalse(thumbnail.data in json.dumps(preview))
                     render = read_json(rendered / 'render.json')
                     self.assertEqual(len(render['paint']), count)
                     self.assertTrue(all(row['primitive'] == 'rect' for row in render['paint']))
@@ -124,6 +135,47 @@ class NativeWorkflowTests(unittest.TestCase):
                         expected = fit.resize((144, 144), Image.Resampling.NEAREST)
                         self.assertEqual(actual.convert('RGBa').tobytes(), expected.convert('RGBa').tobytes())
                 self.assertEqual(sha_file(source), source_digest)
+
+        asyncio.run(run())
+
+    def test_scene_preview_returns_top_and_side_images_in_order(self):
+        draft = self.project / 'layout.json'
+        write_json(draft, {
+            'schema': 1, 'kind': 'whitebox-pivot', 'version': '7.2', 'mode': 'beyond',
+            'groups': [{
+                'key': 'door', 'pivot_relative': [0, .5, .25],
+                'parts': [{'name': 'door panel', 'shape_id': 10009001,
+                           'position_m': [5, 1, 0], 'scale': [2, 2, .25]}],
+            }],
+        })
+        digest = sha_file(draft)
+
+        async def run():
+            async with Client(self.server) as client:
+                outcome = await client.call_tool('scene_preview', {
+                    'input': draft.name, 'sha256': digest, 'output': 'scene',
+                })
+            self.assertFalse(outcome.is_error, outcome)
+            response = outcome.structured_content
+            self.assertEqual(response['status'], 'passed')
+            output = self.outputs / 'scene'
+            self.assertEqual(Path(response['output']), output)
+            self.assertEqual(response['inputs_sha256']['input'], digest)
+            report = response['result']
+            self.assertEqual(report, read_json(output / 'manifest.json'))
+            self.assertEqual(report['views']['top']['axes'], ['X', 'Z'])
+            self.assertEqual(report['views']['side']['axes'], ['X', 'Y'])
+            self.assertEqual(response['outputs_sha256']['manifest.json'], sha_file(output / 'manifest.json'))
+            self.assertEqual([item.type for item in outcome.content], ['text', 'image', 'text', 'image', 'text', 'text'])
+            self.assertIn('俯视', outcome.content[0].text)
+            self.assertIn('侧视', outcome.content[2].text)
+            images = [item for item in outcome.content if isinstance(item, types.ImageContent)]
+            for name, image in zip(('top.png', 'side.png'), images, strict=True):
+                self.assertEqual(image.mime_type, 'image/png')
+                self.assertEqual(sha(b64decode(image.data, validate=True)), report['files'][name])
+                self.assertEqual(sha_file(output / name), report['files'][name])
+                self.assertEqual(response['outputs_sha256'][name], report['files'][name])
+                self.assertFalse(image.data in json.dumps(response))
 
         asyncio.run(run())
 

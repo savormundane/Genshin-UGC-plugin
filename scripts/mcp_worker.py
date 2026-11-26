@@ -1,11 +1,15 @@
 """Isolated fixed-operation worker. stdout is never the MCP transport."""
+from base64 import b64encode
 from pathlib import Path
 import contextlib,json,os,sys
 from authoring_io import DiagnosticError,PLUGIN,sha_file,read_json,write_json,resolve
 
 
+def _inline_png(data, caption):
+    return {'caption': caption, 'data': b64encode(data).decode('ascii')}
+
+
 def _asset_thumbnail(path, name, controls, *, role, within_budget, has_foreground):
-    from base64 import b64encode
     from io import BytesIO
     from PIL import Image
 
@@ -18,7 +22,7 @@ def _asset_thumbnail(path, name, controls, *, role, within_budget, has_foregroun
     with Image.open(path) as image, BytesIO() as thumbnail:
         image.thumbnail((256, 256), Image.Resampling.NEAREST)
         image.save(thumbnail, format='PNG')
-        return {'caption': caption, 'data': b64encode(thumbnail.getvalue()).decode('ascii')}
+        return _inline_png(thumbnail.getvalue(), caption)
 
 
 def main():
@@ -118,7 +122,12 @@ def main():
             result=difference(Path(args['input']).read_bytes(),Path(args['other']).read_bytes(),args.get('allowed_top_level_fields'))
         elif op == 'scene_preview':
             from scene_preview import preview
-            result = preview(args['input'], args['output'], before=args.get('before'))
+            output = Path(args['output'])
+            result = preview(args['input'], output, before=args.get('before'))
+            result['_inline_previews'] = [
+                _inline_png((output / name).read_bytes(), caption)
+                for name, caption in (('top.png', '场景俯视图'), ('side.png', '场景侧视图'))
+            ]
         elif op == 'scene_build':
             from scene_authoring import build
             result = build(args['spec'], args['output'])
@@ -213,8 +222,12 @@ def main():
         elif op=='simulate' and args.get('preview'):
             from beyond_backend import run
             result = run(args['spec'], None, args['output'], preview=True)
-            result.pop('output', None)
-            result.pop('diagnostics_output', None)
+            output = result.pop('output', None)
+            diagnostics = result.pop('diagnostics_output', None)
+            directory = output or diagnostics
+            if directory and result['preview_generated']:
+                caption = 'Beyond 软件预览' if output else 'Beyond 失败时的画面'
+                result['_inline_previews'] = [_inline_png((Path(directory) / 'preview.png').read_bytes(), caption)]
         elif op=='simulate':
             from joint_simulator import evaluate,load_scenario
             from authoring_io import output_directory,finish
