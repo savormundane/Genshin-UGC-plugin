@@ -44,7 +44,7 @@ jobs:
         env:
           VERSION: ${{ inputs.version }}
           PUBLISH: ${{ inputs.publish }}
-          NPM_PUBLIC_CONTACT_EMAIL: ${{ vars.NPM_PUBLIC_CONTACT_EMAIL }}
+          NPM_PUBLIC_CONTACT_EMAIL: ${{ secrets.NPM_PUBLIC_CONTACT_EMAIL }}
         shell: bash
         run: |
           if [[ "$(jq -er .version plugin.json)" != "$VERSION" ]]; then
@@ -159,7 +159,7 @@ jobs:
       - name: Publish the tested archive and confirm public availability
         env:
           VERSION: ${{ inputs.version }}
-          NPM_PUBLIC_CONTACT_EMAIL: ${{ vars.NPM_PUBLIC_CONTACT_EMAIL }}
+          NPM_PUBLIC_CONTACT_EMAIL: ${{ secrets.NPM_PUBLIC_CONTACT_EMAIL }}
         working-directory: candidate
         shell: bash
         run: |
