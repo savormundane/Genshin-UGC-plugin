@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import json
+import os
 from pathlib import Path, PurePosixPath
 import re
 import subprocess
@@ -83,6 +85,27 @@ def require_distributable(source: dict) -> None:
         raise ValueError(f"Public artifact publication is on hold for {len(pending)} unresolved redistribution entries")
 
 
+def check_npm_metadata(metadata: dict, approved_contact: str, archive: Path | None) -> None:
+    if any(owner.get("email") and owner["email"].casefold() != approved_contact.casefold()
+           for owner in metadata.get("maintainers", [])):
+        raise ValueError("npm registry lists a maintainer email outside the approved public contact")
+    if archive is None:
+        return
+
+    publisher = metadata.get("_npmUser", {})
+    if (publisher.get("trustedPublisher", {}).get("id") != "github"
+            or publisher.get("email") != "npm-oidc-no-reply@github.com"
+            or publisher.get("approver") or not metadata.get("dist", {}).get("attestations", {}).get("provenance")):
+        raise ValueError("npm version lacks direct GitHub trusted publishing provenance")
+
+    source = archive.resolve().as_posix()
+    registry = f"https://registry.npmjs.org/{metadata['name']}/-/{archive.name}"
+    sources = {archive.name, f"./{archive.name}", source, f"file:./{archive.name}",
+               f"file:{archive.name}", f"file:{source}", archive.resolve().as_uri(), registry}
+    if any(metadata.get(field) is not None and metadata[field] not in sources for field in ("_from", "_resolved")):
+        raise ValueError("npm registry reports an unexpected package source path")
+
+
 def check_tree(root: Path) -> list[str]:
     allowed = read_policy((root / POLICY).read_bytes())
     files = {item.relative_to(root).as_posix(): item for item in root.rglob("*")
@@ -132,8 +155,6 @@ def check_git(revision: str):
 
 
 def main() -> int:
-    import json
-
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--redact-paths", action="store_true",
                         help="Report only totals in shared logs")
@@ -143,10 +164,16 @@ def main() -> int:
     modes.add_argument("--index", action="store_true")
     modes.add_argument("--outgoing", nargs=2, metavar=("BASE", "HEAD"))
     modes.add_argument("--require-distribution", action="store_true")
+    modes.add_argument("--npm-metadata", type=Path, help="Verify Registry maintainer metadata without displaying it")
+    parser.add_argument("--npm-archive", type=Path, help="Also verify version publication with the supplied archive path")
     args = parser.parse_args()
     try:
         if args.require_distribution:
             require_distributable(json.loads((ROOT / "PUBLIC_SOURCES.json").read_bytes()))
+            failures = []
+        elif args.npm_metadata:
+            check_npm_metadata(json.loads(args.npm_metadata.read_bytes()),
+                               os.environ.get("NPM_PUBLIC_CONTACT_EMAIL", ""), args.npm_archive)
             failures = []
         elif args.tree is not None:
             failures = check_tree(args.tree.resolve())
@@ -161,7 +188,7 @@ def main() -> int:
                 ["git", "-C", str(ROOT), "write-tree"], text=True
             ).strip()
             failures = check_git(revision)
-    except (OSError, ValueError, tarfile.TarError, subprocess.CalledProcessError) as exc:
+    except (OSError, ValueError, AttributeError, KeyError, TypeError, tarfile.TarError, subprocess.CalledProcessError) as exc:
         print(type(exc).__name__ if args.redact_paths else exc, file=sys.stderr)
         return 1
     if failures:

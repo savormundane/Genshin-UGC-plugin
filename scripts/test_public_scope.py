@@ -3,7 +3,7 @@ import tempfile
 import unittest
 import zipfile
 
-from check_public_scope import check_entries, check_tree, require_distributable
+from check_public_scope import check_entries, check_npm_metadata, check_tree, require_distributable
 from package_release import build_release
 
 
@@ -32,6 +32,31 @@ class PublicScopeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "1 unresolved redistribution"):
             require_distributable({"permission_unverified_files": [{"path": "fixture.md"}]})
         require_distributable({"permission_unverified_files": []})
+
+    def test_npm_preflight_checks_the_current_public_contact(self):
+        metadata = {"maintainers": [{"email": "private@example.test"}]}
+        with self.assertRaisesRegex(ValueError, "outside the approved public contact"):
+            check_npm_metadata(metadata, "", None)
+        check_npm_metadata(metadata, "private@example.test", None)
+        check_npm_metadata({"maintainers": [{"name": "fixture"}]}, "", None)
+
+    def test_npm_version_checks_publisher_and_registry_source(self):
+        archive = Path("fixture-1.0.0.tgz")
+        metadata = {
+            "name": "fixture",
+            "_npmUser": {"trustedPublisher": {"id": "github"}, "email": "npm-oidc-no-reply@github.com"},
+            "dist": {"attestations": {"provenance": {"predicateType": "fixture"}}},
+            "_from": f"file:./{archive.name}",
+            "_resolved": str(archive.resolve().as_posix()),
+        }
+        check_npm_metadata(metadata, "", archive)
+        metadata["_resolved"] = "file:" + "C:/Users/" + "test-account/Documents/fixture.tgz"
+        with self.assertRaisesRegex(ValueError, "unexpected package source path"):
+            check_npm_metadata(metadata, "", archive)
+        metadata.pop("_resolved")
+        metadata["_npmUser"]["email"] = "private@example.test"
+        with self.assertRaisesRegex(ValueError, "lacks direct GitHub trusted publishing provenance"):
+            check_npm_metadata(metadata, "", archive)
 
     def test_zip_uses_the_allowlist_at_the_file_boundary(self):
         with tempfile.TemporaryDirectory() as temp:

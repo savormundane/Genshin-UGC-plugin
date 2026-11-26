@@ -65,6 +65,8 @@ python -B scripts/prepare_release.py --set-version 1.3.2
 
 GitHub **Settings → Environments** 中的 `npm` 环境将部署分支限定为 `main`。工作流通过 OIDC 取短期授权，无需配置 npm token。npm 包已存在，首次绑定还需在两天内完成一次成功的正式发布，宜在下一版即将发布时配置。预检无需 npm 绑定。 [npm 可信发布](https://docs.npmjs.com/trusted-publishers/)
 
+npm 会将账户邮箱写入公开 Registry 元数据。用专门供项目公开的地址维护 npm 账户。如果包仍列有维护者邮箱，应在 GitHub **Settings → Secrets and variables → Actions → Variables** 中将 `NPM_PUBLIC_CONTACT_EMAIL` 设为经维护者批准公开的邮箱。正式发布校验包当前的公开联系方式，新版本公开后再确认来源字段、可信发布者和证明信息。 [npm 账户资料](https://docs.npmjs.com/managing-your-profile-settings/)
+
 更新依赖锁时，在仓库根运行以下命令。
 
 ```text
