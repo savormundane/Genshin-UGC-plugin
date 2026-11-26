@@ -35,9 +35,15 @@ def main():
     roots=[*writable,PLUGIN.resolve(),Path(sys.base_prefix).resolve(),*mounted]
     roots.extend(Path(p).resolve() for p in sys.path if p and Path(p).is_dir()
                  and (project is None or not Path(p).resolve().is_relative_to(project)))
-    native_cache=None
-    if op=='produce' or op=='simulate' and args.get('preview'):
-        from beyond_native import native_cache_root
+    native_cache = None
+    native_files = set()
+    if op == 'produce' or (op == 'simulate' and args.get('preview')):
+        from beyond_native import NATIVE_FILES, native_cache_root
+        if override := os.environ.get('MILIASTRA_WONDERLAND_BEYOND_NATIVE_ROOT'):
+            root = Path(override)
+            if root.is_absolute():
+                root = root.resolve()
+                native_files = {root / name for name in NATIVE_FILES}
         cache=native_cache_root()
         if cache and cache.resolve()==cache and not any(
                 cache.is_relative_to(owner) or owner.is_relative_to(cache) for owner in roots):
@@ -51,7 +57,8 @@ def main():
         if str(path).casefold()==os.devnull.casefold() or native_cache and path.is_relative_to(native_cache):return
         write=event=='open'and values[2]&(os.O_WRONLY|os.O_RDWR|os.O_CREAT|os.O_TRUNC|os.O_APPEND)
         if write and not any(path.is_relative_to(root) for root in writable):raise ValueError('MCP write outside request output')
-        if not any(path.is_relative_to(r)for r in roots):raise ValueError('MCP dependency outside allowed roots')
+        if path not in native_files and not any(path.is_relative_to(root) for root in roots):
+            raise ValueError('MCP dependency outside allowed roots')
     import tempfile
     tempfile.tempdir=str(build_scratch or scratch)
     sys.addaudithook(boundary)

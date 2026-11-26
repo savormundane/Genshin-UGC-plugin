@@ -1,0 +1,28 @@
+{
+  "mcpServers": {
+    "miliastra-wonderland": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${PLUGIN_ROOT}/scripts/mcp_launcher.cjs"
+      ],
+      "env": {
+        "MILIASTRA_WONDERLAND_PLUGIN_DATA": "${PLUGIN_DATA}"
+      },
+      "env_vars": [
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+        "NO_PROXY",
+        "http_proxy",
+        "https_proxy",
+        "no_proxy",
+        "MILIASTRA_WONDERLAND_BEYOND_NATIVE_ROOT",
+        "MILIASTRA_WONDERLAND_INSTALL_ROOT",
+        "MILIASTRA_WONDERLAND_MCP_BUILD_TIMEOUT_SECONDS",
+        "MILIASTRA_WONDERLAND_MCP_TIMEOUT_SECONDS",
+        "MILIASTRA_WONDERLAND_PYTHON",
+        "MILIASTRA_WONDERLAND_RUNTIME_CONFIG"
+      ]
+    }
+  }
+}

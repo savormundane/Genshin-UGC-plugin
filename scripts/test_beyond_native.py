@@ -88,6 +88,45 @@ class BeyondNativeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'differs from the bundled file manifest'):
             read_native_lock(self.backend)
 
+    def test_mcp_forwards_proxy_settings_only_when_beyond_can_run(self):
+        from types import SimpleNamespace
+        from unittest.mock import AsyncMock
+        from miliastra.mcp.bridge import Bridge
+
+        project = self.root / 'project'
+        outputs = self.root / 'outputs'
+        project.mkdir()
+        outputs.mkdir()
+        spec = project / 'spec.json'
+        write_json(spec, {})
+        bridge = Bridge(project, outputs)
+        settings = {
+            'HTTP_PROXY': 'http://127.0.0.1:8080',
+            'https_proxy': 'http://127.0.0.1:8443',
+            'NO_PROXY': 'localhost',
+            'MILIASTRA_WONDERLAND_BEYOND_NATIVE_ROOT': str(self.root / 'provided-canvas'),
+        }
+
+        async def worker(*args, **kwargs):
+            write_json(Path(args[-1]), {'status': 'failed'})
+            return SimpleNamespace(wait=AsyncMock(return_value=0))
+
+        async def run():
+            args = {'spec': spec.name, 'sha256': sha_file(spec), 'output': 'probe'}
+            with patch('os.environ', {**settings, 'OTHER_SECRET': 'test-value'}), \
+                 patch('asyncio.create_subprocess_exec', side_effect=worker) as spawn:
+                for operation, options, expected in (
+                    ('simulate', {'preview': True}, settings),
+                    ('produce', {}, settings),
+                    ('simulate', {}, {}),
+                ):
+                    await bridge.call(operation, {**args, **options})
+                    env = spawn.await_args.kwargs['env']
+                    self.assertEqual({name: env[name] for name in settings if name in env}, expected)
+                    self.assertNotIn('OTHER_SECRET', env)
+
+        asyncio.run(run())
+
     def test_offline_revision_prepares_only_the_declared_source_changes(self):
         from beyond_backend import PIN, read_bundle_revision, verify_bundle_files
         from prepare_beyond_revision import prepare
@@ -139,9 +178,8 @@ class BeyondNativeTests(unittest.TestCase):
         backend = PLUGIN / 'vendor/beyond'
         lock = read_native_lock(backend)
         if archive:
-            cache = self.data / 'beyond-native'
-            cache.mkdir(parents=True)
-            extract_native_archive(lock, Path(archive), cache / lock['sha256'])
+            native_root = self.root / 'provided-canvas'
+            extract_native_archive(lock, Path(archive), native_root)
         elif not (backend / NATIVE_BINARY).is_file():
             self.skipTest('Provide MILIASTRA_TEST_BEYOND_ARCHIVE or a bundled Windows Canvas payload')
 
@@ -157,6 +195,8 @@ class BeyondNativeTests(unittest.TestCase):
         outputs.mkdir()
         env = {key: value for key, value in os.environ.items() if not key.startswith('MILIASTRA_WONDERLAND_')}
         env['MILIASTRA_WONDERLAND_PLUGIN_DATA'] = str(self.data)
+        if archive:
+            env['MILIASTRA_WONDERLAND_BEYOND_NATIVE_ROOT'] = str(native_root)
         server = StdioServerParameters(
             command=sys.executable,
             args=['-X', 'utf8', '-B', str(PLUGIN / 'scripts/qianxing.py'), 'mcp', 'serve',
@@ -281,6 +321,7 @@ class BeyondNativeTests(unittest.TestCase):
                             self.assertIn(('error', 'lua-error error text'), logs)
 
         asyncio.run(run())
+        self.assertFalse((self.data / 'beyond-native').exists())
 
     def test_worker_hydrates_only_in_its_native_cache(self):
         project = self.backend.parents[1]

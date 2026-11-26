@@ -211,6 +211,12 @@ class Bridge:
                 try:
                     from portable_trust import child_environment
                     env={**child_environment(),'PYTHONDONTWRITEBYTECODE':'1'}
+                    if operation == 'produce' or (operation == 'simulate' and args.get('preview')):
+                        env.update({
+                            name: value for name, value in os.environ.items()
+                            if name.upper() in ('HTTP_PROXY', 'HTTPS_PROXY', 'NO_PROXY')
+                            or name == 'MILIASTRA_WONDERLAND_BEYOND_NATIVE_ROOT'
+                        })
                     if (data:=data_directory()) is not None:env['MILIASTRA_WONDERLAND_PLUGIN_DATA']=str(data)
                     process=await asyncio.create_subprocess_exec(sys.executable,'-X','utf8','-B',str(PLUGIN/'scripts/mcp_worker.py'),
                         str(request),str(result_path),cwd=project or PLUGIN,stdout=stdout,stderr=stderr,

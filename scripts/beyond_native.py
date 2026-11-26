@@ -72,7 +72,8 @@ def download_native_archive(lock, path):
                 output.write(chunk)
     except OSError as error:
         raise ValueError(
-            f'Beyond 原生渲染依赖下载失败。请检查 GitHub Release 的网络访问，或使用完整 Windows ZIP。{error}'
+            'Beyond 原生渲染依赖下载失败。请检查 GitHub Release 的网络访问。'
+            f'需要代理时可配置 HTTPS_PROXY，也可使用完整 Windows ZIP。{error}'
         ) from error
 
 

@@ -8,7 +8,10 @@ const probe = path.join(__dirname, 'runtime_policy.py');
 const pythonProbeFlags = ['-I', '-X', 'utf8', '-B'];
 const cli = path.join(__dirname, 'qianxing.py');
 const checking = process.argv[2] === '--check';
+const settingUp = process.argv[2] === '--setup';
 const retryCheck = '在插件目录运行 node .\\scripts\\mcp_launcher.cjs --check，按报告修正后重新打开客户端。';
+const prepareRuntime = '在插件目录运行 node .\\scripts\\mcp_launcher.cjs --setup，再重新打开客户端。';
+const mirrorRecovery = '若依赖源连接缓慢或镜像与锁文件冲突，按 docs/runtime-environment.md 用镜像预装哈希锁定的依赖并绑定 Python。';
 
 function startupError(step, message, next, detail) {
   return new Error(`[${step}] ${message}\n下一步 ${next}` + (detail ? `\n详细原因 ${detail}` : ''));
@@ -195,8 +198,17 @@ function start() {
   }
   const active = env.VIRTUAL_ENV && path.isAbsolute(env.VIRTUAL_ENV)
     ? path.join(env.VIRTUAL_ENV, 'Scripts', 'python.exe') : null;
+  let uvEnvironment, uvPython, uvReady;
+  if (!chosen) {
+    const digest = createHash('sha256').update(
+      fs.readFileSync(path.join(plugin, 'uv.lock'), 'utf8').replace(/\r\n/g, '\n')).digest('hex').slice(0, 16);
+    uvEnvironment = path.join(root, 'env', digest);
+    uvPython = path.join(uvEnvironment, 'Scripts', 'python.exe');
+    uvReady = path.join(uvEnvironment, '.miliastra-ready');
+  }
+  const prepared = uvReady && fs.existsSync(uvReady) && fs.existsSync(uvPython) ? uvPython : null;
   const pathPythons = chosen ? [] : pathExecutables('python.exe');
-  const candidates = chosen ? [chosen] : [explicit?.python, active, ...installed, ...pathPythons];
+  const candidates = chosen ? [chosen] : [explicit?.python, active, ...installed, prepared, ...pathPythons];
   const failures = [];
   const checked = new Set();
   const checkPython = candidate => {
@@ -217,7 +229,7 @@ function start() {
     if (!pathPythons.length) failures.push('PATH 上未找到可探测的 python.exe。');
     command = findLauncherPython(env, checkPython, failures);
   }
-  const runArgs = ['-X', 'utf8', '-B', cli, 'mcp', 'serve'];
+  const runArgs = settingUp ? [...pythonProbeFlags, probe] : ['-X', 'utf8', '-B', cli, 'mcp', 'serve'];
   let args = runArgs;
   let useUv = false;
   if (!command) {
@@ -227,9 +239,7 @@ function start() {
         '安装 uv 并确认 uv --version 能运行，或通过 MILIASTRA_WONDERLAND_PYTHON 指定已配置依赖的 Python。重新打开客户端后重试。',
         [...failures, 'uv.exe: ' + probeDetail(check)].join('\n'));
     }
-    const digest = createHash('sha256').update(
-      fs.readFileSync(path.join(plugin, 'uv.lock'), 'utf8').replace(/\r\n/g, '\n')).digest('hex').slice(0, 16);
-    env.UV_PROJECT_ENVIRONMENT = path.join(root, 'env', digest);
+    env.UV_PROJECT_ENVIRONMENT = uvEnvironment;
     command = 'uv.exe';
     args = ['run', '--project', plugin, '--locked', '--no-build', 'python', ...runArgs];
     useUv = true;
@@ -239,21 +249,39 @@ function start() {
     if (useUv) {
       console.log(`未找到已有的兼容 Python 环境。详细原因 ${failures.join('\n')}`);
       console.log('下次启动会由 uv 按 uv.lock 准备环境。首次缺少缓存时需要联网。');
+      console.log('可提前准备。' + prepareRuntime);
     } else {
       console.log(`Python 环境通过版本、依赖和导入检查（${command}）。`);
     }
     console.log('下一步 重新打开客户端，在新对话中用插件查询服务端「创建实体」节点，确认工具已连通。');
     return;
   }
+  if (settingUp && !useUv) {
+    console.log(`Python 环境已就绪（${command}）。`);
+    return;
+  }
 
-  const child = spawn(command, args, {cwd: plugin, env, stdio: 'inherit', windowsHide: true});
+  const child = spawn(command, args, {
+    cwd: plugin, env, stdio: settingUp ? ['ignore', 'ignore', 'inherit'] : 'inherit', windowsHide: true,
+  });
   const step = useUv ? 'runtime.uv' : 'runtime.mcp';
-  const message = useUv ? 'uv 准备环境或启动 MCP 失败。' : 'MCP 进程启动或运行失败。';
-  const next = useUv ? '查看上方 uv 日志。若下载失败，确认网络可访问依赖源后重试。' : retryCheck;
+  const message = settingUp ? 'uv 准备 Python 环境失败。'
+    : useUv ? 'uv 准备环境或启动 MCP 失败。' : 'MCP 进程启动或运行失败。';
+  const next = useUv ? (settingUp ? mirrorRecovery : prepareRuntime + mirrorRecovery) : retryCheck;
   child.on('error', error => fail(startupError(step, message, retryCheck, error.message)));
   child.on('exit', code => {
     if (code) fail(startupError(step, message, next, `退出码 ${code}`), code);
-    else process.exitCode = code ?? 2;
+    else if (settingUp && code === 0) {
+      try {
+        if (!fs.statSync(uvPython, {throwIfNoEntry: false})?.isFile()) {
+          throw new Error('未找到 uv 创建的 Python 可执行文件。');
+        }
+        fs.writeFileSync(uvReady, '');
+        console.log(`Python 环境已就绪（${uvPython}）。`);
+      } catch (error) {
+        fail(startupError(step, message, retryCheck, error.message));
+      }
+    } else process.exitCode = code ?? 2;
   });
   for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => child.kill(signal));
 }

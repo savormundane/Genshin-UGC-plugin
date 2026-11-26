@@ -10,6 +10,32 @@ CLI 和插件 MCP 使用同一套本地工具。可复用已有 Python 或使用
 
 找不到已装好所需版本依赖的 Python 时，启动器使用 PATH 上的 uv 创建独立环境。环境保存在插件安装根目录，首次缺少缓存时需要联网。可用 `MILIASTRA_WONDERLAND_INSTALL_ROOT` 指定安装根目录的绝对路径。 [安装自检](installation.md#安装自检) · [uv 安装说明](https://docs.astral.sh/uv/getting-started/installation/)
 
+## 提前准备 Python 环境
+
+在插件目录运行以下命令。启动器会检查现有 Python，或用 uv 按锁文件准备环境。完成后再打开客户端，MCP 可直接复用准备好的 Python。指定了 `MILIASTRA_WONDERLAND_INSTALL_ROOT` 时，准备环境和启动客户端应使用相同的根目录。
+
+```powershell
+node .\scripts\mcp_launcher.cjs --setup
+```
+
+### 使用 PyPI 镜像
+
+uv 的项目锁文件包含依赖源。切换索引后，如果 `--locked` 报告锁文件需要更新，可以使用随包的依赖清单从镜像安装同版本的 wheel，并校验 SHA-256。下面以清华镜像和已安装的 CPython 3.12 x64 为例。 [uv 锁定规则](https://docs.astral.sh/uv/concepts/projects/sync/#checking-the-lockfile) · [pip 哈希校验](https://pip.pypa.io/en/stable/topics/secure-installs/) · [清华 PyPI 镜像](https://mirrors.tuna.tsinghua.edu.cn/help/pypi/)
+
+```powershell
+$miliastraVenv = Join-Path $env:LOCALAPPDATA 'Miliastra Python'
+py -3.12 -m venv $miliastraVenv
+$miliastraPython = Join-Path $miliastraVenv 'Scripts\python.exe'
+& $miliastraPython -m pip install --require-hashes --only-binary=:all: `
+  -r .\scripts\runtime-requirements.lock -i https://pypi.tuna.tsinghua.edu.cn/simple
+```
+
+安装成功后，将 `$miliastraPython` 的实际路径填入 [运行绑定](#桌面端首次绑定本机工程)的 `python`。如果宿主会向 MCP 传递自定义变量，也可设置 `MILIASTRA_WONDERLAND_PYTHON`。镜像须提供锁定的版本和对应的 Windows wheel。
+
+### Beyond 首次下载代理
+
+从源码安装时，Beyond 首次预览可能需要从 GitHub 下载 Canvas。可在启动客户端前设置 `HTTPS_PROXY`，并按需设置 `HTTP_PROXY` 和 `NO_PROXY`。这些变量需要由宿主传给 MCP。若已有解包后的锁定文件，可设置绝对路径 `MILIASTRA_WONDERLAND_BEYOND_NATIVE_ROOT`。目录内的相对路径和 SHA-256 以 `vendor/beyond/native-canvas.json` 为准。
+
 ## 复用 PowerShell 安装器配置的环境
 
 默认版本目录为 `%LOCALAPPDATA%\Miliastra Wonderland\versions\<Agent>\<版本>`。安装时使用过 `-Root` 的话，以当时指定的位置为准。
@@ -61,4 +87,4 @@ uv run --locked --no-build python -B .\scripts\qianxing.py --help
 
 ### 从终端启动客户端
 
-从工程目录启动客户端，让会话提供已授权的工程目录。客户端不提供工程目录时，使用上面的 `runtime.json`。Codex 的 MCP 子进程只继承指定的环境变量。让客户端的 PATH 可找到 uv 或已具备依赖的 Python，或者把专用解释器路径写入插件数据目录的 `runtime.json`。 [Codex 的环境继承规则](https://github.com/openai/codex/blob/rust-v0.171.0-alpha.13.2/codex-rs/rmcp-client/src/utils.rs#L16-L36)
+从工程目录启动客户端，让会话提供已授权的工程目录。客户端不提供工程目录时，使用上面的 `runtime.json`。Codex 的 MCP 子进程继承宿主允许和插件声明的环境变量。本插件声明了 Python 绑定、安装根目录、Beyond 原生文件目录、代理和插件任务时限。手动配置 MCP 时，可参考 [Codex 示例](mcp.md#调整客户端超时)传递这些设置。 [Codex 环境变量配置](https://developers.openai.com/codex/mcp/)

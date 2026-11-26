@@ -6,7 +6,7 @@
     "name": "Miliastra Wonderland contributors"
   },
   "skills": "./skills/",
-  "mcpServers": "./mcp.json",
+  "mcpServers": "./.codex-plugin/mcp.json",
   "interface": {
     "displayName": "Miliastra Wonderland",
     "shortDescription": "工程配置、节点图、Lua、GIL与素材",

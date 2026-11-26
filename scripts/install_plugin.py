@@ -18,6 +18,15 @@ MANUAL_AGENTS = ('agent-plugins',)
 AGENTS = ('codex', 'claude-code', *MANUAL_AGENTS)
 MCP_SCHEMA = 'https://agent-plugins.org/schemas/1.0.0/mcp.schema.json'
 MCP_NAME = 'miliastra-wonderland'
+CODEX_MCP_ENV_VARS = [
+    'HTTP_PROXY', 'HTTPS_PROXY', 'NO_PROXY', 'http_proxy', 'https_proxy', 'no_proxy',
+    'MILIASTRA_WONDERLAND_BEYOND_NATIVE_ROOT',
+    'MILIASTRA_WONDERLAND_INSTALL_ROOT',
+    'MILIASTRA_WONDERLAND_MCP_BUILD_TIMEOUT_SECONDS',
+    'MILIASTRA_WONDERLAND_MCP_TIMEOUT_SECONDS',
+    'MILIASTRA_WONDERLAND_PYTHON',
+    'MILIASTRA_WONDERLAND_RUNTIME_CONFIG',
+]
 
 
 def read_json(p):
@@ -133,6 +142,10 @@ def marketplace_files(agent, version, node, config):
     files = {Path('miliastra-wonderland/mcp.json'): {'$schema': MCP_SCHEMA, 'mcpServers': {MCP_NAME: server}}}
     if agent == 'agent-plugins':
         return None, files
+    # Codex reads this overlay while the Agent Plugins descriptor stays schema-compatible.
+    files[Path('miliastra-wonderland/.codex-plugin/mcp.json')] = {
+        'mcpServers': {MCP_NAME: {**server, 'env_vars': CODEX_MCP_ENV_VARS}},
+    }
     files[Path('.agents/plugins/marketplace.json')] = {
         'name': market, 'interface': {'displayName': 'Miliastra Wonderland'},
         'plugins': [{'name': 'miliastra-wonderland', 'source': {'source': 'local', 'path': './miliastra-wonderland'},

@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- 安装器可在打开客户端前准备 MCP 的 Python 环境，补充镜像和客户端超时设置，Beyond 下载可使用 MCP 进程收到的代理设置。
 - 缩短 GIL 写回样本的随包路径，减少 Windows 正式安装和 Claude Code 缓存的长路径问题。
 - PowerShell 安装器区分已启用和已停用的保留版本，并为保留版本提供可复制的回退命令。
 - 缩短 Windows ZIP 解包和节点图编译的暂存路径，减少长路径引起的失败。

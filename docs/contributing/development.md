@@ -64,7 +64,7 @@ schema 2 的制作流程复用资源、图编译和 Lua 写回阶段。移除顶
 
 客户端启动 Node 和 `scripts/mcp_launcher.cjs`。解释器选择与工作目录绑定见[独立运行环境](../runtime-environment.md)。
 
-- Codex 读取 `.codex-plugin/plugin.json` 和 `mcp.json`，通用接入读取根 `plugin.json` 和 `mcp.json`。
+- 通用接入读取根 `plugin.json` 和 `mcp.json`。Codex 的附加环境变量声明由 `.codex-plugin/plugin.json` 指向 `.codex-plugin/mcp.json`。
 - Claude Code 读取 `.claude-plugin/plugin.json` 和 `.mcp.json`。可用 `claude plugin validate <目录>` 检查声明。
 - DeepSeek Harness 从插件根目录的 `package.json` 和 `cordis.patch.yml` 加载 Skills 与 MCP。
 

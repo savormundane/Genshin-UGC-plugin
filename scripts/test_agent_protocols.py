@@ -2,6 +2,7 @@
 
 import argparse
 import asyncio
+import hashlib
 import json
 import os
 from pathlib import Path, PureWindowsPath
@@ -49,6 +50,7 @@ def powershell_install(env, **arguments):
 @unittest.skipUnless(WINDOWS_TOOLS, 'Windows Node.js and PowerShell required')
 class WindowsRuntimeTests(unittest.TestCase):
     def test_py_discovery_in_installer_self_check_and_stdio(self):
+        import mcp
         from mcp import Client, StdioServerParameters
 
         with tempfile.TemporaryDirectory(prefix='miliastra Python 查找 ') as temporary:
@@ -59,13 +61,28 @@ class WindowsRuntimeTests(unittest.TestCase):
             source = root / 'probe.cs'
             source.write_text("""
 using System;
+using System.Diagnostics;
 using System.IO;
 class Probe {
     static int Main(string[] args) {
         if (Path.GetFileNameWithoutExtension(Environment.GetCommandLineArgs()[0]) == "uv") {
-            if (args.Length != 1 || args[0] != "--version") return 2;
-            Console.WriteLine("uv fixture");
-            return 0;
+            if (args.Length == 1 && args[0] == "--version") {
+                Console.WriteLine("uv fixture");
+                return 0;
+            }
+            if (args.Length != 11 || args[0] != "run" || args[1] != "--project" || args[3] != "--locked" ||
+                args[4] != "--no-build" || args[5] != "python" || args[6] != "-I" || args[7] != "-X" ||
+                args[8] != "utf8" || args[9] != "-B" || !args[10].EndsWith("runtime_policy.py")) return 2;
+            string environment = Environment.GetEnvironmentVariable("UV_PROJECT_ENVIRONMENT");
+            File.AppendAllText(Environment.GetEnvironmentVariable("MILIASTRA_TEST_UV_LOG"), environment + "\\n");
+            string python = Path.Combine(environment, "Scripts", "python.exe");
+            if (!File.Exists(python)) return 5;
+            using (var child = Process.Start(new ProcessStartInfo(python, "-I -X utf8 -B " + (char)34 + args[10] + (char)34) {
+                UseShellExecute = false, CreateNoWindow = true
+            })) {
+                child.WaitForExit();
+                return child.ExitCode;
+            }
         }
         if (Environment.GetEnvironmentVariable("PYLAUNCHER_ALLOW_INSTALL") != null ||
             Environment.GetEnvironmentVariable("PYLAUNCHER_ALWAYS_INSTALL") != null ||
@@ -146,6 +163,34 @@ class Probe {
             self.assertIn('下次启动会由 uv', uv.stdout)
             self.assertIn('Python 依赖版本需匹配锁定版本', uv.stdout)
             self.assertFalse((root / 'installed').exists())
+
+            env['MILIASTRA_TEST_UV_LOG'] = str(root / 'uv-setup.txt')
+            lock = (ROOT / 'uv.lock').read_text(encoding='utf-8')
+            digest = hashlib.sha256(lock.encode('utf-8')).hexdigest()[:16]
+            managed = root / 'installed/env' / digest
+            ready = managed / '.miliastra-ready'
+            setup = subprocess.run([*command, '--setup'], env=env, capture_output=True, encoding='utf-8', timeout=30)
+            self.assertEqual(setup.returncode, 5, setup.stderr)
+            self.assertIn('[runtime.uv]', setup.stderr)
+            self.assertFalse(ready.exists())
+
+            venv.EnvBuilder(with_pip=False).create(managed)
+            site_packages = Path(mcp.__file__).resolve().parents[1]
+            (managed / 'Lib/site-packages/fixture.pth').write_text(
+                f'import site; site.addsitedir({ascii(str(site_packages))})\n', encoding='utf-8',
+            )
+            setup = subprocess.run([*command, '--setup'], env=env, capture_output=True, encoding='utf-8', timeout=30)
+            self.assertEqual(setup.returncode, 0, setup.stderr)
+            self.assertIn(str(managed / 'Scripts/python.exe'), setup.stdout)
+            self.assertEqual(Path(env['MILIASTRA_TEST_UV_LOG']).read_text(encoding='utf-8').splitlines(),
+                             [str(managed), str(managed)])
+            self.assertTrue(ready.is_file())
+
+            # The prepared environment serves MCP directly even when the original uv is unavailable.
+            (binaries / 'uv.exe').unlink()
+            log.write_text('', encoding='utf-8')
+            asyncio.run(lookup())
+            self.assertEqual(log.read_text(encoding='utf-8'), '')
 
     def test_powershell_recovery_reuses_valid_python_and_checks_target_before_registration(self):
         import mcp
@@ -375,17 +420,23 @@ class ProtocolTests(unittest.TestCase):
         for relative, anchor, data in (
             ('mcp.json', '${PLUGIN_ROOT}', '${PLUGIN_DATA}'),
             ('.mcp.json', '${CLAUDE_PLUGIN_ROOT}', '${CLAUDE_PLUGIN_DATA}'),
+            ('.codex-plugin/mcp.json', '${PLUGIN_ROOT}', '${PLUGIN_DATA}'),
         ):
             with self.subTest(config=relative):
                 descriptor = installer.read_json(ROOT / relative)
                 if relative == 'mcp.json':
                     self.assertEqual(set(descriptor), {'$schema', 'mcpServers'})
                     self.assertEqual(descriptor['$schema'], installer.MCP_SCHEMA)
-                self.assertEqual(descriptor['mcpServers'], {installer.MCP_NAME: {
+                expected = {
                     'type': 'stdio', 'command': 'node',
                     'args': [anchor + '/scripts/mcp_launcher.cjs'],
                     'env': {'MILIASTRA_WONDERLAND_PLUGIN_DATA': data},
-                }})
+                }
+                if relative == '.codex-plugin/mcp.json':
+                    self.assertEqual(installer.read_json(ROOT / '.codex-plugin/plugin.json')['mcpServers'],
+                                     './' + relative)
+                    expected['env_vars'] = installer.CODEX_MCP_ENV_VARS
+                self.assertEqual(descriptor['mcpServers'], {installer.MCP_NAME: expected})
         names = {'miliastra-editor': 'Miliastra Editor', 'miliastra-graph-code': 'Miliastra Graph Code',
                  'miliastra-gil': 'Miliastra GIL', 'miliastra-assets': 'Miliastra Assets'}
         self.assertEqual({path.parent.name for path in (ROOT / 'skills').glob('*/SKILL.md')}, names.keys())
@@ -418,6 +469,11 @@ class ProtocolTests(unittest.TestCase):
                     if agent == 'agent-plugins':
                         self.assertIsNone(market)
                         self.assertEqual(len(files), 1)
+                    else:
+                        overlay = files[Path('miliastra-wonderland/.codex-plugin/mcp.json')]
+                        self.assertEqual(overlay['mcpServers'], {
+                            installer.MCP_NAME: {**server, 'env_vars': installer.CODEX_MCP_ENV_VARS},
+                        })
 
     def test_same_version_install_distinguishes_active_and_retained(self):
         version = installer.read_json(ROOT / 'plugin.json')['version']
@@ -489,7 +545,7 @@ class ProtocolTests(unittest.TestCase):
                     'vendor/ayaya/private_extensions/ugc_file_tools/builtin_resources/templates/server/'
                     'autowire_templates_test2_server_direct_export_v2.gil'
                 )
-                requirements = ['plugin.json', '.codex-plugin/plugin.json', '.claude-plugin/plugin.json',
+                requirements = ['plugin.json', '.codex-plugin/plugin.json', '.codex-plugin/mcp.json', '.claude-plugin/plugin.json',
                                 'mcp.json', '.mcp.json', 'LICENSE', 'scripts/runtime-requirements.lock',
                                 'scripts/mcp_launcher.cjs', 'vendor/beyond/bundle.json', writeback_template.as_posix()]
                 with zipfile.ZipFile(archive, 'w') as output:

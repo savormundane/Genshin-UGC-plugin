@@ -70,6 +70,35 @@ CLI 和 MCP 共用同一套任务调度逻辑。结果包含 `schema`、`operati
 
 路径检查和工作进程的Python文件访问审计用于发现越界依赖，不是操作系统沙箱。Graph Code等工程源码及后端仍须可信；由其自行启动的任意第三方程序不因本工具而获得完整沙箱保证。Python依赖目录与插件自身是允许读取的运行资源。
 
+## 调整客户端超时
+
+启动时限和工具时限由客户端分别控制。首次启动超时时，先在客户端之外[准备 Python 环境](runtime-environment.md#提前准备-python-环境)。长任务仍被中断时，将客户端工具时限设得比插件的任务时限稍长，以便客户端收到结果或诊断。
+
+**Codex** 手动连接本机 MCP 时，可在 `config.toml` 使用下面的条目。将路径换成当前插件目录内启动器的绝对路径。两个时限都以秒为单位，下面的 960 秒覆盖插件默认的 900 秒长任务。已有手动连接条目时，直接调整该条目的两个时限。 [Codex MCP 配置](https://developers.openai.com/codex/mcp/) · [配置参考](https://developers.openai.com/codex/config-reference/)
+
+```toml
+[mcp_servers.miliastra-wonderland-local]
+command = "node"
+args = ['C:\插件\miliastra-wonderland\scripts\mcp_launcher.cjs']
+startup_timeout_sec = 120
+tool_timeout_sec = 960
+env_vars = [
+  "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY",
+  "MILIASTRA_WONDERLAND_PYTHON", "MILIASTRA_WONDERLAND_RUNTIME_CONFIG",
+  "MILIASTRA_WONDERLAND_INSTALL_ROOT", "MILIASTRA_WONDERLAND_BEYOND_NATIVE_ROOT",
+  "MILIASTRA_WONDERLAND_MCP_TIMEOUT_SECONDS", "MILIASTRA_WONDERLAND_MCP_BUILD_TIMEOUT_SECONDS",
+]
+```
+
+同时启用了从 GitHub 市场安装的插件时，可停用插件自带的 MCP 服务，继续使用插件的 Skills。通过 PowerShell 创建过独立市场的用户，可用 `codex plugin list --json` 找到对应的插件 ID，并替换下方的 ID。复用原运行绑定时，让手动服务通过 `MILIASTRA_WONDERLAND_RUNTIME_CONFIG` 读取原 `runtime.json`。
+
+```toml
+[plugins."miliastra-wonderland@miliastra-wonderland".mcp_servers.miliastra-wonderland]
+enabled = false
+```
+
+**Claude Code** 可在启动客户端的 PowerShell 中设置 `$env:MCP_TIMEOUT = '120000'`，将握手等待设为 120 秒。若此前收紧了工具时限，可在同一终端设置 `$env:MCP_TOOL_TIMEOUT = '960000'`。这两个变量由 Claude Code 读取，单位为毫秒。服务器单独声明 `timeout` 时，工具时限以该声明为准。 [Claude Code 超时设置](https://code.claude.com/docs/en/mcp#time-limits-on-mcp-tool-calls)
+
 ## 便携交付重建
 
 使用相同清单和摘要按以下顺序调用。 [重建边界](../references/workflows/portable-delivery.md)
