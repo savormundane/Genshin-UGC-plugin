@@ -1,11 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createCanvas, loadImage } from '@napi-rs/canvas'
-import { Container, Graphics, Matrix } from 'pixi.js'
 import { createRuntime } from '../../client/lua-runtime/src/index.js'
 import { paintList, playSnapshot } from '../play/session.js'
 import { renderPaintPng, renderScenePng } from '../host-png.js'
-import { PixiPlayRenderer } from '../play/pixi-renderer.js'
 
 function fixture(t, imageId = 100001, children = []) {
   const runtime = createRuntime({ canvasWidth: 240, canvasHeight: 160 })
@@ -115,35 +113,6 @@ test('PNG horizontal and vertical fill obey independent quarter pixels for 0, ha
   assert.deepEqual(quarterPoints.map(([x, y]) => isWhite(at(x, y))), [true, true, true, true], 'Unused cancels clipping even after amount zero')
 })
 
-test('Pixi uses image-local masks for all four half fills, hides zero, and removes masks for Unused', t => {
-  const f = fixture(t)
-  const renderer = Object.create(PixiPlayRenderer.prototype)
-  renderer.scratch = new Matrix()
-  renderer.canvasHeight = 160
-  const root = new Container()
-  t.after(() => root.destroy({ children: true }))
-  for (const entry of directions) for (const amount of [0, 0.5, 1]) {
-    f.setFill(entry.axis, entry.direction, amount)
-    renderer.updateNode(root, f.node())
-    const graphic = root.__visual.children.at(-1)
-    assert.ok(graphic instanceof Graphics)
-    assert.equal(graphic.visible, amount !== 0)
-    if (amount !== 0) {
-      const clip = graphic.mask
-      assert.ok(clip instanceof Graphics)
-      const bounds = clip.bounds
-      assert.deepEqual([bounds.minX, bounds.minY, bounds.width, bounds.height], amount === 1 ? [-50, -40, 100, 80] : entry.rect)
-      const actual = quarterPoints.map(([x, y]) => clip.containsPoint({ x: x - 120, y: y - 80 }))
-      assert.deepEqual(actual, expectedQuarters(entry, amount))
-    }
-  }
-  f.invoke('Unused')
-  renderer.updateNode(root, f.node())
-  const graphic = root.__visual.children.at(-1)
-  assert.equal(graphic.visible, true)
-  assert.equal(graphic.mask, undefined)
-  assert.equal(root.__visual.children.length, 1)
-})
 
 test('circle fill clips the original circle instead of rescaling its shape', async t => {
   const f = fixture(t, 100002)

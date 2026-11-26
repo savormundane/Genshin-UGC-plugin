@@ -3,13 +3,12 @@ from collections import Counter
 from miliastra.native.core import model,get
 from authoring_io import sha
 from level_inventory import fields,vals
-from protocol_types import TYPES
+from protocol_types import TYPES, validate_protocol
 
 
 def check_protocol(raw,scripts,contract):
-    from production_core import protocol
     from protocol_codegen import wire
-    declarations={s['name']:s for s in protocol(contract)['signals']}
+    declarations={s['name']:s for s in validate_protocol(contract)['signals']}
     references=[];errors=[];unresolved=[];layouts=[]
     operations={('game','ServerSignal'):('send','client_to_server'),
                 ('Script','RegisterServerSignalHandler'):('listen','server_to_client'),

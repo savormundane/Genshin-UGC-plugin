@@ -11,7 +11,7 @@ python scripts/qianxing.py beyond SPEC.json --out NEW_DIRECTORY
 
 MCP 中用 `simulate`，传配置的路径和摘要并设 `preview=true`。工具会附上本次生成的 `preview.png`。通过时用 `output` 和 `outputs_sha256` 定位并核对文件。失败时看诊断原因，并用 `diagnostics_output` 和 `diagnostics_sha256` 找到已保存的画面和报告。诊断目录重名时仍可收到本次生成的图，用新名称重试即可保存。为 `asset_fit` 配置 `mount` 后，会生成可直接用于 `simulate` 的配置和供软件预览使用的图片模板。 [拟合预览示例](../../samples/creator-demos/png/README.md#拟合并预览可挂载的-lua)
 
-可用 --backend PATH 指定同一提交的干净独立检出；缺依赖时失败，不自动安装。默认加载 vendor/beyond 并核对随包文件摘要。
+可用 --backend PATH 指定同一提交的干净独立检出；缺依赖时失败，不自动安装。默认由插件的预览进程加载 `vendor/beyond` 中的 Lua、控件会话和 Canvas 2D 源码，启动前核对随包文件摘要。
 
 即使关闭 PNG 输出，Beyond 的文字布局和部分交互仍需要 Canvas。只验证插件模型覆盖的逻辑时，使用 [联合模拟](joint-simulation.md)。
 

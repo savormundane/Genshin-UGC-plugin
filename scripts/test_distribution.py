@@ -324,16 +324,19 @@ class ReleaseTests(unittest.TestCase):
                     self.assertRegex(digest, r'^[a-f0-9]{64}$')
             self.assertTrue(list((restored / 'vendor/beyond/node_modules').rglob('*.node')))
             self.assertFalse(list((restored / 'vendor/beyond/node_modules').rglob('*.map')))
-            pixi = restored / 'vendor/beyond/node_modules/pixi.js'
-            self.assertTrue((pixi / 'LICENSE').is_file())
-            self.assertFalse(list(pixi.rglob('*.d.ts')))
-            package = read_json(pixi / 'package.json')
-            self.assertNotIn('types', package)
-            for entry in ('.', './gif', './html-source'):
-                for mode in ('import', 'require'):
-                    export = package['exports'][entry][mode]
-                    self.assertNotIn('types', export)
-                    self.assertTrue((pixi / export['default']).is_file())
+            beyond = restored / 'vendor/beyond'
+            for path in (
+                'studio/index.js', 'studio/host-png.js', 'client/lua-runtime/src/index.js',
+                'server/index.js', 'node_modules/@napi-rs/canvas/LICENSE',
+                'node_modules/fengari/LICENSE', 'node_modules/protobufjs/LICENSE',
+            ):
+                self.assertTrue((beyond / path).is_file(), path)
+            for path in (
+                'web', 'dsh-plugin', 'mcp', 'editor-ui', 'studio/play/pixi-renderer.js',
+                'node_modules/pixi.js', 'node_modules/qxqy-studio',
+                'node_modules/qxqy-lua-runtime', 'node_modules/qxqy-server',
+            ):
+                self.assertFalse((beyond / path).exists(), path)
 
 
 if __name__ == '__main__':

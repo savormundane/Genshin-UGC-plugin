@@ -74,6 +74,43 @@ def client_catalogue(source=None, *, include_search_details=False):
     return parsed, source
 
 
+def search_api_text(query, limit=20):
+    """Search source lines for the original text-only API command."""
+    if type(limit) != int or not 1 <= limit <= 100:
+        raise ValueError('limit must be 1..100')
+    terms = query.casefold().split()
+    if not terms:
+        raise ValueError('API query cannot be empty')
+    record = sources()['client_api']
+    if record['integrity'] != 'passed':
+        raise ValueError('Client API source changed; review source registry before use')
+    source = PLUGIN / record['path']
+    lines = source.read_text(encoding='utf-8').splitlines()
+    found = []
+    section = ''
+    for i, line in enumerate(lines):
+        if line.startswith('#'):
+            section = line
+        if all(t in line.casefold() for t in terms):
+            found.append(
+                {
+                    'line': i + 1,
+                    'section': section,
+                    'excerpt': '\n'.join(lines[max(0, i - 1) : i + 2]),
+                }
+            )
+    return {
+        'source': record['path'],
+        'sha256': sha(source.read_bytes()),
+        'matches': len(found),
+        'results': found[:limit],
+        'source_metadata': record,
+        'scope': 'text discovery only; use knowledge api for parameter authority',
+        'editor': 'not_checked',
+        'host': 'not_checked',
+    }
+
+
 def api(symbol):
     if not isinstance(symbol, str) or not symbol.strip():
         raise ValueError('Nonempty API query required')

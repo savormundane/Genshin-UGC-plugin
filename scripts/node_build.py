@@ -1,9 +1,9 @@
 """Unified, isolated Graph Code build pipeline. Python 3.10-3.12; standard library."""
 from pathlib import Path
-import ast,collections,hashlib,json,os,re,shutil,subprocess,sys,tempfile
+import ast,collections,hashlib,json,os,re,shutil,sys,tempfile
 from level_inventory import inspect_file,container,fields,vals,unique
 from graph_validation import GraphBuildError
-from ayaya_bridge import FILE_TOOLS, FILE_TOOLS_RUNNER, RUNTIME, compiler_nodes
+from ayaya_bridge import COMPILER_ENTRY, compiler_nodes, compiler_process, prepare_workspace
 from node_contracts import calibrated_ports, node_contracts, port_evidence
 
 PLUGIN=Path(__file__).resolve().parents[1]
@@ -14,10 +14,6 @@ def resolve_input(value,base):
     p=Path(value).expanduser();return (p if p.is_absolute() else base/p).resolve()
 def json_new(path,value):
     with Path(path).open('x',encoding='utf-8') as f:json.dump(value,f,ensure_ascii=False,indent=2)
-def copy_tree(source,dest):
-    if source.is_symlink() or any(p.is_symlink() for p in source.rglob('*')):raise ValueError('Linked resources are not supported')
-    shutil.copytree(source,dest,dirs_exist_ok=True,ignore=shutil.ignore_patterns('__pycache__','*.pyc','.git','out','__workbench_out__'))
-
 def route(kind='game',interface='lua',multiplayer=False,output='gil',task_mode=None,target_domain=None):
     if kind not in ['game','nodes','lua','gil','assets','animation','editor','diagnosis','storage','protocol']:raise ValueError('Unknown task kind')
     if interface not in ['lua','html','native','none']:raise ValueError('Unknown UI implementation')
@@ -241,8 +237,7 @@ def build(spec_path,out_dir,preserve_container_order=False,structure_bindings=()
         source_texts[source]=(raw,expand_graph(code,source,bindings))
     logs=[]
     with tempfile.TemporaryDirectory(prefix='g-') as td:
-        work=Path(td);runtime=work/'runtime';copy_tree(RUNTIME,runtime)
-        project=runtime/'assets/资源库/项目存档/BuildProject';project.mkdir(parents=True)
+        work=Path(td);workspace=work/'workspace';project=prepare_workspace(workspace)
         if job.get('project_resources'):
             resources=resolve_input(job['project_resources'],base)
             from graph_resources import merge_resources
@@ -264,33 +259,32 @@ def build(spec_path,out_dir,preserve_container_order=False,structure_bindings=()
                     text=text.replace(old,new)
             return text
 
-        def call(label,args,*,validation=False):
-            cmd=[sys.executable,'-X','utf8','-B',*map(str,args)]
-            if os.environ.get('MILIASTRA_WONDERLAND_BUILD_BOUNDARY'):
-                cmd=[sys.executable,'-X','utf8','-B',str(PLUGIN/'scripts/dependency_runner.py'),*map(str,args)]
-            r=subprocess.run(cmd,cwd=runtime,capture_output=True,text=True,encoding='utf-8',timeout=180)
+        def call(label, action, *args):
+            r = compiler_process(COMPILER_ENTRY, '--compiler-worker', workspace,
+                                 action, *args, cwd=workspace)
             diagnostic=remap_source_paths(r.stdout+r.stderr)
             (stage/'logs'/(label+'.txt')).write_text(diagnostic,encoding='utf-8')
             logs.append({'stage':label,'exit_code':r.returncode})
             if r.returncode:
                 rows=[]
-                if validation and r.stdout.strip():
+                if action == 'validate' and r.stdout.strip():
                     try:rows=json.loads(remap_source_paths(r.stdout))['diagnostics']
                     except (ValueError,KeyError):pass
                 if len(diagnostic)>16000:diagnostic=diagnostic[:12000]+'\n[diagnostic truncated]\n'+diagnostic[-4000:]
                 raise GraphBuildError(label+' failed:\n'+diagnostic,rows or [
                     {'code':'graph_build_stage_failed','stage':label,'message':diagnostic},
                 ])
-        runner=runtime/FILE_TOOLS_RUNNER;up_out=runtime/FILE_TOOLS/'out'
+        up_out=workspace/'out'
         for index,path in enumerate(paths):
-            call('validate-'+str(index),[PLUGIN/'scripts/graph_validation.py','--worker',path,runtime],validation=True)
-            call('model-'+str(index),[runner,'tool','export_graph_model_json_from_graph_code','--graph-code',path,'--output-json','model_'+str(index)+'.json'])
+            call('validate-'+str(index), 'validate', path)
+            call('model-'+str(index), 'export', 'tool','export_graph_model_json_from_graph_code',
+                 '--graph-code',path,'--graph-generater-root',workspace,
+                 '--output-json','model_'+str(index)+'.json')
             shutil.copyfile(up_out/('model_'+str(index)+'.json'),stage/'models'/('model_'+str(index)+'.json'))
-        args=[runner,'tool','export_project_graphs_to_gia','--project-root',project,'--out-dir','build_gia']
+        args=['tool','export_project_graphs_to_gia','--project-root',project,'--out-dir','build_gia']
         for path in paths:args+=['--graph-code',path]
         if baseline:args+=['--base-gil-for-signal-defs',baseline,'--id-ref-gil',baseline]
-        if preserve_container_order:args=[PLUGIN/'scripts/gia_backend_adapter.py',*args]
-        call('gia-export',args)
+        call('gia-export', 'native-gia' if preserve_container_order else 'export', *args)
         exported=list((up_out/'build_gia').rglob('*.gia'))
         if not exported:raise ValueError('No GIA was generated')
         summaries=[];composite_summaries={};signal_audits=[];gia_structures=[];gia_variable_types=[]
@@ -342,10 +336,10 @@ def build(spec_path,out_dir,preserve_container_order=False,structure_bindings=()
             selection_arg=[]
             if set(sections)=={'graphs'}:
                 selection_path.write_text(json.dumps(selection),encoding='utf-8');selection_arg=['--selection-json',selection_path]
-            args=[runner,'project','import','--dangerous','--project-archive',project,'--graphs-strict',*selection_arg]
+            args=['project','import','--dangerous','--project-archive',project,'--graphs-strict',*selection_arg]
             for section,flag in [('templates','templates'),('instances','instances'),('structs','structs'),('signals','signals'),('ui','ui-widget-templates')]:
                 if section not in sections:args+=['--skip-'+flag]
-            newgil=up_out/'level.gil';args += [baseline,newgil];call('gil-writeback',args)
+            newgil=up_out/'level.gil';args += [baseline,newgil];call('gil-writeback', 'export', *args)
             raw=newgil.read_bytes();calibrated_container(raw)
             bound,changes=bind_skill_notifications(raw,names)
             if changes:newgil.write_bytes(bound)

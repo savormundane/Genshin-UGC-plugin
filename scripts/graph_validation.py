@@ -2,14 +2,13 @@
 import argparse
 from contextlib import redirect_stdout
 import json
-import os
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
 
-from authoring_io import DiagnosticError, PLUGIN, ProductionInputs, read_json, sha
-from ayaya_bridge import RUNTIME, validate_rules
+from authoring_io import DiagnosticError, ProductionInputs, read_json, sha
+from ayaya_bridge import RUNTIME, compiler_process, validate_rules
 
 
 class GraphBuildError(ValueError):
@@ -75,10 +74,8 @@ def check(source, bindings_path=None, job_path=None):
                 compiled = source
             else:
                 compiled.write_bytes(expanded.encode('utf-8'))
-            worker = [sys.executable,'-X','utf8','-B',__file__,'--worker',str(compiled),str(RUNTIME),str(cache),*workspace_args]
-            if os.environ.get('MILIASTRA_WONDERLAND_BUILD_BOUNDARY'):
-                worker.insert(4,str(PLUGIN/'scripts/dependency_runner.py'))
-            proc = subprocess.run(worker,cwd=RUNTIME,capture_output=True,text=True,encoding='utf-8',timeout=180)
+            proc = compiler_process(__file__, '--worker', compiled, RUNTIME, cache,
+                                    *workspace_args, cwd=RUNTIME)
             if not proc.stdout.strip():
                 raise ValueError(proc.stderr.strip()[-3000:].replace(str(compiled),str(source)) or
                                  'Graph validator did not return a report')

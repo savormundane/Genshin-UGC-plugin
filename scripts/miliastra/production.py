@@ -285,9 +285,9 @@ def produce(
         if 'spec' in item:
             track(resolve(base, item['spec']))
     if 'protocol' in job:
-        from production_core import protocol
+        from protocol_types import validate_protocol
 
-        protocol(job['protocol'])
+        validate_protocol(job['protocol'])
         if client_contract is not None:
             if 'protocol' in client_contract and client_contract['protocol'] != job['protocol']:
                 raise ValueError('Client protocol contract differs from production protocol')

@@ -25,10 +25,13 @@ function checkLuaExecution(studio) {
 }
 
 const job=JSON.parse(readFileSync(process.argv[2],'utf8'));
-const {createStudio}=await import(pathToFileURL(job.entry).href);
+const studioEntry = job.entry
+ ? pathToFileURL(job.entry)
+ : new URL('../vendor/beyond/studio/index.js', import.meta.url);
+const {createStudio}=await import(studioEntry.href);
 const directory=dirname(process.argv[3]);
 if(job.gil){
- const {importGia}=await import(new URL('./gia/codec.js',pathToFileURL(job.entry)));
+ const {importGia}=await import(new URL('./gia/codec.js', studioEntry));
  const imported=importGia(Buffer.from(job.gil.envelope,'base64'));
  if(imported.warnings.length!==1) throw Error('Unexpected conversion warnings: '+imported.warnings.join('; '));
  job.project=imported.project;
@@ -80,7 +83,7 @@ try {
  let previewGenerated=false;
  if(job.render){
   try {
-   const {renderPaintPng}=await import(new URL('./host-png.js',pathToFileURL(job.entry)));
+   const {renderPaintPng}=await import(new URL('./host-png.js', studioEntry));
    const snap=studio.playGet({inspect:true,paint:true});
    const rendered=renderPaintPng(snap.paint,snap.canvasWidth,snap.canvasHeight,{background:'transparent'});
    writeFileSync(join(directory,'preview.png'),rendered.data);

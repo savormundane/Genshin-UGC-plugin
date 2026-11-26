@@ -1,4 +1,4 @@
-import { createRuntime } from 'qxqy-lua-runtime'
+import { createRuntime } from '../../client/lua-runtime/src/index.js'
 
 function same(actual, expected) {
   return JSON.stringify(actual) === JSON.stringify(expected)

@@ -7,8 +7,7 @@ PIN='02a5ea2cd38bb5bcf7a7ce6dd745be3bb1ae655c'
 BUNDLED=Path(__file__).resolve().parent.parent/'vendor/beyond'
 REVISION_PIN = Path(__file__).with_name('beyond-revision.json')
 # npm-compatible Git installations omit these upstream ignore rules.
-NON_RUNTIME_GITIGNORE={'dsh-plugin/.gitignore','client/lua-runtime/.gitignore',
-                       'node_modules/qxqy-lua-runtime/.gitignore'}
+NON_RUNTIME_GITIGNORE = {'client/lua-runtime/.gitignore'}
 
 
 def read_bundle_revision(backend, pin_path=REVISION_PIN):
@@ -127,7 +126,14 @@ def run(path,backend,out,*,final_gil=None,preview=False):
     if int(subprocess.check_output([node,'--version'],text=True).strip().lstrip('v').split('.')[0])<22:raise ValueError('Node 22+ required')
     native_binding=native_library_path(backend,lock=native_lock) if native_lock else None
     with tempfile.TemporaryDirectory(prefix='ugc-beyond-')as td:
-        td=Path(td);write_json(td/'job.json',{'entry':str(backend/'studio/index.js'),'project':project_data,'gil':gil,'scripts':scripts,'case':spec['case'],'render':spec.get('render',False),'render_checks':spec.get('render_checks',[])})
+        td = Path(td)
+        job = {
+            'project': project_data, 'gil': gil, 'scripts': scripts, 'case': spec['case'],
+            'render': spec.get('render', False), 'render_checks': spec.get('render_checks', []),
+        }
+        if backend != BUNDLED:
+            job['entry'] = str(backend / 'studio/index.js')
+        write_json(td / 'job.json', job)
         proc=subprocess.run([node,str(Path(__file__).with_name('beyond_worker.mjs')),str(td/'job.json'),str(td/'result.json')],capture_output=True,text=True,encoding='utf-8',timeout=45,env=native_canvas_environment(native_binding))
         if proc.returncode:raise ValueError('External simulator failed: '+proc.stderr[-3000:])
         result=read_json(td/'result.json')

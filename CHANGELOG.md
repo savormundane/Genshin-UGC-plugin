@@ -4,7 +4,9 @@
 
 ## Unreleased
 
-- 去掉 Beyond 随包依赖中的 PixiJS 类型声明，使 Git 市场安装低于 Claude 账户插件的文件数量上限。
+- Beyond 软件预览使用一套随包 Lua、控件和 Canvas 2D 实现，移除上游独立应用、重复副本及浏览器绘图库。
+- Graph Code 编译直接使用随包编译器，工程、缓存和产物在各自的作业目录中生成。
+- 协作协议、Lua 写回和 API 文本查询由各自模块提供，同一实现供制作、CLI 和 MCP 复用。
 - 说明 DeepSeek Harness 从 GitHub 直装后的手动更新步骤。
 
 ## 1.2.1

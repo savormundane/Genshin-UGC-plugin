@@ -4,7 +4,7 @@ import json
 import os
 
 from authoring_io import DiagnosticError, ProductionInputs, resolve, sha
-from ayaya_bridge import NODE_IMPLEMENTATIONS, RUNTIME, SHARED_RESOURCES, resource_definition
+from ayaya_bridge import prepare_workspace, resource_definition
 
 
 def merge_resources(roots, destination):
@@ -87,8 +87,6 @@ def merge_resources(roots, destination):
 
 def prepare_check_context(job_path, workspace, inputs):
     """Materialize declared project context without compiling any graphs."""
-    from node_build import copy_tree
-
     def configuration(path):
         raw = path.read_bytes()
         inputs.bind(path, sha(raw), 'graph_context')
@@ -125,19 +123,14 @@ def prepare_check_context(job_path, workspace, inputs):
         generate(spec, generated/'storage',server_only=mode=='server')
         roots.append(generated/'storage/resources')
     if job.get('protocol_native'):
-        from production_core import protocol
+        from protocol_types import validate_protocol
         from protocol_codegen import generate
 
-        generate(protocol(job['protocol']), generated/'protocol')
+        generate(validate_protocol(job['protocol']), generated/'protocol')
         roots.append(generated/'protocol/resources')
-    layout = workspace / 'assets/资源库'
-    project = layout / '项目存档/BuildProject'
-    project.mkdir(parents=True)
+    project = prepare_workspace(workspace)
     receipt = merge_resources(roots,project)
     inputs.merge({path:digest for path,digest in receipt.items() if not Path(path).is_relative_to(generated)},'graph_context')
-    copy_tree(RUNTIME / NODE_IMPLEMENTATIONS, workspace / NODE_IMPLEMENTATIONS)
-    if (RUNTIME / SHARED_RESOURCES).exists():
-        copy_tree(RUNTIME / SHARED_RESOURCES, workspace / SHARED_RESOURCES)
     binding = resolve(graph_path.parent, graph['bindings']) if graph and graph.get('bindings') else None
     baseline = resolve(graph_path.parent, graph['base_gil']) if graph and graph.get('base_gil') else None
     return project, graphs, binding, baseline, bool(job.get('native') or job.get('level') or 'storage' in job)

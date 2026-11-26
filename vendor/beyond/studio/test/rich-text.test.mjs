@@ -1,7 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createCanvas, loadImage } from '@napi-rs/canvas'
-import { Container, DOMAdapter, Matrix } from 'pixi.js'
 import { createRuntime } from '../../client/lua-runtime/src/index.js'
 import { createStudio } from '../index.js'
 import { parseRichText } from '../play/rich-text.js'
@@ -10,7 +9,6 @@ import { drawRichText, paintRichTextCanvas } from '../play/rich-text-paint.js'
 import { localFontStack } from '../host/local-font.js'
 import { paintList, playSnapshot } from '../play/session.js'
 import { renderScenePng, renderPaintPng } from '../host-png.js'
-import { PixiPlayRenderer } from '../play/pixi-renderer.js'
 import { layoutTree } from '../ui/inspector.js'
 import { importGia, exportGia } from '../gia/codec.js'
 import { walk } from '../ui/authoring.js'
@@ -165,41 +163,4 @@ test('JSON/GIA preserve markup while editor layout exposes styled lines', () => 
   const texts = []
   walk(restored.root, node => { if (node.kind === 'textbox') texts.push(node.text) })
   assert.ok(texts.includes(text), 'GIA preserves the exact tag string, not the rendered text')
-})
-
-test('Pixi rich text reuses its canvas/texture, switches plain/rich and releases owned resources', async t => {
-  const previous = DOMAdapter.get()
-  DOMAdapter.set({ ...previous, createCanvas })
-  const renderer = Object.create(PixiPlayRenderer.prototype)
-  Object.assign(renderer, { ready: Promise.resolve(), nodes: new Map(), scratch: new Matrix(), canvasWidth: 240, canvasHeight: 160,
-    app: { stage: new Container(), render() {}, renderer: { resize() {}, resolution: 1 } } })
-  t.after(() => { renderer.clearNodes(); DOMAdapter.set(previous) })
-  const { label, session } = fixture(t)
-  let scene = playSnapshot(session, { view: true }).scene
-  await renderer.applyScene(scene, 240, 160)
-  const root = renderer.nodes.get(label.Id), visual = root.__visual, texture = visual.__richText.texture, source = texture.source
-  label.text = '<color=yellow><b>changed</b></color>'
-  label.markPlayDirty()
-  scene = playSnapshot(session, { view: true, sceneRev: scene.revision }).scene
-  await renderer.applyScene(scene, 240, 160)
-  assert.equal(root.__visual, visual)
-  assert.equal(root.__visual.__richText.texture, texture)
-  label.text = 'plain'
-  label.markPlayDirty()
-  scene = playSnapshot(session, { view: true, sceneRev: scene.revision }).scene
-  await renderer.applyScene(scene, 240, 160)
-  assert.equal(texture.destroyed, true)
-  assert.equal(source.destroyed, true)
-  assert.equal(root.__visual.__text.text, 'plain')
-  const plain = root.__visual.__text
-  label.text = '<i>rich again</i>'
-  label.markPlayDirty()
-  await renderer.applyScene(playSnapshot(session, { view: true, sceneRev: scene.revision }).scene, 240, 160)
-  assert.equal(plain.destroyed, true)
-  const lastSource = root.__visual.__richText.texture.source
-  renderer.clearNodes()
-  assert.equal(lastSource.destroyed, true)
-  const canvas = createCanvas(1, 1)
-  paintRichTextCanvas(canvas, { textLayout: { richLines: [], contentHeight: 0 } }, 10_000, 50, undefined, 2)
-  assert.equal(canvas.width, 4096, 'large controls use a bounded viewport texture')
 })

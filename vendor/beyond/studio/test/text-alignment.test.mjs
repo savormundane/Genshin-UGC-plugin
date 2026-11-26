@@ -1,11 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createCanvas, loadImage } from '@napi-rs/canvas'
-import { Container, Text } from 'pixi.js'
 import { createRuntime } from '../../client/lua-runtime/src/index.js'
 import { paintList, playSnapshot } from '../play/session.js'
 import { renderScenePng } from '../host-png.js'
-import { PixiPlayRenderer } from '../play/pixi-renderer.js'
 import './fixtures/render-font.mjs'
 
 function fixture(t) {
@@ -90,32 +88,4 @@ test('Lua alignment changes preserve enum identity and reach scene, paint and PN
   const corner = await whiteBounds(playSnapshot(session, { view: true }).scene)
   assert.ok(corner.left > 170 && corner.right < 202, JSON.stringify(corner))
   assert.ok(corner.top > 95 && corner.bottom <= 122, JSON.stringify(corner))
-})
-
-test('Pixi visuals consume the same normalized Lua scene and update anchors without a browser', t => {
-  const { runtime, session } = fixture(t)
-  // Actual Pixi containers/text and the production visual adapter are enough
-  // to observe anchors/positions. Starting a WebGL application is unnecessary.
-  const renderer = Object.create(PixiPlayRenderer.prototype)
-  const root = new Container()
-  t.after(() => root.destroy({ children: true }))
-  const first = playSnapshot(session, { view: true }).scene.nodes.find(item => item.name === 'Label')
-  renderer.replaceVisual(root, first, first.sourceWidth, first.sourceHeight)
-  let text = root.__visual.children.find(child => child instanceof Text)
-  assert.ok(text)
-  assert.deepEqual([text.anchor.x, text.anchor.y, text.x, text.y], [0.5, 0.5, 0, 0])
-  assert.equal(text.style.align, 'center')
-  runtime.step(0.25)
-  const changed = playSnapshot(session, { view: true }).scene.nodes.find(item => item.name === 'Label')
-  renderer.replaceVisual(root, changed, changed.sourceWidth, changed.sourceHeight)
-  text = root.__visual.children.find(child => child instanceof Text)
-  assert.deepEqual([text.anchor.x, text.anchor.y, text.x, text.y], [1, 1, 78, 40])
-  assert.equal(text.style.align, 'right')
-  // A faint outline must not become opaque at the PNG → Pixi boundary.
-  for (const [outlineColor, alpha] of [[0x33333333, 0.2], [0x00333333, 0], [0xff333333, 1]]) {
-    renderer.replaceVisual(root, { ...changed, enableOutline: true, outlineColor }, changed.sourceWidth, changed.sourceHeight)
-    text = root.__visual.children.find(child => child instanceof Text)
-    assert.equal(text.style.stroke.color, 0x333333)
-    assert.equal(text.style.stroke.alpha, alpha)
-  }
 })

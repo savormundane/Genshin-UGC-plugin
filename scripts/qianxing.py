@@ -79,8 +79,8 @@ def main(argv=None):
             value=produce(a.spec,a.out,a.next_output)
             if a.summary:value=produce_summary(value)
         elif a.command=='api':
-            from production_core import api
-            value=api(a.query,a.limit)
+            from knowledge import search_api_text
+            value=search_api_text(a.query,a.limit)
         elif a.command=='plan':value=route(a.kind,a.interface,a.multiplayer,a.format,a.task_mode,a.target_domain)
         elif a.command=='nodes':value=catalog(a.query,a.scope,a.limit)
         elif a.command=='build':value=build(a.spec,a.out)

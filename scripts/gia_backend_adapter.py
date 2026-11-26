@@ -35,9 +35,7 @@ def collect_signals(collect,*,graph_payload,signal_params_by_name,composite_mgr,
     return list(specs.values())
 
 
-def main():
-    runner=Path(sys.argv[1]).resolve();runtime=runner.parent.parent
-    sys.path[:0]=[str(runtime),str(runner.parent)]
+def install_schema2_bindings():
     from ugc_file_tools.pipelines.project_export_gia_parts import pipeline
     from ugc_file_tools.signal_writeback import gia_export
     collect=pipeline._collect_used_signal_specs_from_graph_payload
@@ -49,6 +47,12 @@ def main():
         allocate(node_def,node_def_id_int=node_def_id_int)
         if client_kernel:meta['2']['5']=2000
     gia_export._set_node_def_id_inplace=set_id
+
+
+def main():
+    runner=Path(sys.argv[1]).resolve();runtime=runner.parent.parent
+    sys.path[:0]=[str(runtime),str(runner.parent)]
+    install_schema2_bindings()
     sys.argv=[str(runner),*sys.argv[2:]]
     runpy.run_path(str(runner),run_name='__main__')
 

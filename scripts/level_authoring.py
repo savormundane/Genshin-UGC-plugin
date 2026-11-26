@@ -88,6 +88,57 @@ def script_records(data):
    out.append({'id':unique(ef,1,0),'name':name,'display_name':unique(ef,2,default=b'').decode('utf-8',errors='replace'),'bytes':len(unique(ef,5,default=b'')),'sha256':hashlib.sha256(unique(ef,5,default=b'')).hexdigest()})
  return out
 
+
+def replace_lua(data: bytes, mapping: str, code: bytes) -> bytes:
+    """Replace one script body while preserving all other container fields."""
+    if not isinstance(code, bytes) or not code:
+        raise ValueError('Empty Lua source')
+    header, root = calibrated_container(data)
+
+    def one(fs, n):
+        matches = [f for f in fs if f[0] == n and f[1] == 2]
+        if len(matches) != 1:
+            raise ValueError('Missing or ambiguous field ' + str(n))
+        return matches[0]
+
+    def replace(fs, target, payload):
+        return b''.join(msg(f[0], payload) if f is target else f[3] for f in fs)
+
+    group = one(root, 50)
+    entries = fields(group[2])
+    matches = []
+    for entry in entries:
+        if entry[0:2] == (1, 2) and mapping.encode('utf-8') in vals(fields(entry[2]), 3):
+            matches.append(entry)
+    if len(matches) != 1:
+        found = [
+            name.decode('utf-8', errors='replace')
+            for entry in entries
+            if entry[:2] == (1, 2)
+            for name in vals(fields(entry[2]), 3)
+        ]
+        raise ValueError(
+            '脚本映射缺失或不唯一；需要完整文件名（精确相等，含.lua）。请求='
+            + repr(mapping)
+            + '，现有映射='
+            + repr(found)
+        )
+    entry = matches[0]
+    ef = fields(entry[2])
+    one(ef, 3)
+    body = one(ef, 5)
+    payload = replace(root, group, replace(entries, entry, replace(ef, body, code)))
+    result = pack(payload, header[1:4])
+    _, after = container(result)
+    if [f[3] for f in root if f is not group] != [f[3] for f in after if f[0:2] != (50, 2)]:
+        raise ValueError('Protected fields changed')
+    ae = fields(one(after, 50)[2])
+    newentry = ae[entries.index(entry)]
+    if unique(fields(newentry[2]), 5) != code:
+        raise ValueError('Lua readback mismatch')
+    return result
+
+
 def inspect_bindings(data):
  records=ui_records(data);known={unique(fs,501,0):fs for fs in records};scripts=script_records(data);script_ids={s['id'] for s in scripts};templates=[];bindings=[];diagnostics=[];names={}
  if len(known)!=len(records):diagnostics.append('控件GUID重复')
@@ -254,7 +305,6 @@ def compile_spec(spec,base):
  records.append(library_record)
  data=set_section(data,9,msg(501,b''.join(vi(i) for i in registry))+b''.join(msg(502,r) for r in records))
  for mapping,alias in aliases.items():
-  from production_core import replace_lua
   data=replace_lua(data,mapping,with_template_alias(script_sources[mapping],alias,indices))
  report=inspect_bindings(data)
  if report['diagnostics']:raise ValueError('生成关联不闭合：'+repr(report['diagnostics']))

@@ -47,9 +47,9 @@ def check(raw: bytes, kind: str, *, mapping=None, source_map=None, contract=None
 
         validate_targets(contract.get('variable_targets', {}))
         if 'protocol' in contract:
-            from production_core import protocol
+            from protocol_types import validate_protocol
 
-            protocol(contract['protocol'])
+            validate_protocol(contract['protocol'])
         if not isinstance(contract['scripts'], list) or not contract['scripts']:
             raise ValueError('API contract requires scripts')
         for item in contract['scripts']:

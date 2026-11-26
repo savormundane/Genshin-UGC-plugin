@@ -1,33 +1,18 @@
-"""Plugin-owned contracts, animation, API lookup, protected Lua writeback and staged production."""
+"""Compose shared production stages and dispatch saved jobs by schema."""
 
 from pathlib import Path
-import hashlib
 import json
 import math
 import os
 import re
 import shutil
-import struct
 import tempfile
 from typing import Any
-from level_inventory import calibrated_container, fields, vals, unique, container
+from authoring_io import PLUGIN, read_json as load, require_fields as keys, sha
+from knowledge import search_api_text as api  # compatibility import
+from level_authoring import replace_lua
 from miliastra.assets.core import ASSET_GENERATORS
-
-PLUGIN = Path(__file__).resolve().parents[1]
-
-
-def sha(data):
-    return hashlib.sha256(data).hexdigest()
-
-
-def load(path):
-    return json.loads(Path(path).read_text(encoding='utf-8-sig'))
-
-
-def keys(v, allowed, required=()):
-    if not isinstance(v, dict) or set(v) - set(allowed) or set(required) - set(v):
-        raise ValueError('Unknown or missing specification fields')
-
+from protocol_types import validate_protocol as protocol
 
 def positive(v):
     if type(v) not in (int, float) or not math.isfinite(v) or v <= 0:
@@ -39,115 +24,6 @@ def input_path(value, base):
         raise ValueError('Expected input path')
     p = (base / value).resolve()
     return p
-
-
-def api(query, limit=20):
-    if type(limit) != int or not 1 <= limit <= 100:
-        raise ValueError('limit must be 1..100')
-    terms = query.casefold().split()
-    if not terms:
-        raise ValueError('API query cannot be empty')
-    from knowledge import sources
-
-    record = sources()['client_api']
-    if record['integrity'] != 'passed':
-        raise ValueError('Client API source changed; review source registry before use')
-    source = PLUGIN / record['path']
-    lines = source.read_text(encoding='utf-8').splitlines()
-    found = []
-    section = ''
-    for i, line in enumerate(lines):
-        if line.startswith('#'):
-            section = line
-        if all(t in line.casefold() for t in terms):
-            found.append(
-                {
-                    'line': i + 1,
-                    'section': section,
-                    'excerpt': '\n'.join(lines[max(0, i - 1) : i + 2]),
-                }
-            )
-    return {
-        'source': record['path'],
-        'sha256': sha(source.read_bytes()),
-        'matches': len(found),
-        'results': found[:limit],
-        'source_metadata': record,
-        'scope': 'text discovery only; use knowledge api for parameter authority',
-        'editor': 'not_checked',
-        'host': 'not_checked',
-    }
-
-
-def protocol(spec):
-    keys(spec, ('schema', 'signals'), ('schema', 'signals'))
-    if (
-        type(spec['schema']) != int
-        or spec['schema'] not in (1, 2)
-        or not isinstance(spec['signals'], list)
-    ):
-        raise ValueError('Invalid protocol schema')
-    names = set()
-    for signal in spec['signals']:
-        keys(
-            signal,
-            ('name', 'direction', 'fields', 'phases')
-            + (('policy', 'target') if spec['schema'] == 2 else ()),
-            ('name', 'direction', 'fields', 'phases'),
-        )
-        if spec['schema'] == 2 and signal.get('policy') not in ('ordered', 'snapshot'):
-            raise ValueError('schema 2 requires ordered/snapshot policy')
-        name = signal['name']
-        if (
-            not isinstance(name, str)
-            or not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]{0,63}', name)
-            or name in names
-        ):
-            raise ValueError('Invalid or duplicate signal name')
-        names.add(name)
-        if signal['direction'] not in ('client_to_server', 'server_to_client', 'server_local'):
-            raise ValueError('Invalid direction')
-        if (
-            not isinstance(signal['phases'], list)
-            or not signal['phases']
-            or len(set(signal['phases'])) != len(signal['phases'])
-            or any(not isinstance(p, str) or not p for p in signal['phases'])
-        ):
-            raise ValueError('Invalid phases')
-        if not isinstance(signal['fields'], list):
-            raise ValueError('fields must be an ordered list')
-        if 'target' in signal:
-            target = signal['target']
-            if (
-                signal['direction'] != 'server_to_client'
-                or not isinstance(target, str)
-                or target != 'signal_source'
-                and not any(
-                    target == 'field:' + f['name'] and f['type'] == 'entity'
-                    for f in signal['fields']
-                )
-            ):
-                raise ValueError('Client target must be signal_source or an entity field')
-        seen = set()
-        for f in signal['fields']:
-            keys(f, ('name', 'type', 'max_length'), ('name', 'type'))
-            if not isinstance(f['name'], str) or not f['name'] or f['name'] in seen:
-                raise ValueError('Duplicate or invalid parameter')
-            seen.add(f['name'])
-            from protocol_types import TYPES
-
-            if f['type'] not in (
-                TYPES if spec['schema'] == 2 else ('integer', 'number', 'boolean', 'string')
-            ):
-                raise ValueError('Unsupported protocol type')
-            if 'max_length' in f and (
-                f['type'] != 'string'
-                and not f['type'].endswith('_list')
-                or type(f['max_length']) != int
-                or f['max_length'] < 0
-            ):
-                raise ValueError('Invalid max_length')
-    return spec
 
 
 def animation(spec, base):
@@ -253,71 +129,6 @@ def animation(spec, base):
         'frames': frames,
         'source_sha256': sources,
     }
-
-
-def replace_lua(data: bytes, mapping: str, code: bytes) -> bytes:
-    if not isinstance(code, bytes) or not code:
-        raise ValueError('Empty Lua source')
-    _, root = calibrated_container(data)
-
-    def one(fs, n):
-        matches = [f for f in fs if f[0] == n and f[1] == 2]
-        if len(matches) != 1:
-            raise ValueError('Missing or ambiguous field ' + str(n))
-        return matches[0]
-
-    def vi(v):
-        out = bytearray()
-        while v >= 128:
-            out.append((v & 127) | 128)
-            v >>= 7
-        out.append(v)
-        return bytes(out)
-
-    def encode(n, b):
-        return vi(n * 8 + 2) + vi(len(b)) + b
-
-    def replace(fs, target, payload):
-        return b''.join(
-            encode(n, payload) if f is target else raw for f in fs for n, w, value, raw in [f]
-        )
-
-    group = one(root, 50)
-    entries = fields(group[2])
-    matches = []
-    for entry in entries:
-        if entry[0:2] == (1, 2) and mapping.encode('utf-8') in vals(fields(entry[2]), 3):
-            matches.append(entry)
-    if len(matches) != 1:
-        found = [
-            name.decode('utf-8', errors='replace')
-            for entry in entries
-            if entry[:2] == (1, 2)
-            for name in vals(fields(entry[2]), 3)
-        ]
-        raise ValueError(
-            '脚本映射缺失或不唯一；需要完整文件名（精确相等，含.lua）。请求='
-            + repr(mapping)
-            + '，现有映射='
-            + repr(found)
-        )
-    entry = matches[0]
-    ef = fields(entry[2])
-    one(ef, 3)
-    body = one(ef, 5)
-    payload = replace(root, group, replace(entries, entry, replace(ef, body, code)))
-    head = bytearray(data[:20])
-    struct.pack_into('>I', head, 0, len(payload) + 20)
-    struct.pack_into('>I', head, 16, len(payload))
-    result = bytes(head) + payload + data[-4:]
-    _, after = container(result)
-    if [f[3] for f in root if f is not group] != [f[3] for f in after if f[0:2] != (50, 2)]:
-        raise ValueError('Protected fields changed')
-    ae = fields(one(after, 50)[2])
-    newentry = ae[entries.index(entry)]
-    if unique(fields(newentry[2]), 5) != code:
-        raise ValueError('Lua readback mismatch')
-    return result
 
 
 def _produce(spec_path, out, evidence, *, include_runtime=True, fallback_gil=None):

@@ -1,5 +1,5 @@
-import { createRuntime, walkControls as walk, layoutGrid, controlSize } from 'qxqy-lua-runtime'
-import { createServer, normalizePlayerCount, normalizePlayerIndex } from 'qxqy-server'
+import { createRuntime, walkControls as walk, layoutGrid, controlSize } from '../../client/lua-runtime/src/index.js'
+import { createServer, normalizePlayerCount, normalizePlayerIndex } from '../../server/index.js'
 import { compileProject } from './compile.js'
 import { assertLosslessJson } from '../json.js'
 import { CANVAS_PRESETS, imagePrimitive } from '../constants.js'

@@ -117,6 +117,13 @@ def write_json(path: str | Path, value: Any) -> None:
     Path(path).write_text(canonical(value) + '\n', encoding='utf-8')
 
 
+def require_fields(
+    value: object, allowed: Collection[str], required: Collection[str] = (),
+) -> None:
+    if not isinstance(value, dict) or set(value) - set(allowed) or set(required) - set(value):
+        raise ValueError('Unknown or missing specification fields')
+
+
 def schema(
     value: object, allowed: Collection[str], required: Collection[str] = (), version: int = 2
 ) -> None:

@@ -79,7 +79,12 @@ class StaticDefinitionGraph:
                 'formats': ['gia'], 'project_resources': 'resources',
             })
             output = root / 'compiled'
-            self.assertEqual(compile_graphs(spec, output)['graphs'], 1)
+            runtime_before = inventory(runtime)
+            with patch('shutil.copytree', wraps=shutil.copytree) as copy:
+                self.assertEqual(compile_graphs(spec, output)['graphs'], 1)
+                self.assertFalse(any(Path(call.args[0]).resolve() == runtime
+                                     for call in copy.call_args_list))
+            self.assertEqual(inventory(runtime), runtime_before)
             artifact, = (output / 'gia').glob('*.gia')
             graph = model(artifact.read_bytes())
             issues, unknown, declarations = audit_gia_signals(graph)

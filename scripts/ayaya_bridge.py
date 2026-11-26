@@ -3,8 +3,12 @@ from functools import lru_cache
 from pathlib import Path
 import ast
 import argparse
+from contextlib import redirect_stdout
 import json
+import os
 import re
+import runpy
+import shutil
 import subprocess
 import sys
 
@@ -25,6 +29,68 @@ TOOLS = (
 )
 REQUIRED = ('app/cli/graph_tools.py', 'engine/graph/graph_code_parser.py',
             FILE_TOOLS_RUNNER, FILE_TOOLS / 'unified_cli/__init__.py')
+COMPILER_ENTRY = Path(__file__).resolve()
+
+
+def prepare_workspace(workspace):
+    project = workspace / 'assets/资源库/项目存档/BuildProject'
+    project.mkdir(parents=True)
+    # Ayaya's project and structure resolvers use directory markers; all
+    # imports, node definitions and built-in format samples stay in RUNTIME.
+    for marker in ('engine', 'app', 'tools'):
+        (workspace / marker).mkdir()
+    shared = RUNTIME / SHARED_RESOURCES
+    if shared.exists():
+        if shared.is_symlink() or any(path.is_symlink() for path in shared.rglob('*')):
+            raise ValueError('Linked resources are not supported')
+        shutil.copytree(shared, workspace / SHARED_RESOURCES, ignore=shutil.ignore_patterns(
+            '__pycache__', '*.pyc', '.git', 'out', '__workbench_out__',
+        ))
+    return project
+
+
+def compiler_process(script, *args, cwd):
+    command = [sys.executable, '-X', 'utf8', '-B']
+    if os.environ.get('MILIASTRA_WONDERLAND_BUILD_BOUNDARY'):
+        command.append(str(PLUGIN / 'scripts/dependency_runner.py'))
+    command.extend(map(str, (script, *args)))
+    return subprocess.run(command, cwd=cwd, capture_output=True, text=True,
+                          encoding='utf-8', timeout=180)
+
+
+def compiler_worker(workspace, action, *args):
+    workspace = Path(workspace).resolve()
+    if action == 'validate':
+        with redirect_stdout(sys.stderr):
+            report = validate_rules(Path(args[0]), RUNTIME, workspace=workspace)
+        print(json.dumps(report, ensure_ascii=False))
+        return 0 if report['status'] == 'passed' else 2
+    if action not in ('export', 'native-gia'):
+        raise ValueError('Unknown compiler operation')
+
+    runner = RUNTIME / FILE_TOOLS_RUNNER
+    sys.path[:0] = [str(RUNTIME), str(runner.parent)]
+    from ugc_file_tools import output_paths
+    from ugc_file_tools.signal_writeback import template_cache
+
+    # Keep the legacy CLI output naming rules, but bind their root to this
+    # invocation's scratch. The override lives only in this compiler process.
+    def workspace_output():
+        output = workspace / 'out'
+        output.mkdir(exist_ok=True)
+        return output
+
+    output_paths.resolve_out_dir = workspace_output
+    template_cache.signal_node_def_template_cache_path = (
+        lambda: workspace_output() / '_signal_node_def_templates.cache.json'
+    )
+    if action == 'native-gia':
+        from gia_backend_adapter import install_schema2_bindings
+
+        install_schema2_bindings()
+    sys.argv[:] = [str(runner), *args]
+    runpy.run_path(str(runner), run_name='__main__')
+    return 0
 
 
 def compiler_nodes(scope):
@@ -243,4 +309,6 @@ def main(argv=None):
         return 2
 
 if __name__ == '__main__':
+    if sys.argv[1:2] == ['--compiler-worker']:
+        raise SystemExit(compiler_worker(*sys.argv[2:]))
     raise SystemExit(main())

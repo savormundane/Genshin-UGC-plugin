@@ -1,12 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createCanvas, loadImage } from '@napi-rs/canvas'
-import { Container, DOMAdapter, Matrix } from 'pixi.js'
 import { createRuntime } from '../../client/lua-runtime/src/index.js'
 import { createStudio } from '../index.js'
 import { paintList, playSnapshot } from '../play/session.js'
 import { renderEditorPng, renderPaintPng, renderScenePng, flattenScenePaint } from '../host-png.js'
-import { PixiPlayRenderer } from '../play/pixi-renderer.js'
 import { editorMaskProject, maskScenes, maskSamples, maskAlphas, contourScene, contourSamples, contourAlphas } from './fixtures/image-mask.mjs'
 import { imageMaskSpec, createMaskSampler, paintMaskCanvas } from '../play/image-mask.js'
 import { featherMaskAlpha } from '../play/image-mask-raster.js'
@@ -116,47 +114,6 @@ test('cropped mask layers keep backing-pixel offsets at high DPI and when partly
   assert.equal(await alphaPixel(png, 40, 160), 255)
 })
 
-test('Pixi image and viewport masks update independently and release their resources', async t => {
-  const previous = DOMAdapter.get()
-  DOMAdapter.set({ ...previous, createCanvas })
-  const renderer = Object.create(PixiPlayRenderer.prototype)
-  Object.assign(renderer, { ready: Promise.resolve(), nodes: new Map(), scratch: new Matrix(), canvasWidth: 240, canvasHeight: 160,
-    app: { stage: new Container(), render() {}, renderer: { resize() {} } } })
-  t.after(() => { renderer.clearNodes(); DOMAdapter.set(previous) })
-  const scene = maskScenes().grid
-  await renderer.applyScene(scene, 240, 160)
-  const root = renderer.nodes.get('mask')
-  const viewport = root.__viewportClip, texture = root.__imageMask.texture
-  const item = scene.nodes.find(n => n.id === 'mask')
-  const update = extra => renderer.applyScene({ format: 'tree-v1', reset: false, changed: [{ ...item, ...extra }] }, 240, 160)
-  await update({ softEdgeWidthX: 40 })
-  assert.equal(root.mask, viewport, 'width change must not overwrite viewport clip')
-  assert.equal(root.__imageMask.texture, texture, 'width animation reuses the texture')
-  assert.equal(root.__imageContent.mask, root.__imageMask)
-  await update({ primitive: 'ring', imageId: 100006, reverseMaskArea: true })
-  assert.equal(root.__imageMask.texture, texture, 'shape and inverse changes repaint the owned texture')
-  assert.equal(root.__imageContent._maskOptions.inverse, true)
-  const pixels = texture.source.resource.getContext('2d')
-  assert.equal(pixels.getImageData(100, 60, 1, 1).data[3], 0, 'ring hole remains positive-coverage zero before GPU inversion')
-  await update({ sourceWidth: 0 })
-  assert.equal(root.__imageContent.visible, false)
-  assert.equal(root.mask, viewport)
-  assert.equal(texture.destroyed, true)
-  await update({})
-  assert.equal(root.__imageContent.visible, true)
-  const restoredTexture = root.__imageMask.texture
-  await update({ enableMask: false })
-  assert.equal(root.mask, viewport)
-  assert.equal(root.__imageContent.mask, undefined)
-  assert.equal(restoredTexture.destroyed, true)
-  await update({ clipToParent: false })
-  assert.equal(root.mask, undefined)
-  assert.equal(viewport.destroyed, true)
-  const finalTexture = root.__imageMask.texture
-  renderer.removeNode('mask')
-  assert.equal(finalTexture.destroyed, true)
-  assert.equal(renderer.nodes.get('red').destroyed, false, 'child removal is owned by the scene, not mask disposal')
-})
 
 test('a rotated mask uses its own rectangle rather than the axis-aligned bounds', async (t) => {
   const f = fixture(t)
