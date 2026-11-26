@@ -1,6 +1,6 @@
 {
   "name": "miliastra-wonderland",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "以平台资料与客户端API为依据，提供 Miliastra Editor、Miliastra Graph Code、Miliastra GIL 和 Miliastra Assets，覆盖原生工程、客户端 Lua、节点图、容器和素材，以及共享协议、存储、动画、诊断与制作工具。",
   "author": {
     "name": "Miliastra Wonderland contributors"

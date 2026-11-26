@@ -63,7 +63,7 @@ claude plugin install miliastra-wonderland@miliastra-wonderland
 
 ### 从本地目录导入
 
-在[本版发行页](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/v1.3.0)下载 **Agent Plugins Windows x64 ZIP**。客户端支持导入 ZIP 时直接上传，支持目录导入时解压到独立目录并选择包含 `plugin.json` 的目录。 [Agent Plugins 规范](https://agent-plugins.org/specification)
+在[本版发行页](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/v1.3.1)下载 **Agent Plugins Windows x64 ZIP**。客户端支持导入 ZIP 时直接上传，支持目录导入时解压到独立目录并选择包含 `plugin.json` 的目录。 [Agent Plugins 规范](https://agent-plugins.org/specification)
 
 ### 用 PowerShell 安装本地 ZIP
 
