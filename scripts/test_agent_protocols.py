@@ -436,6 +436,8 @@ class ProtocolTests(unittest.TestCase):
                     self.assertEqual(installer.read_json(ROOT / '.codex-plugin/plugin.json')['mcpServers'],
                                      './' + relative)
                     expected['env_vars'] = installer.CODEX_MCP_ENV_VARS
+                    for variable in ('MILIASTRA_WONDERLAND_PROJECT_ROOT', 'MILIASTRA_WONDERLAND_OUTPUT_ROOT'):
+                        self.assertIn(variable, expected['env_vars'])
                 self.assertEqual(descriptor['mcpServers'], {installer.MCP_NAME: expected})
         names = {'miliastra-editor': 'Miliastra Editor', 'miliastra-graph-code': 'Miliastra Graph Code',
                  'miliastra-gil': 'Miliastra GIL', 'miliastra-assets': 'Miliastra Assets'}

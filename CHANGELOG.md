@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- 修复 Codex 市场和 PowerShell 安装配置漏传工程及输出目录变量的问题。
 - 修复 Beyond 预览忽略 `case.duration` 的问题。无事件或定时断言时也能预览逐帧更新。
 
 ## 1.3.0
