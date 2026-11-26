@@ -458,9 +458,26 @@ class NativeWorkflowTests(unittest.TestCase):
 
         asyncio.run(run())
 
-    def test_compiled_graph_continues_into_reviewed_gil_edit(self):
+    def test_graph_compiles_with_default_output_and_continues_into_reviewed_gil_edit(self):
+        from ayaya_bridge import FILE_TOOLS, RUNTIME
         from level_inventory import inspect_file
+        from miliastra.mcp.workspace import workspace_outputs
 
+        data = self.root / "plugin data" / ("a" * 40)
+        compiler_temp = self.root / "t"
+        compiler_temp.mkdir()
+        output_root = workspace_outputs(data, self.project.resolve())
+        server = StdioServerParameters(
+            command=self.server.command, args=self.server.args[:-2],
+            env={
+                **self.workspace_environment(),
+                "MILIASTRA_WONDERLAND_PLUGIN_DATA": str(data),
+                "TEMP": str(compiler_temp), "TMP": str(compiler_temp), "TMPDIR": str(compiler_temp),
+            },
+        )
+        template = (RUNTIME / FILE_TOOLS / "builtin_resources/template_library/test2_server_writeback_samples"
+                    / "autowire_templates_test2_server_direct_export_v2.gil")
+        template_digest = sha_file(template)
         source = self.project / 'graph.py'
         source.write_text(
             '"""\ngraph_id: server_mcp_delivery_test\ngraph_name: EntryLog\ngraph_type: server\n"""\n'
@@ -478,21 +495,39 @@ class NativeWorkflowTests(unittest.TestCase):
         job = {"schema": 1, "graphs": [{"source": source.name}], "formats": ["gia"]}
         write_json(self.project / "build.json", job)
         write_json(self.project / "gil-build.json", {**job, "formats": ["gia", "gil"]})
+        invalid = self.project / "invalid.py"
+        invalid.write_text(source.read_text(encoding="utf-8").replace("打印字符串", "不存在的节点"), encoding="utf-8")
+        write_json(self.project / "invalid-build.json", {**job, "graphs": [{"source": invalid.name}]})
 
         async def run():
-            async with Client(self.server) as client:
+            async with Client(server) as client:
                 rejected = await self.call(client, "graph_build", {
                     "spec": "gil-build.json", "output": "blocked",
                 }, "failed")
                 self.assertIsNone(rejected["output"])
-                self.assertFalse((self.outputs / "blocked").exists())
+                failed = await self.call(client, "graph_build", {
+                    "spec": "invalid-build.json", "output": "invalid",
+                }, "failed")
+                self.assertIn("validate-0 failed", failed["error"])
+                self.assertIsNone(failed["output"])
+                self.assertEqual(list(output_root.iterdir()), [])
+                self.assertEqual(list(compiler_temp.iterdir()), [])
                 compiled = await self.call(client, "graph_build", {
                     "spec": "build.json", "output": "compiled",
                 })
                 gia, = compiled["result"]["gia"]
-                compiled_file = Path(compiled["output"]) / gia
+                self.assertEqual(Path(compiled["output"]), output_root / "compiled")
+                compiled_file = output_root / "compiled" / gia
                 self.assertEqual(sha_file(compiled_file), compiled["outputs_sha256"][gia])
                 self.assertEqual(compiled["inputs_sha256"]["spec"], sha_file(self.project / "build.json"))
+
+                export_log = (compiled_file.parent.parent / "logs/gia-export.txt").read_text(encoding="utf-8")
+                log_prefix = "- output_dir: "
+                compiler_output, = (Path(line.removeprefix(log_prefix)) for line in export_log.splitlines()
+                                    if line.startswith(log_prefix))
+                self.assertTrue(compiler_output.is_relative_to(compiler_temp.resolve()))
+                self.assertEqual(list(compiler_temp.iterdir()), [])
+                self.assertEqual(list(output_root.iterdir()), [output_root / "compiled"])
 
                 base = {"input": "entrance.gil", "sha256": sha_file(self.project / "entrance.gil")}
                 plan = await self.call(client, "native_plan", {
@@ -511,6 +546,7 @@ class NativeWorkflowTests(unittest.TestCase):
                 self.assertIn("EntryLog", {graph["name"] for graph in inventory["graphs"]})
                 self.assertEqual(sha_file(exported), applied["outputs_sha256"]["level.gil"])
                 self.assertEqual((self.project / "entrance.gil").read_bytes(), self.raw)
+                self.assertEqual(sha_file(template), template_digest)
 
         asyncio.run(run())
 

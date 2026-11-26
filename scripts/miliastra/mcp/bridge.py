@@ -1,4 +1,5 @@
 """Fixed operations shared by local MCP and CLI; no arbitrary command tool."""
+from contextlib import nullcontext
 from pathlib import Path
 import argparse,asyncio,json,os,re,sys,tempfile,math
 from authoring_io import DiagnosticError,PLUGIN,sha_file,schema,read_json,write_json,missing_input,require_new_output
@@ -59,7 +60,6 @@ async def finish_worker(process):
                 pass
         await process.wait()
 
-    from contextlib import nullcontext
     try:
         from anyio import CancelScope
     except ImportError:
@@ -190,13 +190,20 @@ class Bridge:
             if default_output:
                 output_root.mkdir(parents=True, exist_ok=True)
         if progress:await progress(0,3,'Inputs bound')
-        # Only this request's private directory is removed on failure/cancellation.
-        with tempfile.TemporaryDirectory(prefix='qianxing-mcp-',dir=output_root if destination else None)as temporary:
+        # Compiler files use private system temp. Delivery still stages on the output volume.
+        compiler = tempfile.TemporaryDirectory(prefix='mw-') if operation == 'graph_build' else nullcontext()
+        with (
+            compiler as build_scratch,
+            tempfile.TemporaryDirectory(
+                prefix='qianxing-mcp-', dir=output_root if destination else None,
+            ) as temporary,
+        ):
             scratch=Path(temporary);request=scratch/'request.json';result_path=scratch/'result.json'
             if destination:args['output']=str(scratch/'delivery')
             write_json(request,{'operation':operation,'arguments':args,'inputs':bound,
                                'project':str(project) if project else None,
                                'output_root':str(output_root) if output_root else None,'scratch':str(scratch),
+                               'build_scratch':build_scratch,
                                'destination':str(destination) if destination else None})
             process=None
             code=None

@@ -240,7 +240,7 @@ def build(spec_path,out_dir,preserve_container_order=False,structure_bindings=()
         ids.add(meta['graph_id']);names.add(meta['graph_name']);sources.append((source,scope,category,meta));inputs[str(source)]=sha(raw)
         source_texts[source]=(raw,expand_graph(code,source,bindings))
     logs=[]
-    with tempfile.TemporaryDirectory(prefix='qianxing-node-build-') as td:
+    with tempfile.TemporaryDirectory(prefix='g-') as td:
         work=Path(td);runtime=work/'runtime';copy_tree(RUNTIME,runtime)
         project=runtime/'assets/资源库/项目存档/BuildProject';project.mkdir(parents=True)
         if job.get('project_resources'):
@@ -452,7 +452,7 @@ def build(spec_path,out_dir,preserve_container_order=False,structure_bindings=()
         json_new(stage/'build-report.json',report)
         output.parent.mkdir(parents=True,exist_ok=True)
         # Copy to a sibling staging directory, then publish only the complete build.
-        staging=Path(tempfile.mkdtemp(prefix='.node-build-',dir=output.parent))
+        staging=Path(tempfile.mkdtemp(prefix='.g-',dir=output.parent))
         try:
             shutil.copytree(stage,staging,dirs_exist_ok=True)
             if output.exists():raise ValueError('Output appeared while building')

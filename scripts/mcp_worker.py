@@ -28,9 +28,11 @@ def _asset_thumbnail(path, name, controls, *, role, within_budget, has_foregroun
 def main():
     request=read_json(sys.argv[1]);result_path=Path(sys.argv[2]);args=request['arguments'];op=request['operation']
     scratch=Path(request['scratch']).resolve()
+    build_scratch = Path(request['build_scratch']).resolve() if op == 'graph_build' else None
+    writable = (scratch, build_scratch) if build_scratch is not None else (scratch,)
     project=Path(request['project']) if request['project'] else None
     mounted=[Path(request[k]).resolve() for k in ('project','output_root') if request[k]]
-    roots=[scratch,PLUGIN.resolve(),Path(sys.base_prefix).resolve(),*mounted]
+    roots=[*writable,PLUGIN.resolve(),Path(sys.base_prefix).resolve(),*mounted]
     roots.extend(Path(p).resolve() for p in sys.path if p and Path(p).is_dir()
                  and (project is None or not Path(p).resolve().is_relative_to(project)))
     native_cache=None
@@ -48,10 +50,10 @@ def main():
         path=Path(os.fsdecode(value)).resolve()
         if str(path).casefold()==os.devnull.casefold() or native_cache and path.is_relative_to(native_cache):return
         write=event=='open'and values[2]&(os.O_WRONLY|os.O_RDWR|os.O_CREAT|os.O_TRUNC|os.O_APPEND)
-        if write and not path.is_relative_to(scratch):raise ValueError('MCP write outside request output')
+        if write and not any(path.is_relative_to(root) for root in writable):raise ValueError('MCP write outside request output')
         if not any(path.is_relative_to(r)for r in roots):raise ValueError('MCP dependency outside allowed roots')
     import tempfile
-    tempfile.tempdir=str(scratch)
+    tempfile.tempdir=str(build_scratch or scratch)
     sys.addaudithook(boundary)
     for path,digest in request['inputs'].items():
         actual=sha_file(path)

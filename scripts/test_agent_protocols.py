@@ -4,7 +4,7 @@ import argparse
 import asyncio
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import shutil
 import subprocess
 import sys
@@ -424,9 +424,13 @@ class ProtocolTests(unittest.TestCase):
             with self.subTest(agent=agent), tempfile.TemporaryDirectory(prefix='ugc 准备 ') as temp:
                 root = Path(temp)
                 archive = root / 'bundle.zip'
+                writeback_template = Path(
+                    'vendor/ayaya/private_extensions/ugc_file_tools/builtin_resources/template_library/'
+                    'test2_server_writeback_samples/autowire_templates_test2_server_direct_export_v2.gil'
+                )
                 requirements = ['plugin.json', '.codex-plugin/plugin.json', '.claude-plugin/plugin.json',
                                 'mcp.json', '.mcp.json', 'LICENSE', 'scripts/runtime-requirements.lock',
-                                'scripts/mcp_launcher.cjs', 'vendor/beyond/bundle.json']
+                                'scripts/mcp_launcher.cjs', 'vendor/beyond/bundle.json', writeback_template.as_posix()]
                 with zipfile.ZipFile(archive, 'w') as output:
                     for relative in requirements:
                         output.write(ROOT / relative, 'miliastra-wonderland/' + relative)
@@ -441,6 +445,7 @@ class ProtocolTests(unittest.TestCase):
                 with patch.object(installer, 'preflight', return_value=(None, 'node')), \
                         patch.object(installer, 'activate') as activate, \
                         patch.object(installer, 'activate_codex_install') as codex_activate, \
+                        patch.object(installer, 'extract', wraps=installer.extract) as extract, \
                         patch.object(installer, 'run') as run:
                     with self.assertRaisesRegex(ValueError, 'SHA-256 校验失败'):
                         installer.operate(args)
@@ -458,6 +463,16 @@ class ProtocolTests(unittest.TestCase):
                     self.assertEqual(result['registration'], 'pending_host_registration')
                     self.assertEqual(result['agent_host_load'], 'not_checked')
                     self.assertEqual(Path(result['plugin_directory']), home / 'miliastra-wonderland')
+                    self.assertEqual((home / 'miliastra-wonderland' / writeback_template).read_bytes(),
+                                     (ROOT / writeback_template).read_bytes())
+                    self.assertEqual(extract.call_count, 2)
+                    windows_root = PureWindowsPath(r'C:\Users\abcdefgh\AppData\Local\Miliastra Wonderland')
+                    for call in extract.call_args_list:
+                        staging = call.args[2]
+                        self.assertFalse(staging.exists())
+                        projected = windows_root / staging.relative_to(args.root.resolve()).as_posix()
+                        sample = projected / 'miliastra-wonderland' / writeback_template.as_posix()
+                        self.assertLess(len(str(sample).encode('utf-16-le')) // 2, 260, str(sample))
                     self.assertIn('--adapter', run.call_args.args[0])
                     self.assertFalse((home / 'installation-pending.json').exists())
                     with self.assertRaisesRegex(ValueError, '文件已准备好'):

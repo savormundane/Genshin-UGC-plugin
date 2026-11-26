@@ -1,6 +1,7 @@
 """Windows full-bundle installer. Only explicit invocation changes client registration."""
 from pathlib import Path, PurePosixPath
 import argparse
+from contextlib import contextmanager
 import hashlib
 import json
 import os
@@ -103,6 +104,13 @@ def extract(archive, expected, destination, version):
     return bundle
 
 
+@contextmanager
+def staged_bundle(root, archive, expected, version):
+    # Keep extraction shallow and on the same volume as the version directory.
+    with tempfile.TemporaryDirectory(prefix='mw-', dir=root) as temporary:
+        yield extract(archive, expected, Path(temporary), version)
+
+
 def marketplace_files(agent, version, node, config):
     market = 'miliastra-wonderland-download-' + agent + '-' + version.replace('.', '-')
     server = {'type': 'stdio', 'command': 'node',
@@ -142,10 +150,9 @@ def configure_marketplace(home, agent, version, node, config):
     return market
 
 
-def verify_unfinished_bundle(home, archive, binding, generated):
+def verify_unfinished_bundle(root, home, archive, binding, generated):
     """Compare all retained files with the archive or exact installer-generated configuration."""
-    with tempfile.TemporaryDirectory(prefix='resume-check-', dir=home.parent) as temporary:
-        extracted = extract(archive, binding['archive_sha256'], Path(temporary), binding['version'])
+    with staged_bundle(root, archive, binding['archive_sha256'], binding['version']) as extracted:
         bundle = home / 'miliastra-wonderland'
         if linked(bundle) or not bundle.is_dir():
             raise ValueError('未完成安装的目录缺失或指向链接。')
@@ -375,14 +382,13 @@ def operate(args):
             previous = original
         elif pending.get('phase') not in ('dependencies', 'checks', *(['preparation'] if manual else [])):
             raise ValueError('此客户端已尝试启用插件。请在客户端中查看当前状态。')
-        verify_unfinished_bundle(home, args.archive, binding,
+        verify_unfinished_bundle(root, home, args.archive, binding,
                                  generated if recovering_activation or (manual and pending.get('phase') == 'preparation') else {})
     else:
         if getattr(args,'resume',False):raise ValueError('没有已登记的未完成版本可继续安装。')
         home.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.TemporaryDirectory(prefix='extract-', dir=home.parent) as td:
-            stage = Path(td)
-            extract(args.archive, args.sha256, stage, args.version)
+        with staged_bundle(root, args.archive, args.sha256, args.version) as extracted:
+            stage = extracted.parent
             save(stage/'installation-pending.json',{'binding':binding,'phase':'dependencies'})
             os.replace(stage, home)
     # Not activated yet. Failed dependencies leave a diagnostic copy, never an active half-install.
