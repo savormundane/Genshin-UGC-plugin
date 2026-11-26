@@ -1,7 +1,7 @@
 """Read-only JSONL attribution and editor debug-print decoding."""
 from pathlib import Path
 import argparse,json,os,re,struct
-from authoring_io import schema,resolve,sha,sha_file
+from authoring_io import DiagnosticError,schema,resolve,sha,sha_file
 from level_inventory import iter_fields
 from miliastra.client.check import inspect
 from miliastra.client.assembly import locate
@@ -18,20 +18,18 @@ def _log_input(base, name, read_roots):
     if read_roots is None:
         return resolve(base, name)
 
-    from miliastra.mcp.workspace import linked
+    from miliastra.mcp.workspace import mounted_path
 
     path = Path(os.path.abspath(base / name))
-    owner = next((root for root in read_roots if path != root and path.is_relative_to(root)), None)
-    if owner is None:
+    try:
+        resolved = mounted_path(path, read_roots, detail='Linked log input refused')
+    except DiagnosticError as exc:
+        raise ValueError('Linked log input refused') from exc
+    if resolved is None:
         raise ValueError('Log input outside allowed project/output roots')
-    for part in (path, *path.parents):
-        if linked(part):
-            raise ValueError('Linked log input refused')
-        if part == owner:
-            break
-    if not path.resolve().is_relative_to(owner) or not path.is_file():
+    if not resolved.is_file():
         raise ValueError('Log input must be a file under the authorized project/output roots')
-    return path
+    return resolved
 
 
 def _known_fields(raw, wires):
@@ -95,6 +93,10 @@ def _editor_debug_log(raw, file, offset, limit):
 
 def diagnose(path, *, read_roots=None):
     path = Path(path).resolve()
+    if read_roots is not None:
+        from miliastra.mcp.workspace import directory
+
+        read_roots = [directory(root, create=True) for root in read_roots]
     spec_raw = path.read_bytes()
     spec = json.loads(spec_raw.decode('utf-8-sig'))
     schema(spec,('schema','logs','bindings'),('logs','bindings'))

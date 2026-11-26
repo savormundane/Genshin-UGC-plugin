@@ -287,7 +287,7 @@ runpy.run_path({str(ROOT / 'scripts/install_smoke.py')!r}, run_name='__main__')
             self.assertEqual(recovered.returncode, 0, recovered.stderr)
             receipts = [json.loads(line) for line in recovered.stdout.splitlines() if line.startswith('{')]
             self.assertEqual(receipts[-2]['stdio'], 'passed', recovered.stdout)
-            self.assertEqual(Path(receipts[-1]['bootstrap']), Path(records[old]['python']))
+            self.assertEqual(Path(receipts[-1]['bootstrap']).resolve(), Path(records[old]['python']).resolve())
             self.assertEqual(receipts[-1]['rolled_back'], old)
             self.assertEqual(installer.read_json(state)['current'], records[old])
             self.assertEqual(installer.read_json(registry), [old])

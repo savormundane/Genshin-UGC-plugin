@@ -3,7 +3,7 @@ from contextlib import nullcontext
 from pathlib import Path
 import argparse,asyncio,json,os,re,sys,tempfile,math
 from authoring_io import DiagnosticError,PLUGIN,sha_file,schema,read_json,write_json,missing_input,require_new_output
-from miliastra.mcp.workspace import data_directory, linked, linked_path_error, workspace as project_context
+from miliastra.mcp.workspace import data_directory, mounted_path, workspace as project_context
 
 OPERATIONS={'doctor':(), 'capabilities':(), 'docs_search':('version','query'),'api_lookup':('symbol',),'nodes_lookup':(),'resources_lookup':('version',),'diagnose':('spec','sha256'),
             'native_inspect':('input',),'native_audit':('input',),
@@ -108,17 +108,9 @@ class Bridge:
         if not isinstance(value,str)or not value:raise ValueError('Nonempty path required')
         root = output_root if output else project
         original = Path(os.path.abspath(root / value))
-        owners = [r for r in ([output_root] if output else [project, output_root])
-                  if r is not None and original != r and original.is_relative_to(r)]
-        if not owners:
-            raise outside_allowed_roots(original, output=output)
-        owner, = owners  # The two permitted roots never overlap.
-        for part in(original,*original.parents):
-            if linked(part):
-                raise linked_path_error(part, 'Linked tool path refused')
-            if part==owner:break
-        resolved = original.resolve()
-        if resolved == owner or not resolved.is_relative_to(owner):
+        roots = [r for r in ([output_root] if output else [project, output_root]) if r is not None]
+        resolved = mounted_path(original, roots, detail='Linked tool path refused')
+        if resolved is None:
             raise outside_allowed_roots(original, output=output)
         if output:
             require_new_output(resolved)

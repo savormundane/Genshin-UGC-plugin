@@ -338,9 +338,15 @@ def operate(args):
         if not selected:
             raise ValueError('找不到这个版本的保留安装。')
         record = selected[-1]
-        if not Path(record['home']).is_relative_to(root) or not Path(record['config']).is_file():
+        recorded_home = Path(record['home'])
+        if not recorded_home.is_absolute() or any(
+            linked(part) for part in (recorded_home, *recorded_home.parents)
+        ):
             raise ValueError('无法访问保留的安装目录。')
-        run([record['python'], '-X', 'utf8', '-B', Path(record['home']) / 'miliastra-wonderland/scripts/install_smoke.py',
+        home = recorded_home.resolve()
+        if not home.is_relative_to(root) or not Path(record['config']).is_file():
+            raise ValueError('无法访问保留的安装目录。')
+        run([record['python'], '-X', 'utf8', '-B', home / 'miliastra-wonderland/scripts/install_smoke.py',
              '--config', record['config'], '--node', node])
         if codex:
             ensure_codex_active(client, record)

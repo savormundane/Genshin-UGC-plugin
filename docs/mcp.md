@@ -50,7 +50,7 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 
 ## 文件路径和校验值
 
-输入可以使用相对工程根目录的路径，或工程根、输出根内的绝对路径。`output` 指向输出根内尚不存在的目录，其父目录须存在。工具可创建按工程生成的默认输出根。若目录经过 Windows 目录联接或符号链接，请改用文件夹的实际位置。 [工程与输出根目录](runtime-environment.md#连接-mcp-或切换工程)
+输入可以使用相对工程根目录的路径，或工程根、输出根内的绝对路径。Windows 路径比较会统一同一文件夹的长短名称。`output` 指向输出根内尚不存在的目录，其父目录须存在。工具可创建按工程生成的默认输出根。若目录经过 Windows 目录联接或符号链接，请改用文件夹的实际位置。 [工程与输出根目录](runtime-environment.md#连接-mcp-或切换工程)
 
 现有客户端仍可通过 MCP Roots 提供会话目录。MCP 从 2026-07-28 协议版本起将 Roots 标为弃用。接入不提供 Roots 的客户端时，从客户端配置或 `runtime.json` 绑定目录。 [MCP SDK 弃用说明](https://py.sdk.modelcontextprotocol.io/deprecated/)
 

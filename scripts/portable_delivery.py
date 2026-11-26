@@ -29,7 +29,7 @@ def collect(path,options,*,snapshot_root=None,inputs=None):
     schema(options,('roots','dependencies'))
     roots={'project':base,'toolchain':PLUGIN}
     if snapshot_root is not None:
-        roots={p.name:p for p in Path(snapshot_root).iterdir() if p.is_dir() and p.name!='toolchain'}
+        roots={p.name:p for p in Path(snapshot_root).resolve().iterdir() if p.is_dir() and p.name!='toolchain'}
     for name,value in options.get('roots',{}).items():
         if not re.fullmatch(r'[A-Za-z][A-Za-z0-9_-]*',name)or name in roots:raise ValueError('Unique portable root name required')
         roots[name]=(base/value).resolve()

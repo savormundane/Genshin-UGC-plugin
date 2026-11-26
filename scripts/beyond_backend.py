@@ -24,6 +24,7 @@ def read_bundle_revision(backend, pin_path=REVISION_PIN):
 
 
 def verify_bundle_files(backend, manifest, native_lock, *, allowed_changes=frozenset()):
+    backend = backend.resolve()
     changes = {}
     for name, digest in manifest['files'].items():
         if native_lock and name in native_lock['files']:

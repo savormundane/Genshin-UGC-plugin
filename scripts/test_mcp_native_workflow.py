@@ -977,6 +977,53 @@ class NativeWorkflowTests(unittest.TestCase):
 
         asyncio.run(run())
 
+    @unittest.skipUnless(sys.platform == "win32", "Windows short paths required")
+    def test_windows_short_paths_use_the_authorized_canonical_root(self):
+        from ctypes import create_unicode_buffer, windll
+
+        from log_diagnostics import diagnose
+        from portable_delivery import collect
+
+        buffer = create_unicode_buffer(32767)
+        actual_root = self.root.resolve()
+        length = windll.kernel32.GetShortPathNameW(str(actual_root), buffer, len(buffer))
+        if not length or length >= len(buffer) or Path(buffer.value) == actual_root:
+            self.skipTest("The Windows volume does not provide a short name")
+        short_root = Path(buffer.value)
+        short_project = short_root / self.project.name
+        raw_level = short_project / "entrance.gil"
+        self.assertEqual(raw_level.resolve(), self.project.resolve() / raw_level.name)
+
+        another = actual_root / "another"
+        another.mkdir()
+
+        async def list_roots(_):
+            return types.ListRootsResult(roots=[
+                types.Root(uri=directory.as_uri()) for directory in (self.project.resolve(), another)
+            ])
+
+        async def run():
+            params = StdioServerParameters(command=sys.executable, args=self.server.args[:-4],
+                                           env=self.workspace_environment())
+            async with Client(params, list_roots_callback=list_roots, mode="legacy") as client:
+                result = await self.call(client, "project_inspect", {"input": str(raw_level)})
+                self.assertEqual(result["inputs_sha256"]["input"], sha_file(raw_level))
+
+        asyncio.run(run())
+
+        log = self.project / "trace.jsonl"
+        log.write_text("", encoding="utf-8")
+        diagnosis = self.project / "logs.json"
+        write_json(diagnosis, {"schema": 2, "logs": [str(short_project / log.name)], "bindings": []})
+        self.assertEqual(diagnose(diagnosis, read_roots=[short_project])["inputs"][str(log.resolve())],
+                         sha_file(log))
+
+        job = self.project / "job.json"
+        write_json(job, {"schema": 2})
+        resolved_job, roots, files, *_ = collect(job, {}, snapshot_root=short_root)
+        self.assertEqual(roots["project"], self.project.resolve())
+        self.assertEqual(files[resolved_job], "project/job.json")
+
     def test_unsupported_session_roots_preserve_runtime_config_results(self):
         async def unsupported_roots(_):
             return types.ErrorData(code=types.METHOD_NOT_FOUND, message="Roots unavailable")

@@ -26,8 +26,10 @@ def listed_path(root, name, checked=None):
 
 def closure(bundle):
     bundle = Path(bundle).absolute()
-    checked=set()
-    record = read_json(listed_path(bundle, 'portable.json',checked))
+    header = listed_path(bundle, 'portable.json')
+    bundle = bundle.resolve()
+    checked = {bundle, bundle / 'portable.json'}
+    record = read_json(header)
     if record.get('schema') != 1 or not isinstance(record.get('files'), dict):
         raise ValueError('Unknown portable input schema')
     for name, digest in record['files'].items():

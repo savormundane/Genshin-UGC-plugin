@@ -44,6 +44,22 @@ def directory(value: str | Path, *, create: bool = False) -> Path:
     return path.resolve()
 
 
+def mounted_path(path: Path, roots, *, detail: str) -> Path | None:
+    """Resolve a file path after checking links, then test its canonical owner."""
+    owner = next((root for root in roots if path != root and path.is_relative_to(root)), None)
+    for part in (path, *path.parents):
+        if linked(part):
+            if owner is None:
+                return None
+            raise linked_path_error(part, detail)
+        if part == owner:
+            break
+    resolved = path.resolve()
+    if any(resolved != root and resolved.is_relative_to(root) for root in roots):
+        return resolved
+    return None
+
+
 def data_directory() -> Path | None:
     value = os.environ.get('MILIASTRA_WONDERLAND_PLUGIN_DATA')
     if value and Path(value).is_absolute():
@@ -138,7 +154,14 @@ def workspace(project, output, roots=(), arguments=None):
                     ),
                     None,
                 )
-                path = Path(os.path.abspath(value)) if value else None
+                candidate_outputs = {
+                    candidate: workspace_outputs(data, candidate).resolve()
+                    for candidate in candidates
+                } if data is not None else {}
+                path = mounted_path(
+                    Path(os.path.abspath(value)), [*candidates, *candidate_outputs.values()],
+                    detail='Linked tool path refused',
+                ) if value else None
                 # A previous output may itself be the primary input of the next request.
                 matches = [
                     candidate
@@ -146,8 +169,8 @@ def workspace(project, output, roots=(), arguments=None):
                     if path
                     and (
                         path.is_relative_to(candidate)
-                        or data
-                        and path.is_relative_to(workspace_outputs(data, candidate))
+                        or candidate in candidate_outputs
+                        and path.is_relative_to(candidate_outputs[candidate])
                     )
                 ]
                 if len(matches) != 1:
