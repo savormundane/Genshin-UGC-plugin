@@ -1,7 +1,7 @@
 """Explicit input closure, immutable originals and isolated portable production."""
 from pathlib import Path
 import importlib.util,json,os,re,shutil,subprocess,sys,tempfile
-from authoring_io import PLUGIN,ProductionInputs,read_json,sha,inventory,write_json,output_directory,finish,schema
+from authoring_io import PLUGIN,ProductionInputs,read_json,sha,sha_file,inventory,write_json,output_directory,finish,schema
 from validation_evidence import backend_inventory
 
 
@@ -206,14 +206,18 @@ def produce(path,out,evidence,*,job=None,job_digest=None):
             from portable_trust import closure
             result=Path(directory)/'result';execution=execute(bundle,result,closure(bundle)[1])
             inner=read_json(result/'manifest.json')
-            for item in result.iterdir():shutil.move(str(item),str(stage/item.name))
+            # The outer delivery writes its own reports after collecting the final files.
+            for item in result.iterdir():
+                if item.name not in ('manifest.json', 'production-report.json'):
+                    shutil.move(str(item), str(stage/item.name))
         if snapshot!=inventory(bundle):raise ValueError('Portable input snapshot changed during production')
         if any(inventory(source)!=listing for source,(_,listing)in directories.items()):raise ValueError('Portable input directory changed during production')
         evidence.update(inner['evidence']);evidence['portable_inputs']={'status':'passed','report':'portable/portable.json'}
         if backend_inventory()!=backends:raise ValueError('Execution backend changed during portable production')
         from delivery_artifacts import roles
         report=finish(stage,original,kind='production',specification=str(path),stages=inner['stages'],evidence=evidence,portable={'schema':1,'root':'portable','execution':execution})
-        write_json(stage/'production-report.json',report)
-        report['files']={name:digest for name,digest in inventory(stage).items()if name!='manifest.json'}
+        report_path = stage / 'production-report.json'
+        write_json(report_path, report)
+        report['files'][report_path.name] = sha_file(report_path)
         report['artifacts']=roles(report['files']);write_json(stage/'manifest.json',report)
     return report

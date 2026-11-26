@@ -104,6 +104,8 @@ class NativeWorkflowTests(unittest.TestCase):
 
     @unittest.skipUnless(shutil.which("node"), "Node.js required for runtime fingerprint coverage")
     def test_portable_production_and_rebuild_over_stdio(self):
+        from qianxing_workflow import check
+
         source = self.project / "client.lua"
         source.write_text("function OnInit() end\n", encoding="utf-8")
         write_json(self.project / "level.json", {
@@ -113,6 +115,16 @@ class NativeWorkflowTests(unittest.TestCase):
         })
         job = self.project / "portable.json"
         write_json(job, {"schema": 2, "level": {"spec": "level.json"}, "portable": {}})
+        plan = self.root / "plan.json"
+        write_json(plan, {
+            "schema": 1, "domain": "genshin-qianxing-ugc", "kind": "delivery",
+            "goal": "Deliver a portable level",
+            "requirements": [{"id": "level", "acceptance": "Level delivered"}],
+            "steps": [{
+                "id": "prepare", "phase": "inspect", "owner": "miliastra-gil",
+                "requirements": ["level"],
+            }],
+        })
         node = Path(shutil.which("node")).resolve()
 
         async def run():
@@ -129,6 +141,9 @@ class NativeWorkflowTests(unittest.TestCase):
                 digest = sha_file(manifest)
                 inputs = {"input": str(manifest), "sha256": digest, "portable": True}
                 source.rename(source.with_name("original-client.lua"))
+                for report in (manifest, output / "production-report.json"):
+                    result = check(plan, report)
+                    self.assertEqual(result["production_evidence"]["portable_inputs"]["status"], "passed")
                 inspected = (await self.call(client, "verify", inputs))["result"]
                 self.assertEqual(inspected["source_check"], "packaged_inputs")
                 rebuilt = (await self.call(client, "verify", {

@@ -509,6 +509,55 @@ class StaticDefinitionGraph:
                 with self.assertRaises(ValueError):
                     verify(root, portable=True)
 
+    @unittest.skipUnless(find_spec('lupa') and find_spec('lupa.lua53'), 'full production requires lupa.lua53')
+    def test_workflow_checks_legacy_and_current_production_reports(self):
+        from production_core import produce
+        from qianxing_workflow import check
+
+        with tempfile.TemporaryDirectory(prefix='miliastra workflow ') as temporary:
+            root = Path(temporary)
+            job = root / 'job.json'
+            plan = root / 'plan.json'
+            write_json(plan, {
+                'schema': 1, 'domain': 'genshin-qianxing-ugc', 'kind': 'delivery',
+                'goal': 'Deliver a Lua script',
+                'requirements': [{'id': 'lua', 'acceptance': 'Lua delivered'}],
+                'steps': [{
+                    'id': 'prepare', 'phase': 'inspect', 'owner': 'miliastra-editor',
+                    'requirements': ['lua'],
+                }],
+            })
+            (root / 'source.lua').write_text('return 1\n', encoding='utf-8')
+            for schema, artifact in ((1, 'client.lua'), (2, 'build/client.lua')):
+                with self.subTest(schema=schema):
+                    write_json(job, {'schema': schema, 'client': {'source': 'source.lua'}})
+                    output = root / f'output-{schema}'
+                    production = produce(job, output)
+                    report_paths = [output / 'production-report.json']
+                    if schema == 2:
+                        report_paths.append(output / 'manifest.json')
+                    for report in report_paths:
+                        result = check(plan, report)
+                        self.assertEqual(result['production_evidence'], production['evidence'])
+                        self.assertFalse(result['gameplay_semantics_verified'])
+                        self.assertFalse(result['evidence_claims_independently_observed'])
+
+                    if schema == 2:
+                        candidate = output / 'candidate.json'
+                        write_json(candidate, {**production, 'kind': 'asset'})
+                        with self.assertRaisesRegex(ValueError, 'Expected actual production report'):
+                            check(plan, candidate)
+                        write_json(candidate, {
+                            **production, 'evidence': {**production['evidence'], 'client_syntax': {'status': 'failed'}},
+                        })
+                        with self.assertRaisesRegex(ValueError, 'failed stage: client_syntax'):
+                            check(plan, candidate)
+
+                    (output / artifact).write_text('return 2\n', encoding='utf-8')
+                    for report in report_paths:
+                        with self.assertRaisesRegex(ValueError, 'missing/stale: ' + artifact):
+                            check(plan, report)
+
 
 if __name__ == '__main__':
     unittest.main()

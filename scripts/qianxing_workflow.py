@@ -1,6 +1,8 @@
 """Stage and evidence checks exclusively for Genshin Qianxing UGC production."""
 from pathlib import Path
 import argparse,hashlib,json,re,sys
+from authoring_io import read_json, sha_file
+
 DOMAIN='genshin-qianxing-ugc'
 PHASES={
  'feature':['inspect','design','plan','slice','implement','review','build','playtest','deliver'],
@@ -33,6 +35,44 @@ PURPOSE={
 def guide(kind='feature'):
  if kind not in PHASES:raise ValueError('Unknown Qianxing task kind')
  return {'domain':DOMAIN,'kind':kind,'phases':[{'id':p,'exit_condition':PURPOSE[p]} for p in PHASES[kind]],'approval_policy':'Proceed within existing authorization; ask only for unavailable essential inputs or material gameplay choices.','automatic_gameplay_validation':False,'experience_checklist':['player_verbs_and_feedback','simulation_presentation_ownership','input_action_and_modal_boundaries','HUD_and_playfield_readability','asset_canvas_scale_anchor','session_end_restart_and_reentry']}
+
+
+def check_production_report(report_path):
+    from portable_trust import listed_path
+
+    report = Path(report_path).resolve()
+    data = read_json(report)
+    if not isinstance(data, dict):
+        raise ValueError('Expected actual production report')
+
+    if 'files' in data:
+        if data.get('schema') != 2 or data.get('kind') != 'production':
+            raise ValueError('Expected actual production report')
+        files = data['files']
+        evidence = data.get('evidence')
+        if not files:
+            raise ValueError('Production report lists no artifacts')
+    else:
+        files = data.get('files_sha256')
+        evidence = data.get('evidence', {})
+    if not isinstance(files, dict) or not isinstance(evidence, dict):
+        raise ValueError('Expected actual production report')
+
+    checked = set()
+    for name, digest in files.items():
+        path = listed_path(report.parent, name, checked)
+        if not path.is_file() or sha_file(path) != digest:
+            raise ValueError('Production artifact missing/stale: ' + name)
+    for stage, entry in evidence.items():
+        if not isinstance(entry, dict) or entry.get('status') not in (
+            'passed', 'failed', 'not_checked', 'not_applicable',
+        ):
+            raise ValueError('Invalid production stage evidence: ' + stage)
+        if entry['status'] == 'failed':
+            raise ValueError('Production report contains a failed stage: ' + stage)
+    return evidence
+
+
 def check(plan_path,report_path=None):
  p=Path(plan_path).resolve();plan=json.loads(p.read_text(encoding='utf-8-sig'))
  if not isinstance(plan,dict) or set(plan)-{'schema','domain','kind','goal','requirements','steps'}:raise ValueError('Invalid workflow fields')
@@ -75,21 +115,17 @@ def check(plan_path,report_path=None):
    blocked.append({'id':sid,'reason':step['blocker']})
   seen[sid]=status
  if covered!=wanted:raise ValueError('Acceptance requirement has no implementation/check task: '+repr(sorted(wanted-covered)))
- production=None
- if report_path:
-  report=Path(report_path).resolve();v=json.loads(report.read_text(encoding='utf-8-sig'));production=v.get('evidence',{})
-  if not isinstance(production,dict) or not isinstance(v.get('files_sha256'),dict):raise ValueError('Expected actual production report')
-  for name,h in v['files_sha256'].items():
-   f=(report.parent/name).resolve()
-   if not f.is_relative_to(report.parent) or not f.is_file() or hashlib.sha256(f.read_bytes()).hexdigest()!=h:raise ValueError('Production artifact missing/stale: '+name)
-  for e in production.values():
-   if not isinstance(e,dict) or e.get('status') not in ('passed','failed','not_checked','not_applicable'):raise ValueError('Invalid production stage evidence')
-   if e['status']=='failed':raise ValueError('Production report contains a failed stage')
+ production=check_production_report(report_path) if report_path else None
  return {'schema':1,'domain':DOMAIN,'kind':kind,'plan_integrity_verified':True,'requirements_traced':len(wanted),'declared_complete_steps':completed,'pending_steps':[s for s,v in seen.items() if v=='pending'],'blocked_steps':blocked,'evidence_hashes_verified':proofs,'production_evidence':production,'gameplay_semantics_verified':False,'evidence_claims_independently_observed':False,'resolved_owners':owners}
 def main(argv=None):
  p=argparse.ArgumentParser(description=__doc__);sub=p.add_subparsers(dest='op',required=True)
  g=sub.add_parser('guide');g.add_argument('--kind',choices=list(PHASES),default='feature')
- c=sub.add_parser('check');c.add_argument('plan');c.add_argument('--report')
+ c = sub.add_parser('check')
+ c.add_argument('plan')
+ c.add_argument(
+     '--report', metavar='FILE',
+     help='Check artifact hashes and stage evidence in a production manifest or report',
+ )
  test=sub.add_parser('playtest');test.add_argument('--device',choices=['pc','mobile','both'],default='both');test.add_argument('--multiplayer',action='store_true');test.add_argument('--persistence',action='store_true');test.add_argument('--report')
  a=p.parse_args(argv)
  try:

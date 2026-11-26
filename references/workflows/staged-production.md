@@ -26,10 +26,13 @@
 python scripts/qianxing.py workflow guide --kind feature
 python scripts/qianxing.py workflow guide --kind fix
 python scripts/qianxing.py workflow check PLAN.json
+python scripts/qianxing.py workflow check PLAN.json --report OUTPUT/manifest.json
 python scripts/qianxing.py verify OUTPUT
 ```
 
-`guide` 提供 `feature`、`fix`、`ui`、`assets`、`delivery` 五类阶段。复杂任务需要恢复或交接时可保存计划。`check` 核对阶段顺序、需求覆盖、依赖、所有者和证据校验值。产物与输入清单用 `verify` 单独核对。旧的 `workflow check --report` 选项使用带 `files_sha256` 的历史制作报告。
+`guide` 提供 `feature`、`fix`、`ui`、`assets`、`delivery` 五类阶段。复杂任务需要恢复或交接时可保存计划。`check` 核对阶段顺序、需求覆盖、依赖、所有者和证据校验值。
+
+添加 `--report` 后，同时核对登记产物的 SHA-256 校验值和制作阶段状态。普通制作和便携交付使用 `manifest.json`，旧版任务可传入含 `files_sha256` 的 `production-report.json`。原始输入与便携重建按需使用 [verify](portable-delivery.md#验证与边界)。
 
 ```json
 {
