@@ -26,6 +26,8 @@ class ReleaseTests(unittest.TestCase):
         tracked = subprocess.check_output([git, 'ls-files', '-z'], cwd=root, timeout=60)
         members = tracked.decode('utf-8').rstrip('\0').split('\0')
         self.assertTrue(members[0])
+        # Chat and Cowork account marketplaces accept at most 5,000 files per plugin.
+        self.assertLessEqual(len(members), 5_000, 'Claude account marketplace file limit')
         marketplace = read_json(root / '.claude-plugin/marketplace.json')
         (plugin,) = marketplace['plugins']
         version = read_json(root / '.claude-plugin/plugin.json')['version']
@@ -322,6 +324,16 @@ class ReleaseTests(unittest.TestCase):
                     self.assertRegex(digest, r'^[a-f0-9]{64}$')
             self.assertTrue(list((restored / 'vendor/beyond/node_modules').rglob('*.node')))
             self.assertFalse(list((restored / 'vendor/beyond/node_modules').rglob('*.map')))
+            pixi = restored / 'vendor/beyond/node_modules/pixi.js'
+            self.assertTrue((pixi / 'LICENSE').is_file())
+            self.assertFalse(list(pixi.rglob('*.d.ts')))
+            package = read_json(pixi / 'package.json')
+            self.assertNotIn('types', package)
+            for entry in ('.', './gif', './html-source'):
+                for mode in ('import', 'require'):
+                    export = package['exports'][entry][mode]
+                    self.assertNotIn('types', export)
+                    self.assertTrue((pixi / export['default']).is_file())
 
 
 if __name__ == '__main__':

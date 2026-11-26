@@ -4,6 +4,9 @@
 
 ## Unreleased
 
+- 去掉 Beyond 随包依赖中的 PixiJS 类型声明，使 Git 市场安装低于 Claude 账户插件的文件数量上限。
+- 说明 DeepSeek Harness 从 GitHub 直装后的手动更新步骤。
+
 ## 1.2.1
 
 - 中文资料检索支持常见开场语，按正文与可见链接文字匹配，保留原文片段和版本。
