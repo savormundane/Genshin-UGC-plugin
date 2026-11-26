@@ -16,6 +16,7 @@
     "app",
     "app.runtime",
     "ugc_file_tools.unified_cli",
+    "ugc_file_tools.writeback_defaults",
     "app.cli.commands",
     "app.cli.graph_tools",
     "engine.resources.definition_schema_view",
@@ -2430,7 +2431,7 @@
       "source_sha256": "67bc359c51d10112cd1a3da9e2cce0e145ae71c31b4f3ed6b183f2697682e6e9"
     },
     "private_extensions/ugc_file_tools/writeback_defaults.py": {
-      "sha256": "70d247f37fe3880fec78c92232626d5defba6236223e0b38f32f12c4ec1da9c7",
+      "sha256": "92422cb4a630d2195b1368fc2368efae4ebdb5d8b9f8860af53dedbe2d0273a0",
       "source_sha256": "ace093ce16f4d088173321522cf52395a4e00b6689043893e915fafdbca4164a"
     },
     "private_extensions/ugc_file_tools/project_archive_importer/supported.py": {
@@ -5781,47 +5782,58 @@
       "sha256": "651cf9c9c4ca917ad1790520401e7d2fa7bc1459fc11469deb4190399092f1ff",
       "source_sha256": "651cf9c9c4ca917ad1790520401e7d2fa7bc1459fc11469deb4190399092f1ff"
     },
-    "private_extensions/ugc_file_tools/builtin_resources/template_library/test2_client_writeback_samples/missing_nodes_wall_test2_client_autowired.gil": {
+    "private_extensions/ugc_file_tools/builtin_resources/templates/client/missing_nodes_wall_test2_client_autowired.gil": {
+      "source_path": "private_extensions/ugc_file_tools/builtin_resources/template_library/test2_client_writeback_samples/missing_nodes_wall_test2_client_autowired.gil",
       "sha256": "881f40e1b02b7ae91f609d32706e1fa6611c5c2bb2b1dccf86cc5eb365c01855",
       "source_sha256": "881f40e1b02b7ae91f609d32706e1fa6611c5c2bb2b1dccf86cc5eb365c01855"
     },
-    "private_extensions/ugc_file_tools/builtin_resources/template_library/test2_client_writeback_samples/node_graph_notify_server.gil": {
+    "private_extensions/ugc_file_tools/builtin_resources/templates/client/node_graph_notify_server.gil": {
+      "source_path": "private_extensions/ugc_file_tools/builtin_resources/template_library/test2_client_writeback_samples/node_graph_notify_server.gil",
       "sha256": "b64b9c19908a7b30759c8900a8c4836620935d2b61c8a46692f034abcf38c51b",
       "source_sha256": "b64b9c19908a7b30759c8900a8c4836620935d2b61c8a46692f034abcf38c51b"
     },
-    "private_extensions/ugc_file_tools/builtin_resources/template_library/test2_server_writeback_samples/01_ng_minimal_wiring_graph_var_set_entity.gil": {
+    "private_extensions/ugc_file_tools/builtin_resources/templates/server/01_ng_minimal_wiring_graph_var_set_entity.gil": {
+      "source_path": "private_extensions/ugc_file_tools/builtin_resources/template_library/test2_server_writeback_samples/01_ng_minimal_wiring_graph_var_set_entity.gil",
       "sha256": "01da7c983627673e68c13ccf56d39c61097bdf155965d235a883e42e52b456c4",
       "source_sha256": "01da7c983627673e68c13ccf56d39c61097bdf155965d235a883e42e52b456c4"
     },
-    "private_extensions/ugc_file_tools/builtin_resources/template_library/test2_server_writeback_samples/02_graph_vars_all_types_minimal.gil": {
+    "private_extensions/ugc_file_tools/builtin_resources/templates/server/02_graph_vars_all_types_minimal.gil": {
+      "source_path": "private_extensions/ugc_file_tools/builtin_resources/template_library/test2_server_writeback_samples/02_graph_vars_all_types_minimal.gil",
       "sha256": "e08367527b9f2c45df6712dd121f08cf2891bce1781019122b2d72d1db9c04b5",
       "source_sha256": "e08367527b9f2c45df6712dd121f08cf2891bce1781019122b2d72d1db9c04b5"
     },
-    "private_extensions/ugc_file_tools/builtin_resources/template_library/test2_server_writeback_samples/03_node_graph_new_empty.gil": {
+    "private_extensions/ugc_file_tools/builtin_resources/templates/server/03_node_graph_new_empty.gil": {
+      "source_path": "private_extensions/ugc_file_tools/builtin_resources/template_library/test2_server_writeback_samples/03_node_graph_new_empty.gil",
       "sha256": "4726d6040d41158f5a1d49882454943efc9556331abe23eac51d75d91277a607",
       "source_sha256": "4726d6040d41158f5a1d49882454943efc9556331abe23eac51d75d91277a607"
     },
-    "private_extensions/ugc_file_tools/builtin_resources/template_library/test2_server_writeback_samples/04_struct_var_with_defaults_minimal.gil": {
+    "private_extensions/ugc_file_tools/builtin_resources/templates/server/04_struct_var_with_defaults_minimal.gil": {
+      "source_path": "private_extensions/ugc_file_tools/builtin_resources/template_library/test2_server_writeback_samples/04_struct_var_with_defaults_minimal.gil",
       "sha256": "6491a78ca6cf6b48ca2fdec4fe386b8931bd662d51cc2e5a07867bee17409070",
       "source_sha256": "6491a78ca6cf6b48ca2fdec4fe386b8931bd662d51cc2e5a07867bee17409070"
     },
-    "private_extensions/ugc_file_tools/builtin_resources/template_library/test2_server_writeback_samples/05_signals_create_and_use_minimal.gil": {
+    "private_extensions/ugc_file_tools/builtin_resources/templates/server/05_signals_create_and_use_minimal.gil": {
+      "source_path": "private_extensions/ugc_file_tools/builtin_resources/template_library/test2_server_writeback_samples/05_signals_create_and_use_minimal.gil",
       "sha256": "ee72c69d6ca87926b2b0ca7f34322fdd9f3ddcd41197392cf22db5319fa6477e",
       "source_sha256": "ee72c69d6ca87926b2b0ca7f34322fdd9f3ddcd41197392cf22db5319fa6477e"
     },
-    "private_extensions/ugc_file_tools/builtin_resources/template_library/test2_server_writeback_samples/06_signals_multi_param_semantic_generated.gil": {
+    "private_extensions/ugc_file_tools/builtin_resources/templates/server/06_signals_multi_param_semantic_generated.gil": {
+      "source_path": "private_extensions/ugc_file_tools/builtin_resources/template_library/test2_server_writeback_samples/06_signals_multi_param_semantic_generated.gil",
       "sha256": "df190540c9735c3727a985c95eebf4956876dc1481ecadcd579fab85a8edcc5c",
       "source_sha256": "df190540c9735c3727a985c95eebf4956876dc1481ecadcd579fab85a8edcc5c"
     },
-    "private_extensions/ugc_file_tools/builtin_resources/template_library/test2_server_writeback_samples/07_struct_defs_all_field_types_writeback_demo.gil": {
+    "private_extensions/ugc_file_tools/builtin_resources/templates/server/07_struct_defs_all_field_types_writeback_demo.gil": {
+      "source_path": "private_extensions/ugc_file_tools/builtin_resources/template_library/test2_server_writeback_samples/07_struct_defs_all_field_types_writeback_demo.gil",
       "sha256": "45b160ad1bd73e39c1672376ae8c17e2d46e664d9e089da0b44b528b48eae606",
       "source_sha256": "45b160ad1bd73e39c1672376ae8c17e2d46e664d9e089da0b44b528b48eae606"
     },
-    "private_extensions/ugc_file_tools/builtin_resources/template_library/test2_server_writeback_samples/autowire_templates_test2_server_direct_export_v2.gil": {
+    "private_extensions/ugc_file_tools/builtin_resources/templates/server/autowire_templates_test2_server_direct_export_v2.gil": {
+      "source_path": "private_extensions/ugc_file_tools/builtin_resources/template_library/test2_server_writeback_samples/autowire_templates_test2_server_direct_export_v2.gil",
       "sha256": "bdc5cc5559c85ea6e12bfb348e912b026d4c910288501d8558cb1f47b21b4652",
       "source_sha256": "bdc5cc5559c85ea6e12bfb348e912b026d4c910288501d8558cb1f47b21b4652"
     },
-    "private_extensions/ugc_file_tools/builtin_resources/template_library/test2_server_writeback_samples/direct_export_smoke_test.gil": {
+    "private_extensions/ugc_file_tools/builtin_resources/templates/server/direct_export_smoke_test.gil": {
+      "source_path": "private_extensions/ugc_file_tools/builtin_resources/template_library/test2_server_writeback_samples/direct_export_smoke_test.gil",
       "sha256": "0464118e7aeb9c4a28a4db4a2adc17812423dd58ed34014fb2c8d4e945cb4b5d",
       "source_sha256": "0464118e7aeb9c4a28a4db4a2adc17812423dd58ed34014fb2c8d4e945cb4b5d"
     },

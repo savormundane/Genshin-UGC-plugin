@@ -486,8 +486,8 @@ class ProtocolTests(unittest.TestCase):
                 root = Path(temp)
                 archive = root / 'bundle.zip'
                 writeback_template = Path(
-                    'vendor/ayaya/private_extensions/ugc_file_tools/builtin_resources/template_library/'
-                    'test2_server_writeback_samples/autowire_templates_test2_server_direct_export_v2.gil'
+                    'vendor/ayaya/private_extensions/ugc_file_tools/builtin_resources/templates/server/'
+                    'autowire_templates_test2_server_direct_export_v2.gil'
                 )
                 requirements = ['plugin.json', '.codex-plugin/plugin.json', '.claude-plugin/plugin.json',
                                 'mcp.json', '.mcp.json', 'LICENSE', 'scripts/runtime-requirements.lock',

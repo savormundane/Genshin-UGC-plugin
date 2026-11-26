@@ -475,7 +475,7 @@ class NativeWorkflowTests(unittest.TestCase):
                 "TEMP": str(compiler_temp), "TMP": str(compiler_temp), "TMPDIR": str(compiler_temp),
             },
         )
-        template = (RUNTIME / FILE_TOOLS / "builtin_resources/template_library/test2_server_writeback_samples"
+        template = (RUNTIME / FILE_TOOLS / "builtin_resources/templates/server"
                     / "autowire_templates_test2_server_direct_export_v2.gil")
         template_digest = sha_file(template)
         source = self.project / 'graph.py'

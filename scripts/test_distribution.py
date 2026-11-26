@@ -1,14 +1,38 @@
 """Manual release check: actual ZIP structure, extraction and content identity."""
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import hashlib,json,shutil,subprocess,sys,tempfile,unittest,zipfile
 from unittest.mock import patch
 from check_repository import check, MANIFESTS, REPO, REQUIRED_FILES
 from marketplace_release import marketplace_files
 from package_release import build_release, validate_windows_names
-from install_plugin import extract,read_json
+from install_plugin import AGENTS, extract, read_json
+
+
+WINDOWS_TEST_PROFILE = PureWindowsPath('C:/Users') / ('a' * 24)
 
 
 class ReleaseTests(unittest.TestCase):
+    def assert_legacy_windows_paths_fit(self, root, members):
+        paths = (str(root / member) for member in members)
+        length, longest = max((len(path.encode('utf-16-le')) // 2, path) for path in paths)
+        self.assertLess(length, 260, longest)
+
+    def test_git_files_fit_claude_windows_paths(self):
+        root = Path(__file__).resolve().parents[1]
+        git = shutil.which('git')
+        if not git or not (root / '.git').exists():
+            self.skipTest('Git checkout required for tracked path checks')
+        tracked = subprocess.check_output([git, 'ls-files', '-z'], cwd=root, timeout=60)
+        members = tracked.decode('utf-8').rstrip('\0').split('\0')
+        self.assertTrue(members[0])
+        marketplace = read_json(root / '.claude-plugin/marketplace.json')
+        plugin, = marketplace['plugins']
+        version = read_json(root / '.claude-plugin/plugin.json')['version']
+        plugins = WINDOWS_TEST_PROFILE / '.claude/plugins'
+        self.assert_legacy_windows_paths_fit(plugins / 'marketplaces' / marketplace['name'], members)
+        cache = plugins / 'cache' / marketplace['name'] / plugin['name'] / version
+        self.assert_legacy_windows_paths_fit(cache, members)
+
     def test_windows_zip_bundles_locked_beyond_native_files(self):
         with tempfile.TemporaryDirectory(prefix='ugc native bundle ') as temporary:
             root = Path(temporary)
@@ -167,16 +191,22 @@ class ReleaseTests(unittest.TestCase):
 
     def test_complete_bundle(self):
         root=Path(__file__).resolve().parents[1]
+        plugin = read_json(root / 'plugin.json')
         with tempfile.TemporaryDirectory(prefix='ugc release space ') as td:
             temp=Path(td);zip_path=temp/'plugin.zip'
-            result=build_release(root,zip_path,archive_root='miliastra-wonderland')
-            restored=extract(zip_path,result['sha256'],temp/'extracted',read_json(root/'plugin.json')['version'])
+            result=build_release(root, zip_path, layout='agent-plugins')
+            restored=extract(zip_path, result['sha256'], temp/'extracted', plugin['version'])
             lock_path=root/'vendor/beyond/native-canvas.json'
             locked={Path('vendor/beyond')/name: digest for name,digest in read_json(lock_path)['files'].items()} if lock_path.is_file() else {}
             with zipfile.ZipFile(zip_path) as archive:
+                members = [entry.filename for entry in archive.infolist() if not entry.is_dir()]
+                versions = WINDOWS_TEST_PROFILE / 'AppData/Local/Miliastra Wonderland/versions'
+                for agent in AGENTS:
+                    with self.subTest(agent=agent):
+                        self.assert_legacy_windows_paths_fit(versions / agent / plugin['version'] / plugin['name'], members)
                 for entry in archive.infolist():
-                    path=Path(entry.filename);relative=Path(*path.parts[1:])
-                    self.assertNotIn('.git',path.parts)
+                    relative = Path(entry.filename)
+                    self.assertNotIn('.git', relative.parts)
                     self.assertNotIn('marketplace', relative.parts)
                     self.assertNotEqual(relative.name, 'marketplace.json')
                     self.assertFalse(entry.filename.endswith('GE_IMG_Tool.exe'))

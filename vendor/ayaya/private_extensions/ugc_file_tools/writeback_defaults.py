@@ -31,29 +31,19 @@ def default_ingame_save_structs_bootstrap_gil_path() -> Path:
 
 
 def default_node_graph_server_template_gil_path() -> Path:
-    return (
-        ugc_file_tools_builtin_resources_root()
-        / "template_library"
-        / "test2_server_writeback_samples"
-        / "autowire_templates_test2_server_direct_export_v2.gil"
-    )
+    return default_node_graph_server_template_library_dir() / "autowire_templates_test2_server_direct_export_v2.gil"
 
 
 def default_node_graph_client_template_gil_path() -> Path:
-    return (
-        ugc_file_tools_builtin_resources_root()
-        / "template_library"
-        / "test2_client_writeback_samples"
-        / "missing_nodes_wall_test2_client_autowired.gil"
-    )
+    return default_node_graph_client_template_library_dir() / "missing_nodes_wall_test2_client_autowired.gil"
 
 
 def default_node_graph_server_template_library_dir() -> Path:
-    return ugc_file_tools_builtin_resources_root() / "template_library" / "test2_server_writeback_samples"
+    return ugc_file_tools_builtin_resources_root() / "templates" / "server"
 
 
 def default_node_graph_client_template_library_dir() -> Path:
-    return ugc_file_tools_builtin_resources_root() / "template_library" / "test2_client_writeback_samples"
+    return ugc_file_tools_builtin_resources_root() / "templates" / "client"
 
 
 def default_node_graph_mapping_json_path() -> Path:
