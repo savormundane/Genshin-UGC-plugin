@@ -26,6 +26,8 @@ python scripts/qianxing.py beyond SPEC.json --out NEW_DIRECTORY
 }
 ```
 
+随包 Beyond 的 `case.duration` 是可选的最短运行时间，单位为秒，须为非负有限数字。预览按固定步长推进到 `duration`、最后一个事件时间和最后一个断言时间中最晚的一项。没有事件和断言时，也可仅凭 `duration` 观察逐帧变化。断言在 `at` 指定的秒数到达后的首个时间步执行，省略 `at` 时在启动时检查。断言失败会提前结束。
+
 `canvas` 支持 `pc-16-9` 和 `mobile-16-9`。`scripts` 须精确覆盖选中树下的全部原生挂载，按映射名从同一份 GIL 提取脚本。未知组件、重复或缺失 GUID、父子关系不符、变换缺项及当前未校准的非空旋转字段会拒绝转换。`converted-project.json` 是只读转换的中间结果，编辑器交付仍用原生文件流程。
 
 `render:true` 输出透明背景的 `preview.png` 和 `render.json`。`render_checks` 按唯一名称比较 `width`、`height`、`text`，省略时即使有图片，绘制断言仍为 `not_checked`。容器和交互区域可在控件树查看。软件画面使用本地字体和布局，点击命中及游戏内显示按[相应验证](validation.md)记录。

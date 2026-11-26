@@ -97,6 +97,38 @@ end
   studio.playStop()
 })
 
+test('duration advances Lua frames with no events or assertions', () => {
+  const studio = createStudio()
+  studio.patch({
+    op: 'addScript',
+    controlId: 'n1',
+    controlAsset: 'server-control-template',
+    path: 'duration',
+    source: `
+function OnStart() script:EnableUpdate(true) end
+function OnUpdate() print("duration frame") end
+`,
+  })
+  try {
+    const report = studio.playRunCase({ duration: 0.25, dt: 0.125, events: [], asserts: [] })
+    assert.equal(report.passed, true)
+    assert.equal(report.snapshot.time, 0.25)
+    assert.equal(report.snapshot.logs.filter((row) => row.text === 'duration frame').length, 2)
+  } finally {
+    studio.playStop()
+  }
+})
+
+test('duration normalization accepts optional nonnegative seconds for object cases', () => {
+  for (const form of [{}, { queue: [] }, { steps: [] }]) {
+    assert.equal(normalizeCase(form).duration, undefined)
+    for (const duration of [0, 0.25]) assert.equal(normalizeCase({ ...form, duration }).duration, duration)
+    for (const duration of [-1, Infinity, NaN, '1', null, true]) {
+      assert.throws(() => normalizeCase({ ...form, duration }), /duration.*nonnegative finite number/)
+    }
+  }
+})
+
 test('saved server logic reacts to a client signal with PlayerSelf/Level writes and a PlayerSelf response', () => {
   const studio = createStudio()
   const configured = studio.patch({

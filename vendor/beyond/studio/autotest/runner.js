@@ -39,7 +39,7 @@ export function replayCase(play, rawCase) {
   const dt = spec.dt || DEFAULT_DT
   const lastEvent = events.reduce((max, row) => Math.max(max, row.t), 0)
   const lastAssert = asserts.reduce((max, row) => Math.max(max, Number(row.at || 0)), 0)
-  const end = Math.max(lastEvent, lastAssert)
+  const end = Math.max(spec.duration ?? 0, lastEvent, lastAssert)
   let eventIndex = 0
   const results = []
   let time = 0

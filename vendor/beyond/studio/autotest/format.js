@@ -138,6 +138,11 @@ export function normalizeCase(raw) {
     }
   }
   if (!raw || typeof raw !== 'object') throw new Error('autotest case must be an object or step array')
+  const { duration } = raw
+  if (duration !== undefined && (!Number.isFinite(duration) || duration < 0)) {
+    throw new Error('duration must be a nonnegative finite number')
+  }
+  const timing = duration === undefined ? {} : { duration }
   if (Array.isArray(raw.queue) || Array.isArray(raw.steps)) {
     const converted = fromQueue(raw.queue || raw.steps)
     return {
@@ -145,6 +150,7 @@ export function normalizeCase(raw) {
       version: CASE_VERSION,
       name: String(raw.name || ''),
       dt: Number(raw.dt) > 0 ? Number(raw.dt) : converted.dt,
+      ...timing,
       events: converted.events,
       asserts: converted.asserts,
     }
@@ -158,6 +164,7 @@ export function normalizeCase(raw) {
     name: String(raw.name || ''),
     dt: Number(raw.dt) > 0 ? Number(raw.dt) : DEFAULT_DT,
     playerCount: Number(raw.playerCount) > 0 ? Number(raw.playerCount) : 1,
+    ...timing,
     events,
     asserts,
   }

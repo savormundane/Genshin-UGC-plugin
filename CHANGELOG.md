@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- 修复 Beyond 预览忽略 `case.duration` 的问题。无事件或定时断言时也能预览逐帧更新。
+
 ## 1.3.0
 
 - 修复 `workflow check --report` 读取当前制作和便携交付清单的问题。

@@ -4688,6 +4688,30 @@
         "vendor/beyond/web/test/ui-vfx.test.mjs": "ea3a7de15d523947c67ab08b46934af2fff4f29baf268a2f7c6c90840b98cf01",
         "vendor/beyond/web/test/web.test.mjs": "8141f807c2a45712a0d9927bc803f1e5d7e39f37b16f87ecfbf6061de7fe2d7f"
       }
+    },
+    {
+      "path": "vendor/beyond/studio/autotest/format.js",
+      "source_sha256": "657c489f78b08a8455c93923da539b4e0f6395b9351db8867d93d034b4e3254c",
+      "sha256": "c353e1201d40fe664a05f70fa3eb660d537fc1ba82ae8bce5f3e49903b4c05c9",
+      "reason": "Apply the optional preview duration to fixed-step replay, including cases with no events or assertions."
+    },
+    {
+      "path": "vendor/beyond/studio/autotest/runner.js",
+      "source_sha256": "607fd5e5702ef27ed88aa87c267c9a7185dbf807659717e18baf24287578c29a",
+      "sha256": "c7b8670a1546beaebdd272ba6fe5f71c8c6b0691a56ec41288069328a7abf672",
+      "reason": "Apply the optional preview duration to fixed-step replay, including cases with no events or assertions."
+    },
+    {
+      "path": "vendor/beyond/studio/test/autotest.test.mjs",
+      "source_sha256": "b4319972d382c912f88a86c5d5e291bd92caca60495bce561fa61d3e4840b130",
+      "sha256": "77be6c41492f342a557f4561e7c878e375c6fede260e4f2c057c5f8e2c9f6029",
+      "reason": "Apply the optional preview duration to fixed-step replay, including cases with no events or assertions."
+    },
+    {
+      "path": "vendor/beyond/bundle.json",
+      "source_sha256": "5beb891ddc1890f98daa0b67ed697376779b5a7dca4912080b3f5f08e5449767",
+      "sha256": "d7893a7d82f281c7bbfa30bb603a1e849b612ccf208e08db268528ba2095b967",
+      "reason": "Apply the optional preview duration to fixed-step replay, including cases with no events or assertions."
     }
   ]
 }
