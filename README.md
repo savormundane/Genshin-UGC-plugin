@@ -27,7 +27,7 @@ Miliastra Wonderland 是面向原神「千星奇域」创作者的非官方 AI �
 
 完整本地工具面向 Windows x64。 [运行要求](docs/compatibility.md#运行要求) · [安装自检](docs/installation.md#安装自检)
 
-**当前版本 `1.2.0`**。 [发行与下载](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/v1.2.0) · [版本记录](CHANGELOG.md)
+**当前版本 `1.2.1`**。 [发行与下载](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/v1.2.1) · [版本记录](CHANGELOG.md)
 
 ## 快速开始
 

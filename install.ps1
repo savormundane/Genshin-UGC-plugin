@@ -1,7 +1,7 @@
 ﻿param(
     [ValidateSet('codex', 'claude-code', 'agent-plugins')][string]$Agent = 'codex',
     [ValidateSet('install', 'rollback', 'uninstall')][string]$Action = 'install',
-    [string]$Version = '1.2.0',
+    [string]$Version = '1.2.1',
     [switch]$Resume,
     [string]$Project, [string]$Outputs, [string]$Python,
     [string]$Root, [string]$Archive, [string]$Sha256
