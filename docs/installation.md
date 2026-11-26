@@ -16,13 +16,13 @@
 
 ### DeepSeek Harness
 
-在「插件 → 添加插件」的「包名或地址」中粘贴仓库地址。安装完成后点「立即启用」。
+在「插件 → 添加插件」的「包名或地址」中输入 npm 包名。安装完成后点「立即启用」。
 
 ```text
-https://github.com/savormundane/miliastra-wonderland-plugin
+dsh-miliastra-wonderland
 ```
 
-此方式安装仓库默认分支当时的内容。 [DSH 运行要求](compatibility.md#运行要求) · [更新方法](#回退与卸载)
+[npm 包页](https://www.npmjs.com/package/dsh-miliastra-wonderland) · [DSH 运行要求](compatibility.md#运行要求) · [更新方法](#回退与卸载)
 
 ### Agent Plugins
 
@@ -93,7 +93,7 @@ claude plugin install miliastra-wonderland@miliastra-wonderland
 ## 回退与卸载
 
 - **市场安装**在各客户端的插件页管理。市场从登记的来源同步，发行 ZIP 则对应选定版本。更新后开启新会话，确认工具能正常调用。
-- **DeepSeek Harness** 从 GitHub 地址直装后，已安装详情不会检查新版。更新时卸载该插件，再用[同一仓库地址](#deepseek-harness)重新安装并启用。 [DSH 更新说明](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.3-alpha.2/packages/client/ui-plugin-manager/README.md#updating-a-registry-bundle)
+- **DeepSeek Harness** 可在支持更新的版本中打开插件详情，检查并安装新版。此前通过 GitHub 地址安装的用户，卸载旧条目后用 [npm 包名](#deepseek-harness)重新安装并启用。 [DSH 更新说明](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/client/ui-plugin-manager/README.md#updating-a-registry-bundle)
 - **CLI 安装**使用同一客户端的插件命令管理。Codex CLI 可用 `codex plugin marketplace upgrade miliastra-wonderland` 刷新已登记的市场。
 - **市场或 CLI 安装**遇到同版本重新发布且客户端仍加载旧缓存时，请按原安装方式卸载并重装。保留现有运行配置，或用 `MILIASTRA_WONDERLAND_RUNTIME_CONFIG` 指定原配置文件，即可继续使用原工程和解释器。
 - **PowerShell 登记的 Codex 和 Claude**可从新版安装器升级。回退或卸载可用完整 ZIP 内的命令。改用 `-Agent claude-code` 即可操作 Claude，使用过 `-Root` 的用户应传入原值。
@@ -131,7 +131,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-install.
 | --- | --- | --- |
 | 市场中找不到插件 | ChatGPT/Codex 或 Claude | 核对仓库名和插件 ID，确认市场已导入。 [市场安装](#市场安装) |
 | Claude 市场验证失败 | Claude | 查看市场的「同步错误详情」。可临时使用 [Claude Code](#claude-code) 安装并调用本地工具。 |
-| 添加 DeepSeek Harness 插件时报错 | DeepSeek Harness | 使用完整的 [GitHub 仓库地址](#deepseek-harness)，并核对 DSH 版本。 |
+| 添加 DeepSeek Harness 插件时报错 | DeepSeek Harness | 核对 [npm 包名](#deepseek-harness)和 DSH 版本。 |
 | Claude Chat 里有 Skill，调用不到节点查询 | Claude | 在 Cowork 新建任务并允许本地工具，再做[首次工具验证](#首次工具验证)。 |
 | 能看到 Skill，工具未连通 | 所有安装方式 | 确认插件已启用并允许本地 MCP，运行[安装自检](#安装自检)。 |
 | MCP 首次启动超时，或缺少 Python 依赖 | 所有安装方式 | 先在终端[准备 Python 环境](runtime-environment.md#提前准备-python-环境)，再打开客户端。若仍超时，核对[客户端时限](mcp.md#调整客户端超时)。 |

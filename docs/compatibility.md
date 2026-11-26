@@ -20,7 +20,7 @@ Python 版本和依赖以 [`pyproject.toml`](../pyproject.toml) 与 [`uv.lock`](
 | --- | --- |
 | Agent Plugins | [ChatGPT/Codex](installation.md#chatgptcodex)、[Codex CLI](installation.md#codex-cli)及[通用 Agent Plugins 客户端](installation.md#agent-plugins)。 |
 | Claude | [Claude](installation.md#claude) 和 [Claude Code](installation.md#claude-code)。 |
-| DSH | 在 [DeepSeek Harness 插件页](installation.md#deepseek-harness)添加 GitHub 仓库地址，通过 Cordis Bundle 接入。 |
+| DSH | 在 [DeepSeek Harness 插件页](installation.md#deepseek-harness)按 npm 包名安装，通过 Cordis Bundle 接入。 |
 
 [安装自检](installation.md#安装自检) · [独立 CLI](runtime-environment.md#只用-cli)
 
