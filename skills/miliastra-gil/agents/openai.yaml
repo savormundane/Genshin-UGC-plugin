@@ -1,3 +1,4 @@
 interface:
   display_name: "Miliastra GIL"
   short_description: "GIL/GIA 容器检查、修改与交付"
+  default_prompt: "用 $miliastra-gil 只读检查我提供的 GIL，找到名称包含「出生点」的对象并列出引用。"

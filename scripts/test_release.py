@@ -10,7 +10,7 @@ from unittest.mock import patch
 import zipfile
 
 from check_repository import check, MANIFESTS, REQUIRED_FILES, REPO, SOURCE_ARCHIVE
-from prepare_release import prepare
+from prepare_release import package_npm, prepare
 from package_release import build_release
 
 
@@ -317,6 +317,28 @@ class ReleaseTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "pending changes"):
             prepare(self.root, output, self.notes)
         self.assertFalse(output.exists())
+
+    def test_selected_version_and_changelog_notes_are_bound_to_the_commit(self):
+        self.fixture()
+        self.write("CHANGELOG.md", "# Changes\n\n## Unreleased\n\nPreview text\n\n"
+                   "## 1.2.3\n\n- Release notes.\n\n## 1.2.2\n\nOlder text.\n")
+        self.git("commit", "-am", "release notes")
+        refused = self.base / "wrong version"
+        with self.assertRaisesRegex(ValueError, "Expected release 1.2.4"):
+            prepare(self.root, refused, expected_version="1.2.4")
+        self.assertFalse(refused.exists())
+        candidate = self.base / "release candidate"
+        report = prepare(self.root, candidate, expected_version="1.2.3")
+        self.assertEqual(report["tag"], "v1.2.3")
+        self.assertEqual((candidate / "release-notes.md").read_text(encoding="utf-8"),
+                         "- Release notes.")
+
+    def test_wrong_npm_name_cannot_be_packed_for_release(self):
+        self.fixture()
+        self.write("package.json", '{"name":"miliastra-wonderland","version":"1.2.3"}')
+        with self.assertRaisesRegex(ValueError, "Expected npm manifest dsh-miliastra-wonderland"):
+            package_npm(self.root, self.base, "1.2.3")
+        self.assertFalse(list(self.base.glob("*.tgz")))
 
     def test_installer_version_and_manifest_errors(self):
         self.fixture()

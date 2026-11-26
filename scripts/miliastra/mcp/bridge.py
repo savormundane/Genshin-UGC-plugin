@@ -300,7 +300,8 @@ class Bridge:
             if progress:await progress(2,3,'Core result checked; ready to commit')
             await asyncio.sleep(0)
             status=result.get('status', 'failed'if result.get('passed')is False else'passed')
-            if destination and status!='passed':
+            completed_experiment = operation == 'experiment_run' and result.get('kind') == 'experiment'
+            if destination and status != 'passed' and not completed_experiment:
                 response={'schema':2,'operation':operation,'status':status,'result':result,'output':None}
                 if 'error' in result:response['error']=result['error']
                 if 'diagnostics' in result:response['diagnostics']=result['diagnostics']
@@ -326,15 +327,21 @@ class Bridge:
             output_hashes=None
             if destination:
                 delivery=scratch/'delivery'
-                if operation in (
-                    'native_plan', 'native_apply', 'asset_generate', 'asset_fit',
-                    'scene_preview', 'scene_build', 'scene_catalogue', 'graph_build',
-                ) or (operation == 'simulate' and args.get('preview')):
-                    manifest=delivery/'manifest.json'
-                    field = 'files_sha256' if operation == 'asset_generate' else 'files'
-                    output_hashes={**read_json(manifest)[field],'manifest.json':sha_file(manifest)}
+                manifest = delivery / 'manifest.json'
+                if operation == 'produce':
+                    # Portable deliveries can list thousands of files. Return the two
+                    # entry points for follow-up verification without copying the list.
+                    output_hashes = {'production-report.json': sha_file(delivery / 'production-report.json')}
+                    if manifest.is_file():
+                        output_hashes['manifest.json'] = sha_file(manifest)
                 elif operation == 'asset_preview':
-                    output_hashes = {'report.json': sha_file(delivery / 'report.json')}
+                    output_hashes = {
+                        'report.json': sha_file(delivery / 'report.json'),
+                        'manifest.json': sha_file(manifest),
+                    }
+                else:
+                    field = 'files_sha256' if operation == 'asset_generate' else 'files'
+                    output_hashes = {**read_json(manifest)[field], 'manifest.json': sha_file(manifest)}
                 self.path(str(destination),project,output_root,output=True)
                 os.rename(delivery,destination)
                 if operation=='produce' and 'output_directory' in result:result['output_directory']=str(destination)

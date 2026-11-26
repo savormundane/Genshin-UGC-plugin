@@ -113,6 +113,8 @@ PowerShell 卸载保留项目、输出和各版本的运行环境。重新启用
 
 ## 安装自检
 
+在支持斜杠命令的 DeepSeek Harness 对话框输入 `/miliastra-check`，直接查看本地运行检查结果。MCP 启动失败时也可运行。
+
 工具连不上时，在 Windows PowerShell 进入要检查的插件目录。若检查客户端安装的副本，可从 MCP 日志中的 `scripts\mcp_launcher.cjs` 路径找到其上两级目录。用 PowerShell 登记的插件可从[安装记录](runtime-environment.md#复用-powershell-安装器配置的环境)中的 `current.home` 找到 `miliastra-wonderland` 子目录。然后运行以下命令。
 
 ```powershell

@@ -7,6 +7,7 @@ import re
 from check_repository import REPO, ROOT, SEMVER
 from package_release import distribution_exclusions
 
+DSH_PACKAGE = 'dsh-miliastra-wonderland'
 DSH_ENGINE = '0.2.2-rc.5 || 0.2.3-alpha.2'
 DSH_ICON = 'assets/icon.png'
 DSH_DETAILS = {lang: f'docs/dsh/overview.{lang}.md' for lang in ('en', 'zh')}
@@ -54,12 +55,13 @@ def marketplace_files(root):
     exclusions = [f'!{prefix}**' for prefix in excluded_prefixes]
     exclusions.extend(f'!{path}' for path in excluded_files)
     bundle = {
-        'name': identity,
+        'name': DSH_PACKAGE,
         'version': version,
         'description': english_description,
         'icon': './' + DSH_ICON,
         'license': core['license'],
         'repository': {'type': 'git', 'url': f'git+{GITHUB}.git'},
+        'publishConfig': {'access': 'public'},
         'engines': {'dsh': DSH_ENGINE},
         'files': [
             'cordis.patch.yml', 'plugin.json', 'locale/', 'assets/', 'docs/', 'references/',
@@ -93,7 +95,10 @@ def check_marketplace(root):
         path = root / relative
         if not path.is_file() or path.read_text(encoding='utf-8-sig') != expected:
             errors.append(f'{relative}: regenerate with scripts/marketplace_release.py')
-    for relative in ('cordis.patch.yml', 'scripts/dsh-paths.mjs', 'scripts/mcp_launcher.cjs'):
+    for relative in (
+        'cordis.patch.yml', 'scripts/dsh-paths.mjs', 'scripts/dsh-runtime-check.mjs',
+        'scripts/mcp_launcher.cjs',
+    ):
         if not (root / relative).is_file():
             errors.append(f'{relative}: missing plugin entry')
     for relative in (DSH_ICON, *DSH_DETAILS.values()):

@@ -15,4 +15,6 @@ Look for a `nodes_lookup` call that lists Target GUID as an input and Flow out a
 
 ## Local tools
 
+In a DSH session with slash commands, enter `/miliastra-check` to run the plugin's installation check. It works without a model call and can diagnose an MCP startup failure.
+
 The full toolset targets Windows x64. Setting up dependencies for the first time may require a network connection. [Supported versions and requirements](https://github.com/savormundane/miliastra-wonderland-plugin/blob/main/docs/compatibility.md#运行要求) · [Installation checks](https://github.com/savormundane/miliastra-wonderland-plugin/blob/main/docs/installation.md#安装自检) · [Creator tutorials](https://github.com/savormundane/miliastra-wonderland-plugin/tree/main/samples/creator-demos)

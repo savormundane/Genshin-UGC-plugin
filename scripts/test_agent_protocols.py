@@ -407,7 +407,8 @@ class ProtocolTests(unittest.TestCase):
             manifest = installer.read_json(ROOT / relative)
             self.assertEqual((manifest['name'], manifest['version']), (core['name'], version))
         bundle = installer.read_json(ROOT / 'package.json')
-        self.assertEqual((bundle['name'], bundle['version']), (core['name'], version))
+        self.assertEqual((bundle['name'], bundle['version']), ('dsh-miliastra-wonderland', version))
+        self.assertEqual(bundle['publishConfig']['access'], 'public')
         self.assertEqual(bundle['exports']['./locale/*.json'], './locale/*.json')
         english = installer.read_json(ROOT / 'locale/en.json')['meta']
         chinese = installer.read_json(ROOT / 'locale/zh.json')['meta']
@@ -544,7 +545,7 @@ class ProtocolTests(unittest.TestCase):
                 root = Path(temp)
                 archive = root / 'bundle.zip'
                 writeback_template = Path(
-                    'vendor/ayaya/private_extensions/ugc_file_tools/builtin_resources/templates/server/'
+                    'vendor/ayaya/assets/gil-templates/server/'
                     'autowire_templates_test2_server_direct_export_v2.gil'
                 )
                 requirements = ['plugin.json', '.codex-plugin/plugin.json', '.codex-plugin/mcp.json', '.claude-plugin/plugin.json',

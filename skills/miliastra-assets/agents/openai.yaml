@@ -1,4 +1,4 @@
 interface:
   display_name: "Miliastra Assets"
-  short_description: "内置生成与转换矩形、富文本素材，统一处理透明边缘、预算及Lua数据"
-  default_prompt: "使用 $miliastra-assets 生成并转换当前素材，按目标选择输出，交付数据和参考预览。"
+  short_description: "将 PNG 和点阵图转成矩形图元，比较候选预览、误差和控件预算"
+  default_prompt: "用 $miliastra-assets 把这张 PNG 转成矩形图元，比较预览和控件数后，在 20 个控件的预算内生成素材。"

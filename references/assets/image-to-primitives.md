@@ -67,6 +67,8 @@ python scripts/qianxing.py assets batch generate REVIEW/report.json --out GENERA
 
 结果包括 `asset.json`（源摘要、坐标、格式和数据）、`data.lua`（运行数据）、`preview.png`（参考网格）、`report.json`（参数、预算和证据）和 `manifest.json`（各产物摘要）。参数化输入还会保留 `source.json`。工具在临时目录生成文件，完成后保存到新目录。整个流程可离线执行，无需启动外部进程，也不会修改安装目录。
 
+复核已生成的文件时，用 `verify` 传入生成目录下的 `manifest.json`，沿用 `outputs_sha256["manifest.json"]` 并设置 `artifacts_only=true`。终端对应命令为 `qianxing.py verify 生成目录 --artifacts-only`。
+
 矩形坐标以左上网格像素为原点，Lua保留w/h/maxRects/palette/rects结构；富文本坐标为左上设计单位，Lua含tiles的坐标、尺寸、fontSize和text。cell是设计单位与建议字号，fit=auto按实际列数设置宽度，fixed按指定列数保留框宽。富文本字形、行距和内边距需按宿主校准，参考图不是实际文字渲染。
 
 ## 无需位图的基础图形

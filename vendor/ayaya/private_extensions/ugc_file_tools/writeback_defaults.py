@@ -12,7 +12,7 @@ writeback_defaults.py
 
 from pathlib import Path
 
-from ugc_file_tools.repo_paths import ugc_file_tools_builtin_resources_root, ugc_file_tools_root
+from ugc_file_tools.repo_paths import repo_root, ugc_file_tools_builtin_resources_root, ugc_file_tools_root
 
 
 def default_signal_template_gil_path() -> Path:
@@ -39,11 +39,11 @@ def default_node_graph_client_template_gil_path() -> Path:
 
 
 def default_node_graph_server_template_library_dir() -> Path:
-    return ugc_file_tools_builtin_resources_root() / "templates" / "server"
+    return repo_root() / "assets" / "gil-templates" / "server"
 
 
 def default_node_graph_client_template_library_dir() -> Path:
-    return ugc_file_tools_builtin_resources_root() / "templates" / "client"
+    return repo_root() / "assets" / "gil-templates" / "client"
 
 
 def default_node_graph_mapping_json_path() -> Path:

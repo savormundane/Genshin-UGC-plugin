@@ -9,7 +9,7 @@ from mcp.server.mcpserver import Context
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp.shared.exceptions import MCPError
 from pydantic import Field, StrictInt
-from authoring_io import DiagnosticError
+from authoring_io import DiagnosticError, PLUGIN, read_json
 from miliastra.mcp.bridge import BUILTIN_OPERATIONS
 from runtime_policy import REQUIREMENTS
 
@@ -47,7 +47,7 @@ def _preview_result(response, *, summary=None, error_on_failure=True):
 
 def server(bridge):
     if version('mcp')!=REQUIREMENTS['mcp']:raise ValueError('MCP service requires pinned mcp=='+REQUIREMENTS['mcp'])
-    app=MCPServer('Miliastra Wonderland')
+    app = MCPServer('Miliastra Wonderland', version=read_json(PLUGIN / 'plugin.json')['version'])
     async def call(operation,ctx,**args):
         try:
             args = {k: v for k, v in args.items() if v is not None}
@@ -386,7 +386,7 @@ def server(bridge):
         output: OutputDirectory,
         ctx: Context,
     ) -> dict[str, Any]:
-        """按配置中的种子分组和策略运行离线 Lua 模拟，保存 observations.json。"""
+        """按种子分组和策略运行离线 Lua 模拟，保存 observations.json 并返回其校验值。用例失败后仍可用报告配对比较。"""
         return await call('experiment_run',ctx,spec=spec,sha256=sha256,output=output)
     @app.tool(structured_output=True, annotations=READ_ONLY)
     async def experiment_compare(

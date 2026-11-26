@@ -22,4 +22,6 @@ EXPERIMENT采用schema=2，包含source、entry、development_seeds、holdout_se
 
 `compare` 读取两份 `observations.json`。分组、种子和策略集合须一致，结果逐例给出差异和数值差。同一个种子也可能因策略不同而消耗不同数量的随机数，比较时需核对随机数的使用情况。用保留集调参后，应重新选取独立验收样本。结果不能冒充真人策略、完整游玩时间或宿主FPS。
 
+在 MCP 中，用 `experiment_run` 返回的 `output` 定位 `observations.json`，将对应的 `outputs_sha256["observations.json"]` 传给 `experiment_compare`。若个别用例失败，整体状态为 `failed`，已完成的观察报告仍保存在输出目录。
+
 示例可在 3×3 网格绕开中心格，在 4×2 网格绕开第二排第二格。可用两条不同种子的独立随机流分别测试。实验配置可用开发种子[2,3]／保留种子[8]和策略[1,2]，另一配置选择保留集独立验证。负边代价、零RNG状态、重叠种子集及保留集调参均拒绝。观察失败保留调用参数、错误栈和最后一步／信号轨迹；failed结果的experiment run返回非零退出码。工作量由metrics中的项目指标提供，model_seconds单独记录模型进程耗时。

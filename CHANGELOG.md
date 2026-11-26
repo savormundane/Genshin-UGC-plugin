@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+- DSH 从 npm 安装，并可用 `/miliastra-check` 直接检查本机运行环境。
+- MCP 制作、模拟和观察实验返回交付校验值，失败但已完成的观察可继续对照。图元素材可用交付清单核对生成文件。
+- 更新图像处理依赖 Pillow，并同步锁文件和 Windows wheel 校验值。
+- 缩短 Ayaya 写回样本目录，减少 Claude Code 在 Windows 克隆市场时的路径过长问题。
+
 ## 1.3.1
 
 - 修复 Codex 市场和 PowerShell 安装配置漏传工程及输出目录变量的问题。

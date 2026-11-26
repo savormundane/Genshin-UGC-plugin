@@ -32,7 +32,11 @@
       "gap": "这组用例检查静态类型诊断，完整的 Lua 组装和挂载需要另外检查。"
     },
     "simulation": {
-      "gap": "按受影响的 API 或回调验证联合模拟的行为。"
+      "cases": [
+        "test_mcp_native_workflow.py::NativeWorkflowTests.test_joint_simulation_returns_checksums_for_verification",
+        "test_mcp_native_workflow.py::NativeWorkflowTests.test_experiment_observations_can_be_compared_with_reported_checksums"
+      ],
+      "gap": "用例覆盖模拟交付和失败观察对照。具体 API 或回调仍需按变更验证。"
     },
     "protocol": {
       "gap": "用相关工程样本核对受影响的信号方向、字段和回调。"
@@ -71,9 +75,11 @@
     },
     "mcp": {
       "cases": [
-        "test_chinese_lookup.py::ChineseLookupTests.test_mcp_matches_cli_and_routes_asset_questions"
+        "test_chinese_lookup.py::ChineseLookupTests.test_mcp_matches_cli_and_routes_asset_questions",
+        "test_mcp_native_workflow.py::NativeWorkflowTests.test_asset_generate_uses_reviewed_candidate_and_protects_inputs",
+        "test_mcp_native_workflow.py::NativeWorkflowTests.test_portable_production_and_rebuild_over_stdio"
       ],
-      "gap": "用例覆盖查询和素材入口的 stdio 调用。其他工具需按改动范围验证。"
+      "gap": "用例覆盖查询、素材交付和便携重建的 stdio 调用。其他工具需按改动范围验证。"
     },
     "native_changes": {
       "cases": [

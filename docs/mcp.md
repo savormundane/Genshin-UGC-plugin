@@ -36,14 +36,14 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 | asset_fit | input、spec、output。用内置拟合处理图片或分层清单，返回误差、边缘检查和控件数。可选 sha256、spec_sha256、steps、resume、resume_sha256、initial、initial_sha256。配置 mount 可用实际 GIL 解析模板和目标控件，并生成 Lua 和软件预览配置 |
 | project_inspect | input，可选 sha256、scope。用 query、kind、limit 搜索对象，用 selector、transitive 查精确目标和关系，或用 summary 查看对象数。`scope="scene"` 查询 3D，`scope="gameplay"` 查询玩法资源 |
 | client_check | input，可选 sha256、mapping、contract、contract_sha256。对 Lua 文件或 GIL 中的 Lua 源码做编译检查。可选择单个 GIL 映射，按相应约定检查 API 用法 |
-| produce | spec、sha256、output，可选 summary。执行已有制作配置并校验交付 |
+| produce | spec、sha256、output，可选 summary。执行已有制作配置并校验交付。从 `outputs_sha256` 取 `manifest.json` 的校验值后可继续调用 `verify` |
 | native_diff | input、other，可选 sha256、other_sha256、allowed_top_level_fields。给出允许范围时，核对其余字段的原始字节 |
 | experiment_compare | input、sha256、other、other_sha256。读取两份观察报告，按相同种子和策略配对比较，不写文件 |
 | native_plan | input、sha256、output 加一个 patch 对象，或加 spec 和 spec_sha256 文件参数。可选 summary。输出可审阅的 plan.json 和文件校验值 |
 | simulate | spec、sha256、output。默认执行联合场景或复跑此前失败。传 preview=true 时运行 Beyond 软件预览并附上已生成的 PNG，失败时一并返回诊断 |
-| experiment_run | spec、sha256、output。按配置中的种子和策略运行 Lua 模拟，将观察报告保存到新的输出目录 |
+| experiment_run | spec、sha256、output。按配置中的种子和策略运行 Lua 模拟，保存观察报告并返回其校验值。完成的观察报告会保留失败案例，仍可用 `experiment_compare` 对照 |
 | logs_diagnose | spec、sha256。只读解析 JSONL 或支持的编辑器二进制调试日志，并返回可核对的关联证据 |
-| verify | input 指向交付 manifest.json，sha256 必填。artifacts_only、portable、rebuild 默认为 false。仅产物校验独立运行。重建还需 portable=true 和 trusted_inputs_sha256 |
+| verify | input 指向交付 manifest.json，sha256 必填。artifacts_only、portable、rebuild 默认为 false。校验 `asset_generate` 的清单时使用 artifacts_only=true。重建还需 portable=true 和 trusted_inputs_sha256 |
 | native_apply | input、sha256、plan、plan_sha256、output。核对文件校验值，按审阅过的修改计划执行并另存 |
 
 在对话中先展示工具返回的预览图，再说明检查结果和下一步。结构化结果保留文件路径及校验值。Beyond 即使附上画面，检查是否通过也以 `status` 为准。 [Beyond 诊断产物](../references/workflows/beyond-backend.md)
@@ -51,6 +51,8 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 ## 文件路径和校验值
 
 输入可以使用相对工程根目录的路径，或工程根、输出根内的绝对路径。`output` 指向输出根内尚不存在的目录，其父目录须存在。工具可创建按工程生成的默认输出根。若目录经过 Windows 目录联接或符号链接，请改用文件夹的实际位置。 [工程与输出根目录](runtime-environment.md#连接-mcp-或切换工程)
+
+现有客户端仍可通过 MCP Roots 提供会话目录。MCP 从 2026-07-28 协议版本起将 Roots 标为弃用。接入不提供 Roots 的客户端时，从客户端配置或 `runtime.json` 绑定目录。 [MCP SDK 弃用说明](https://py.sdk.modelcontextprotocol.io/deprecated/)
 
 `sha256` 对应输入文件原始字节。`native_apply` 的 `plan_sha256` 参数核对计划文件字节，计划内的同名字段核对计划内容。
 

@@ -11,20 +11,28 @@ from beyond_native import NATIVE_BINARY, native_canvas_environment, read_native_
 from miliastra.mcp.bridge import OPERATIONS
 
 
-async def check(config, node, adapter=None):
+async def check(config, node, adapter=None, *, require_render=False):
     bundle = Path(__file__).resolve().parents[1]
     command = node
     args = [str(bundle / 'scripts/mcp_launcher.cjs')]
     env = {**os.environ, 'MILIASTRA_WONDERLAND_RUNTIME_CONFIG': str(config)}
     cwd = None
     if adapter:
-        location = '.mcp.json' if adapter == 'claude-code' else 'mcp.json'
-        placeholder = '${CLAUDE_PLUGIN_ROOT}' if adapter == 'claude-code' else '${PLUGIN_ROOT}'
+        location, root_name, data_name = {
+            'agent-plugins': ('mcp.json', 'PLUGIN_ROOT', 'PLUGIN_DATA'),
+            'claude-code': ('.mcp.json', 'CLAUDE_PLUGIN_ROOT', 'CLAUDE_PLUGIN_DATA'),
+            'codex': ('.codex-plugin/mcp.json', 'PLUGIN_ROOT', 'PLUGIN_DATA'),
+        }[adapter]
         config_file = json.loads((bundle / location).read_text(encoding='utf-8'))
         server, = config_file['mcpServers'].values()
-        command = server['command']
-        args = [arg.replace(placeholder, str(bundle)) for arg in server['args']]
-        env.update(server['env'])
+        command = node if server['command'] == 'node' else server['command']
+        args = [arg.replace('${' + root_name + '}', str(bundle)) for arg in server['args']]
+        if adapter == 'codex':
+            env = {key: value for key, value in env.items()
+                   if not key.startswith('MILIASTRA_WONDERLAND_') or key in server['env_vars']}
+        plugin_data = config.parent / 'plugin-data' / adapter
+        env.update({key: value.replace('${' + data_name + '}', str(plugin_data))
+                    for key, value in server['env'].items()})
         cwd = str(bundle)
     params = StdioServerParameters(command=command, args=args, env=env, cwd=cwd)
     async with Client(params) as client:
@@ -57,6 +65,8 @@ async def check(config, node, adapter=None):
                              's.playStop();if(r.data.length<100)throw Error("软件预览返回了空 PNG");console.log(r.data.length);', encoding='utf-8')
             subprocess.run([node, str(probe)], check=True, env=native_canvas_environment(binding))
         software_png = 'passed'
+    if require_render and software_png != 'passed':
+        raise ValueError('随包 Windows Canvas 未生成软件预览。')
     print(json.dumps({'stdio': 'passed', 'tools': len(tools), 'software_png': software_png,
                       'agent_host': 'not_checked', 'editor': 'not_checked', 'game_host': 'not_checked'}))
 
@@ -66,5 +76,9 @@ if __name__ == '__main__':
     p.add_argument('--config', type=Path, required=True)
     p.add_argument('--node', required=True)
     p.add_argument('--adapter', choices=('agent-plugins', 'claude-code', 'codex'))
+    p.add_argument('--require-render', action='store_true')
     args = p.parse_args()
-    asyncio.run(asyncio.wait_for(check(args.config, args.node, args.adapter), timeout=90))
+    asyncio.run(asyncio.wait_for(
+        check(args.config.resolve(), args.node, args.adapter, require_render=args.require_render),
+        timeout=90,
+    ))

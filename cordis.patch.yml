@@ -17,3 +17,6 @@
         command: node
         args: !!js '[ctx.miliastraWonderlandPaths.launcher]'
         toolCallTimeoutMs: 930000
+    - id: miliastra-wonderland-runtime-check
+      name: ./scripts/dsh-runtime-check.mjs
+      inject: [commands, miliastraWonderlandPaths]

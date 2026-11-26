@@ -71,6 +71,7 @@ class NativeWorkflowTests(unittest.TestCase):
         async def run():
             async with Client(self.server) as client:
                 listed = await client.list_tools()
+                self.assertEqual(client.server_info.version, read_json(PLUGIN / "plugin.json")["version"])
                 tools = {tool.name: tool for tool in listed.tools}
                 for tool in tools.values():
                     with self.subTest(tool=tool.name):
@@ -138,7 +139,12 @@ class NativeWorkflowTests(unittest.TestCase):
                 self.assertTrue(snapshot["backends"]["node"]["available"])
                 self.assertEqual(snapshot["backends"]["node"]["executable"], sha_file(node))
                 manifest = output / "manifest.json"
-                digest = sha_file(manifest)
+                digest = delivery["outputs_sha256"]["manifest.json"]
+                self.assertEqual(digest, sha_file(manifest))
+                self.assertEqual(
+                    delivery["outputs_sha256"]["production-report.json"],
+                    sha_file(output / "production-report.json"),
+                )
                 inputs = {"input": str(manifest), "sha256": digest, "portable": True}
                 source.rename(source.with_name("original-client.lua"))
                 for report in (manifest, output / "production-report.json"):
@@ -155,6 +161,77 @@ class NativeWorkflowTests(unittest.TestCase):
                 self.assertEqual(rebuilt["rebuild_differences"], [])
                 self.assertGreater(rebuilt["rebuild_artifacts"], 0)
                 self.assertEqual(sha_file(manifest), digest)
+
+        asyncio.run(run())
+
+    def test_experiment_observations_can_be_compared_with_reported_checksums(self):
+        baseline = self.project / "baseline.lua"
+        baseline.write_text("function Observe(seed, policy) Score = seed + policy end\n", encoding="utf-8")
+        candidate = self.project / "candidate.lua"
+        candidate.write_text(
+            "function Observe(seed, policy)\n"
+            "    if seed == 3 then error('observation unavailable') end\n"
+            "    Score = seed + policy + 1\n"
+            "end\n",
+            encoding="utf-8",
+        )
+        sample = {
+            "schema": 2, "entry": "Observe", "development_seeds": [2, 3],
+            "holdout_seeds": [8], "split": "development", "policies": [1], "metrics": ["Score"],
+        }
+
+        async def run():
+            async with Client(self.server) as client:
+                observations = []
+                for source, status in ((baseline, "passed"), (candidate, "failed")):
+                    spec = source.with_suffix(".json")
+                    write_json(spec, {**sample, "source": source.name})
+                    result = await self.call(client, "experiment_run", {
+                        "spec": spec.name, "sha256": sha_file(spec), "output": source.stem,
+                    }, status)
+                    output = Path(result["output"])
+                    self.assertEqual(output, self.outputs / source.stem)
+                    report = output / "observations.json"
+                    digest = result["outputs_sha256"]["observations.json"]
+                    self.assertEqual(digest, sha_file(report))
+                    self.assertEqual(result["outputs_sha256"]["manifest.json"], sha_file(output / "manifest.json"))
+                    observations.append((str(report), digest))
+
+                (before, before_sha256), (after, after_sha256) = observations
+                compared = (await self.call(client, "experiment_compare", {
+                    "input": before, "sha256": before_sha256, "other": after, "other_sha256": after_sha256,
+                }))["result"]
+                success, failure = compared["rows"]
+                self.assertEqual(success["numeric_deltas"], {"Score": 1})
+                self.assertTrue(failure["before"]["passed"])
+                self.assertFalse(failure["after"]["passed"])
+                self.assertIn("observation unavailable", failure["after"]["error"])
+
+        asyncio.run(run())
+
+    def test_joint_simulation_returns_checksums_for_verification(self):
+        source = self.project / "score.lua"
+        source.write_text("function UpdateScore(value) Score = value end\n", encoding="utf-8")
+        spec = self.project / "scenario.json"
+        write_json(spec, {
+            "schema": 2,
+            "clients": [{"id": 1, "source": source.name}],
+            "steps": [{"op": "invoke", "client": 1, "name": "UpdateScore", "args": [5]}],
+            "assertions": [{"client": 1, "path": "Score", "equals": 5}],
+        })
+
+        async def run():
+            async with Client(self.server) as client:
+                result = await self.call(client, "simulate", {
+                    "spec": spec.name, "sha256": sha_file(spec), "output": "simulation",
+                })
+                output = Path(result["output"])
+                self.assertEqual(result["outputs_sha256"]["simulation.json"], sha_file(output / "simulation.json"))
+                checked = await self.call(client, "verify", {
+                    "input": str(output / "manifest.json"), "sha256": result["outputs_sha256"]["manifest.json"],
+                })
+                self.assertEqual(checked["result"]["source_check"], "passed")
+                self.assertEqual(checked["result"]["artifact_check"], "passed")
 
         asyncio.run(run())
 
@@ -343,6 +420,8 @@ class NativeWorkflowTests(unittest.TestCase):
                 report = Path(preview["output"]) / "report.json"
                 report_digest = preview["outputs_sha256"]["report.json"]
                 self.assertEqual(sha_file(report), report_digest)
+                self.assertEqual(sha_file(report.with_name("manifest.json")),
+                                 preview["outputs_sha256"]["manifest.json"])
                 chosen = preview["result"]["recommendations"][0]
                 self.assertEqual(chosen, "grid-25")
                 candidate = next(row for row in preview["result"]["candidates"] if row["name"] == chosen)
@@ -373,6 +452,23 @@ class NativeWorkflowTests(unittest.TestCase):
                 with Image.open(BytesIO(b64decode(image.data))) as thumbnail:
                     self.assertEqual(thumbnail.size, (6, 6))
                     thumbnail.verify()
+
+                verified_args = {
+                    "input": str(output / "manifest.json"), "sha256": digests["manifest.json"], "artifacts_only": True,
+                }
+                verification = (await self.call(client, "verify", verified_args))["result"]
+                self.assertEqual(verification["artifact_check"], "passed")
+                self.assertEqual(verification["source_check"], "not_checked")
+                source_verification = (await self.call(client, "verify", {
+                    **verified_args, "artifacts_only": False,
+                }, "failed"))["result"]
+                self.assertEqual(source_verification["diagnostics"][0]["code"], "verify.artifacts_only_required")
+                data_file = output / "data.lua"
+                original_data = data_file.read_bytes()
+                data_file.write_bytes(original_data + b"\n")
+                changed = (await self.call(client, "verify", verified_args, "failed"))["result"]
+                self.assertEqual(changed["artifact_changes"], ["data.lua"])
+                data_file.write_bytes(original_data)
 
                 repeat = await client.call_tool("asset_generate", args)
                 self.assertTrue(repeat.is_error)
@@ -640,7 +736,7 @@ class NativeWorkflowTests(unittest.TestCase):
         asyncio.run(run())
 
     def test_graph_compiles_with_default_output_and_continues_into_reviewed_gil_edit(self):
-        from ayaya_bridge import FILE_TOOLS, RUNTIME
+        from ayaya_bridge import RUNTIME
         from level_inventory import inspect_file
         from miliastra.mcp.workspace import workspace_outputs
 
@@ -656,7 +752,7 @@ class NativeWorkflowTests(unittest.TestCase):
                 "TEMP": str(compiler_temp), "TMP": str(compiler_temp), "TMPDIR": str(compiler_temp),
             },
         )
-        template = (RUNTIME / FILE_TOOLS / "builtin_resources/templates/server"
+        template = (RUNTIME / "assets/gil-templates/server"
                     / "autowire_templates_test2_server_direct_export_v2.gil")
         template_digest = sha_file(template)
         source = self.project / 'graph.py'

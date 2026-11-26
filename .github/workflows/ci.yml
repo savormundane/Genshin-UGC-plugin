@@ -1,0 +1,191 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      expected_version:
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repository:
+    name: Repository and workflows
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '22.22.2'
+          package-manager-cache: false
+      - uses: astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9 # v7
+        with:
+          version: '0.13.10'
+          enable-cache: false
+      - run: python -B scripts/check_repository.py
+      - run: python -m compileall -q scripts
+      - run: node scripts/test_gil.mjs
+      - name: Verify both Python locks represent the same dependencies
+        shell: bash
+        run: |
+          uv lock --check --offline
+          uv export --locked --no-dev --no-emit-project --no-header --format requirements-txt --output-file "$RUNNER_TEMP/runtime-requirements.lock"
+          python -B -c "from pathlib import Path; import sys; assert Path('scripts/runtime-requirements.lock').read_text(encoding='utf-8') == Path(sys.argv[1]).read_text(encoding='utf-8'), 'Regenerate scripts/runtime-requirements.lock with uv export'" "$RUNNER_TEMP/runtime-requirements.lock"
+      - name: Lint GitHub Actions
+        shell: bash
+        run: |
+          cd "$RUNNER_TEMP"
+          curl -fsSL --retry 3 -o actionlint.tar.gz https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          echo '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  actionlint.tar.gz' | sha256sum --check
+          tar -xzf actionlint.tar.gz actionlint
+          cd "$GITHUB_WORKSPACE"
+          "$RUNNER_TEMP/actionlint" -shellcheck="" -pyflakes=""
+
+  windows:
+    name: Windows and Python ${{ matrix.python }}
+    runs-on: windows-2025
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python: '3.11'
+            node: '22.22.2'
+          - python: '3.12.10'
+            node: '24.22.3'
+            full: true
+          - python: '3.14'
+            node: '24.22.3'
+    env:
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: x64
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: ${{ matrix.node }}
+          architecture: x64
+          package-manager-cache: false
+      - name: Install locked Windows runtime
+        run: |
+          python -m pip install --disable-pip-version-check --require-hashes --only-binary=:all: -r scripts/runtime-requirements.lock
+      - name: Check the runtime launcher
+        shell: pwsh
+        run: |
+          $env:MILIASTRA_WONDERLAND_PYTHON = (Get-Command python).Source
+          node scripts/mcp_launcher.cjs --check
+      - name: Check stdio on supported Python boundaries
+        if: ${{ !matrix.full }}
+        run: python -B -m unittest discover -s scripts -p test_chinese_lookup.py -v
+      - name: Fetch the locked Windows Canvas
+        if: matrix.full
+        shell: pwsh
+        run: |
+          "MILIASTRA_TEST_BEYOND_ARCHIVE=$env:RUNNER_TEMP/canvas.zip" >> $env:GITHUB_ENV
+          python -B -c "import os,sys; from pathlib import Path; sys.path.insert(0,'scripts'); from beyond_native import download_native_archive,read_native_lock; download_native_archive(read_native_lock(Path('vendor/beyond')), Path(os.environ['RUNNER_TEMP']) / 'canvas.zip')"
+      - name: Run public Python regressions
+        if: matrix.full
+        run: python -B -m unittest discover -s scripts -v
+      - name: Build ZIP and npm packages from the same commit
+        if: matrix.full
+        env:
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          $releaseArgs = @('--output', "$env:RUNNER_TEMP/release", '--with-npm', '--beyond-native-archive', $env:MILIASTRA_TEST_BEYOND_ARCHIVE)
+          if ($env:EXPECTED_VERSION) { $releaseArgs += @('--expected-version', $env:EXPECTED_VERSION) }
+          python -B scripts/prepare_release.py @releaseArgs
+      - name: Exercise the Agent Plugins, Codex and Claude MCP declarations from the ZIP
+        if: matrix.full
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          $archive = (Get-ChildItem -LiteralPath "$env:RUNNER_TEMP/release" -Filter '*.zip').FullName
+          $unpacked = "$env:RUNNER_TEMP/mw"
+          python -m zipfile -e $archive $unpacked
+          $runtime = "$env:RUNNER_TEMP/mw-runtime"
+          New-Item -ItemType Directory "$runtime/project", "$runtime/outputs" | Out-Null
+          $config = "$runtime/runtime.json"
+          @{
+            schema = 1
+            python = (Get-Command python).Source
+            project_root = "$runtime/project"
+            output_root = "$runtime/outputs"
+          } | ConvertTo-Json | Set-Content -LiteralPath $config -Encoding utf8
+          foreach ($adapter in @('agent-plugins', 'codex', 'claude-code')) {
+            python -B "$unpacked/scripts/install_smoke.py" --config $config --node (Get-Command node).Source --adapter $adapter --require-render
+          }
+      - name: Save checked release packages
+        if: matrix.full
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: release-candidate
+          path: ${{ runner.temp }}/release/
+          if-no-files-found: error
+          retention-days: 7
+
+  deepseek-harness:
+    name: DSH ${{ matrix.dsh }} native host
+    needs: windows
+    runs-on: windows-2025
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        dsh: ['0.2.2-rc.5', '0.2.3-alpha.2']
+    env:
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.12'
+          architecture: x64
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '24.22.3'
+          package-manager-cache: false
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: release-candidate
+          path: ${{ runner.temp }}/release/
+      - name: Install temporary host and its test runtime
+        env:
+          DSH_VERSION: ${{ matrix.dsh }}
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          python -m pip install --disable-pip-version-check --require-hashes --only-binary=:all: -r scripts/runtime-requirements.lock
+          npm install --global --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org pnpm@11.25.0
+          npm prefix --global >> $env:GITHUB_PATH
+          npm install --prefix "$env:RUNNER_TEMP/dsh" --no-audit --no-fund --ignore-scripts --no-package-lock --registry=https://registry.npmjs.org "@deepseek-ai/dsh@$env:DSH_VERSION"
+      - name: Install Cordis and call it in an isolated DSH Web host
+        shell: pwsh
+        run: |
+          $archive = (Get-ChildItem -LiteralPath "$env:RUNNER_TEMP/release" -Filter '*.tgz').FullName
+          $dsh = "$env:RUNNER_TEMP/dsh/node_modules/@deepseek-ai/dsh/lib/bin.js"
+          python -B scripts/test_dsh_host.py --archive $archive --dsh $dsh

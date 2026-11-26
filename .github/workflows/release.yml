@@ -1,0 +1,196 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version already synchronized on main, such as 1.3.2
+        type: string
+        required: true
+      publish:
+        description: Publish the checked build to GitHub and npm
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: formal-release
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Validate release scope
+        env:
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REPOSITORY" != savormundane/miliastra-wonderland-plugin || "$GITHUB_REF" != refs/heads/main ]]; then
+            echo "::error::Use this workflow from main in the official repository."
+            exit 1
+          fi
+          if [[ ! "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::Expected a stable major.minor.patch version."
+            exit 1
+          fi
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Verify the selected candidate
+        env:
+          VERSION: ${{ inputs.version }}
+          PUBLISH: ${{ inputs.publish }}
+        shell: bash
+        run: |
+          if [[ "$(jq -er .version plugin.json)" != "$VERSION" ]]; then
+            echo "::error::The selected version must already be in plugin.json on main."
+            exit 1
+          fi
+          if [[ "$PUBLISH" == true ]]; then
+            tag="refs/tags/v$VERSION"
+            refs=$(git ls-remote origin "$tag" "$tag^{}")
+            target=$(awk 'END { print $1 }' <<< "$refs")
+            if [[ -n "$target" && "$target" != "$GITHUB_SHA" ]]; then
+              echo "::error::$tag already points to another commit."
+              exit 1
+            fi
+          fi
+
+  check:
+    needs: plan
+    uses: ./.github/workflows/ci.yml
+    with:
+      expected_version: ${{ inputs.version }}
+
+  github-release:
+    if: inputs.publish
+    needs: check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: release-candidate
+          path: candidate
+      - name: Verify and publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ inputs.version }}
+        working-directory: candidate
+        shell: bash
+        run: |
+          tag="v$VERSION"
+          zip="Miliastra-Wonderland-$VERSION-agent-plugins-windows-x64.zip"
+          sum="$zip.sha256"
+          actual=$(sha256sum "$zip" | cut -d ' ' -f 1)
+          printf '%s  %s\n' "$actual" "$zip" | cmp - "$sum"
+          jq --exit-status --arg tag "$tag" --arg commit "$GITHUB_SHA" --arg zip "$zip" --arg actual "$actual" \
+            '.tag == $tag and .source_commit == $commit and .assets[$zip] == $actual' release-review.json >/dev/null
+          notes=$(sha256sum release-notes.md | cut -d ' ' -f 1)
+          jq --exit-status --arg notes "$notes" '.notes_sha256 == $notes' release-review.json >/dev/null
+
+          target=$(gh api "repos/$GH_REPO/commits/$tag" --jq .sha 2>/dev/null || true)
+          if [[ -z "$target" ]]; then
+            gh api --method POST "repos/$GH_REPO/git/refs" -f "ref=refs/tags/$tag" -f "sha=$GITHUB_SHA" --silent
+            target=$(gh api "repos/$GH_REPO/commits/$tag" --jq .sha)
+          fi
+          if [[ "$target" != "$GITHUB_SHA" ]]; then
+            echo "::error::$tag belongs to $target; selected commit is $GITHUB_SHA."
+            exit 1
+          fi
+
+          if ! gh release view "$tag" --json isDraft,isPrerelease,assets > release.json; then
+            gh release create "$tag" --verify-tag --draft --title "Miliastra Wonderland $VERSION" --notes-file release-notes.md
+            gh release view "$tag" --json isDraft,isPrerelease,assets > release.json
+          fi
+          jq --exit-status '.isPrerelease == false' release.json >/dev/null
+          if jq --exit-status '.isDraft' release.json >/dev/null; then
+            for asset in "$zip" "$sum"; do
+              if ! jq --exit-status --arg name "$asset" 'any(.assets[]; .name == $name)' release.json >/dev/null; then
+                gh release upload "$tag" "$asset"
+              fi
+            done
+            gh release download "$tag" --dir "$RUNNER_TEMP/github-draft" --pattern "$zip" --pattern "$sum"
+            cmp "$zip" "$RUNNER_TEMP/github-draft/$zip"
+            cmp "$sum" "$RUNNER_TEMP/github-draft/$sum"
+            gh release edit "$tag" --draft=false
+          fi
+          gh release download "$tag" --dir "$RUNNER_TEMP/github-published" --pattern "$zip" --pattern "$sum"
+          cmp "$zip" "$RUNNER_TEMP/github-published/$zip"
+          cmp "$sum" "$RUNNER_TEMP/github-published/$sum"
+          test "$(gh release view "$tag" --json isDraft --jq .isDraft)" = false
+          test "$(gh api "repos/$GH_REPO/commits/$tag" --jq .sha)" = "$GITHUB_SHA"
+
+  npm:
+    if: inputs.publish
+    needs: github-release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '24.22.3'
+          package-manager-cache: false
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: release-candidate
+          path: candidate
+      - name: Install the pinned npm client
+        run: npm install --global --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org npm@12.2.3
+      - name: Publish the tested archive and confirm public availability
+        env:
+          VERSION: ${{ inputs.version }}
+        working-directory: candidate
+        shell: bash
+        run: |
+          package=dsh-miliastra-wonderland
+          archive="$package-$VERSION.tgz"
+          actual=$(sha256sum "$archive" | cut -d ' ' -f 1)
+          printf '%s  %s\n' "$actual" "$archive" | cmp - "$archive.sha256"
+          jq --exit-status --arg version "$VERSION" --arg commit "$GITHUB_SHA" --arg archive "$archive" --arg actual "$actual" \
+            '.version == $version and .source_commit == $commit and .npm.filename == $archive and .assets[$archive] == $actual' release-review.json >/dev/null
+          tarball="https://registry.npmjs.org/$package/-/$archive"
+          verify_registry() {
+            local status
+            status=$(curl -sS --retry 2 --max-time 30 -H 'Cache-Control: no-cache' \
+              -o "$RUNNER_TEMP/npm-version.json" -w '%{http_code}' "https://registry.npmjs.org/$package/$VERSION") || exit 1
+            if [[ "$status" == 404 ]]; then return 1; fi
+            if [[ "$status" != 200 ]]; then
+              echo "::error::npm version endpoint returned $status."
+              exit 1
+            fi
+            jq --exit-status --arg name "$package" --arg version "$VERSION" --arg tarball "$tarball" \
+              '.name == $name and .version == $version and .dist.tarball == $tarball' "$RUNNER_TEMP/npm-version.json" >/dev/null || exit 1
+            curl -fsSL --retry 2 --max-time 60 -o "$RUNNER_TEMP/$archive" "$tarball" || exit 1
+            if ! cmp "$archive" "$RUNNER_TEMP/$archive"; then
+              echo "::error::$package@$VERSION already exists with different archive bytes."
+              exit 1
+            fi
+            local latest
+            latest=$(curl -fsSL --retry 2 --max-time 30 -H 'Cache-Control: no-cache' "https://registry.npmjs.org/$package/latest" | jq -r .version) || exit 1
+            if [[ "$latest" != "$VERSION" ]]; then
+              echo "::error::npm latest points to $latest; expected $VERSION."
+              exit 1
+            fi
+            echo "$package@$VERSION is public and matches the tested archive."
+          }
+          if verify_registry; then exit 0; fi
+          unset NODE_AUTH_TOKEN NPM_TOKEN
+          npm publish "./$archive" --registry=https://registry.npmjs.org/ --access public --tag latest --ignore-scripts --loglevel=warn
+          for attempt in {1..36}; do
+            if verify_registry; then exit 0; fi
+            sleep 25
+          done
+          echo "::error::npm accepted the upload but the release is not publicly available yet. Inspect the npm scan status before retrying."
+          exit 1

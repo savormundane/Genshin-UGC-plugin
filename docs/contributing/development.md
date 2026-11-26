@@ -1,6 +1,8 @@
 # 本地开发与检查
 
-开始前读 [AGENTS.md](../../AGENTS.md)，从 [工程架构](architecture.md) 和 [工具导航](../../scripts/README.md) 找到负责模块。日常开发依据当前检出的源码和配置，正式发行以对应 Git 标签为准。 `plugin.json` 中的版本由定版流程同步，尚未发行的行为记录在 CHANGELOG 的 `Unreleased`。 [变更记录](../../CHANGELOG.md)
+开始前读 [AGENTS.md](../../AGENTS.md)，从 [工程架构](architecture.md) 和 [工具导航](../../scripts/README.md) 找到负责模块。以 `origin/main` 为基线，工作区有用户改动时新建临时分支和工作树。按改动范围跑本地检查，提交并按仓库分支保护规则推送，查看对应提交的 Actions 结果。 [GitHub Actions](https://github.com/savormundane/miliastra-wonderland-plugin/actions)
+
+普通开发在 CHANGELOG 的 `Unreleased` 记录面向创作者的行为变更。版本同步、标签与分发包归[定版流程](maintenance.md#定版与发行)。临时产物放到源码外，核对验证结果后清理可重建的副本及已合并分支。 [变更记录](../../CHANGELOG.md)
 
 ## 配置开发环境
 
@@ -44,7 +46,7 @@ $miliastraPython = (Resolve-Path .\.venv\Scripts\python.exe).Path
 
 通用 Agent Plugins 读取根 `plugin.json` 和 `mcp.json`。Codex 读取 `.codex-plugin/plugin.json` 及其引用的 MCP 文件。Claude Code 读取 `.claude-plugin/plugin.json` 和 `.mcp.json`。DSH 通过 `package.json` 和 `cordis.patch.yml` 加载四个 Skill 和 MCP。 `locale/` 下的中英文资源及 `docs/dsh/` 下的详情用于 DSH 插件介绍。
 
-修改客户端声明时，检查生成清单、包内路径和实际工具发现。在 Claude Code 可用 `claude plugin validate <目录>` 做清单校验。Claude 账户市场使用单独的客户端入口。运行参数及日常安装由各自的文档维护。 [市场与安装](../installation.md) · [运行环境](../runtime-environment.md) · [维护与发行](maintenance.md)
+修改客户端声明时，检查生成清单、包内路径和实际工具发现。通用功能继续复用同一实现。客户端特有入口接到已有功能，并在对应宿主复测。DSH 原生接入使用宿主允许的 Cordis 服务，Claude Code 可用 `claude plugin validate <目录>` 做清单校验，Codex 用隔离市场加载并查看工具。Claude 账户市场使用单独的客户端入口。 [市场与安装](../installation.md) · [运行环境](../runtime-environment.md) · [维护与发行](maintenance.md)
 
 ## 文档维护
 

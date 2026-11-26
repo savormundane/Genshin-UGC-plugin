@@ -36,9 +36,30 @@ python -B scripts/prepare_beyond_revision.py studio/play/session.js --reason "�
 
 ## 定版与发行
 
-1. 从明确的 Git 提交准备独立候选。根目录 `plugin.json` 是发行版本的来源，定版流程同步其它清单、安装器和使用文档中的定版链接。将 CHANGELOG 的待发行条目归入对应版本。
-2. 检查候选差异、文件来源、实际运行和分发结果。Python 依赖变化时，更新 `uv.lock` 和安装器用的 `scripts/runtime-requirements.lock`，再用锁定环境复测。 [本地检查](development.md) · [锁文件](../../uv.lock)
-3. 推送同一份定版源码，创建对应标签及 GitHub Release。采用 Windows ZIP 的发行核对公开附件的 SHA-256。依次核对正式标签、下载文件和各客户端安装所用提交。保存发行、安装和回退记录。 [版本记录](../../CHANGELOG.md) · [回退与卸载](../installation.md#回退与卸载)
+根目录 `plugin.json` 是发行版本的来源。确认目标版本和 `Unreleased` 内容后，在以远端 `main` 为基线的任务分支运行以下命令。它同步插件与 npm 清单、安装器、版本链接，并将待发行条目归入指定版本。
+
+```powershell
+python -B scripts/prepare_release.py --set-version 1.3.2
+```
+
+1. 审阅定版差异并按分支规则合入 `main`。日常 push 和 PR 运行 CI，检查仓库、Windows 运行边界、成品 MCP 和原生 DSH，构建产物由 Actions 短期保存。 [CI 工作流](../../.github/workflows/ci.yml) · [本地检查](development.md)
+2. 在 GitHub 的 Actions 打开 **Release → Run workflow**，选择 `main`，填入已同步的版本。默认关闭 `publish` 时预检同一提交并构建 ZIP、Cordis 包和校验记录，可审阅产物。
+3. 获得正式发布授权后，从同一提交运行 Release 并打开 `publish`。工作流在检查通过后为选定提交创建 `v版本`，验证草稿中的 Windows ZIP 和 SHA-256，再公开 GitHub Release。GitHub 公开成品核对通过后，用 npm 可信发布上传本次验过的 Cordis 包，等待注册表公开并下载比对。
+4. 查看 Git 标签、GitHub 下载件和 npm 公开版本。从正式安装入口分别记录客户端验收；CI 的 MCP 和软件预览范围不含编辑器导入、游戏内运行或桌面图形界面。上传中断时复用同次工作流的产物重跑失败 job。已有标签必须指向同一提交，已公开成品的字节必须匹配。 [Release 工作流](../../.github/workflows/release.yml) · [回退与卸载](../installation.md#回退与卸载)
+
+### 首次连接 npm 可信发布
+
+使用 npm 包的维护者账号，在 `dsh-miliastra-wonderland` 的 **Settings → Trusted publishers** 新增 GitHub Actions 发布者。
+
+| 设置 | 值 |
+| --- | --- |
+| Organization / user | `savormundane` |
+| Repository | `miliastra-wonderland-plugin` |
+| Workflow filename | `release.yml` |
+| Environment | `npm` |
+| Allowed action | `Allow npm publish` |
+
+GitHub **Settings → Environments** 中的 `npm` 环境将部署分支限定为 `main`。工作流通过 OIDC 取短期授权，无需配置 npm token。npm 包已存在，首次绑定还需在两天内完成一次成功的正式发布，宜在下一版即将发布时配置。预检无需 npm 绑定。 [npm 可信发布](https://docs.npmjs.com/trusted-publishers/)
 
 更新依赖锁时，在仓库根运行以下命令。
 

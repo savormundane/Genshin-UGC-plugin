@@ -2,6 +2,7 @@
 
 from pathlib import Path, PureWindowsPath
 import hashlib, json, shutil, subprocess, sys, tempfile, unittest, zipfile
+import os
 from unittest.mock import patch
 from check_repository import check, MANIFESTS, REPO, REQUIRED_FILES
 from marketplace_release import marketplace_files
@@ -34,6 +35,15 @@ class ReleaseTests(unittest.TestCase):
         plugins = WINDOWS_TEST_PROFILE / '.claude/plugins'
         self.assert_legacy_windows_paths_fit(
             plugins / 'marketplaces' / marketplace['name'], members
+        )
+        repository = read_json(root / 'plugin.json')['repository'].rstrip('/')
+        clone_name = '-'.join(repository.rsplit('/', 2)[-2:]) + '..clone'
+        self.assert_legacy_windows_paths_fit(plugins / 'marketplaces' / clone_name, members)
+        isolated_config = PureWindowsPath(
+            'C:/Users/abcde/AppData/Local/Temp/mw-claude-market-12345678'
+        )
+        self.assert_legacy_windows_paths_fit(
+            isolated_config / 'plugins/marketplaces' / clone_name, members
         )
         cache = plugins / 'cache' / marketplace['name'] / plugin['name'] / version
         self.assert_legacy_windows_paths_fit(cache, members)
@@ -267,7 +277,10 @@ class ReleaseTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix='ugc release space ') as td:
             temp = Path(td)
             zip_path = temp / 'plugin.zip'
-            result = build_release(root, zip_path, layout='agent-plugins')
+            result = build_release(
+                root, zip_path, layout='agent-plugins',
+                beyond_native_archive=os.environ.get('MILIASTRA_TEST_BEYOND_ARCHIVE'),
+            )
             restored = extract(zip_path, result['sha256'], temp / 'extracted', plugin['version'])
             lock_path = root / 'vendor/beyond/native-canvas.json'
             locked = (

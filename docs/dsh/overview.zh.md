@@ -15,4 +15,6 @@
 
 ## 本地运行
 
+在支持斜杠命令的 DSH 对话框输入 `/miliastra-check`，查看插件安装自检。无需发起模型对话，MCP 启动失败时也可使用。
+
 完整工具面向 Windows x64。首次准备依赖可能需要联网。 [支持版本和运行要求](https://github.com/savormundane/miliastra-wonderland-plugin/blob/main/docs/compatibility.md#运行要求) · [安装自检](https://github.com/savormundane/miliastra-wonderland-plugin/blob/main/docs/installation.md#安装自检) · [制作教程](https://github.com/savormundane/miliastra-wonderland-plugin/tree/main/samples/creator-demos)
