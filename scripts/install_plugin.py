@@ -13,7 +13,7 @@ import tempfile
 import zipfile
 from runtime_policy import PYTHON_RANGE, supported_python
 
-MANUAL_AGENTS = ('agent-plugins', 'deepseek-harness')
+MANUAL_AGENTS = ('agent-plugins',)
 AGENTS = ('codex', 'claude-code', *MANUAL_AGENTS)
 MCP_SCHEMA = 'https://agent-plugins.org/schemas/1.0.0/mcp.schema.json'
 MCP_NAME = 'miliastra-wonderland'
@@ -54,9 +54,8 @@ def preflight(agent, project=None, outputs=None):
         raise ValueError('请先安装 Node.js 和所选客户端，并确认终端能找到对应命令。')
     version = subprocess.check_output([node, '--version'], text=True).strip()
     match = re.fullmatch(r'v(\d+)\.(\d+)\.(\d+)', version)
-    minimum = (24, 9, 0) if agent == 'deepseek-harness' else (22, 0, 0)
-    if not match or tuple(map(int, match.groups())) < minimum:
-        raise ValueError('请安装 Node.js ' + '.'.join(map(str, minimum)) + ' 或更高版本。')
+    if not match or tuple(map(int, match.groups())) < (22, 0, 0):
+        raise ValueError('请安装 Node.js 22.0.0 或更高版本。')
     if client:
         run([client, 'plugin', '--help'], capture_output=True)
     if project is not None:
@@ -109,45 +108,6 @@ def marketplace_files(agent, version, node, config):
     server = {'type': 'stdio', 'command': 'node',
               'args': ['${PLUGIN_ROOT}/scripts/mcp_launcher.cjs'],
               'env': {'MILIASTRA_WONDERLAND_RUNTIME_CONFIG': str(config)}}
-    if agent == 'deepseek-harness':
-        from marketplace_release import DSH_DETAILS, DSH_ENGINE, DSH_ICON
-
-        bundle = config.parent / 'miliastra-wonderland'
-        # The Cordis YAML loader accepts JSON. Using the existing serializer keeps Windows paths
-        # and Unicode lossless without evaluating expressions or interpolating YAML strings.
-        patch = [{'insert': [
-            {'id': 'miliastra-wonderland-skills', 'name': '@deepseek-ai/dsh-skill-filesystem',
-             'config': {'providerName': 'miliastra-wonderland', 'includeDefaultRoots': False,
-                        'customSkillDirs': [str(bundle / 'skills')]}},
-            {'id': 'miliastra-wonderland-mcp', 'name': '@deepseek-ai/dsh-mcp-client',
-             'config': {'serverName': 'miliastra_wonderland', 'transport': 'stdio', 'command': node,
-                        'args': [str(bundle / 'scripts/mcp_launcher.cjs')], 'env': server['env'],
-                        'cwd': str(bundle), 'toolCallTimeoutMs': 930000, 'failOnStartupError': True}},
-        ]}]
-        local_manifest = {
-            'name': '@local/miliastra-wonderland', 'version': version, 'private': True,
-            'description': 'Miliastra Wonderland Skills and local MCP for DeepSeek Harness',
-            'engines': {'dsh': DSH_ENGINE}, 'files': ['cordis.patch.yml'],
-            'dsh': {'bundle': {'patch': './cordis.patch.yml'}},
-        }
-        files = {
-            Path('cordis-bundle/package.json'): local_manifest,
-            Path('cordis-bundle/cordis.patch.yml'): patch,
-        }
-        package_path = bundle / 'package.json'
-        if linked(bundle) or linked(package_path):
-            raise ValueError('DeepSeek Harness 的插件清单路径指向链接。')
-        if package_path.is_file():
-            package = read_json(package_path)
-            if package.get('icon') == './' + DSH_ICON:
-                paths = [DSH_ICON, *(f'locale/{lang}.json' for lang in DSH_DETAILS), *DSH_DETAILS.values()]
-                for relative in map(Path, paths):
-                    if any(linked(bundle / part) for part in (relative, *relative.parents)):
-                        raise ValueError(f'DeepSeek Harness 的展示资源路径指向链接 {relative}')
-                    files[Path('cordis-bundle') / relative] = (bundle / relative).read_bytes()
-                local_manifest.update(description=package['description'], icon=package['icon'],
-                                      exports=package['exports'], files=[*local_manifest['files'], *paths])
-        return None, files
     if agent == 'claude-code':
         server.update(command=node, args=['${CLAUDE_PLUGIN_ROOT}/scripts/mcp_launcher.cjs'])
         return market, {
@@ -304,6 +264,8 @@ def activate(client, agent, record, previous):
 
 
 def operate(args):
+    if args.agent not in AGENTS:
+        raise ValueError('此客户端不支持通过本地安装器安装。请查看安装指南。')
     manual = args.agent in MANUAL_AGENTS
     if manual and args.action != 'install':
         raise ValueError('请在对应客户端中管理插件登记、回退或卸载。已准备的文件保存在本地。')
@@ -443,12 +405,8 @@ def operate(args):
         run([*smoke, '--adapter', args.agent])
         result = {'prepared': args.version, 'agent': args.agent, 'runtime_smoke': 'passed',
                   'registration': 'pending_host_registration', 'agent_host_load': 'not_checked',
-                  'plugin_directory': str(bundle), 'config': str(config)}
-        if args.agent == 'deepseek-harness':
-            result.update(bundle_directory=str(home / 'cordis-bundle'),
-                          next='在选定的 DeepSeek Harness 配置中，从插件页面添加安装目录。')
-        else:
-            result['next'] = '在客户端中使用 plugin_directory 导入本地插件。'
+                  'plugin_directory': str(bundle), 'config': str(config),
+                  'next': '在客户端中使用 plugin_directory 导入本地插件。'}
         save(home / 'preparation.json', result)
         journal.unlink()
         return result

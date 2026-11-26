@@ -59,14 +59,6 @@ claude plugin install miliastra-wonderland@miliastra-wonderland
 
 运行 `claude plugin list` 查看启用状态，然后开启新会话。 [Claude Code 插件说明](https://code.claude.com/docs/en/plugins/install)
 
-### DeepSeek Harness 命令行
-
-在终端将插件安装到 DSH 的 Web 配置。
-
-```powershell
-dsh plugin --profile web add https://github.com/savormundane/miliastra-wonderland-plugin
-```
-
 ## 本地安装
 
 ### 从本地目录导入

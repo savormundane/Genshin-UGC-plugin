@@ -1,5 +1,5 @@
 ﻿param(
-    [ValidateSet('codex', 'claude-code', 'agent-plugins', 'deepseek-harness')][string]$Agent = 'codex',
+    [ValidateSet('codex', 'claude-code', 'agent-plugins')][string]$Agent = 'codex',
     [ValidateSet('install', 'rollback', 'uninstall')][string]$Action = 'install',
     [string]$Version = '1.2.0',
     [switch]$Resume,
@@ -108,7 +108,7 @@ function Get-RetainedHome($Record, [string]$InstallRoot) {
 
 # Recovery uses the retained installation at the selected root.
 if ($Action -ne 'install') {
-    if ($Agent -in @('agent-plugins', 'deepseek-harness')) {
+    if ($Agent -eq 'agent-plugins') {
         throw '[install.arguments] 请在对应客户端中管理插件登记、回退或卸载。已准备的文件保存在本地。'
     }
     $recordName = $Agent + '.json'

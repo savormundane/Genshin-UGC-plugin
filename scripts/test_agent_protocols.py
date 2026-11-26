@@ -403,20 +403,7 @@ class ProtocolTests(unittest.TestCase):
         for agent in installer.AGENTS:
             with self.subTest(agent=agent):
                 market, files = installer.marketplace_files(agent, '3.8.0', node, config)
-                if agent == 'deepseek-harness':
-                    self.assertIsNone(market)
-                    manifest = files[Path('cordis-bundle/package.json')]
-                    patch_file = manifest['dsh']['bundle']['patch']
-                    self.assertEqual(manifest['version'], '3.8.0')
-                    self.assertEqual(manifest['engines'], installer.read_json(ROOT / 'package.json')['engines'])
-                    skills, mcp = files[Path('cordis-bundle') / patch_file][0]['insert']
-                    self.assertEqual(skills['name'], '@deepseek-ai/dsh-skill-filesystem')
-                    self.assertFalse(skills['config']['includeDefaultRoots'])
-                    self.assertEqual(skills['config']['customSkillDirs'], [str(home / 'miliastra-wonderland/skills')])
-                    self.assertEqual(mcp['name'], '@deepseek-ai/dsh-mcp-client')
-                    self.assertEqual(mcp['config']['args'], [str(home / 'miliastra-wonderland/scripts/mcp_launcher.cjs')])
-                    self.assertEqual(mcp['config']['env']['MILIASTRA_WONDERLAND_RUNTIME_CONFIG'], str(config))
-                elif agent == 'claude-code':
+                if agent == 'claude-code':
                     self.assertIn(Path('.claude-plugin/marketplace.json'), files)
                     server, = files[Path('miliastra-wonderland/.mcp.json')]['mcpServers'].values()
                     self.assertEqual(server['args'], ['${CLAUDE_PLUGIN_ROOT}/scripts/mcp_launcher.cjs'])
@@ -440,11 +427,6 @@ class ProtocolTests(unittest.TestCase):
                 requirements = ['plugin.json', '.codex-plugin/plugin.json', '.claude-plugin/plugin.json',
                                 'mcp.json', '.mcp.json', 'LICENSE', 'scripts/runtime-requirements.lock',
                                 'scripts/mcp_launcher.cjs', 'vendor/beyond/bundle.json']
-                if agent == 'deepseek-harness':
-                    from marketplace_release import DSH_DETAILS, DSH_ICON
-
-                    presentation = [DSH_ICON, *(f'locale/{lang}.json' for lang in DSH_DETAILS), *DSH_DETAILS.values()]
-                    requirements.extend(['package.json', *presentation])
                 with zipfile.ZipFile(archive, 'w') as output:
                     for relative in requirements:
                         output.write(ROOT / relative, 'miliastra-wonderland/' + relative)
@@ -472,19 +454,6 @@ class ProtocolTests(unittest.TestCase):
                     self.assertFalse((args.root / (agent + '.json')).exists())
                     args.resume = True
                     run.side_effect = None
-                    if agent == 'deepseek-harness':
-                        cordis = home / 'cordis-bundle'
-                        meta = installer.read_json(cordis / 'package.json')
-                        self.assertEqual(meta['icon'], './' + DSH_ICON)
-                        self.assertEqual(meta['exports']['./locale/*.json'], './locale/*.json')
-                        for item in presentation:
-                            self.assertIn(item, meta['files'])
-                            self.assertEqual((cordis / item).read_bytes(), (ROOT / item).read_bytes())
-                        page = cordis / DSH_DETAILS['zh']
-                        page.write_bytes(b'Tampered')
-                        with self.assertRaisesRegex(ValueError, '安装与 ZIP 或安装器配置不一致'):
-                            installer.operate(args)
-                        page.write_bytes((ROOT / DSH_DETAILS['zh']).read_bytes())
                     result = installer.operate(args)
                     self.assertEqual(result['registration'], 'pending_host_registration')
                     self.assertEqual(result['agent_host_load'], 'not_checked')
