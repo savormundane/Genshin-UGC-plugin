@@ -16,6 +16,8 @@ description: 查询千星奇域节点签名和端口，编写、检查和编译�
 
 编写时按实际类型、端口和事件连接，检查图变量、结构体与复合引脚。 [编写规则](../../references/graph-code/graph-authoring.md) · [语法与完整文件示例](../../references/graph-code/graph-code-syntax.md#完整文件示例) · [编译错误](../../references/graph-code/validation-fixes.md)
 
+编译使用可信的工程来源。信号和结构体资源中的 ID、类型和数据用顶层常量声明。
+
 独立交付图或只检查源码时走上表。需要引用本轮新建对象并与 Lua、GIL 一起交付时，按 [produce 的具名绑定](../../references/workflows/produce.md#按名称连接制作阶段) 协作。文件挂载交给 [Miliastra GIL](../miliastra-gil/SKILL.md)，客户端控件和脚本交给 [Miliastra Editor](../miliastra-editor/SKILL.md#client-lua)。
 
 修改已有图时，从目标工程核对图 ID、作用域和引用。编译后把 GIA 路径交给 `native_plan`，沿用同一基底摘要，审阅后另存并回读。 [修改计划](../../references/gil/native-changes.md#审阅并另存已有工程)

@@ -17,7 +17,11 @@
     "app.runtime",
     "ugc_file_tools.unified_cli",
     "app.cli.commands",
-    "app.cli.graph_tools"
+    "app.cli.graph_tools",
+    "engine.resources.definition_schema_view",
+    "ugc_file_tools.signal_writeback.gia_export",
+    "ugc_file_tools.project_archive_importer.ingame_save_structs_importer",
+    "ugc_file_tools.project_archive_importer.struct_definitions_importer_parts"
   ],
   "excluded": [
     "GUI launcher",
@@ -2442,7 +2446,7 @@
       "source_sha256": "e83138a7f16120055a8cb04e9ba6fed2f59d42a7b5fd56b3b2722a6284b84ff4"
     },
     "private_extensions/ugc_file_tools/project_archive_importer/ingame_save_structs_importer.py": {
-      "sha256": "2dbb6cc2bca62bd764407f89cade89d377c344639c5b520117e6c183b732f87c",
+      "sha256": "03200185544532e300dd4690facaf615da61be486f605071c13690ef88cb3617",
       "source_sha256": "8d8e87d22416ab98a3362a0766b89503e623ada678d0180d10de40ae29628146"
     },
     "private_extensions/ugc_file_tools/pipelines/gil_to_project_archive.py": {
@@ -2714,7 +2718,7 @@
       "source_sha256": "d0792360a3e6f5c9b04ac9548811c8c19ba1f3b9ec70118fb6d55cc5076022c8"
     },
     "private_extensions/ugc_file_tools/project_archive_importer/struct_definitions_importer_parts/importer.py": {
-      "sha256": "59e27664dbc581438e66957108508a7c9cc99d596226598a457d836e5c291b63",
+      "sha256": "7370eb0b3bc81799796903015771651d67ee5b8dca16b4cd273348b107edd5b8",
       "source_sha256": "bdaa922f9ffd3cdf56177cdf0796ac628528a13b9186cd30a35feff843530eeb"
     },
     "private_extensions/ugc_file_tools/project_archive_importer/struct_definitions_importer_parts/node_defs.py": {
@@ -2722,7 +2726,7 @@
       "source_sha256": "57cb6f99db36d757350e7644d85a817d482d3298545f566e45336f20b089f6e2"
     },
     "private_extensions/ugc_file_tools/project_archive_importer/struct_definitions_importer_parts/paths.py": {
-      "sha256": "d7c0d28d16ea0207c9ea2b407038b86639450244d098a1b6f94f7ac272a355df",
+      "sha256": "429247b6001a1f3793eee6efb2a309a8bd3a720fb5c5c07cafc05047fa3f84bf",
       "source_sha256": "334ee171ff597b398edee670935a9daa67b01ce59b95515b7953fd5b7682f088"
     },
     "private_extensions/ugc_file_tools/project_archive_importer/struct_definitions_importer_parts/types.py": {
@@ -3586,7 +3590,7 @@
       "source_sha256": "647f81722be8cbf62cf4a81a046f451cccc6164a77cf342dbd367cebd1641aaf"
     },
     "engine/resources/definition_schema_view.py": {
-      "sha256": "d3ec5014fd8fbfcf1e95cee307d1c10c688c92d121f263dd545483790e8bb3cc",
+      "sha256": "5045022fbc859be8cd15d75facecfcd6eeeb07620ee34dedbb52d84b93cd3a69",
       "source_sha256": "bfddad062b67466b7aa08c9e37c019a959d2f0f3345054600f9e8898ec205d56"
     },
     "engine/resources/ingame_save_template_schema_view.py": {
@@ -3834,7 +3838,7 @@
       "source_sha256": "f54b3c4ae77b7012de72fac4e95c79753acb93d042cc781e2ac40c51d3ef2767"
     },
     "private_extensions/ugc_file_tools/signal_writeback/gia_export.py": {
-      "sha256": "4b876b65da413d10cfdf3a7e6af6a499b90cc1bf5204d084c348e1b4455d2ab1",
+      "sha256": "7f48abbfd5b42d2d6ec5f6447cdaaf7c936dc2dcc3a41ce464842782808dbd2a",
       "source_sha256": "6268e8d1a050c3054867b337ab0bc93e54451ec3bc39d871f6998bff2bd08ac4"
     },
     "private_extensions/ugc_file_tools/signal_writeback/signal_node_def_units_builder.py": {

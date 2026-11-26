@@ -94,6 +94,7 @@ def server(bridge):
     async def graph_build(spec: str, output: str, ctx: Context, sha256: str | None = None) -> dict[str, Any]:
         """Compile Graph Code into independent GIA files.
 
+        Use trusted project sources. Signal definitions must use static declarations.
         To add one to an existing GIL, pass its GIA path as the source of an
         append_graph operation in native_plan with allowed_top_level_fields=[10].
         """
@@ -191,7 +192,10 @@ def server(bridge):
                           contract_sha256=contract_sha256,mapping=mapping)
     @app.tool(structured_output=True)
     async def produce(spec:str,sha256:str,output:str,ctx:Context,summary:bool=False)->dict[str,Any]:
-        """Build a trusted project into a new output directory; cancellation prevents commit."""
+        """Build a trusted project into a new output directory. Cancellation prevents commit.
+
+        Signal and struct definitions must use static declarations.
+        """
         return await call('produce',ctx,spec=spec,sha256=sha256,output=output,summary=summary)
     @app.tool(structured_output=True)
     async def native_apply(input:str,sha256:str,plan:str,plan_sha256:str,output:str,ctx:Context)->dict[str,Any]:

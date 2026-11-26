@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- 节点图信号导出和 GIL 的结构体写回改用静态资源声明。
 - Beyond 预览在 Lua 挂载、启动或回调报错时返回失败，并保留已生成的画面、控件树和日志。
 - MCP 场景预览直接附上俯视图和侧视图，Beyond 预览附上软件画面，失败时一并说明原因。
 - DeepSeek Harness 从插件页添加 GitHub 仓库地址，移除了 PowerShell 安装入口。

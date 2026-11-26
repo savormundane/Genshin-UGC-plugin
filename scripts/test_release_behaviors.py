@@ -19,6 +19,130 @@ from delivery_verify import verify
 
 
 class ReleaseBehaviorTests(unittest.TestCase):
+    def test_static_project_resources_compile_and_write_back(self):
+        from miliastra.native.core import get, model
+        from miliastra.native.signals import audit_gia_signals, declared_ports
+        from node_build import build as compile_graphs
+
+        runtime = PLUGIN / 'vendor/ayaya'
+        extension_root = runtime / 'private_extensions'
+        seed = extension_root / 'ugc_file_tools/builtin_resources/seeds/ingame_save_structs_bootstrap.gil'
+        original_seed = seed.read_bytes()
+        source = '''"""
+graph_id: static_definition_graph
+graph_name: StaticDefinitionGraph
+graph_type: server
+"""
+from app.runtime.engine.graph_prelude_server import *
+
+class StaticDefinitionGraph:
+    def __init__(self, game, owner_entity):
+        self.game = game
+        self.owner_entity = owner_entity
+    def on_实体创建时(self, 事件源实体, 事件源GUID):
+        发送信号(self.game, 信号名="NeutralDefinitionSignal", number=3, label="hello")
+    def register_handlers(self):
+        return
+'''
+        with tempfile.TemporaryDirectory(prefix='miliastra static resources ') as temporary:
+            root = Path(temporary)
+            resources = root / 'resources/管理配置'
+            signal = resources / '信号/signal.py'
+            basic = resources / '结构体定义/基础结构体/basic.py'
+            ingame = resources / '结构体定义/局内存档结构体/save.py'
+            for path in (signal, basic, ingame):
+                path.parent.mkdir(parents=True, exist_ok=True)
+            signal.write_text(
+                'NAME = "NeutralDefinitionSignal"\nSIGNAL_ID: str = NAME\n'
+                'PARAMS = [{"name": "number", "parameter_type": "整数"}, '
+                '{"name": "label", "parameter_type": "字符串"}]\n'
+                'SIGNAL_PAYLOAD = {"signal_name": NAME, "parameters": PARAMS}\n',
+                encoding='utf-8',
+            )
+            for path, identity, name in (
+                (basic, '200001', 'StaticBasicFixture'), (ingame, '200002', 'StaticSaveFixture'),
+            ):
+                payload = {
+                    'type': 'Struct', 'struct_name': name, 'struct_ype': 'basic',
+                    'fields': [{'field_name': 'value', 'param_type': '整数', 'default_value': {'value': 0}}],
+                }
+                path.write_text(
+                    f'IDENTITY = {identity!r}\nSTRUCT_ID: str = IDENTITY\n'
+                    f'STRUCT_TYPE = "basic"\nBODY = {payload!r}\nSTRUCT_PAYLOAD = BODY\n',
+                    encoding='utf-8',
+                )
+            original_sources = {path: path.read_bytes() for path in (signal, basic, ingame)}
+            (root / 'graph.py').write_text(source, encoding='utf-8')
+            spec = root / 'build.json'
+            write_json(spec, {
+                'schema': 1, 'graphs': [{'source': 'graph.py'}],
+                'formats': ['gia'], 'project_resources': 'resources',
+            })
+            output = root / 'compiled'
+            self.assertEqual(compile_graphs(spec, output)['graphs'], 1)
+            artifact, = (output / 'gia').glob('*.gia')
+            graph = model(artifact.read_bytes())
+            issues, unknown, declarations = audit_gia_signals(graph)
+            self.assertFalse(issues or unknown)
+            self.assertEqual({row['role'] for row in declarations.values()}, {1, 2, 7})
+            definition, = [key for key, row in declarations.items() if row['role'] == 1]
+            self.assertEqual(declarations[definition]['name'], 'NeutralDefinitionSignal')
+            ports = declared_ports(graph['definitions'][definition])
+            self.assertEqual([get(ports[3, index], 1) for index in (0, 1)], [b'number', b'label'])
+
+            with patch.object(sys, 'path', [str(runtime), str(extension_root), *sys.path]), \
+                    patch('runpy.run_path', side_effect=AssertionError('Resource definition executed as Python')):
+                from ugc_file_tools.project_archive_importer import ingame_save_structs_importer as save_import
+                from ugc_file_tools.project_archive_importer.struct_definitions_importer_parts import importer as basic_import
+                from ugc_file_tools.signal_writeback import gia_export
+
+                project = root / 'resources'
+                basic_output, final = root / 'basic.gil', root / 'final.gil'
+
+                def write_basic(destination):
+                    with patch.object(basic_import, 'resolve_output_file_path_in_out_dir', return_value=destination):
+                        return basic_import.import_struct_definitions_from_project_archive_to_gil(
+                            project_archive_path=project, input_gil_file_path=seed,
+                            output_gil_file_path=destination,
+                            options=basic_import.StructImportOptions(mode='merge', include_struct_ids=['200001']),
+                        )
+
+                def write_ingame(destination):
+                    with patch.object(save_import, 'resolve_output_file_path_in_out_dir', return_value=destination):
+                        return save_import.import_ingame_save_structs_from_project_archive_to_gil(
+                            project_archive_path=project, input_gil_file_path=basic_output,
+                            output_gil_file_path=destination,
+                            options=save_import.IngameSaveStructImportOptions(mode='merge', include_struct_ids=['200002']),
+                        )
+
+                self.assertEqual(len(write_basic(basic_output)['added_struct_ids']), 1)
+                self.assertEqual(write_ingame(final)['added_struct_names'], ['StaticSaveFixture'])
+                bodies = [get(row, 1) for row in model(final.read_bytes())['structs']]
+                definitions = {get(body, 501): get(body, 2, 0) for body in bodies}
+                self.assertIn(b'StaticBasicFixture', definitions)
+                self.assertNotEqual(definitions[b'StaticBasicFixture'], 2)
+                self.assertEqual(definitions[b'StaticSaveFixture'], 2)
+                self.assertEqual(seed.read_bytes(), original_seed)
+                self.assertEqual({path: path.read_bytes() for path in original_sources}, original_sources)
+
+                rejected = root / 'rejected.gil'
+                for path, field, action in (
+                    (signal, 'SIGNAL_PAYLOAD', lambda: gia_export.collect_basic_signal_py_records(
+                        project_archive_path=project
+                    )),
+                    (basic, 'STRUCT_PAYLOAD', lambda: write_basic(rejected)),
+                    (ingame, 'STRUCT_TYPE', lambda: write_ingame(rejected)),
+                ):
+                    with self.subTest(definition=path.name):
+                        lines = path.read_text(encoding='utf-8').splitlines()
+                        lines = [f'{field} = UNDEFINED_CONSTANT' if line.startswith(field + ' = ') else line
+                                 for line in lines]
+                        path.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+                        with self.assertRaisesRegex(ValueError, rf'{path.name}.*{field}'):
+                            action()
+                        self.assertFalse(rejected.exists())
+                        path.write_bytes(original_sources[path])
+
     @unittest.skipUnless(find_spec('lupa') and find_spec('lupa.lua53'), 'Lua compile check requires lupa.lua53')
     def test_gil_bound_fit_creates_reviewed_mount(self):
         from joint_simulator import script_from_gil

@@ -58,6 +58,8 @@ python scripts/qianxing.py graph bind NEW.gil --from OLD.gil --bindings OLD_BIND
 
 默认只新增明确列出的图。要修改已有同名图，请用有样本依据的局部补丁流程。需要信号、结构体、实体或模板时，设置 `project_resources` 和 `include_sections`，按需选择 `graphs`、`signals`、`structs`、`templates` 或 `instances`。所有图源码都在 `graphs` 中明确声明，辅助资源目录只放图所需的资源。HTML UI 通过离线工具链生成当前 bundle，再按其资源导出流程更新。
 
+编译使用可信的工程来源。信号的 `SIGNAL_ID`、`SIGNAL_PAYLOAD`，以及结构体的 `STRUCT_ID`、`STRUCT_PAYLOAD` 和局内存档的 `STRUCT_TYPE` 使用顶层常量声明。导出和写回从这些声明静态读取数据，无法读取时会指出文件和字段。
+
 `max_stored_nodes` 是本次任务可选的离线节点预算。复合节点展开后的数量以编辑器为准，项目经验倍率只适用于对应项目。
 
 需要验证图已挂载到实体时，可在 `required_mounts` 中逐项指定 `graph_name` 和 `entity_id`。这些标识来自当前文件，或由 Agent 根据已核验的结构创建的资源。构建命令只核对这些绑定。需要新增宿主或挂载时，先按有样本依据的流程写回，再核验。报告只确认明确检查过的挂载，能否游玩需另行验证。缺少指定绑定时，构建会拒绝交付。

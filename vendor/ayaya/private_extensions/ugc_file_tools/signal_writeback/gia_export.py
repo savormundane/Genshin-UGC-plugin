@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import runpy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Sequence, Tuple
 
+from engine.resources.definition_schema_view import read_code_definition
 from ugc_file_tools.fs_naming import sanitize_file_stem
 from ugc_file_tools.gia.container import unwrap_gia_container, wrap_gia_container
 from ugc_file_tools.gia.varbase_semantics import decoded_field_map_to_numeric_message
@@ -142,18 +142,12 @@ def collect_basic_signal_py_records(*, project_archive_path: Path | None) -> Lis
     by_id: Dict[str, BasicSignalPyRecord] = {}
 
     def _load_record(py_path: Path, *, scope: str) -> BasicSignalPyRecord | None:
-        env = runpy.run_path(str(py_path))
-        sid_raw = env.get("SIGNAL_ID")
-        if sid_raw is None:
-            # 允许目录下存在辅助脚本，但必须显式不定义 SIGNAL_ID
+        definition = read_code_definition(py_path, id_name="SIGNAL_ID", payload_name="SIGNAL_PAYLOAD")
+        if definition is None:
+            # 允许目录下存在不含信号声明的辅助文件。
             return None
-        sid = str(sid_raw or "").strip()
-        if sid == "":
-            raise ValueError(f"SIGNAL_ID 为空：{str(py_path)}")
-
-        payload = env.get("SIGNAL_PAYLOAD")
-        if not isinstance(payload, dict):
-            raise ValueError(f"SIGNAL_PAYLOAD 缺失或不是 dict：{str(py_path)}")
+        sid = definition["SIGNAL_ID"].strip()
+        payload = definition["SIGNAL_PAYLOAD"]
         name = str(payload.get("signal_name") or "").strip()
         if name == "":
             raise ValueError(f"SIGNAL_PAYLOAD.signal_name 为空：{str(py_path)}")

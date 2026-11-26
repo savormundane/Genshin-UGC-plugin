@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import copy
-import runpy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 import ugc_file_tools.struct_def_writeback as struct_writer
+from engine.resources.definition_schema_view import read_code_definition
 from ugc_file_tools.repo_paths import repo_root
 from ugc_file_tools.decode_gil import decode_bytes_to_python
 from ugc_file_tools.gil_dump_codec.gil_container import build_gil_file_bytes_from_payload, read_gil_container_spec
@@ -15,6 +15,7 @@ from ugc_file_tools.gil_dump_codec.protobuf_like import (
     format_binary_data_hex_text,
     parse_binary_data_hex_text,
 )
+from ugc_file_tools.gil_dump_codec.protobuf_like_bridge import decoded_field_map_to_numeric_message
 from ugc_file_tools.output_paths import resolve_output_file_path_in_out_dir
 from ugc_file_tools.struct_type_id_registry import (
     resolve_struct_field_type_id,
@@ -408,7 +409,7 @@ def _resolve_graph_generater_root(project_archive_path: Path) -> Path:
     )
 
 
-def _collect_ingame_save_struct_py_files_in_scope(project_archive_path: Path) -> List[Path]:
+def _collect_ingame_save_struct_definitions(project_archive_path: Path) -> Dict[str, Tuple[Path, Dict[str, Any]]]:
     """
     对齐 Graph_Generater 的代码级 Schema 作用域：
     - 共享根 + 当前项目存档根
@@ -425,35 +426,25 @@ def _collect_ingame_save_struct_py_files_in_scope(project_archive_path: Path) ->
     )
 
     # 先加载共享，再用项目覆盖同 STRUCT_ID（避免重复导入）
-    by_id: Dict[str, Path] = {}
-    for p in shared_files:
-        struct_id, _struct_type, _payload = _load_struct_payload_from_py(Path(p))
-        by_id[str(struct_id)] = Path(p)
-    for p in project_files:
-        struct_id, _struct_type, _payload = _load_struct_payload_from_py(Path(p))
-        by_id[str(struct_id)] = Path(p)
+    by_id = {}
+    for path in (*shared_files, *project_files):
+        definition = read_code_definition(
+            path, id_name="STRUCT_ID", payload_name="STRUCT_PAYLOAD", required=("STRUCT_TYPE",)
+        )
+        if definition is None:
+            raise ValueError(f"STRUCT_ID missing/invalid: {path}")
+        struct_type = definition["STRUCT_TYPE"]
+        if not isinstance(struct_type, str) or not struct_type.strip():
+            raise ValueError(f"STRUCT_TYPE missing/invalid: {path}")
+        by_id[str(definition["STRUCT_ID"])] = (path, definition["STRUCT_PAYLOAD"])
 
     # 稳定排序：按路径
-    return sorted([p.resolve() for p in by_id.values()], key=lambda x: x.as_posix())
+    return dict(sorted(by_id.items(), key=lambda item: item[1][0].as_posix()))
 
 
 def collect_ingame_save_struct_py_files_in_scope(project_archive_path: Path) -> List[Path]:
     """Public API (no leading underscores)."""
-    return _collect_ingame_save_struct_py_files_in_scope(project_archive_path)
-
-
-def _load_struct_payload_from_py(path: Path) -> Tuple[str, str, Dict[str, Any]]:
-    env = runpy.run_path(str(path))
-    struct_id = env.get("STRUCT_ID")
-    struct_type = env.get("STRUCT_TYPE")
-    payload = env.get("STRUCT_PAYLOAD")
-    if not isinstance(struct_id, str) or not struct_id.strip():
-        raise ValueError(f"STRUCT_ID missing/invalid: {str(path)}")
-    if not isinstance(struct_type, str) or not struct_type.strip():
-        raise ValueError(f"STRUCT_TYPE missing/invalid: {str(path)}")
-    if not isinstance(payload, dict):
-        raise ValueError(f"STRUCT_PAYLOAD missing/invalid: {str(path)}")
-    return str(struct_id), str(struct_type), payload
+    return [path for path, _ in _collect_ingame_save_struct_definitions(project_archive_path).values()]
 
 
 def import_ingame_save_structs_from_project_archive_to_gil(
@@ -478,23 +469,18 @@ def import_ingame_save_structs_from_project_archive_to_gil(
     if mode not in {"merge", "overwrite"}:
         raise ValueError(f"unsupported mode: {mode!r}")
 
-    struct_py_files = _collect_ingame_save_struct_py_files_in_scope(project_path)
-    if not struct_py_files:
+    definitions = _collect_ingame_save_struct_definitions(project_path)
+    if not definitions:
         raise ValueError(f"项目存档缺少局内存档结构体定义：{str(project_path)}")
 
     wanted_ids = [str(x or "").strip() for x in list(getattr(options, "include_struct_ids", None) or [])]
     wanted_ids = [x for x in wanted_ids if x]
     if wanted_ids:
-        by_id: Dict[str, Path] = {}
-        for p in struct_py_files:
-            env = runpy.run_path(str(p))
-            sid = env.get("STRUCT_ID")
-            if isinstance(sid, str) and sid.strip():
-                by_id[str(sid).strip()] = Path(p)
-        missing = sorted(list(set(wanted_ids) - set(by_id.keys())), key=lambda t: t.casefold())
+        definitions = {source_id.strip(): definition for source_id, definition in definitions.items()}
+        missing = sorted(set(wanted_ids) - definitions.keys(), key=str.casefold)
         if missing:
             raise ValueError(f"选择的局内存档结构体不存在于当前作用域（共享+项目）：{missing}")
-        struct_py_files = [by_id[sid] for sid in wanted_ids]
+    selected_ids = wanted_ids or list(definitions)
 
     raw_dump_object = struct_writer._dump_gil_to_raw_json_object(input_path)
     payload_root = raw_dump_object.get("4")
@@ -584,13 +570,9 @@ def import_ingame_save_structs_from_project_archive_to_gil(
     skipped_struct_names: List[str] = []
     imported_structs: List[Dict[str, Any]] = []
 
-    for py_path in struct_py_files:
-        source_struct_id, source_struct_type, source_payload = _load_struct_payload_from_py(py_path)
+    for source_id in selected_ids:
+        py_path, source_payload = definitions[source_id]
         struct_name, normalized_fields = _normalize_struct_payload_to_fields(source_payload)
-
-        # 局内存档结构体导入：强制视为 ingame_save（写回时会设置 struct_message.field_2=2）
-        _ = source_struct_id
-        _ = source_struct_type
 
         existing = existing_struct_name_to_id_and_index.get(struct_name)
         target_struct_id: Optional[int] = None
@@ -679,7 +661,7 @@ def import_ingame_save_structs_from_project_archive_to_gil(
 
         # 防御性：归一化 decode_gil 的非法 field_0
         struct_writer._sanitize_decoded_invalid_field0_message_nodes(new_decoded)
-        dump_json_message = struct_writer._decoded_field_map_to_dump_json_message(new_decoded)
+        dump_json_message = decoded_field_map_to_numeric_message(new_decoded, prefer_raw_hex_for_utf8=True)
         blob_bytes = encode_message(dump_json_message)
         blob_text = format_binary_data_hex_text(blob_bytes)
 
@@ -719,7 +701,7 @@ def import_ingame_save_structs_from_project_archive_to_gil(
         "output_gil": str(output_path),
         "mode": mode,
         "bootstrap_template_gil": (str(Path(bootstrap_template_gil_file_path).resolve()) if bootstrap_template_gil_file_path is not None else None),
-        "source_struct_py_files_count": len(struct_py_files),
+        "source_struct_py_files_count": len(selected_ids),
         "template_struct_id_for_node_defs": int(template_struct_id_for_node_defs),
         "imported_structs": imported_structs,
         "added_struct_names": sorted(set(added_struct_names)),

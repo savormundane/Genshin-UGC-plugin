@@ -11,6 +11,7 @@ from ugc_file_tools.gil_dump_codec.protobuf_like import (
     format_binary_data_hex_text,
     parse_binary_data_hex_text,
 )
+from ugc_file_tools.gil_dump_codec.protobuf_like_bridge import decoded_field_map_to_numeric_message
 from ugc_file_tools.output_paths import resolve_output_file_path_in_out_dir
 
 from .basic_py_blob import (
@@ -19,7 +20,7 @@ from .basic_py_blob import (
     _find_basic_template_blob_text,
 )
 from .node_defs import ensure_struct_node_defs, choose_template_struct_id_for_node_defs
-from .paths import collect_basic_struct_py_files_in_scope, iter_struct_decoded_files
+from .paths import collect_basic_struct_definitions, iter_struct_decoded_files
 from .types import StructImportOptions
 
 
@@ -86,35 +87,17 @@ def import_struct_definitions_from_project_archive_to_gil(
     wanted_struct_ids = [str(x or "").strip() for x in list(getattr(options, "include_struct_ids", None) or [])]
     wanted_struct_ids = [x for x in wanted_struct_ids if x]
 
-    decoded_files = iter_struct_decoded_files(project_path)
-    basic_struct_py_files: List[Path] = []
-    use_py_fallback = False
+    # 显式选择按 STRUCT_ID 使用代码级定义。没有选择时优先使用 decoded-json。
+    decoded_files = [] if wanted_struct_ids else iter_struct_decoded_files(project_path)
+    definitions = {} if decoded_files else collect_basic_struct_definitions(project_path)
     if wanted_struct_ids:
-        # 显式选择：强制走代码级结构体写回（按 STRUCT_ID 过滤），避免 decoded-json 与选择粒度不一致导致“选了但没生效”。
-        decoded_files = []
-        basic_struct_py_files = collect_basic_struct_py_files_in_scope(project_path)
-        if not basic_struct_py_files:
+        if not definitions:
             raise ValueError("已选择写回结构体（按 STRUCT_ID 过滤），但当前作用域未发现任何基础结构体 .py。")
-
-        import runpy
-
-        by_id: Dict[str, Path] = {}
-        for p in basic_struct_py_files:
-            env = runpy.run_path(str(p))
-            sid = env.get("STRUCT_ID")
-            if isinstance(sid, str) and sid.strip():
-                by_id[str(sid).strip()] = Path(p)
-
-        missing = sorted(list(set(wanted_struct_ids) - set(by_id.keys())), key=lambda t: t.casefold())
+        missing = sorted(set(wanted_struct_ids) - definitions.keys(), key=str.casefold)
         if missing:
             raise ValueError(f"选择的结构体不存在于当前作用域（共享+项目）：{missing}")
-        basic_struct_py_files = [by_id[sid] for sid in wanted_struct_ids]
-        use_py_fallback = True
-    else:
-        if not decoded_files:
-            basic_struct_py_files = collect_basic_struct_py_files_in_scope(project_path)
-            use_py_fallback = bool(basic_struct_py_files)
-    if not decoded_files and not use_py_fallback:
+    selected_ids = wanted_struct_ids or list(definitions)
+    if not decoded_files and not selected_ids:
         raise ValueError(
             "项目存档缺少可写回的基础结构体定义：\n"
             f"- decoded-json：{str(project_path / '管理配置/结构体定义/原始解析')}\n"
@@ -149,7 +132,7 @@ def import_struct_definitions_from_project_archive_to_gil(
     existing_internal_ids = struct_writer._collect_existing_struct_internal_ids(struct_blob_list)
     next_internal_id = (max(existing_internal_ids) + 2) if existing_internal_ids else 2
     template_decoded: Dict[str, Any] | None = None
-    if use_py_fallback:
+    if selected_ids:
         template_blob_text = _find_basic_template_blob_text(struct_blob_list)
         template_decoded = _decode_struct_template_to_decoded_field_map(blob_text=template_blob_text)
 
@@ -165,7 +148,7 @@ def import_struct_definitions_from_project_archive_to_gil(
             # 在重编码前需归一化，否则 encoder 会因 field_number=0 抛错。
             struct_writer._sanitize_decoded_invalid_field0_message_nodes(decoded_blob)
             # 将 decoded -> bytes -> <binary_data>
-            dump_json_message = struct_writer._decoded_field_map_to_dump_json_message(decoded_blob)
+            dump_json_message = decoded_field_map_to_numeric_message(decoded_blob, prefer_raw_hex_for_utf8=True)
             blob_bytes = encode_message(dump_json_message)
             blob_text = format_binary_data_hex_text(blob_bytes)
 
@@ -195,9 +178,7 @@ def import_struct_definitions_from_project_archive_to_gil(
             )
     else:
         if template_decoded is None:
-            raise RuntimeError("internal error: use_py_fallback but template_decoded is None")
-
-        import runpy
+            raise RuntimeError("internal error: code-level structures but template_decoded is None")
 
         def _decode_struct_name_from_blob_text(blob_text: str) -> str:
             blob_bytes = parse_binary_data_hex_text(blob_text)
@@ -314,12 +295,8 @@ def import_struct_definitions_from_project_archive_to_gil(
         items: List[Tuple[Path, str, Dict[str, Any], str, int]] = []
         # (py_path, source_struct_id_str, payload_raw, struct_name, target_struct_id_int)
         source_id_to_target_struct_id: Dict[str, int] = {}
-        for py_path in basic_struct_py_files:
-            env = runpy.run_path(str(py_path))
-            source_struct_id = str(env.get("STRUCT_ID") or "").strip()
-            payload_raw = env.get("STRUCT_PAYLOAD")
-            if not isinstance(payload_raw, dict):
-                raise ValueError(f"STRUCT_PAYLOAD missing/invalid: {str(py_path)}")
+        for source_struct_id in selected_ids:
+            py_path, payload_raw = definitions[source_struct_id]
 
             # 以 payload 内名称为唯一匹配键（对齐局内存档结构体导入器）
             struct_name_text = str(payload_raw.get("struct_name") or payload_raw.get("name") or "").strip()
@@ -338,8 +315,6 @@ def import_struct_definitions_from_project_archive_to_gil(
                 struct_id_int = _allocate_next_struct_id()
                 existing_struct_ids_list.append(int(struct_id_int))
 
-            if source_struct_id == "":
-                raise ValueError(f"STRUCT_ID 为空，无法建立结构体引用映射：{str(py_path)}")
             source_id_to_target_struct_id[str(source_struct_id)] = int(struct_id_int)
             items.append((Path(py_path), str(source_struct_id), payload_raw, str(struct_name_text), int(struct_id_int)))
 
@@ -371,7 +346,7 @@ def import_struct_definitions_from_project_archive_to_gil(
                 allocate_next_struct_ref_id=_allocate_next_struct_ref_id,
             )
             struct_writer._sanitize_decoded_invalid_field0_message_nodes(decoded_blob)
-            dump_json_message = struct_writer._decoded_field_map_to_dump_json_message(decoded_blob)
+            dump_json_message = decoded_field_map_to_numeric_message(decoded_blob, prefer_raw_hex_for_utf8=True)
             blob_bytes = encode_message(dump_json_message)
             blob_text = format_binary_data_hex_text(blob_bytes)
 

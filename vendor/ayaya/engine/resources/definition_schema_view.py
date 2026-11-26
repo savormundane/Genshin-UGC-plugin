@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+from collections import Counter
 from pathlib import Path
 import tokenize
 from typing import Dict, Tuple
@@ -82,6 +83,36 @@ def _try_extract_id_and_payload_from_code(
     if payload_value is NOT_EXTRACTABLE or not isinstance(payload_value, dict):
         return None, None
     return str(id_value), dict(payload_value)
+
+
+def read_code_definition(
+    py_path: Path,
+    *,
+    id_name: str,
+    payload_name: str,
+    required: tuple[str, ...] = (),
+) -> dict[str, object] | None:
+    """Read the constant declarations required for export or writeback."""
+    with tokenize.open(str(py_path)) as source:
+        tree = ast.parse(source.read(), filename=str(py_path))
+    names = (id_name, payload_name, *required)
+    bindings = Counter(
+        node.id for node in ast.walk(tree)
+        if isinstance(node, ast.Name) and isinstance(node.ctx, (ast.Store, ast.Del)) and node.id in names
+    )
+    if not bindings:
+        return None
+
+    constants = collect_module_constants(tree)
+    for name in names:
+        if bindings[name] != 1 or name not in constants:
+            raise ValueError(f"{py_path}: {name} 必须有一个可静态读取的顶层常量声明。")
+    ident = constants[id_name]
+    if not isinstance(ident, str) or not ident.strip():
+        raise ValueError(f"{py_path}: {id_name} 必须是非空字符串。")
+    if not isinstance(constants[payload_name], dict):
+        raise ValueError(f"{py_path}: {payload_name} 必须是字典。")
+    return {name: constants[name] for name in names}
 
 
 class CodeSchemaResourceService:

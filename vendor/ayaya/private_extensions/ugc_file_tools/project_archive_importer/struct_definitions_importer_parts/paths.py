@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List, Tuple
 
+from engine.resources.definition_schema_view import read_code_definition
 from ugc_file_tools.repo_paths import repo_root
 
 
@@ -68,7 +69,7 @@ def _iter_basic_struct_py_files(project_archive_path: Path) -> List[Path]:
     return files
 
 
-def _collect_basic_struct_py_files_in_scope(project_archive_path: Path) -> List[Path]:
+def collect_basic_struct_definitions(project_archive_path: Path) -> Dict[str, Tuple[Path, Dict[str, Any]]]:
     """对齐 Graph_Generater 的代码级 Schema 作用域：
     - 共享根 + 当前项目存档根
     - 若共享与项目出现同 STRUCT_ID，则以项目定义覆盖共享定义
@@ -92,24 +93,16 @@ def _collect_basic_struct_py_files_in_scope(project_archive_path: Path) -> List[
         )
 
     # 用 STRUCT_ID 做覆盖合并（项目覆盖共享）
-    import runpy
+    by_id = {}
+    for path in (*shared_files, *project_files):
+        definition = read_code_definition(path, id_name="STRUCT_ID", payload_name="STRUCT_PAYLOAD")
+        if definition is not None:
+            by_id[str(definition["STRUCT_ID"]).strip()] = (path, definition["STRUCT_PAYLOAD"])
 
-    by_id: Dict[str, Path] = {}
-    for p in shared_files:
-        env = runpy.run_path(str(p))
-        sid = env.get("STRUCT_ID")
-        if isinstance(sid, str) and sid.strip():
-            by_id[str(sid).strip()] = Path(p)
-    for p in project_files:
-        env = runpy.run_path(str(p))
-        sid = env.get("STRUCT_ID")
-        if isinstance(sid, str) and sid.strip():
-            by_id[str(sid).strip()] = Path(p)
-
-    return sorted(by_id.values(), key=lambda p: p.as_posix().casefold())
+    return dict(sorted(by_id.items(), key=lambda item: item[1][0].as_posix().casefold()))
 
 
 def collect_basic_struct_py_files_in_scope(project_archive_path: Path) -> List[Path]:
     """Public API (no leading underscores)."""
-    return _collect_basic_struct_py_files_in_scope(project_archive_path)
+    return [path for path, _ in collect_basic_struct_definitions(project_archive_path).values()]
 
