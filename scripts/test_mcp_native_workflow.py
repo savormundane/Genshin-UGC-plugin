@@ -102,6 +102,47 @@ class NativeWorkflowTests(unittest.TestCase):
 
         asyncio.run(run())
 
+    @unittest.skipUnless(shutil.which("node"), "Node.js required for runtime fingerprint coverage")
+    def test_portable_production_and_rebuild_over_stdio(self):
+        source = self.project / "client.lua"
+        source.write_text("function OnInit() end\n", encoding="utf-8")
+        write_json(self.project / "level.json", {
+            "schema": "qianxing-level-spec/v1", "id": "portable-mcp",
+            "scripts": [{"name": "main.lua", "source": source.name}],
+            "root_script": "main.lua", "templates": [{"name": "Root", "kind": "container"}],
+        })
+        job = self.project / "portable.json"
+        write_json(job, {"schema": 2, "level": {"spec": "level.json"}, "portable": {}})
+        node = Path(shutil.which("node")).resolve()
+
+        async def run():
+            async with Client(self.server) as client:
+                delivery = await self.call(client, "produce", {
+                    "spec": job.name, "sha256": sha_file(job), "output": "portable", "summary": True,
+                })
+                output = Path(delivery["output"])
+                self.assertEqual(output, self.outputs / "portable")
+                snapshot = read_json(output / "portable/portable.json")
+                self.assertTrue(snapshot["backends"]["node"]["available"])
+                self.assertEqual(snapshot["backends"]["node"]["executable"], sha_file(node))
+                manifest = output / "manifest.json"
+                digest = sha_file(manifest)
+                inputs = {"input": str(manifest), "sha256": digest, "portable": True}
+                source.rename(source.with_name("original-client.lua"))
+                inspected = (await self.call(client, "verify", inputs))["result"]
+                self.assertEqual(inspected["source_check"], "packaged_inputs")
+                rebuilt = (await self.call(client, "verify", {
+                    **inputs, "rebuild": True,
+                    "trusted_inputs_sha256": inspected["trusted_inputs_sha256"],
+                }))["result"]
+                self.assertEqual(rebuilt["rebuild"], "passed")
+                self.assertEqual(rebuilt["portable_execution"]["status"], "passed")
+                self.assertEqual(rebuilt["rebuild_differences"], [])
+                self.assertGreater(rebuilt["rebuild_artifacts"], 0)
+                self.assertEqual(sha_file(manifest), digest)
+
+        asyncio.run(run())
+
     def test_fit_mount_uses_the_same_lua_for_beyond(self):
         sample = PLUGIN / 'samples/creator-demos/png'
         source = self.project / 'checkpoint-marker.png'

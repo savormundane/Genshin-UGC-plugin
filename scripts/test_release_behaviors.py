@@ -438,6 +438,38 @@ class StaticDefinitionGraph:
         self.assertGreater(one['history'][-1][1], 0)
         self.assertTrue(all(cost <= 6 for _, cost in one['history']))
 
+    def test_capabilities_checks_evidence_against_the_requested_test_directory(self):
+        with tempfile.TemporaryDirectory(prefix='miliastra evidence ') as temporary:
+            root = Path(temporary)
+            tests_root = root / '维护 用例'
+            tests_root.mkdir()
+            test_name = 'test_alternate_root.py'
+            test_source = b'# Custom evidence fixture\n'
+            (tests_root / test_name).write_bytes(test_source)
+            case = {'id': 'AlternateRoot.test_checked', 'status': 'passed'}
+            required = [test_name + '::' + case['id']]
+            write_json(tests_root / 'validation-contract.json', {
+                'schema': 1, 'coverage': {'mcp': required},
+            })
+            evidence = root / 'evidence.json'
+            write_json(evidence, {
+                'schema': 3, 'scope': 'public', 'selected': [test_name],
+                'results': [{
+                    'test': test_name, 'test_sha256': sha(test_source),
+                    'passed': True, 'exit_code': 0, 'cases': [case],
+                }],
+            })
+
+            result = subprocess.run([
+                sys.executable, '-B', '-X', 'utf8', str(PLUGIN / 'scripts/qianxing.py'),
+                'capabilities', '--evidence', evidence.name, '--tests-root', tests_root.name,
+            ], cwd=root, encoding='utf-8', capture_output=True, timeout=60)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            report = json.loads(result.stdout)
+            self.assertEqual(report['capabilities']['mcp']['coverage']['required'], required)
+            self.assertNotIn('test missing or changed: ' + test_name, report['evidence_problems'])
+            self.assertFalse(report['evidence_current'])
+
     def test_portable_static_and_refusals(self):
         with tempfile.TemporaryDirectory(prefix='ugc portable ') as temporary:
             root = Path(temporary)

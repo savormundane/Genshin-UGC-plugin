@@ -12,12 +12,16 @@ DOCUMENTS={'creature':'mh74ae9fsg8i','movers':'mhnmcmipncrg','timer':'mhufb90zbn
 HAN = r'[\u3400-\u4dbf\u4e00-\u9fff]'
 CHINESE = re.compile(HAN + '+')
 QUERY_TERM = re.compile(HAN + r'+|[a-z0-9_]+(?:[.:-][a-z0-9_]+)*')
+QUESTION_PREFIX = re.compile(
+    r'^(?:(?:请问|我?想问(?:一下|问)?|我?想(?:了解|知道)|在千星奇域(?:里|中)|'
+    r'请?帮我(?:查|看)(?:一下)?)[\s,，、:：]*)+'
+)
 QUESTION_WORDS = re.compile(
     r'请问|想了解|(?:怎么|如何|怎样)(?:使用|用|调用|工作)?|'
     r'(?:有哪些|有什么)(?:用法|使用方法)?|有没有|是什么|'
     r'在哪(?:里|份文档里)?|哪里|能不能|可不可以|是否|能否'
 )
-LINK_URL = re.compile(r'https?://[^\s<>)]+')
+LINK_URL = re.compile(r'https?://[^\s<>)）]+')
 MARKDOWN_HEADING = re.compile(r'^\s*#{1,6}\s+\**\s*(?:\d+[.、]\s*)?')
 
 
@@ -74,7 +78,7 @@ def show(version,ident):
 def _chinese_matches(records, query, version):
     if not CHINESE.search(query):
         return []
-    literal = normalize('NFKC', query).casefold()
+    literal = QUESTION_PREFIX.sub('', normalize('NFKC', query).casefold().strip())
     terms = {}
     for word in QUERY_TERM.findall(QUESTION_WORDS.sub(' ', literal)):
         chinese = CHINESE.fullmatch(word)
@@ -91,12 +95,8 @@ def _chinese_matches(records, query, version):
         return []
 
     ranked = []
-    for record, body in records:
+    for record, text, lines in records:
         title = record['title'].casefold()
-        lines = body.splitlines()
-        # Image attachment URLs may contain terms such as PNG or API names.
-        folded_lines = [LINK_URL.sub('', line.casefold()) for line in lines]
-        text = title + ' ' + '\n'.join(folded_lines)
         exact = {term for term in terms if term in text}
         approximate = terms.keys() - exact
         coverage = {
@@ -108,7 +108,7 @@ def _chinese_matches(records, query, version):
 
         evidence = []
         heading_match = 0
-        for line, folded in zip(lines, folded_lines):
+        for line, folded in lines:
             heading = MARKDOWN_HEADING.match(folded)
             if heading:
                 heading_text = folded[heading.end():].strip('* ')
@@ -143,12 +143,14 @@ def search(version, query, limit=20):
     for source in documents(version).values():
         record = _content(source)
         body = record.pop('content')
-        records.append((record, body))
-        text = (record['title'] + ' ' + body).casefold()
+        # Match visible text and keep the corresponding original lines for excerpts.
+        lines = [(line, LINK_URL.sub('', line.casefold())) for line in body.splitlines()]
+        text = record['title'].casefold() + ' ' + '\n'.join(line for _, line in lines)
+        records.append((record, text, lines))
         if all(term in text for term in terms):
-            lines = [line for line in body.splitlines()
-                     if any(term in line.casefold() for term in terms)]
-            matches.append({**record, 'excerpts': [line[:500] for line in lines[:3]]})
+            excerpts = [original[:500] for original, line in lines
+                        if any(term in line for term in terms)]
+            matches.append({**record, 'excerpts': excerpts[:3]})
     matches.sort(key=lambda record: (folded not in record['title'].casefold(),
                                      record['title'], record['id']))
     if not matches:

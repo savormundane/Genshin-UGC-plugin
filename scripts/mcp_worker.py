@@ -1,7 +1,7 @@
 """Isolated fixed-operation worker. stdout is never the MCP transport."""
 from base64 import b64encode
 from pathlib import Path
-import contextlib,json,os,sys
+import contextlib,json,os,shutil,sys
 from authoring_io import DiagnosticError,PLUGIN,sha_file,read_json,write_json,resolve
 
 
@@ -36,14 +36,19 @@ def main():
     roots.extend(Path(p).resolve() for p in sys.path if p and Path(p).is_dir()
                  and (project is None or not Path(p).resolve().is_relative_to(project)))
     native_cache = None
-    native_files = set()
+    read_only_files = set()
+    if op == 'produce' or (op == 'verify' and args.get('rebuild')):
+        # Portable production and rebuild fingerprint the executables selected by this worker.
+        read_only_files.add(Path(sys.executable).resolve())
+        if node := shutil.which('node'):
+            read_only_files.add(Path(node).resolve())
     if op == 'produce' or (op == 'simulate' and args.get('preview')):
         from beyond_native import NATIVE_FILES, native_cache_root
         if override := os.environ.get('MILIASTRA_WONDERLAND_BEYOND_NATIVE_ROOT'):
             root = Path(override)
             if root.is_absolute():
                 root = root.resolve()
-                native_files = {root / name for name in NATIVE_FILES}
+                read_only_files.update(root / name for name in NATIVE_FILES)
         cache=native_cache_root()
         if cache and cache.resolve()==cache and not any(
                 cache.is_relative_to(owner) or owner.is_relative_to(cache) for owner in roots):
@@ -57,7 +62,9 @@ def main():
         if str(path).casefold()==os.devnull.casefold() or native_cache and path.is_relative_to(native_cache):return
         write=event=='open'and values[2]&(os.O_WRONLY|os.O_RDWR|os.O_CREAT|os.O_TRUNC|os.O_APPEND)
         if write and not any(path.is_relative_to(root) for root in writable):raise ValueError('MCP write outside request output')
-        if path not in native_files and not any(path.is_relative_to(root) for root in roots):
+        if event == 'open' and not write and path in read_only_files:
+            return
+        if not any(path.is_relative_to(root) for root in roots):
             raise ValueError('MCP dependency outside allowed roots')
     import tempfile
     tempfile.tempdir=str(build_scratch or scratch)

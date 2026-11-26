@@ -55,6 +55,10 @@ def main(argv=None):
         sub.add_parser(name, help=description)
     doctor_parser=sub.add_parser('doctor');doctor_parser.add_argument('--compare',metavar='PLUGIN_ROOT')
     capability=sub.add_parser('capabilities');capability.add_argument('--evidence')
+    capability.add_argument(
+        '--tests-root', type=Path, metavar='TEST_DIR',
+        help='Development test directory used to verify --evidence',
+    )
     capability.add_argument('--platform');capability.add_argument('--mode',choices=['classic','beyond'])
     try:
         if argv and argv[0] in DELEGATED:
@@ -67,7 +71,9 @@ def main(argv=None):
         a=p.parse_args(argv)
         if a.command in ('doctor','capabilities'):
             from capabilities import doctor,capabilities
-            value=doctor(a.compare)if a.command=='doctor'else capabilities(a.evidence,platform=a.platform,mode=a.mode)
+            value = doctor(a.compare) if a.command == 'doctor' else capabilities(
+                a.evidence, tests_root=a.tests_root, platform=a.platform, mode=a.mode,
+            )
         elif a.command=='produce':
             from production_core import produce,produce_summary
             value=produce(a.spec,a.out,a.next_output)

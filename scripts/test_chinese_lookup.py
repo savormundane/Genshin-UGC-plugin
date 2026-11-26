@@ -219,6 +219,9 @@ class ChineseLookupTests(unittest.TestCase):
         cases = (
             ('定时器怎么用', 'mhufb90zbnts', '7.2', '定时器'),
             ('怎么暂停定时器', 'mhufb90zbnts', '7.2', '暂停定时器'),
+            ('我想问一下怎么暂停定时器', 'mhufb90zbnts', '7.2', '暂停定时器'),
+            ('在千星奇域里怎么暂停定时器', 'mhufb90zbnts', '7.2', '暂停定时器'),
+            ('请问，在千星奇域里，我想问一下怎么暂停定时器', 'mhufb90zbnts', '7.2', '暂停定时器'),
             ('怎么暂停实体定时器', 'mhufb90zbnts', '7.2', '暂停'),
             ('请问，７．２的定时器有哪些用法？', 'mhufb90zbnts', '7.2', '定时器'),
             ('怎么创建实体', 'mhw66orrrfkm', '7.1', '创建实体'),
@@ -243,6 +246,7 @@ class ChineseLookupTests(unittest.TestCase):
         for question in (
             '怎么用',
             '定时器量子火星密码怎么用',
+            '在千星奇域里我想问一下怎么打开火星传送门',
             '怎么加载本地PNG',
             '怎么调用 game.LoadAnyLocalPNG',
         ):
@@ -251,6 +255,29 @@ class ChineseLookupTests(unittest.TestCase):
                 self.assertEqual(result['documents'], [])
                 self.assertEqual(result['matches'], 0)
                 self.assertIn('平台术语', result['retry_hint'])
+
+    def test_document_search_counts_visible_text_instead_of_link_targets(self):
+        attachment = '![配图](https://example.invalid/asset.png)'
+        caption = '[PNG 图片](https://example.invalid/guide)'
+        plain = '将样例保存为 PNG 图片。'
+        documents = {
+            'url': {'id': 'url', 'title': '附件', 'content': '参照图片。\n' + attachment},
+            'visible': {
+                'id': 'visible', 'title': '使用说明',
+                'content': '\n'.join((attachment, caption, plain)),
+            },
+        }
+        with (
+            patch('platform_profiles.documents', return_value=documents),
+            patch('platform_profiles._content', side_effect=dict),
+        ):
+            for query in ('PNG', 'PNG 图片', '我想问一下怎么用 PNG 图片'):
+                with self.subTest(query=query):
+                    result = search('7.2', query)
+                    self.assertEqual(result['matches'], 1)
+                    selected, = result['documents']
+                    self.assertEqual(selected['id'], 'visible')
+                    self.assertEqual(selected['excerpts'], [caption, plain])
 
     def test_chinese_node_questions_keep_the_selected_scope(self):
         for question, term, scope, expected in NODE_CASES:
@@ -504,7 +531,7 @@ class ChineseLookupTests(unittest.TestCase):
                         response.structured_content['result'], cli('knowledge', 'api', question)
                     )
                 missing_query = '无匹配内容的测试词zzz'
-                for query in ('控件 可见性', '怎么暂停定时器', missing_query):
+                for query in ('控件 可见性', '我想问一下怎么暂停定时器', missing_query):
                     response = await client.call_tool(
                         'docs_search', {'version': '7.2', 'query': query}
                     )
