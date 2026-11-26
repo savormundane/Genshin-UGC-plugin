@@ -72,6 +72,12 @@ def archive_sha256(path):
         return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
+def powershell_literal(value):
+    # PowerShell also treats typographic single quotes as delimiters.
+    escaped = re.sub(r"['‘’‚‛]", lambda match: match[0] * 2, str(value))
+    return "'" + escaped + "'"
+
+
 def extract(archive, expected, destination, version):
     if archive_sha256(archive) != expected.lower():
         raise ValueError('ZIP 的 SHA-256 校验失败。请核对安装包和打包输出的摘要。')
@@ -363,9 +369,20 @@ def operate(args):
             raise ValueError('安装进度记录的路径指向链接。')
         pending = read_json(journal) if getattr(args, 'resume', False) and journal.is_file() else None
         recovering_activation = args.agent == 'codex' and pending is not None and pending.get('phase') == 'activation'
-        if any(r and r['home'] == str(home) for r in [previous, *state['history']]) and not (
-                recovering_activation and previous == record):
-            raise ValueError('该版本已启用。请在客户端管理它，或选择其他版本安装。')
+        if not (recovering_activation and previous == record):
+            if previous and previous['home'] == str(home):
+                raise ValueError(f'版本 {args.version} 已启用。请在客户端管理该版本，或选择其他版本安装。')
+            if any(r and r['home'] == str(home) for r in state['history']):
+                script = bundle / 'install.ps1'
+                entry = f'& {powershell_literal(script)}' if script.is_file() else r'.\install.ps1'
+                command = (
+                    f'{entry} -Agent {args.agent} -Action rollback -Version {args.version} '
+                    f'-Root {powershell_literal(root)}'
+                )
+                raise ValueError(
+                    f'版本 {args.version} 已停用，安装文件仍保留。'
+                    f'在 PowerShell 中运行下面的命令，可用原配置重新启用。\n{command}'
+                )
         if pending is None:
             raise ValueError('版本目录已存在。只有已登记的未完成安装可以使用 --resume。')
         if pending.get('binding') != binding:

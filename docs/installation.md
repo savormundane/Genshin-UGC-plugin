@@ -92,7 +92,7 @@ Claude 的 Chat 可使用 Skill。本地 MCP 在 Cowork 或 Claude Code 中验�
 
 - **市场安装**在各客户端的插件页管理。更新后开启新会话，确认工具能正常调用。
 - **CLI 安装**使用同一客户端的插件命令管理。Codex CLI 可用 `codex plugin marketplace upgrade miliastra-wonderland` 刷新已登记的市场。
-- **同版本重新发布**后，若客户端仍加载旧缓存，请按原安装方式卸载并重装。保留现有运行配置，或用 `MILIASTRA_WONDERLAND_RUNTIME_CONFIG` 指定原配置文件，即可继续使用原工程和解释器。
+- **市场或 CLI 安装**遇到同版本重新发布且客户端仍加载旧缓存时，请按原安装方式卸载并重装。保留现有运行配置，或用 `MILIASTRA_WONDERLAND_RUNTIME_CONFIG` 指定原配置文件，即可继续使用原工程和解释器。
 - **PowerShell 登记的 Codex 和 Claude**可从新版安装器升级。回退或卸载可用完整 ZIP 内的命令。改用 `-Agent claude-code` 即可操作 Claude，使用过 `-Root` 的用户应传入原值。
 - **本地目录导入**通过客户端管理。升级时导入新目录，回退时重新指向保留的旧版本。
 
@@ -106,7 +106,7 @@ Claude 的 Chat 可使用 Skill。本地 MCP 在 Cowork 或 Claude Code 中验�
 
 当前版本的 Python 无法启动时，回退会尝试目标版本保留的解释器，再查找系统中兼容的 Python。也可以给回退或卸载命令加上 `-Python '<可用 Python 的绝对路径>'`。回退在目标版本的运行环境通过自检后才切换登记。
 
-卸载保留项目、输出和各版本的运行环境。清理旧版本目录前，确认其他客户端已停用该版本，并且无需回退。
+卸载保留项目、输出和各版本的运行环境。在 PowerShell 中重新启用已保留的同版本时，可复制安装器提示中的回退命令，使用原安装文件和运行配置。清理旧版本目录前，确认其他客户端已停用该版本，并且无需回退。
 
 ## 安装自检
 

@@ -419,6 +419,67 @@ class ProtocolTests(unittest.TestCase):
                         self.assertIsNone(market)
                         self.assertEqual(len(files), 1)
 
+    def test_same_version_install_distinguishes_active_and_retained(self):
+        version = installer.read_json(ROOT / 'plugin.json')['version']
+        for agent in ('codex', 'claude-code'):
+            with self.subTest(agent=agent), tempfile.TemporaryDirectory() as temporary:
+                directory = Path(temporary).resolve()
+                root = directory / "安装 '工作区' ’"
+                relative_script = Path('versions') / agent / version / 'miliastra-wonderland/install.ps1'
+                script = root / relative_script
+                script.parent.mkdir(parents=True)
+                shutil.copyfile(ROOT / 'install.ps1', script)
+                archive = directory / 'bundle.zip'
+                with zipfile.ZipFile(archive, 'w') as output:
+                    output.write(script, 'install.ps1')
+                config = script.parent.parent / 'runtime.json'
+                original_config = {'project_root': str(directory / 'project'), 'output_root': str(directory / 'outputs')}
+                installer.save(config, original_config)
+                args = argparse.Namespace(
+                    action='install', agent=agent, root=root, version=version, resume=False,
+                    archive=archive, sha256=installer.archive_sha256(archive),
+                    project=original_config['project_root'], outputs=original_config['output_root'],
+                )
+                record = {'version': version, 'home': str(config.parent), 'config': str(config),
+                          'marketplace': 'miliastra-wonderland-download-' + agent, 'archive_sha256': args.sha256}
+                state_path = root / (agent + '.json')
+                active = {'schema': 1, 'current': record, 'history': []}
+                installer.save(state_path, active)
+
+                with (
+                    patch.object(installer, 'preflight', return_value=('client', 'node')),
+                    patch.object(installer, 'run') as run,
+                    patch.object(installer, 'retire_codex_registration'),
+                ):
+                    with self.assertRaises(ValueError) as enabled:
+                        installer.operate(args)
+                    self.assertIn(f'版本 {version} 已启用', str(enabled.exception))
+                    self.assertNotIn('-Action rollback', str(enabled.exception))
+                    self.assertEqual(installer.read_json(state_path), active)
+                    run.assert_not_called()
+
+                    args.action = 'uninstall'
+                    self.assertTrue(installer.operate(args)['registration_removed'])
+                    retained = {'schema': 1, 'current': None, 'history': [record]}
+                    self.assertEqual(installer.read_json(state_path), retained)
+                    run.reset_mock()
+
+                    args.action = 'install'
+                    with self.assertRaises(ValueError) as stopped:
+                        installer.operate(args)
+                    message = str(stopped.exception)
+                    self.assertIn(f'版本 {version} 已停用，安装文件仍保留', message)
+                    quoted_root = str(root).replace("'", "''").replace('’', '’’')
+                    quoted_script = Path(quoted_root) / relative_script
+                    self.assertEqual(
+                        message.splitlines()[-1],
+                        f"& '{quoted_script}' -Agent {agent} -Action rollback -Version {version} -Root '{quoted_root}'",
+                    )
+                    self.assertEqual(installer.read_json(state_path), retained)
+                    self.assertEqual(installer.read_json(config), original_config)
+                    self.assertEqual(script.read_bytes(), (ROOT / 'install.ps1').read_bytes())
+                    run.assert_not_called()
+
     def test_manual_modes_do_not_register_or_overwrite(self):
         for agent in installer.MANUAL_AGENTS:
             with self.subTest(agent=agent), tempfile.TemporaryDirectory(prefix='ugc 准备 ') as temp:
