@@ -43,6 +43,7 @@
     "platform": {
       "cases": [
         "test_chinese_lookup.py::ChineseLookupTests.test_versioned_documents_found_after_keyword_retry",
+        "test_chinese_lookup.py::ChineseLookupTests.test_document_questions_keep_relevant_passages_and_version_evidence",
         "test_chinese_lookup.py::ChineseLookupTests.test_compiler_calibration_and_document_provenance"
       ],
       "gap": "用例覆盖已收录版本与已校准节点。新增版本的资料和行为仍需核对。"

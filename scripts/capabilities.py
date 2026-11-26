@@ -805,6 +805,27 @@ def doctor(compare=None):
     }
 
 
+def capabilities_summary():
+    from capability_index import TASK_ENTRYPOINTS
+    from platform_profiles import CATALOGUE
+
+    tasks = {name: routes['mcp'] for name, routes in TASK_ENTRYPOINTS.items()}
+    routed = {tool for tools in tasks.values() for tool in tools}
+    return {
+        'schema': 1,
+        'version': read_json(PLUGIN / 'plugin.json')['version'],
+        'platform_versions': list(read_json(CATALOGUE)['profiles']),
+        'tasks': tasks,
+        'other_tools': [tool for tool in OPERATIONS if tool not in routed],
+        'validation': {
+            'offline_evidence': 'not_checked',
+            'editor': 'not_checked',
+            'host': 'not_checked',
+        },
+        'detail_command': 'python scripts/qianxing.py capabilities [--evidence REPORT]',
+    }
+
+
 def capabilities(evidence=None, tests_root=None, platform=None, mode=None):
     proof = read_json(evidence) if evidence else None
     current = inventory(PLUGIN / 'scripts')

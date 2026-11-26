@@ -64,13 +64,19 @@ def main():
     sys.addaudithook(boundary)
     for path,digest in request['inputs'].items():
         actual=sha_file(path)
-        if actual!=digest:
-            raise DiagnosticError('mcp.input_sha256_mismatch','Worker input digest mismatch',phase=op,
-                                  source=path,expected=digest,actual=actual)
+        if actual != digest:
+            raise DiagnosticError(
+                'mcp.input_sha256_mismatch',
+                '输入文件的 SHA-256 校验值不一致。请确认使用的是当前文件，重新读取校验值后重试。',
+                phase=op, source=path, expected=digest, actual=actual, detail='Worker input digest mismatch',
+            )
     with contextlib.redirect_stdout(sys.stderr):
-        if op in('doctor','capabilities'):
-            import capabilities
-            result=getattr(capabilities,op)()
+        if op == 'doctor':
+            from capabilities import doctor
+            result = doctor()
+        elif op == 'capabilities':
+            from capabilities import capabilities_summary
+            result = capabilities_summary()
         elif op=='api_lookup':
             from knowledge import api
             result=api(args['symbol'])

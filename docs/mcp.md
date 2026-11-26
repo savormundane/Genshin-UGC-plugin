@@ -14,59 +14,59 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 
 | 工具 | 参数与行为 |
 | --- | --- |
-| doctor | 返回依赖状态、当前加载路径、版本、能力指纹和 `plugin.capability_groups` 分组摘要。用 CLI `doctor --compare PLUGIN_ROOT` 定位同版本的文件差异 |
-| capabilities | 返回当前实现的功能及验证范围 |
+| doctor | 返回依赖状态、当前加载路径、版本和 `plugin.capability_groups` 的分组校验值。用 CLI `doctor --compare PLUGIN_ROOT` 定位同版本的文件差异 |
+| capabilities | 返回插件版本、可用任务和对应工具。用 CLI `capabilities` 查看完整清单，可加 `--evidence REPORT` 核对本地验证记录 |
 | api_lookup | symbol。接受客户端 Lua 的正式符号、英文片段或中文用途。返回正式符号、原文说明、来源与推导状态 |
 | diagnose | spec、sha256。按配置执行只读的环境、Lua、GIL 和素材检查 |
-| docs_search | version、query：检索固定版本资料 |
+| docs_search | version、query。接受中文问题或关键词，返回匹配资料的原文片段和来源版本 |
 | nodes_lookup | query、scope、limit 均可选。查询 Graph Code 调用、作用域、签名和端口。scope 为 all、client 或 server，limit 默认 20，范围 1 到 100 |
-| graph_check | input 指向一张 Graph Code 源文件。可给 job 载入制作任务，或给 bindings 提供具名绑定。sha256、job_sha256、bindings_sha256 可选，工具返回直接输入和实际读取的项目依赖摘要 |
-| graph_build | spec、output，可选 sha256。使用 schema 1 配置编译独立 GIA，并返回产物及摘要。用于已有 GIL 时，把 GIA 交给 native_plan 审阅，再用 native_apply 另存 |
+| graph_check | input 指向一张 Graph Code 源文件。可给 job 载入制作任务，或给 bindings 提供具名绑定。sha256、job_sha256、bindings_sha256 可选，工具返回直接输入和实际读取的项目依赖的校验值 |
+| graph_build | spec、output，可选 sha256。使用 schema 1 配置编译独立 GIA，并返回产物及 SHA-256 校验值。用于已有 GIL 时，把 GIA 交给 native_plan 审阅，再用 native_apply 另存 |
 | resources_lookup | version 必填。可选 query、mode（默认 beyond）、limit（默认 20）、catalogue、catalogue_sha256。默认查询模型和模板 ID，设置 resource_type 可查音效 `sound` 或特效 `effect` |
 | native_inspect / native_audit | input，可选 sha256。读取或审计指定原生文件 |
-| scene_preview | input、output，可选 sha256。附上场景草案 JSON 或 GIL 布局的俯视图、侧视图及产物摘要。GIL 可用 before 和 before_sha256 对照 |
-| scene_catalogue | input、sha256、version、mode、output。从实际 GIL/GIA 提取布景模板和样本摘要，生成 models.json |
-| scene_build | spec、sha256、output。按已审阅的布景配置和样本证据生成静态 scene.gia，校验回读 |
-| asset_preview | input、output，可选 sha256、max_controls、step。试算单张 PNG 的矩形图元方案，返回各方案的控件数、误差、预算结果及预览路径，附 `report.json` 的摘要 |
-| asset_generate | input、sha256、report、report_sha256、candidate、output。用已选候选生成矩形图元或试算报告指定的素材，返回参考 PNG、实际控件数和产物摘要 |
+| scene_preview | input、output，可选 sha256。生成场景草案 JSON 或 GIL 布局的俯视图、侧视图，并返回产物校验值。GIL 可用 before 和 before_sha256 对照 |
+| scene_catalogue | input、sha256、version、mode、output。从实际 GIL/GIA 提取布景模板和样本校验值，生成 models.json |
+| scene_build | spec、sha256、output。按已审阅的布景配置和样本证据生成静态 scene.gia，写入后重新读取并校验 |
+| asset_preview | input、output，可选 sha256、max_controls、step。试算单张 PNG 的矩形图元方案并写出预览文件，返回各方案的控件数、误差、预算和路径，附 `report.json` 的校验值 |
+| asset_generate | input、sha256、report、report_sha256、candidate、output。用已选候选生成矩形图元或试算报告指定的素材，返回参考 PNG、实际控件数和产物校验值 |
 | asset_fit | input、spec、output。用内置拟合处理图片或分层清单，返回误差、边缘检查和控件数。可选 sha256、spec_sha256、steps、resume、resume_sha256、initial、initial_sha256。配置 mount 可用实际 GIL 解析模板和目标控件，并生成 Lua 和软件预览配置 |
 | project_inspect | input，可选 sha256、scope。用 query、kind、limit 搜索对象，用 selector、transitive 查精确目标和关系，或用 summary 查看对象数。`scope="scene"` 查询 3D，`scope="gameplay"` 查询玩法资源 |
-| client_check | input，可选 sha256、mapping、contract、contract_sha256。编译 Lua 正文，可选择单个 GIL 映射或检查 API 合同 |
+| client_check | input，可选 sha256、mapping、contract、contract_sha256。编译 Lua 正文，可选择单个 GIL 映射，并按相应约定检查 API 用法 |
 | produce | spec、sha256、output，可选 summary。执行已有制作配置并校验交付 |
 | native_diff | input、other，可选 sha256、other_sha256、allowed_top_level_fields。给出允许范围时，核对其余字段的原始字节 |
-| experiment_compare | input、sha256、other、other_sha256。比较两份实验观察结果 |
-| native_plan | input、sha256、output 加一个 patch 对象，或加 spec 和 spec_sha256 文件参数。可选 summary。输出可审阅的 plan.json 和文件摘要 |
+| experiment_compare | input、sha256、other、other_sha256。读取两份观察报告，按相同种子和策略配对比较，不写文件 |
+| native_plan | input、sha256、output 加一个 patch 对象，或加 spec 和 spec_sha256 文件参数。可选 summary。输出可审阅的 plan.json 和文件校验值 |
 | simulate | spec、sha256、output。默认执行联合场景或复跑此前失败。传 preview=true 时附上 Beyond 生成的 PNG，失败时一并说明原因 |
-| experiment_run | spec、sha256、output：观察实验，开发／保留种子合同不变；失败不提交 |
+| experiment_run | spec、sha256、output。按配置中的种子和策略运行 Lua 模拟，将观察报告保存到新的输出目录 |
 | logs_diagnose | spec、sha256。只读解析 JSONL 或支持的编辑器二进制调试日志，并返回可核对的关联证据 |
 | verify | input 指向交付 manifest.json，sha256 必填。artifacts_only、portable、rebuild 默认为 false。仅产物校验独立运行。重建还需 portable=true 和 trusted_inputs_sha256 |
-| native_apply | input、sha256、plan、plan_sha256、output。按已绑定文件摘要的原生修改计划执行 |
+| native_apply | input、sha256、plan、plan_sha256、output。核对文件校验值，按审阅过的修改计划执行并另存 |
 
-输入文件路径相对工程根目录，或使用工程根、输出根内的绝对路径。output 指向输出根内尚不存在的目录。父目录须存在，按工程生成的默认输出根可由工具创建。sha256 均为对应输入文件的原始字节摘要。`plan_sha256` 参数核对计划文件字节，计划内的同名字段核对计划语义。
+输入文件路径相对工程根目录，或使用工程根、输出根内的绝对路径。output 指向输出根内尚不存在的目录。父目录须存在，按工程生成的默认输出根可由工具创建。若工程经过 Windows 目录联接，请在客户端打开文件夹的实际位置。sha256 是对应输入文件原始字节的 SHA-256 校验值。`plan_sha256` 参数核对计划文件字节，计划内的同名字段核对计划内容。
 
-带可选摘要的工具在省略时自行计算，并在 `inputs_sha256` 按参数名返回。编辑既有 GIL 时可把 `inputs_sha256.input` 交给 `native_plan`。配置诊断、修改计划、原生写入和重建继续使用各自的必填摘要。
+省略可选校验值时，工具自行计算并在 `inputs_sha256` 按参数名返回。编辑既有 GIL 时可把 `inputs_sha256.input` 交给 `native_plan`。配置诊断、修改计划、原生写入和重建须提供各自的必填校验值。
 
 调用步骤见 [PNG 试算与生成](../references/assets/image-to-primitives.md#单张-png-试算与生成) · [拟合与预览](../references/assets/asset-fit.md#生成可挂载的-lua-和软件预览) · [静态布景](../references/editor/native-scene.md) · [诊断日志](../references/workflows/client-simulation.md#读取编辑器调试日志) · [审阅并另存已有工程](../references/gil/native-changes.md#审阅并另存已有工程)。
 
 在对话中先展示预览图，再说明检查结果和下一步。需要打开或核对文件时，从结构化结果读取路径和 SHA-256。Beyond 失败时，即使附上画面也以 `status` 为准。 [Beyond 诊断产物](../references/workflows/beyond-backend.md)
 
-## CLI 与 MCP 共同合同
+## CLI 与 MCP 共同约定
 
 ```text
 python scripts/qianxing.py mcp call request.json --project PATH_TO_PROJECT --output-root PATH_TO_OUTPUTS
 ```
 
 ```json
-{"schema":2,"operation":"native_inspect","arguments":{"input":"level.gil","sha256":"填写实际文件摘要"}}
+{"schema":2,"operation":"native_inspect","arguments":{"input":"level.gil","sha256":"填写实际文件的 SHA-256 校验值"}}
 ```
 
 CLI 和 MCP 共用同一套任务调度逻辑。结果包含 `schema`、`operation`、`status`、`result` 和 `output`。参数错误由 SDK 返回。执行失败时，工具会返回结构化的结果和诊断信息，CLI 则以非零退出码退出。产物报告记录检查范围和结果。
 
 ## 取消和输出保护
 
-每次调用都在独立临时目录内用指定的 Python 工作进程执行。需要写文件时，产物先暂存在输出根目录内。工具在任务开始和结束时核对输入摘要，确认执行成功且任务未取消后，再将暂存目录改名为正式输出目录。已有目录不覆盖。取消时终止本次工作进程，Windows 同时终止其进程树。清理仅限该请求的临时目录。
+每次调用都在独立临时目录内用指定的 Python 工作进程执行。需要写文件时，产物先暂存在输出根目录内。工具在任务开始和结束时核对输入文件的校验值，确认执行成功且任务未取消后，再将暂存目录改名为正式输出目录。已有目录不覆盖。取消时终止本次工作进程，Windows 同时终止其进程树。清理仅限该请求的临时目录。
 
-进度依次报告输入绑定、核心运行和结果检查。普通操作默认时限 120 秒，制作、拟合、应用和重建为 900 秒。可分别设置 `MILIASTRA_WONDERLAND_MCP_TIMEOUT_SECONDS` 和 `MILIASTRA_WONDERLAND_MCP_BUILD_TIMEOUT_SECONDS`，范围为大于 0 且不超过 3600 秒。
+进度依次报告输入核对、任务执行和结果检查。普通操作默认时限 120 秒，编译、制作、拟合、应用和重建为 900 秒。可分别设置 `MILIASTRA_WONDERLAND_MCP_TIMEOUT_SECONDS` 和 `MILIASTRA_WONDERLAND_MCP_BUILD_TIMEOUT_SECONDS`，范围为大于 0 且不超过 3600 秒。
 
 路径检查和工作进程的Python文件访问审计用于发现越界依赖，不是操作系统沙箱。Graph Code等工程源码及后端仍须可信；由其自行启动的任意第三方程序不因本工具而获得完整沙箱保证。Python依赖目录与插件自身是允许读取的运行资源。
 

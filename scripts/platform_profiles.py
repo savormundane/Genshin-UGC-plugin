@@ -1,12 +1,24 @@
 """Versioned document selection and explicit platform configuration checks."""
 from pathlib import Path
-import argparse,difflib,json,math
+from unicodedata import normalize
+import argparse,difflib,json,math,re
 from authoring_io import DiagnosticError,PLUGIN,read_json,sha,schema,canonical
 
 CATALOGUE=PLUGIN/'scripts/platform-sources.json'
 MOVERS=('linear','rotation','target_rotation','path','point','level_path')
 DOCUMENTS={'creature':'mh74ae9fsg8i','movers':'mhnmcmipncrg','timer':'mhufb90zbnts',
            'photo_button':'mhtpwgitsigc','combat_text_filter':'mh3lmk9tmrky','prefab_group':'mhzhzb9rw0uy'}
+
+HAN = r'[\u3400-\u4dbf\u4e00-\u9fff]'
+CHINESE = re.compile(HAN + '+')
+QUERY_TERM = re.compile(HAN + r'+|[a-z0-9_]+(?:[.:-][a-z0-9_]+)*')
+QUESTION_WORDS = re.compile(
+    r'请问|想了解|(?:怎么|如何|怎样)(?:使用|用|调用|工作)?|'
+    r'(?:有哪些|有什么)(?:用法|使用方法)?|有没有|是什么|'
+    r'在哪(?:里|份文档里)?|哪里|能不能|可不可以|是否|能否'
+)
+LINK_URL = re.compile(r'https?://[^\s<>)]+')
+MARKDOWN_HEADING = re.compile(r'^\s*#{1,6}\s+\**\s*(?:\d+[.、]\s*)?')
 
 
 def selection(version):
@@ -59,17 +71,90 @@ def show(version,ident):
     return _content(records[ident])
 
 
-def search(version,query,limit=20):
-    if type(limit)!=int or not 1<=limit<=100:raise ValueError('Document limit must be 1..100')
-    if not isinstance(query,str)or not query.strip():raise ValueError('Document query required')
-    terms=query.casefold().split();matches=[]
+def _chinese_matches(records, query, version):
+    if not CHINESE.search(query):
+        return []
+    literal = normalize('NFKC', query).casefold()
+    terms = {}
+    for word in QUERY_TERM.findall(QUESTION_WORDS.sub(' ', literal)):
+        chinese = CHINESE.fullmatch(word)
+        term = word.strip('的呢吗') if chinese else word
+        if term == version or (chinese and len(term) < 2):
+            continue
+        # Keep short terms and formal identifiers literal. Longer Chinese clauses
+        # can share adjacent pairs with a passage that uses a different word order.
+        pairs = set()
+        if chinese and len(term) >= 4:
+            pairs = {term[start:start + 2] for start in range(len(term) - 1)}
+        terms[term] = pairs
+    if not terms:
+        return []
+
+    ranked = []
+    for record, body in records:
+        title = record['title'].casefold()
+        lines = body.splitlines()
+        # Image attachment URLs may contain terms such as PNG or API names.
+        folded_lines = [LINK_URL.sub('', line.casefold()) for line in lines]
+        text = title + ' ' + '\n'.join(folded_lines)
+        exact = {term for term in terms if term in text}
+        approximate = terms.keys() - exact
+        coverage = {
+            term: sum(pair in text for pair in terms[term]) for term in approximate
+        }
+        if any(count < max(2, math.ceil(len(terms[term]) * 2 / 3))
+               for term, count in coverage.items()):
+            continue
+
+        evidence = []
+        heading_match = 0
+        for line, folded in zip(lines, folded_lines):
+            heading = MARKDOWN_HEADING.match(folded)
+            if heading:
+                heading_text = folded[heading.end():].strip('* ')
+                if heading_text in exact:
+                    heading_match = max(heading_match, len(heading_text))
+            exact_hits = sum(len(term) for term in exact if term in folded)
+            pair_hits = sum(pair in folded for term in approximate for pair in terms[term])
+            if exact_hits or pair_hits >= 2:
+                evidence.append((exact_hits, pair_hits, line))
+        evidence.sort(key=lambda row: (-row[0], -row[1]))
+        excerpts = [line[:500] for _, _, line in evidence[:3]]
+        if excerpts:
+            score = (
+                -sum(len(term) for term in exact if term in title),
+                -(len(title) if title in literal else 0),
+                -heading_match,
+                -len(exact), -sum(coverage.values()), record['title'], record['id'],
+            )
+            ranked.append((score, {**record, 'excerpts': excerpts}))
+    ranked.sort(key=lambda entry: entry[0])
+    return [record for _, record in ranked]
+
+
+def search(version, query, limit=20):
+    if type(limit) is not int or not 1 <= limit <= 100:
+        raise ValueError('Document limit must be 1..100')
+    if not isinstance(query, str) or not query.strip():
+        raise ValueError('Document query required')
+    folded = query.casefold()
+    terms = folded.split()
+    records, matches = [], []
     for source in documents(version).values():
-        record=_content(source);body=record.pop('content');text=(record['title']+' '+body).casefold()
-        if all(t in text for t in terms):
-            lines=[line for line in body.splitlines()if any(t in line.casefold()for t in terms)]
-            matches.append({**record,'excerpts':[line[:500]for line in lines[:3]]})
-    matches.sort(key=lambda r:(query.casefold()not in r['title'].casefold(),r['title'],r['id']))
-    result = {'schema':2,'version':version,'query':query,'matches':len(matches),'documents':matches[:limit]}
+        record = _content(source)
+        body = record.pop('content')
+        records.append((record, body))
+        text = (record['title'] + ' ' + body).casefold()
+        if all(term in text for term in terms):
+            lines = [line for line in body.splitlines()
+                     if any(term in line.casefold() for term in terms)]
+            matches.append({**record, 'excerpts': [line[:500] for line in lines[:3]]})
+    matches.sort(key=lambda record: (folded not in record['title'].casefold(),
+                                     record['title'], record['id']))
+    if not matches:
+        matches = _chinese_matches(records, query, version)
+    result = {'schema': 2, 'version': version, 'query': query, 'matches': len(matches),
+              'documents': matches[:limit]}
     if not matches:
         result['retry_hint'] = '当前版本的随包资料未找到匹配项。请拆成短关键词，或改用平台术语和正式名称重查。'
     return result

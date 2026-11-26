@@ -3,7 +3,7 @@ from contextlib import nullcontext
 from pathlib import Path
 import argparse,asyncio,json,os,re,sys,tempfile,math
 from authoring_io import DiagnosticError,PLUGIN,sha_file,schema,read_json,write_json,missing_input,require_new_output
-from miliastra.mcp.workspace import data_directory, linked, workspace as project_context
+from miliastra.mcp.workspace import data_directory, linked, linked_path_error, workspace as project_context
 
 OPERATIONS={'doctor':(), 'capabilities':(), 'docs_search':('version','query'),'api_lookup':('symbol',),'nodes_lookup':(),'resources_lookup':('version',),'diagnose':('spec','sha256'),
             'native_inspect':('input',),'native_audit':('input',),
@@ -34,6 +34,20 @@ OPTIONAL_FIELDS={**READ_FILE_OPERATIONS,'native_plan':('patch','spec','spec_sha2
                  'simulate':('preview',),
                  'nodes_lookup':('query','scope','limit'),'verify':('rebuild','portable','trusted_inputs_sha256','artifacts_only')}
 BUILTIN_OPERATIONS = ('doctor', 'capabilities', 'docs_search', 'api_lookup', 'nodes_lookup', 'resources_lookup')
+TIMEOUT_SETTINGS = {
+    'ordinary': ('MILIASTRA_WONDERLAND_MCP_TIMEOUT_SECONDS', '120'),
+    'build': ('MILIASTRA_WONDERLAND_MCP_BUILD_TIMEOUT_SECONDS', '900'),
+}
+
+
+def outside_allowed_roots(path, *, output):
+    area = '输出根目录' if output else '工程目录或输出根目录'
+    return DiagnosticError(
+        'io.outside_allowed_roots',
+        f'路径 {path} 不在已授权的{area}内。请从已授权目录选择文件或输出位置后重试。',
+        source=str(path),
+        detail='Path outside allowed project/output roots',
+    )
 
 
 async def finish_worker(process):
@@ -81,8 +95,10 @@ async def finish_worker(process):
 
 class Bridge:
     def __init__(self,project=None,output_root=None):
-        self.timeouts = {kind: float(os.environ.get(variable, default)) for kind, variable, default in
-                         [('ordinary','MILIASTRA_WONDERLAND_MCP_TIMEOUT_SECONDS','120'),('build','MILIASTRA_WONDERLAND_MCP_BUILD_TIMEOUT_SECONDS','900')]}
+        self.timeouts = {
+            kind: float(os.environ.get(variable, default))
+            for kind, (variable, default) in TIMEOUT_SETTINGS.items()
+        }
         if any(not math.isfinite(value) or not 0 < value <= 3600 for value in self.timeouts.values()):
             raise ValueError('MCP timeouts must be finite seconds in (0, 3600]')
         self.project = project
@@ -95,27 +111,42 @@ class Bridge:
         owners = [r for r in ([output_root] if output else [project, output_root])
                   if r is not None and original != r and original.is_relative_to(r)]
         if not owners:
-            raise ValueError('Path outside allowed project/output roots')
+            raise outside_allowed_roots(original, output=output)
         owner, = owners  # The two permitted roots never overlap.
         for part in(original,*original.parents):
-            if linked(part):raise ValueError('Linked tool path refused')
+            if linked(part):
+                raise linked_path_error(part, 'Linked tool path refused')
             if part==owner:break
         resolved = original.resolve()
         if resolved == owner or not resolved.is_relative_to(owner):
-            raise ValueError('Path outside allowed project/output roots')
+            raise outside_allowed_roots(original, output=output)
         if output:
             require_new_output(resolved)
             if not resolved.parent.is_dir() and not (default_output and resolved.parent == output_root):
-                raise ValueError('Output parent must exist')
+                raise DiagnosticError(
+                    'io.output_parent_missing',
+                    f'输出位置的上一级目录 {resolved.parent} 不存在。请选用输出根目录内已有的父目录后重试。',
+                    source=str(resolved.parent),
+                    detail='Output parent must exist',
+                )
         elif not resolved.is_file():raise missing_input(resolved)
         return resolved
 
     async def call(self,operation,arguments,progress=None,*,roots=()):
         build=operation in ('produce','native_apply','asset_fit','graph_build') or operation=='verify' and arguments.get('rebuild')
+        kind = 'build' if build else 'ordinary'
+        seconds = self.timeouts[kind]
         try:
-            return await asyncio.wait_for(self._call(operation,arguments,progress,roots),self.timeouts['build' if build else 'ordinary'])
+            return await asyncio.wait_for(self._call(operation,arguments,progress,roots),seconds)
         except asyncio.TimeoutError:
-            return {'schema':2,'operation':operation,'status':'failed','error':'MCP operation exceeded its total timeout','output':None}
+            variable, _ = TIMEOUT_SETTINGS[kind]
+            problem = DiagnosticError(
+                'mcp.timeout',
+                f'任务超过插件设定的 {seconds:g} 秒时限。请缩小处理范围，或提高 {variable} 后重试。',
+                phase=operation, timeout_seconds=seconds, detail='MCP operation exceeded its total timeout',
+            )
+            return {'schema':2,'operation':operation,'status':'failed','error':str(problem),
+                    'diagnostics':problem.diagnostics,'output':None}
 
     async def _call(self,operation,arguments,progress,roots):
         if operation not in OPERATIONS:raise ValueError('Unknown bridge operation')
@@ -127,11 +158,18 @@ class Bridge:
         context = project_context(self.project, self.output_root, roots, args) if not builtin or operation == 'doctor' else {}
         project = Path(context['project_root']) if not builtin and context['project_root'] else None
         output_root = Path(context['output_root']) if not builtin and context['output_root'] else None
-        if not builtin and project is None:
-            code = 'mcp.workspace_ambiguous' if context['status'] == 'ambiguous' else 'mcp.workspace_required'
-            raise DiagnosticError(code, context['message'], phase=operation, context=context)
-        if 'output' in args and output_root is None:
-            raise DiagnosticError('mcp.output_required', context['output_message'], phase=operation, context=context)
+        project_required = not builtin and project is None
+        if project_required or ('output' in args and output_root is None):
+            if project_required:
+                code = 'mcp.workspace_ambiguous' if context['status'] == 'ambiguous' else 'mcp.workspace_required'
+                message, detail = context['message'], context.get('detail')
+            else:
+                code = 'mcp.output_required'
+                message, detail = context['output_message'], context.get('output_detail')
+            problem = context.get('directory_problem', {})
+            fields = {'source': problem['source']} if problem else {}
+            raise DiagnosticError(problem.get('code', code), message, phase=operation,
+                                  context=context, detail=detail, **fields)
         if 'summary' in args and type(args['summary']) is not bool:raise ValueError('summary must be a boolean')
         if operation=='native_plan':
             supplied=set(args)&{'patch','spec','spec_sha256'}
@@ -170,16 +208,30 @@ class Bridge:
             if not automatic or digest_field in args:
                 digest=args[digest_field]
                 if not isinstance(digest,str)or not re.fullmatch('[0-9a-f]{64}',digest)or actual!=digest:
-                    raise DiagnosticError('mcp.input_sha256_mismatch','Input digest mismatch: '+field,phase=operation,
-                                          source=str(path),field=field,expected=digest,actual=actual)
-            if str(path) in bound and bound[str(path)]!=actual:raise ValueError('Input changed during binding')
+                    raise DiagnosticError(
+                        'mcp.input_sha256_mismatch',
+                        f'输入 {field} 的文件与提供的 SHA-256 校验值不一致。请确认要用的文件版本，'
+                        '如文件已修改，先重做依赖该文件的上一步，再用对应校验值重试。',
+                        phase=operation, source=str(path), field=field, expected=digest, actual=actual,
+                        detail='Input digest mismatch: '+field,
+                    )
+            if str(path) in bound and bound[str(path)]!=actual:
+                raise DiagnosticError(
+                    'mcp.input_changed', '读取输入时文件发生了变化。请结束正在编辑或同步的操作后重试。',
+                    phase=operation, source=str(path), expected=bound[str(path)], actual=actual,
+                    detail='Input changed during binding',
+                )
             args[field]=str(path);bound[str(path)]=actual;input_hashes[field]=actual
         if operation == 'native_plan' and 'patch' in args:
             patch = args['patch']
             actual = input_hashes['input']
             if 'base_sha256' in patch and patch['base_sha256'] != actual:
-                raise DiagnosticError('native.base_sha256_mismatch', 'Patch base_sha256 differs from the verified input',
-                                      phase=operation, field='base_sha256', expected=actual, actual=patch['base_sha256'])
+                raise DiagnosticError(
+                    'native.base_sha256_mismatch',
+                    '补丁中的基底 SHA-256 校验值与当前 GIL 不一致。请针对当前 GIL 重新检查并准备修改计划。',
+                    phase=operation, field='base_sha256', expected=actual, actual=patch['base_sha256'],
+                    detail='Patch base_sha256 differs from the verified input',
+                )
             args['patch'] = {**patch, 'base_sha256': actual}
         if operation=='verify' and any(type(args.get(k,False)) is not bool for k in ('rebuild','portable','artifacts_only')):
             raise ValueError('Verification flags must be boolean')
@@ -240,8 +292,11 @@ class Bridge:
             for path,digest in bound.items():
                 actual=sha_file(path)
                 if actual!=digest:
-                    raise DiagnosticError('mcp.input_changed','Input changed during operation',phase=operation,
-                                          source=path,expected=digest,actual=actual)
+                    raise DiagnosticError(
+                        'mcp.input_changed', '执行期间输入文件发生了变化。请确认当前版本并重新执行本次操作。',
+                        phase=operation, source=path, expected=digest, actual=actual,
+                        detail='Input changed during operation',
+                    )
             if progress:await progress(2,3,'Core result checked; ready to commit')
             await asyncio.sleep(0)
             status=result.get('status', 'failed'if result.get('passed')is False else'passed')

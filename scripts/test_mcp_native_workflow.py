@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from lupa.lua53 import LuaRuntime
 from mcp import Client, StdioServerParameters, types
@@ -65,6 +66,41 @@ class NativeWorkflowTests(unittest.TestCase):
         self.assertFalse(outcome.is_error, outcome)
         self.assertEqual(outcome.structured_content["status"], status, outcome)
         return outcome.structured_content
+
+    def test_tool_metadata_and_compact_capabilities(self):
+        async def run():
+            async with Client(self.server) as client:
+                listed = await client.list_tools()
+                tools = {tool.name: tool for tool in listed.tools}
+                for tool in tools.values():
+                    with self.subTest(tool=tool.name):
+                        self.assertTrue(tool.description)
+                        self.assertIsNotNone(tool.annotations)
+                        for name, schema in tool.input_schema["properties"].items():
+                            self.assertTrue(schema.get("description"), name)
+
+                annotations = {name: tool.annotations.model_dump(by_alias=True) for name, tool in tools.items()}
+                self.assertTrue(annotations["docs_search"]["readOnlyHint"])
+                self.assertFalse(annotations["asset_preview"]["readOnlyHint"])
+                self.assertFalse(annotations["asset_preview"]["destructiveHint"])
+                self.assertFalse(annotations["experiment_run"]["readOnlyHint"])
+                self.assertTrue(annotations["experiment_compare"]["readOnlyHint"])
+                self.assertIn("observations.json", tools["experiment_run"].description)
+                self.assertIn("配对比较", tools["experiment_compare"].description)
+
+                outcome = await client.call_tool("capabilities", {})
+                self.assertFalse(outcome.is_error, outcome)
+                self.assertLess(sum(len(part.text) for part in outcome.content), 8192)
+                result = outcome.structured_content["result"]
+                self.assertEqual(result["version"], read_json(PLUGIN / "plugin.json")["version"])
+                self.assertEqual(result["tasks"]["nodes"], ["nodes_lookup", "graph_check", "graph_build"])
+                routed = {tool for group in result["tasks"].values() for tool in group}
+                self.assertEqual(routed | set(result["other_tools"]), set(tools))
+                self.assertEqual(result["validation"]["editor"], "not_checked")
+                self.assertEqual(result["validation"]["host"], "not_checked")
+                self.assertIn("--evidence", result["detail_command"])
+
+        asyncio.run(run())
 
     def test_fit_mount_uses_the_same_lua_for_beyond(self):
         sample = PLUGIN / 'samples/creator-demos/png'
@@ -455,6 +491,95 @@ class NativeWorkflowTests(unittest.TestCase):
                 self.assertIn("缺失 关卡.gil", absent.content[0].text)
                 self.assertIn("请核对文件名、扩展名", absent.content[0].text)
                 self.assertIn("Input file missing", absent.content[0].text)
+                outside = await client.call_tool("project_inspect", {"input": "../other.gil"})
+                self.assertTrue(outside.is_error)
+                self.assertIn("io.outside_allowed_roots", outside.content[0].text)
+                self.assertIn("从已授权目录选择", outside.content[0].text)
+                self.assertIn("Path outside allowed project/output roots", outside.content[0].text)
+                changed = await client.call_tool("project_inspect", {
+                    "input": "entrance.gil", "sha256": "0" * 64,
+                })
+                self.assertTrue(changed.is_error)
+                self.assertIn("mcp.input_sha256_mismatch", changed.content[0].text)
+                self.assertIn("SHA-256 校验值不一致", changed.content[0].text)
+                self.assertIn("Input digest mismatch: input", changed.content[0].text)
+
+        asyncio.run(run())
+
+    @unittest.skipUnless(sys.platform == "win32" and shutil.which("node"), "Windows Node.js required")
+    def test_junction_diagnostic_keeps_the_link_component(self):
+        child = self.project / "actual"
+        child.mkdir()
+        (child / "entrance.gil").write_bytes(self.raw)
+        project_link = self.root / "Documents"
+        output_link = self.root / "Output link"
+        child_link = self.project / "子目录联接"
+        for link, target in (
+            (project_link, self.project), (output_link, self.outputs), (child_link, child),
+        ):
+            subprocess.run([
+                "node", "-e", "require('node:fs').symlinkSync(process.argv[1], process.argv[2], 'junction')",
+                str(target), str(link),
+            ], check=True, capture_output=True, timeout=10)
+            self.addCleanup(link.rmdir)
+
+        async def check_link(client, tool, args, link):
+            outcome = await client.call_tool(tool, args)
+            self.assertTrue(outcome.is_error, outcome)
+            message = outcome.content[0].text
+            problem, = json.loads(message[message.index("{"):])["diagnostics"]
+            self.assertEqual(problem["code"], "io.linked_path")
+            self.assertEqual(Path(problem["source"]), link)
+            self.assertIn("目录联接", problem["message"])
+            self.assertIn("文件夹的实际位置", problem["message"])
+            self.assertIn("Linked", problem["detail"])
+
+        async def run():
+            for project, output, tool, args, link in (
+                (project_link / "actual", self.outputs, "project_inspect", {"input": "entrance.gil"}, project_link),
+                (self.project, output_link, "asset_preview", {"input": "entrance.gil", "output": "review"}, output_link),
+                (self.project, self.outputs, "project_inspect", {"input": "子目录联接/entrance.gil"}, child_link),
+            ):
+                server = StdioServerParameters(
+                    command=sys.executable,
+                    args=[*self.server.args[:-4], "--project", str(project), "--output-root", str(output)],
+                    env=self.workspace_environment(),
+                )
+                async with Client(server) as client:
+                    await check_link(client, tool, args, link)
+
+            roots = [project_link / "actual"]
+
+            async def list_roots(_):
+                return types.ListRootsResult(roots=[types.Root(uri=path.as_uri()) for path in roots])
+
+            server = StdioServerParameters(command=sys.executable, args=self.server.args[:-4],
+                                           env=self.workspace_environment())
+            async with Client(server, list_roots_callback=list_roots, mode="legacy") as client:
+                await check_link(client, "project_inspect", {"input": "entrance.gil"}, project_link)
+                roots.append(self.project)
+                result = await self.call(client, "project_inspect", {"input": "entrance.gil"})
+                self.assertEqual(result["inputs_sha256"]["input"], sha(self.raw))
+
+        asyncio.run(run())
+
+    def test_timeout_points_to_the_matching_setting(self):
+        from miliastra.mcp.bridge import Bridge
+
+        async def run():
+            bridge = Bridge()
+            with patch.object(bridge, "_call", side_effect=TimeoutError):
+                for tool, variable in (
+                    ("docs_search", "MILIASTRA_WONDERLAND_MCP_TIMEOUT_SECONDS"),
+                    ("graph_build", "MILIASTRA_WONDERLAND_MCP_BUILD_TIMEOUT_SECONDS"),
+                ):
+                    result = await bridge.call(tool, {})
+                    self.assertEqual(result["status"], "failed")
+                    problem, = result["diagnostics"]
+                    self.assertEqual(problem["code"], "mcp.timeout")
+                    self.assertIn("任务超过插件设定", problem["message"])
+                    self.assertIn(variable, problem["message"])
+                    self.assertEqual(problem["detail"], "MCP operation exceeded its total timeout")
 
         asyncio.run(run())
 

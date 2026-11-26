@@ -1,6 +1,6 @@
 ---
 name: miliastra-editor
-description: 查找千星奇域工程对象、引用、平台规则和资源，设计原生场景及界面，查询客户端 API、编写和修复 Lua，处理控件输入、事件和动画播放。
+description: 查原神千星奇域（UGC）的奇匠学院资料和平台规则，定位工程对象和引用，设计场景及界面，查客户端 API、编写或修复 Lua，处理控件事件与动画播放。
 ---
 
 # Miliastra Editor
@@ -10,7 +10,7 @@ description: 查找千星奇域工程对象、引用、平台规则和资源，�
 | 任务 | 入口 |
 | --- | --- |
 | 找出生点、变量、模板或引用 | `project_inspect` 传 `query`。同名候选先列出，再按所选对象键追引用。 |
-| 查平台规则和资源 | `docs_search` 查目标版本资料，`resources_lookup` 查模型或模板。 [平台规则](../../references/platform/platform-profiles.md) · [资源目录](../../references/platform/resource-catalogue.md) |
+| 查奇匠学院资料、平台规则或资源 | `docs_search` 可用中文问题查目标版本的资料，`resources_lookup` 查模型或模板。 [平台规则](../../references/platform/platform-profiles.md) · [资源目录](../../references/platform/resource-catalogue.md) |
 | 查 Lua API、检查或修复 Lua | `api_lookup` 查正式符号与来源，`client_check` 定位并复检。已有 GIL 可按 `mapping` 检查其中一个脚本。 |
 | 装配多段 Lua | CLI `client assemble` 输出合并后的脚本和源码映射。 [装配方法](../../references/editor/lua/client-assembly.md) |
 | 布设或核对场景、原生界面 | `project_inspect` 查实体和挂载。用 `scene_catalogue` 从样本提取布景模板，`scene_preview` 看草案，审阅后用 `scene_build` 另存静态场景 GIA。 [原生场景](../../references/editor/native-scene.md) · [UI 矩形布局](../../references/editor/native-ui-layout.md) |
@@ -18,9 +18,9 @@ description: 查找千星奇域工程对象、引用、平台规则和资源，�
 
 ## 原生工程
 
-[工程索引](../../references/editor/project-index.md)说明对象键和引用。涉及机关、资源、技能或计时器时按实际对象和基底核对允许的操作。已验证变换和布局可回读。容器修改、计划和另存由 [Miliastra GIL](../miliastra-gil/SKILL.md) 处理，节点编写由 [Miliastra Graph Code](../miliastra-graph-code/SKILL.md) 处理。多个阶段共用同一交付时，按实际依赖选择 [produce 配置](../../references/workflows/produce.md)。 [原生玩法制作](../../references/editor/native-gameplay.md)
+[工程索引](../../references/editor/project-index.md)说明对象键和引用。涉及机关、资源、技能或计时器时按实际对象和原文件核对允许的操作。写入后可重新读取 GIL，核对已校准的变换和布局。容器修改、计划和另存由 [Miliastra GIL](../miliastra-gil/SKILL.md) 处理，节点编写由 [Miliastra Graph Code](../miliastra-graph-code/SKILL.md) 处理。多个阶段共用同一交付时，按实际依赖选择 [produce 配置](../../references/workflows/produce.md)。 [原生玩法制作](../../references/editor/native-gameplay.md)
 
-接续修改时把实际工程对象、基底摘要和目标平台版本沿用到图编译、挂载和预览。只有对象不唯一或缺少目标版本依据时请用户补选。交付时优先给出最终文件与预览入口。
+接续修改时把实际工程对象、原文件的 SHA-256 校验值和目标平台版本沿用到图编译、挂载和预览。只有对象不唯一或缺少目标版本依据时请用户补选。交付时优先给出最终文件与预览入口。
 
 ## Client Lua
 

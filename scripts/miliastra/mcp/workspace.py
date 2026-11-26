@@ -6,7 +6,7 @@ import stat
 from urllib.parse import urlsplit
 from urllib.request import url2pathname
 
-from authoring_io import PLUGIN, read_json, sha
+from authoring_io import DiagnosticError, PLUGIN, read_json, sha
 
 
 def linked(path: Path) -> bool:
@@ -19,12 +19,28 @@ def linked(path: Path) -> bool:
     )
 
 
+def linked_path_error(path: Path, detail: str) -> DiagnosticError:
+    return DiagnosticError(
+        'io.linked_path',
+        f'路径经过目录联接（junction）、符号链接或其他重解析点。触发位置为 {path}。'
+        '请在客户端选择文件夹的实际位置，或使用实际位置重新配置工程和输出目录后重试。',
+        source=str(path),
+        detail=detail,
+    )
+
+
 def directory(value: str | Path, *, create: bool = False) -> Path:
     path = Path(os.path.abspath(value))
-    if any(linked(part) for part in (path, *path.parents)):
-        raise ValueError('Linked workspace or output directory refused')
+    for part in (path, *path.parents):
+        if linked(part):
+            raise linked_path_error(part, 'Linked workspace or output directory refused')
     if not path.is_dir() and (not create or path.exists()):
-        raise ValueError('Directory does not exist: ' + str(path))
+        raise DiagnosticError(
+            'io.directory_unavailable',
+            f'无法打开目录 {path}。请确认该路径指向已有文件夹后重新选择。',
+            source=str(path),
+            detail='Directory does not exist or is not a directory: ' + str(path),
+        )
     return path.resolve()
 
 
@@ -84,6 +100,7 @@ def workspace(project, output, roots=(), arguments=None):
             selected = directory(project)
             source = 'explicit'
         elif roots:
+            rejected_directory = None
             for uri in roots:
                 try:
                     location = urlsplit(uri)
@@ -100,10 +117,15 @@ def workspace(project, output, roots=(), arguments=None):
                     mounted = directory(path)
                     if mounted != Path(mounted.anchor) and mounted not in candidates:
                         candidates.append(mounted)
+                except DiagnosticError as exc:
+                    if rejected_directory is None:
+                        rejected_directory = exc
                 except (OSError, ValueError, RuntimeError):
                     continue
             context['candidates'] = [str(path) for path in candidates]
             if not candidates:
+                if rejected_directory is not None:
+                    raise rejected_directory
                 raise ValueError('MCP client supplied no usable local workspace directory')
             if len(candidates) > 1:
                 arguments = arguments or {}
@@ -154,6 +176,15 @@ def workspace(project, output, roots=(), arguments=None):
         if selected == Path(selected.anchor):
             raise ValueError('Project root must be a specific directory')
     except (OSError, ValueError, RuntimeError) as exc:
+        if isinstance(exc, DiagnosticError):
+            problem, = exc.diagnostics
+            return {
+                **context,
+                'status': 'invalid',
+                'message': problem['message'],
+                'detail': problem['detail'],
+                'directory_problem': {'code': problem['code'], 'source': problem['source']},
+            }
         return {
             **context,
             'status': 'invalid',
@@ -172,8 +203,10 @@ def workspace(project, output, roots=(), arguments=None):
     )
     if not configured and data is None:
         context['output_message'] = (
-            'Set MILIASTRA_WONDERLAND_OUTPUT_ROOT or use a local plugin data directory'
+            '缺少输出根目录。请在启动客户端的终端设置 MILIASTRA_WONDERLAND_OUTPUT_ROOT，'
+            '或为插件配置本地数据目录后重试。'
         )
+        context['output_detail'] = 'Set MILIASTRA_WONDERLAND_OUTPUT_ROOT or use a local plugin data directory'
         return context
     try:
         target = directory(configured or workspace_outputs(data, selected), create=not configured)
@@ -181,9 +214,25 @@ def workspace(project, output, roots=(), arguments=None):
             target.is_relative_to(owner) or owner.is_relative_to(target)
             for owner in [selected, PLUGIN, *candidates]
         ):
-            raise ValueError('Output directory must be separate from workspace and plugin source')
+            raise DiagnosticError(
+                'io.output_root_overlap',
+                f'输出根目录 {target} 与工程目录或插件目录重叠。请在两者之外选择单独的文件夹后重试。',
+                source=str(target),
+                detail='Output directory must be separate from workspace and plugin source',
+            )
+    except DiagnosticError as exc:
+        problem, = exc.diagnostics
+        context.update(
+            output_message=problem['message'],
+            output_detail=problem['detail'],
+            directory_problem={'code': problem['code'], 'source': problem['source']},
+        )
+        return context
     except (OSError, ValueError, RuntimeError) as exc:
-        context['output_message'] = str(exc)
+        context.update(
+            output_message='无法使用输出根目录。请检查文件夹位置与访问权限，再重新选择输出目录。',
+            output_detail=str(exc),
+        )
         return context
     context.update(
         output_root=str(target),

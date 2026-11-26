@@ -12,12 +12,12 @@ python scripts/qianxing.py native apply BEFORE.gil --plan PLAN.json --out NEW.gi
 
 ## 审阅并另存已有工程
 
-1. 用 `project_inspect` 按名称查找。遇到同名对象时先列出候选，再用完整对象键或明确的 `selector` 核对目标和引用。保存本次返回的 `inputs_sha256.input`。
-2. 调用 `native_plan`，传原文件 `input`、上述 `sha256` 和新的 `output`。内联 `patch` 使用 schema 2，声明 `allowed_top_level_fields` 和 `operations`。服务从已校验的输入填入基底摘要。使用补丁文件时传 `spec` 和 `spec_sha256`。
-3. 审阅 `result.difference`，核对计划操作和保护字段。确认后调用 `native_apply`，传同一基底及其摘要、审阅目录中的 `plan.json`、`outputs_sha256["plan.json"]` 所示的 `plan_sha256` 和新的输出目录。
-4. 用 `native_diff` 比较原文件和另存的 `level.gil`，复用同一允许字段范围。核对应用报告中的实际操作、审计结果和输出摘要。需要静态核对交付清单时，向 `verify` 传入 `manifest.json` 及其摘要。
+1. 用 `project_inspect` 按名称查找。遇到同名对象时先列出候选，再用完整对象键或明确的 `selector` 核对目标和引用。保存 `inputs_sha256.input` 返回的原文件 SHA-256 校验值。
+2. 调用 `native_plan`，传原文件 `input`、上述 `sha256` 和新的 `output`。内联 `patch` 使用 schema 2，声明 `allowed_top_level_fields` 和 `operations`。服务从已校验的输入填入原文件的校验值。使用补丁文件时传 `spec` 和 `spec_sha256`。
+3. 审阅 `result.difference`，核对计划操作和保护字段。确认后调用 `native_apply`，传同一原文件及其校验值、审阅目录中的 `plan.json`、`outputs_sha256["plan.json"]` 所示的 `plan_sha256` 和新的输出目录。
+4. 用 `native_diff` 比较原文件和另存的 `level.gil`，复用同一允许字段范围。核对应用报告中的实际操作、审计结果和输出文件的校验值。需要静态核对交付清单时，向 `verify` 传入 `manifest.json` 及其校验值。
 
-基底或补丁来源变化后重新生成并审阅计划。文件回读和编辑器导入分开记录。 [从样例操作](../../samples/creator-demos/gil/README.md#审阅并另存)
+原文件或补丁来源变化后重新生成并审阅计划。分别记录写入后重新读取 GIL 的校验结果和编辑器导入结果。 [从样例操作](../../samples/creator-demos/gil/README.md#审阅并另存)
 
 ## 差异内容与保护范围
 
@@ -33,9 +33,9 @@ node_connection按使用者→提供者比较，忽略仅改变连线存储端�
 
 ## 内容绑定的计划
 
-PATCH 使用现有 schema 2、base_sha256、allowed_top_level_fields 及 operations 合同。写入 GIL 及 `section_from` 的来源均须匹配已用样本校准的容器头，且来源的目标字段须唯一。`replace_graph` 保留目标图 ID、名称和既有引用。`section_from` 仅用于显式整段替换。计划要求 `strict_audit=true` 或省略该字段。
+PATCH 按 schema 2 的格式约定填写 `base_sha256`、`allowed_top_level_fields` 和 `operations`。写入 GIL 及 `section_from` 的来源均须匹配已用样本校准的容器头，且来源的目标字段须唯一。`replace_graph` 保留目标图 ID、名称和既有引用。`section_from` 仅用于显式整段替换。计划要求 `strict_audit=true` 或省略该字段。
 
-MCP 内联 `native_plan` 可省略 `patch.base_sha256`，服务用已验证的 `sha256` 填入计划。文件补丁保持原合同。预检或结果审计阻止写入时，`diagnostics` 给出阶段、已知对象键和名称、关系、字段与目标 ID。先按 `next_step` 找到并修复阻塞，再用更新后的摘要重新生成计划。
+MCP 内联 `native_plan` 可省略 `patch.base_sha256`，服务用已验证的 `sha256` 填入计划。补丁文件按 schema 2 完整提供所需字段。预检或结果审计阻止写入时，`diagnostics` 给出阶段、已知对象键和名称、关系、字段与目标 ID。先按 `next_step` 处理问题，再用更新后的校验值重新生成计划。
 
 PLAN的schema为2、kind为native-change-plan，包含：
 

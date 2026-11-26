@@ -7,7 +7,7 @@
 | 安装、更新、卸载或排查启动问题 | [安装指南](installation.md) |
 | 核对 Windows 依赖和客户端协议 | [运行要求](compatibility.md) |
 | 指定工程目录和输出目录，或在终端使用 CLI | [运行环境](runtime-environment.md) |
-| 查看 MCP 参数、摘要和文件路径规则 | [MCP 工具](mcp.md) |
+| 查看 MCP 参数、SHA-256 校验值和文件路径规则 | [MCP 工具](mcp.md) |
 | 核对平台资料、文件格式和支持范围 | [来源判断](../references/platform/knowledge-reliability.md) · [验证分层](compatibility.md#验证分层) |
 | 修改源码、维护平台资料或参与发行 | [参与贡献](../CONTRIBUTING.md) |
 

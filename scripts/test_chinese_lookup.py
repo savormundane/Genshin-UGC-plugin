@@ -201,7 +201,6 @@ class ChineseLookupTests(unittest.TestCase):
                 knowledge.api('隐藏控件')
 
     def test_versioned_documents_found_after_keyword_retry(self):
-        self.assertEqual(search('7.2', COMBINED_QUESTION)['matches'], 0)
         for question, terms, expected, source_version in DOCUMENT_CASES:
             with self.subTest(question=question, terms=terms):
                 result = search('7.2', terms)
@@ -215,6 +214,43 @@ class ChineseLookupTests(unittest.TestCase):
                 self.assertEqual(selected['source_version'], source_version)
                 self.assertEqual(selected['inherited'], source_version != '7.2')
                 self.assertTrue(selected['excerpts'] and selected['official_url'])
+
+    def test_document_questions_keep_relevant_passages_and_version_evidence(self):
+        cases = (
+            ('定时器怎么用', 'mhufb90zbnts', '7.2', '定时器'),
+            ('怎么暂停定时器', 'mhufb90zbnts', '7.2', '暂停定时器'),
+            ('怎么暂停实体定时器', 'mhufb90zbnts', '7.2', '暂停'),
+            ('请问，７．２的定时器有哪些用法？', 'mhufb90zbnts', '7.2', '定时器'),
+            ('怎么创建实体', 'mhw66orrrfkm', '7.1', '创建实体'),
+            ('怎么设置主镜头', 'mhfua005zpeg', '7.2', '主镜头'),
+            ('怎么调用 ＳｅｔＶｉｓｉｂｌｅ', 'mhtakr07vej4', '7.1', 'SetVisible'),
+        )
+        for question, document_id, source_version, excerpt in cases:
+            with self.subTest(question=question):
+                result = search('7.2', question, limit=1)
+                self.assertEqual(result['query'], question)
+                self.assertEqual(len(result['documents']), 1)
+                record = result['documents'][0]
+                self.assertEqual(record['id'], document_id)
+                self.assertEqual(record['requested_version'], '7.2')
+                self.assertEqual(record['source_version'], source_version)
+                self.assertEqual(record['inherited'], source_version != '7.2')
+                self.assertTrue(record['official_url'])
+                source = show('7.2', document_id)['content']
+                self.assertIn(excerpt, '\n'.join(record['excerpts']))
+                self.assertTrue(all(line in source for line in record['excerpts']))
+
+        for question in (
+            '怎么用',
+            '定时器量子火星密码怎么用',
+            '怎么加载本地PNG',
+            '怎么调用 game.LoadAnyLocalPNG',
+        ):
+            with self.subTest(question=question):
+                result = search('7.2', question)
+                self.assertEqual(result['documents'], [])
+                self.assertEqual(result['matches'], 0)
+                self.assertIn('平台术语', result['retry_hint'])
 
     def test_chinese_node_questions_keep_the_selected_scope(self):
         for question, term, scope, expected in NODE_CASES:
@@ -468,7 +504,7 @@ class ChineseLookupTests(unittest.TestCase):
                         response.structured_content['result'], cli('knowledge', 'api', question)
                     )
                 missing_query = '无匹配内容的测试词zzz'
-                for query in ('控件 可见性', missing_query):
+                for query in ('控件 可见性', '怎么暂停定时器', missing_query):
                     response = await client.call_tool(
                         'docs_search', {'version': '7.2', 'query': query}
                     )
