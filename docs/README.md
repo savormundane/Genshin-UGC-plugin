@@ -28,6 +28,5 @@
 | 维护版本资料、API 合同和用例 | [平台资料维护](contributing/platform-maintenance.md) |
 | 更新上游、检查成品和定版发行 | [维护与发行](contributing/maintenance.md) |
 | 提交 Issue、样例或代码改动 | [参与贡献](../CONTRIBUTING.md) |
-| 接续开发或协助维护的约定 | [AGENTS.md](../AGENTS.md) |
 
 当前实现以源码和配置为准。正式发布的版本记录见 [CHANGELOG](../CHANGELOG.md)。原文、版本及第三方资料的归属见 [技术参考](../references/README.md) 和 [第三方声明](../THIRD_PARTY_NOTICES.md)。

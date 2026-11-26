@@ -9,10 +9,18 @@ __pycache__/
 !.env.sample
 !.env.template
 .git-credentials
+AGENTS.md
 AGENTS.override.md
+CLAUDE.md
 CLAUDE.local.md
-/.codex/config.toml
-/.claude/settings.local.json
+/.codex/
+/.claude/
+/.cursor/
+/.private/
+/work/
+/development/
+/notes/
+*.log
 .DS_Store
 # Local dependency installs; the audited simulator bundle remains tracked.
 node_modules/

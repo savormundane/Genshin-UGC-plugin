@@ -586,7 +586,7 @@ class ProtocolTests(unittest.TestCase):
                     self.assertEqual((home / 'miliastra-wonderland' / writeback_template).read_bytes(),
                                      (ROOT / writeback_template).read_bytes())
                     self.assertEqual(extract.call_count, 2)
-                    windows_root = PureWindowsPath(r'C:\Users\abcdefgh\AppData\Local\Miliastra Wonderland')
+                    windows_root = PureWindowsPath('C:/Users') / ('a' * 8) / 'AppData/Local/Miliastra Wonderland'
                     for call in extract.call_args_list:
                         staging = call.args[2]
                         self.assertFalse(staging.exists())

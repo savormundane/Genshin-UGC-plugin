@@ -51,6 +51,7 @@ jobs:
             exit 1
           fi
           if [[ "$PUBLISH" == true ]]; then
+            python3 -B scripts/check_public_scope.py --require-distribution
             tag="refs/tags/v$VERSION"
             refs=$(git ls-remote origin "$tag" "$tag^{}")
             target=$(awk 'END { print $1 }' <<< "$refs")

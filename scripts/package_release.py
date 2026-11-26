@@ -74,6 +74,9 @@ def build_release(source, output, layout='auto', archive_root=None, *, beyond_na
     if output.is_relative_to(source):
         raise ValueError('Output must be outside the source directory')
     excluded, excluded_files = distribution_exclusions(source)
+    from check_public_scope import POLICY, content_kinds, private_name, read_policy, shown_name
+    policy = source / POLICY
+    approved = read_policy(policy.read_bytes()) if policy.is_file() else None
     prefix = ''
     if layout == 'agent-plugins':
         if archive_root is not None:
@@ -85,12 +88,14 @@ def build_release(source, output, layout='auto', archive_root=None, *, beyond_na
         prefix = archive_root + '/'
     files = []
     for f in sorted(source.rglob('*')):
-        if f.is_symlink():
+        relative = f.relative_to(source).as_posix()
+        if approved is not None and relative not in approved:
+            continue
+        if f.is_symlink() or (approved is not None and not f.resolve().is_relative_to(source)):
             raise ValueError('Symlinks are not packaged: ' + str(f))
         parts = f.relative_to(source).parts
         if any(p in ('.git', '.venv', '__pycache__', '.pytest_cache') for p in parts):
             continue
-        relative = '/'.join(parts)
         if (relative in excluded_files or any(relative.startswith(p) for p in excluded)
                 or relative in ('.codex/config.toml', '.claude/settings.local.json')):
             continue
@@ -98,6 +103,8 @@ def build_release(source, output, layout='auto', archive_root=None, *, beyond_na
                 or f.name.startswith('.env.') and f.name not in ('.env.example', '.env.sample', '.env.template')):
             continue
         if f.is_file() and f.suffix not in ('.pyc', '.pyo'):
+            if approved is not None and (private_name(relative) or content_kinds(f.read_bytes())):
+                raise ValueError('Restricted package content: ' + shown_name(relative))
             files.append(f)
     if not files:
         raise ValueError('No package files')

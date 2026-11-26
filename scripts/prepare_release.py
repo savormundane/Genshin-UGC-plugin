@@ -120,6 +120,9 @@ def package_npm(tree: Path, output: Path, version: str) -> dict:
     prefixes, excluded = distribution_exclusions(tree, required=True)
     native_lock = json.loads((tree / "vendor/beyond/native-canvas.json").read_text(encoding="utf-8"))
     excluded.extend(f"vendor/beyond/{path}" for path in native_lock["files"])
+    from check_public_scope import POLICY, check_entries, read_policy
+    policy = tree / POLICY
+    approved = read_policy(policy.read_bytes()) if policy.is_file() else None
     required = {
         "package.json", "cordis.patch.yml", "plugin.json", "README.md", "LICENSE",
         "THIRD_PARTY_NOTICES.md", "PUBLIC_SOURCES.json", "pyproject.toml", "uv.lock",
@@ -132,6 +135,10 @@ def package_npm(tree: Path, output: Path, version: str) -> dict:
         entries = archive.getmembers()
         names = [entry.name.removeprefix("package/") for entry in entries]
         validate_windows_names(names)
+        if approved is not None:
+            problems = check_entries(names, approved)
+            if problems:
+                raise ValueError("\n".join(problems))
         for entry, relative in zip(entries, names, strict=True):
             if (not entry.isfile() or relative == entry.name
                     or any(part in ("", ".", "..") for part in relative.split("/"))
@@ -181,6 +188,11 @@ def prepare(
                 if not (tree / member.filename).resolve().is_relative_to(tree) or (member.external_attr >> 16) & 0o170000 == 0o120000:
                     raise ValueError("Unsafe or linked source entry: " + member.filename)
             archive.extractall(tree)
+        from check_public_scope import POLICY, check_tree
+        if (source / POLICY).is_file():
+            problems = check_tree(tree)
+            if problems:
+                raise ValueError("\n".join(problems))
         errors = check(tree)
         if errors:
             raise ValueError("\n".join(errors))

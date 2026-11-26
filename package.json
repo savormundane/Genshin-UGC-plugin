@@ -38,6 +38,7 @@
     "!vendor/beyond/node_modules/js-binary-schema-parser/example/**",
     "!vendor/beyond/node_modules/fengari/test/**",
     "!runtime.json",
+    "!public-files.txt",
     "!.agents/plugins/marketplace.json",
     "!.claude-plugin/marketplace.json"
   ],

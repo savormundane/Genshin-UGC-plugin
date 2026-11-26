@@ -1,6 +1,6 @@
 # 本地开发与检查
 
-开始前读 [AGENTS.md](../../AGENTS.md)，从 [工程架构](architecture.md) 和 [工具导航](../../scripts/README.md) 找到负责模块。以 `origin/main` 为基线，工作区有用户改动时新建临时分支和工作树。按改动范围跑本地检查，提交并按仓库分支保护规则推送，查看对应提交的 Actions 结果。 [GitHub Actions](https://github.com/savormundane/miliastra-wonderland-plugin/actions)
+从 [工程架构](architecture.md) 和 [工具导航](../../scripts/README.md) 找到负责模块。以 `origin/main` 为基线，按改动范围运行检查，提交并按分支保护规则推送，查看对应提交的 Actions 结果。 [GitHub Actions](https://github.com/savormundane/miliastra-wonderland-plugin/actions)
 
 普通开发在 CHANGELOG 的 `Unreleased` 记录面向创作者的行为变更。版本同步、标签与分发包归[定版流程](maintenance.md#定版与发行)。临时产物放到源码外，核对验证结果后清理可重建的副本及已合并分支。 [变更记录](../../CHANGELOG.md)
 
@@ -55,7 +55,7 @@ $miliastraPython = (Resolve-Path .\.venv\Scripts\python.exe).Path
 | 安装入口、更新与排障 | [安装指南](../installation.md)。版本和依赖要求集中在 [兼容性](../compatibility.md)，解释器和目录绑定集中在 [运行环境](../runtime-environment.md)。 |
 | 调用参数和结果 | [MCP 工具](../mcp.md) 和各领域参考，核对工具定义、CLI 帮助和回归。样例展示完成任务的方法。 |
 | 平台原文、版本、许可与样本依据 | 原文按供应版本保留，[平台资料维护](platform-maintenance.md) 负责更新流程，来源清单以内容和路径绑定证据。 |
-| 工具边界、开发协作和历史决策 | [工程架构](architecture.md)、[AGENTS.md](../../AGENTS.md)、本页的退出计划及 [CHANGELOG](../../CHANGELOG.md)。 |
+| 工具边界、开发协作和历史决策 | [工程架构](architecture.md)、[参与贡献](../../CONTRIBUTING.md)、本页的退出计划及 [CHANGELOG](../../CHANGELOG.md)。 |
 | 更新上游与发布 | [维护与发行](maintenance.md)。各次发布与本机安装的结果随对应候选和版本留证。 |
 
 在用页面迁移时，先查 Markdown 链接和代码中的路径或锚点引用，再更新调用方。长期入口可保留指向新位置的短说明。来源正文、旧发布和回归记录用于追溯对应版本。参数名、版本和证据状态引用工具实际值。正文使用 SHA-256 校验值、读回校验、客户端、编辑器、游戏环境等具体名称。

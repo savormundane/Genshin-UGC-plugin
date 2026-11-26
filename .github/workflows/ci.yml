@@ -27,6 +27,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: '3.12'
@@ -39,6 +40,16 @@ jobs:
           version: '0.13.10'
           enable-cache: false
       - run: python -B scripts/check_repository.py
+      - name: Verify the public file scope and outgoing commit trees
+        shell: bash
+        env:
+          PRIVACY_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          python -B scripts/check_public_scope.py --commit HEAD
+          if [[ "$PRIVACY_BASE" =~ ^[0-9a-f]{40}$ && "$PRIVACY_BASE" != 0000000000000000000000000000000000000000 ]]; then
+            git cat-file -e "$PRIVACY_BASE^{commit}"
+            python -B scripts/check_public_scope.py --outgoing "$PRIVACY_BASE" HEAD
+          fi
       - run: python -m compileall -q scripts
       - run: node scripts/test_gil.mjs
       - name: Verify both Python locks represent the same dependencies
@@ -143,8 +154,18 @@ jobs:
           foreach ($adapter in @('agent-plugins', 'codex', 'claude-code')) {
             python -B "$unpacked/scripts/install_smoke.py" --config $config --node (Get-Command node).Source --adapter $adapter --require-render
           }
-      - name: Save checked release packages
+      - name: Check whether distribution may be uploaded
         if: matrix.full
+        id: distribution
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $false
+          python -B scripts/check_public_scope.py --require-distribution
+          $allowed = if ($LASTEXITCODE -eq 0) { 'true' } else { 'false' }
+          "allowed=$allowed" >> $env:GITHUB_OUTPUT
+          exit 0
+      - name: Save checked release packages
+        if: matrix.full && steps.distribution.outputs.allowed == 'true'
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: release-candidate
@@ -181,10 +202,6 @@ jobs:
         with:
           node-version: '24.22.3'
           package-manager-cache: false
-      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-        with:
-          name: release-candidate
-          path: ${{ runner.temp }}/release/
       - name: Install temporary host and its test runtime
         env:
           DSH_VERSION: ${{ matrix.dsh }}
@@ -198,6 +215,10 @@ jobs:
       - name: Install Cordis and call it in an isolated DSH Web host
         shell: pwsh
         run: |
-          $archive = (Get-ChildItem -LiteralPath "$env:RUNNER_TEMP/release" -Filter '*.tgz').FullName
+          $PSNativeCommandUseErrorActionPreference = $true
+          $scratch = New-Item -ItemType Directory "$env:RUNNER_TEMP/dsh-candidate"
+          python -B scripts/check_public_scope.py --commit HEAD
+          python -B -c "import json,sys; from pathlib import Path; sys.path.insert(0,'scripts'); from prepare_release import package_npm; root=Path.cwd(); package_npm(root, Path(sys.argv[1]), json.loads((root/'plugin.json').read_bytes())['version'])" $scratch.FullName
+          $archive = (Get-ChildItem -LiteralPath $scratch.FullName -Filter '*.tgz').FullName
           $dsh = "$env:RUNNER_TEMP/dsh/node_modules/@deepseek-ai/dsh/lib/bin.js"
           python -B scripts/test_dsh_host.py --archive $archive --dsh $dsh
