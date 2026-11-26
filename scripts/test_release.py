@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -332,6 +333,24 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(report["tag"], "v1.2.3")
         self.assertEqual((candidate / "release-notes.md").read_text(encoding="utf-8"),
                          "- Release notes.")
+
+    def test_archive_checks_use_the_canonical_output_parent(self):
+        self.fixture()
+        actual = self.base / "actual release parent"
+        actual.mkdir()
+        alias = self.base / "alias"
+        if os.name == "nt":
+            subprocess.run(
+                ["cmd.exe", "/d", "/c", "mklink", "/J", str(alias), str(actual)],
+                check=True, capture_output=True,
+            )
+        else:
+            alias.symlink_to(actual, target_is_directory=True)
+        report = prepare(self.root, alias / "release", self.notes)
+        self.assertTrue((actual / "release" / "release-review.json").is_file())
+        for name, digest in report["assets"].items():
+            self.assertEqual(hashlib.sha256((actual / "release" / name).read_bytes()).hexdigest(),
+                             digest)
 
     def test_wrong_npm_name_cannot_be_packed_for_release(self):
         self.fixture()

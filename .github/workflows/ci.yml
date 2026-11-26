@@ -75,6 +75,12 @@ jobs:
     env:
       PYTHONUTF8: '1'
     steps:
+      - name: Use one Windows temporary path for the test fixtures
+        shell: pwsh
+        run: |
+          $tmp = Join-Path $env:RUNNER_TEMP 'mw-tmp'
+          New-Item -ItemType Directory -Path $tmp | Out-Null
+          foreach ($var in 'TEMP', 'TMP', 'TMPDIR') { "$var=$tmp" >> $env:GITHUB_ENV }
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
@@ -158,6 +164,12 @@ jobs:
     env:
       PYTHONUTF8: '1'
     steps:
+      - name: Use one Windows temporary path for the DSH profile
+        shell: pwsh
+        run: |
+          $tmp = Join-Path $env:RUNNER_TEMP 'mw-tmp'
+          New-Item -ItemType Directory -Path $tmp | Out-Null
+          foreach ($var in 'TEMP', 'TMP', 'TMPDIR') { "$var=$tmp" >> $env:GITHUB_ENV }
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false

@@ -155,6 +155,7 @@ def prepare(
     source, output = source.resolve(), output.absolute()
     if os.path.lexists(output) or output.resolve().is_relative_to(source):
         raise ValueError("Output must be a new directory outside the repository")
+    output = output.parent.resolve() / output.name
 
     def git(*args: str) -> str:
         return subprocess.check_output(["git", "-C", str(source), *args], encoding="utf-8").strip()
