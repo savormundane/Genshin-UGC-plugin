@@ -1,6 +1,6 @@
 {
   "name": "miliastra-wonderland",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "千星奇域本机创作工具。用中文查节点和 Lua API、检查关卡，并生成节点图和图元素材。",
   "author": {
     "name": "Miliastra Wonderland contributors"
