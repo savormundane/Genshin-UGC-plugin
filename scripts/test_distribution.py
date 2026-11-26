@@ -230,7 +230,8 @@ class ReleaseTests(unittest.TestCase):
                 for path, digest in change['excluded_files_sha256'].items():
                     self.assertFalse((restored/path).exists(), path)
                     self.assertNotIn(path.removeprefix('vendor/beyond/'), bundle['files'])
-                    self.assertEqual(hashlib.sha256((root/path).read_bytes()).hexdigest(), digest)
+                    self.assertFalse((root/path).exists(), path)
+                    self.assertRegex(digest, r'^[a-f0-9]{64}$')
             self.assertTrue(list((restored/'vendor/beyond/node_modules').rglob('*.node')))
             self.assertFalse(list((restored/'vendor/beyond/node_modules').rglob('*.map')))
 

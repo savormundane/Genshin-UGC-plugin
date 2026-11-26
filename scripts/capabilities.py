@@ -4,7 +4,7 @@ from pathlib import Path
 from authoring_io import PLUGIN, canonical, inventory, read_json, sha, sha_file
 from miliastra.mcp.bridge import BUILTIN_OPERATIONS,OPERATIONS,project_context
 from runtime_policy import REQUIREMENTS,supported_python
-from validation_evidence import execution_inventory,validation_dependencies,backend_inventory,case_coverage
+from validation_evidence import execution_inventory,validation_dependencies,backend_inventory,case_coverage,maintenance_contract
 CAPABILITIES={
  'knowledge':('knowledge.py','references/platform/knowledge-reliability.md'),'diagnosis':('project_diagnosis.py','references/workflows/project-diagnosis.md'),'asset_inspection':('miliastra/assets/inspection.py','references/assets/asset-inspection.md'),
  'mcp':('miliastra/mcp/service.py','docs/mcp.md'), 'asset_batch':('miliastra/assets/batch.py','references/assets/image-to-primitives.md'),
@@ -161,8 +161,11 @@ def capabilities(evidence=None,tests_root=None,platform=None,mode=None):
     proof=read_json(evidence)if evidence else None
     current=inventory(PLUGIN/'scripts');verified=False
     problems=[]
+    registration={}
     if proof:
         test_directory=Path(tests_root)if tests_root else PLUGIN.parent/'development'
+        registration=maintenance_contract(test_directory) or {}
+        if not registration:problems.append('maintenance validation contract missing beside the development suites')
         if proof.get('schema')!=3:problems.append('validation evidence schema 3 required')
         if proof.get('validation_dependencies')!=validation_dependencies(test_directory):problems.append('validation helpers, fixtures or rules changed')
         if proof.get('backends')!=backend_inventory():problems.append('execution backend changed or unavailable')
@@ -194,27 +197,22 @@ def capabilities(evidence=None,tests_root=None,platform=None,mode=None):
         if proof.get('source_files')!=current or proof.get('execution_files')!=execution_inventory():problems.append('execution source changed')
         if proof.get('passed')is not True:problems.append('validation did not pass')
         verified=not problems
-    coverage=case_coverage(proof or{})
+    coverage=case_coverage(proof or{},registration.get('coverage', {}))
     if not verified:
         for item in coverage.values():item['status']='not_checked'
     executed={r['test']for r in(proof or{}).get('results',[])if r.get('passed')}
-    required={'scene':{'test_native_scene.py'},'knowledge':{'test_knowledge_diagnosis.py'},'diagnosis':{'test_knowledge_diagnosis.py'},'asset_inspection':{'test_knowledge_diagnosis.py'},'asset_batch':{'test_next_workflows.py'},'mcp':{'test_mcp_service.py'},'native_changes':{'test_native_changes.py','test_native_variables.py','test_native_graph_variables.py'},'project':{'test_project_index.py','test_native_variables.py','test_native_graph_variables.py'},'platform':{'test_platform_profiles.py','test_platform_native.py'},'native':{'test_v3.py','test_v3_integration.py','test_node_build.py','test_v32_regressions.py','test_native_variables.py','test_native_graph_variables.py'},
-              'storage':{'test_v3.py','test_v3_integration.py','test_storage_v3.py','test_runtime_migration.py'},
-              'asset_fit':{'test_audit_remediation.py','test_asset_fit_v2.py'},
- 'native_assets':{'test_v3.py','test_native_asset_layers.py','test_runtime_assets.py'},
-              'ui':{'test_v3.py','test_v32_regressions.py','test_native_ui.py','test_native_ui_parent.py'},
-              'simulation':{'test_self_use_model.py','test_v3.py','test_v3_integration.py','test_v32_regressions.py','test_storage_v3.py','test_native_timers.py','test_native_ports.py','test_native_lifecycle.py','test_native_removal.py','test_native_event_identity.py','test_joint_variables.py'},
-              'protocol':{'test_v3.py','test_v3_integration.py','test_production_integration.py','test_runtime_sessions.py','test_client_protocol.py'},
-              'production':{'test_v3.py','test_v3_integration.py','test_production_core.py','test_production_integration.py','test_v32_regressions.py','test_delivery_portable.py'}}
+    required=registration.get('required_suites', {})
+    default_suites=registration.get('default_suites', [])
+    unchecked={'required':[],'missing':[],'status':'not_checked'}
     from capability_layers import describe
-    layers=describe(proof,verified)
+    layers=describe(proof,verified,registration.get('layer_cases'))
     from platform_profiles import CATALOGUE,profile
     supported={**SUPPORT,'platform':{**SUPPORT['platform'],'profiles':list(read_json(CATALOGUE)['profiles'])}}
     context=profile(platform,mode)if platform is not None or mode is not None else None
     from capability_index import describe as architecture
     return {'schema':2,'version':read_json(PLUGIN/'plugin.json')['version'],'architecture':architecture(),'platform':context,'platform_version_verified':False,
             'capabilities':{name:{'entry':file,'source_present':(PLUGIN/'scripts'/file).is_file(),'guide':guide,'supported':supported[name],
-                                 'layers':layers[name],'offline_evidence':'passed'if verified and required.get(name,{'test_v3.py'})<=executed and coverage[name]['status']=='passed'else'not_checked',
-                                 'coverage':coverage[name],'editor':'not_checked','host':'not_checked'}for name,(file,guide)in CAPABILITIES.items()},
+                                 'layers':layers[name],'offline_evidence':'passed'if verified and set(required.get(name, default_suites))<=executed and coverage.get(name, unchecked)['status']=='passed'else'not_checked',
+                                 'coverage':coverage.get(name, unchecked),'editor':'not_checked','host':'not_checked'}for name,(file,guide)in CAPABILITIES.items()},
             'protocol_types':list(__import__('protocol_types').TYPES),'model':'bounded Lua/API and native graph subset; unsupported operations fail',
             'evidence_current':verified,'evidence_problems':problems,'evidence_file':str(Path(evidence).resolve())if evidence else None,'executed_suites':sorted(executed)if verified else[]}

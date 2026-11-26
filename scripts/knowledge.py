@@ -132,6 +132,7 @@ def snapshot():
 def difference(before,after):
     from authoring_io import schema
     from capability_index import OWNERS
+    from validation_evidence import contract
     old,new=read_json(before),read_json(after)
     for value in (old,new):
         schema(value,('schema','kind','sources','client_api','scope'),('kind','sources','client_api'),version=1)
@@ -155,12 +156,14 @@ def difference(before,after):
     if 'platform_catalogue'in changed_sources:affected.update(('platform','project','native'))
     if 'pixels'in changed_sources:affected.update(('asset_inspection','native_assets'))
     if set(changed_sources)-{'client_api','platform_catalogue','pixels'}:affected.update(OWNERS)
-    suites={'test_knowledge_diagnosis.py','test_v36_architecture.py'} if affected else set()
-    if affected&{'ui','assembly','protocol','storage'}:suites.update(('test_client_api.py','test_client_check.py','test_client_protocol.py','test_storage_v3.py'))
-    if 'platform'in affected:suites.update(('test_platform_profiles.py','test_platform_native.py'))
-    if 'native_assets'in affected:suites.update(('test_asset_pipeline.py','test_native_asset_layers.py'))
+    checks=contract()['public_checks']
+    affected=sorted(affected)
+    cases=sorted({case for name in affected for case in checks.get(name, {}).get('cases', [])})
+    coverage_gaps={name:checks.get(name, {}).get('gap', '请按实际改动补做此能力的定向回归。')
+                   for name in affected}
     return {'schema':1,'changed_sources':changed_sources,'api':{'added':added,'removed':removed,'changed':changed},
-            'affected_capabilities':sorted(affected),'suggested_suites':sorted(suites),
+            'affected_capabilities':affected,'suggested_suites':sorted({case.split('::')[0] for case in cases}),
+            'suggested_cases':cases,'coverage_gaps':coverage_gaps,
             'compatibility':'review_required' if removed or changed or changed_sources or added else 'unchanged',
             'before_sha256':sha(Path(before).read_bytes()),'after_sha256':sha(Path(after).read_bytes()),
             'checks_executed':False,'editor':'not_checked','host':'not_checked',

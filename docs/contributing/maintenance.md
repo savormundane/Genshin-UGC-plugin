@@ -16,4 +16,6 @@ Python 依赖有变更时运行 `uv lock`，并用 `uv export --locked --no-dev 
 
 解包到干净的目录，核对运行文件和许可证是否齐全，再按[本地开发与检查](development.md)验证启动、MCP 和相关工作流。已排除的上游目录及摘要见 [PUBLIC_SOURCES.json](../../PUBLIC_SOURCES.json) 的 `distribution_changes`。 [V1.1.0 分发包精简记录](https://github.com/savormundane/miliastra-wonderland-plugin/blob/v1.1.0/docs/contributing/maintenance.md)
 
+当前 Git 树也已移除 `gifuct-js/demo/`、`js-binary-schema-parser/example/` 和 `fengari/test/` 中的 60 个文件，共 7.36 MiB 未压缩。原文件可从 Git 历史追溯。三个目录继续列在分发排除规则中，避免随上游更新进入成品。
+
 用 [native-canvas.json](../../vendor/beyond/native-canvas.json) 锁定 Windows x64 原生模块与 ICU 数据的资产地址和摘要。更新时核对上游版本、许可证、下载的资产和解包文件。完整 ZIP 须随包携带两份文件。Git 与 Cordis 的成品须实测首次下载及离线缓存复用。 [Beyond 运行文件清单](../../vendor/beyond/bundle.json)

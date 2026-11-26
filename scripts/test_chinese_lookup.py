@@ -70,6 +70,46 @@ def cli(*args):
 
 
 class ChineseLookupTests(unittest.TestCase):
+    def test_knowledge_diff_recommends_public_regressions_by_impact(self):
+        from capability_index import OWNERS
+
+        snapshot = cli("knowledge", "snapshot")
+        changes = (
+            ("client_api", {"knowledge", "ui", "assembly", "simulation", "protocol", "storage"},
+             "test_formal_symbols_catalogue_and_digest_stay_compatible"),
+            ("platform_catalogue", {"platform", "project", "native"},
+             "test_versioned_documents_found_after_keyword_retry"),
+            ("pixels", {"asset_inspection", "native_assets"},
+             "test_asset_preview_returns_images_and_counts"),
+            ("conflicts", set(OWNERS), "test_scene_preview_reports_positions_and_partial_coverage"),
+            (None, set(), None),
+        )
+        with tempfile.TemporaryDirectory(prefix="miliastra knowledge diff ") as temporary:
+            before, after = (Path(temporary) / name for name in ("before.json", "after.json"))
+            write_json(before, snapshot)
+            for source, affected, case in changes:
+                with self.subTest(source=source):
+                    sources = dict(snapshot["sources"])
+                    if source:
+                        sources[source] = {**sources[source], "sha256": "1" * 64}
+                    write_json(after, {**snapshot, "sources": sources})
+                    report = cli("knowledge", "diff", str(before), str(after))
+                    self.assertEqual(report["affected_capabilities"], sorted(affected))
+                    self.assertEqual(set(report["coverage_gaps"]), affected)
+                    self.assertFalse(report["checks_executed"])
+                    self.assertEqual((report["editor"], report["host"]), ("not_checked", "not_checked"))
+                    selectors = report["suggested_cases"]
+                    self.assertEqual(report["suggested_suites"], sorted({s.split("::")[0] for s in selectors}))
+                    self.assertTrue(all((PLUGIN / "scripts" / f).is_file() for f in report["suggested_suites"]))
+                    if case:
+                        self.assertTrue(any(s.endswith("." + case) for s in selectors))
+                    else:
+                        self.assertEqual(selectors, [])
+                        self.assertEqual(report["compatibility"], "unchanged")
+                    if source == "client_api":
+                        self.assertNotIn("test_native_entity_transform.py", report["suggested_suites"])
+                        self.assertIn("信号", report["coverage_gaps"]["protocol"])
+
     def test_chinese_api_returns_top_three_with_source_evidence(self):
         for question, expected in API_CASES:
             with self.subTest(question=question):

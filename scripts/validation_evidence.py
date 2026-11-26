@@ -17,6 +17,19 @@ def contract():
     if value.get('schema')!=1:raise ValueError('Unknown validation contract schema')
     return value
 
+def maintenance_contract_path(tests_root):
+    path=Path(tests_root)/'validation-contract.json'
+    return path if path.is_file() else PLUGIN.parent/'development/validation-contract.json'
+
+def maintenance_contract(tests_root):
+    path=maintenance_contract_path(tests_root)
+    if not path.is_file():
+        return None
+    value=read_json(path)
+    if value.get('schema')!=1:
+        raise ValueError('Unknown maintenance validation contract schema')
+    return value
+
 def runtime_rule(path):
     name=Path(path).as_posix()
     prefix=PLUGIN.as_posix()+'/'
@@ -35,6 +48,9 @@ def validation_dependencies(root):
             if path.is_symlink():raise ValueError('Linked validation dependency '+str(path))
             if path.is_file()and '__pycache__'not in path.parts:
                 result[path.relative_to(root).as_posix()]=sha(path.read_bytes())
+    registration=maintenance_contract_path(root)
+    if registration.is_symlink():raise ValueError('Linked validation dependency '+str(registration))
+    if registration.is_file():result['@maintenance-contract']=sha(registration.read_bytes())
     market=PLUGIN.parent/'.agents/plugins/marketplace.json'
     result['@self-use-marketplace']=sha(market.read_bytes())if market.is_file()else None
     return result
@@ -72,8 +88,8 @@ def backend_inventory():
     else:result['node']={'available':False}
     return result
 
-def case_coverage(proof):
+def case_coverage(proof, requirements):
     passed={row['test']+'::'+case['id']for row in proof.get('results',[])for case in row.get('cases',[])if case.get('status')=='passed'}
     return {name:{'required':cases,'missing':sorted(set(cases)-passed),
-                  'status':'passed'if set(cases)<=passed else'not_checked'}
-            for name,cases in contract()['coverage'].items()}
+                  'status':'passed'if cases and set(cases)<=passed else'not_checked'}
+            for name,cases in requirements.items()}

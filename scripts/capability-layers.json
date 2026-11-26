@@ -4,550 +4,255 @@
     "asset_batch": {
       "generation": {
         "implementation": "available",
-        "scope": "Measured shared control budget with digest-bound batch generation",
-        "cases": [
-          "test_next_workflows.py::NextWorkflowsTests.test_batch_budget_and_append_client_module_to_existing_gil"
-        ]
+        "scope": "Measured shared control budget with digest-bound batch generation"
       },
       "readback": {
         "implementation": "available",
-        "scope": "Generated control counts, reference image digests and client asset table readback",
-        "cases": [
-          "test_next_workflows.py::NextWorkflowsTests.test_batch_budget_and_append_client_module_to_existing_gil"
-        ]
+        "scope": "Generated control counts, reference image digests and client asset table readback"
       }
     },
     "scene": {
       "rules": {
         "implementation": "available",
-        "scope": "Explicit target, native model record evidence and transform constraints",
-        "cases": [
-          "test_native_scene.py::NativeSceneTests.test_reject_unknown_candidate_and_invalid_transform",
-          "test_native_scene.py::NativeSceneTests.test_witness_mode_and_digest_remain_bound",
-          "test_native_scene.py::NativeSceneTests.test_dimensions_are_bound_to_measurement"
-        ]
+        "scope": "Explicit target, native model record evidence and transform constraints"
       },
       "generation": {
         "implementation": "available",
-        "scope": "Static scene GIA, editable layout and resource mapping through the shared production stage",
-        "cases": [
-          "test_native_scene.py::NativeSceneTests.test_static_readback_and_production"
-        ]
+        "scope": "Static scene GIA, editable layout and resource mapping through the shared production stage"
       },
       "readback": {
         "implementation": "available",
-        "scope": "Static object identity and world transform, and protected-byte checks during local GIL edits",
-        "cases": [
-          "test_native_scene.py::NativeSceneTests.test_static_readback_and_production",
-          "test_native_scene.py::NativeSceneTests.test_transform_plan_changes_only_selected_coordinates"
-        ]
+        "scope": "Static object identity and world transform, and protected-byte checks during local GIL edits"
       }
     },
     "mcp": {
       "rules": {
         "implementation": "available",
-        "scope": "Fixed tool schemas, declared roots and source digests; trusted builds only",
-        "cases": [
-          "test_mcp_service.py::MCPTests.test_cancel_and_nested_input_boundary"
-        ]
+        "scope": "Fixed tool schemas, declared roots and source digests; trusted builds only"
       },
       "generation": {
         "implementation": "available",
-        "scope": "Two neutral new native builds and existing graph iterations through real stdio",
-        "cases": [
-          "test_mcp_service.py::MCPTests.test_stdio_cli_parity_and_two_native_flows"
-        ]
+        "scope": "Two neutral new native builds and existing graph iterations through real stdio"
       },
       "readback": {
         "implementation": "available",
-        "scope": "CLI/stdio shared core; sixteen tool calls; cancellation and no failed output commit; host UI not checked",
-        "cases": [
-          "test_mcp_service.py::MCPTests.test_stdio_cli_parity_and_two_native_flows",
-          "test_mcp_service.py::MCPTests.test_sdk_cancellation_protocol",
-          "test_mcp_service.py::MCPTests.test_stdio_cancellation_and_reuse",
-          "test_mcp_service.py::MCPTests.test_stdio_readonly_tools",
-          "test_mcp_service.py::MCPTests.test_added_operations_two_configurations"
-        ]
+        "scope": "CLI/stdio shared core; sixteen tool calls; cancellation and no failed output commit; host UI not checked"
       }
     },
     "native_changes": {
       "rules": {
         "implementation": "available",
-        "scope": "Content-bound GIL modification plans, protected bytes and known semantic changes; unknown payloads remain byte-visible",
-        "cases": [
-          "test_native_changes.py::ChangeTests.test_plan_semantics_identity_and_protection",
-          "test_native_changes.py::ChangeTests.test_input_and_plan_drift_refused",
-          "test_native_changes.py::ChangeTests.test_diff_preserves_unknown_changes_and_normalizes_connections"
-        ]
+        "scope": "Content-bound GIL modification plans, protected bytes and known semantic changes; unknown payloads remain byte-visible"
       },
       "generation": {
         "implementation": "available",
-        "scope": "Existing calibrated GIL patch operations bound to reviewed output and immutable input content",
-        "cases": [
-          "test_native_changes.py::ChangeTests.test_cli_plan_application_and_output_guards",
-          "test_native_changes.py::ChangeTests.test_production_plan_portable_and_failure_rollback"
-        ]
+        "scope": "Existing calibrated GIL patch operations bound to reviewed output and immutable input content"
       },
       "readback": {
         "implementation": "available",
-        "scope": "GIL/GIA differences and verified GIL plan application including portable relocation",
-        "cases": [
-          "test_native_changes.py::ChangeTests.test_diff_preserves_unknown_changes_and_normalizes_connections",
-          "test_native_changes.py::ChangeTests.test_production_plan_portable_and_failure_rollback",
-          "test_native_variables.py::VariableTests.test_duplicate_groups_names_and_difference",
-          "test_native_graph_variables.py::GraphVariableTests.test_namespaces_types_and_semantic_diff",
-          "test_native_graph_variables.py::GraphVariableTests.test_graph_access_contracts_and_consumers"
-        ]
+        "scope": "GIL/GIA differences and verified GIL plan application including portable relocation"
       }
     },
     "project": {
       "rules": {
         "implementation": "available",
-        "scope": "Namespaced identities, calibrated references and explicit required relations; not a complete migration index",
-        "cases": [
-          "test_project_index.py::ProjectTests.test_connection_consumers_ignore_serialization_side",
-          "test_project_index.py::ProjectTests.test_identity_consumers_and_dynamic_signal_binding",
-          "test_project_index.py::ProjectTests.test_client_hierarchy_and_mapping_faults",
-          "test_project_index.py::ProjectTests.test_project_manifest_cli_and_required_references",
-          "test_native_variables.py::VariableTests.test_original_scopes_and_partial_dictionary_descriptors",
-          "test_native_variables.py::VariableTests.test_namespaced_defaults_inheritance_and_consumers",
-          "test_native_variables.py::VariableTests.test_declaration_default_and_deep_reference_faults",
-          "test_native_graph_variables.py::GraphVariableTests.test_original_all_types_and_empty_values",
-          "test_native_graph_variables.py::GraphVariableTests.test_namespaces_types_and_semantic_diff",
-          "test_native_graph_variables.py::GraphVariableTests.test_nested_container_and_structure_faults",
-          "test_native_graph_variables.py::GraphVariableTests.test_unknown_and_missing_declarations",
-          "test_native_graph_variables.py::GraphVariableTests.test_graph_access_contracts_and_consumers",
-          "test_native_graph_variables.py::GraphVariableTests.test_dynamic_names_serialization_sides_and_absent_reads",
-          "test_native_graph_variables.py::GraphVariableTests.test_access_structure_and_dictionary_types"
-        ]
+        "scope": "Namespaced identities, calibrated references and explicit required relations; not a complete migration index"
       },
       "readback": {
         "implementation": "available",
-        "scope": "Final GIL client/native references, GIA structure dependencies and portable artifact closure",
-        "cases": [
-          "test_project_index.py::ProjectTests.test_gia_structure_dependency_and_slot_consumers",
-          "test_project_index.py::ProjectTests.test_production_portable_requirements_and_fault_rollback",
-          "test_native_variables.py::VariableTests.test_duplicate_groups_names_and_difference",
-          "test_native_variables.py::VariableTests.test_cli_and_portable_final_checks",
-          "test_native_graph_variables.py::GraphVariableTests.test_cli_production_portable_and_rollback",
-          "test_native_graph_variables.py::GraphVariableTests.test_real_access_compilation_production_and_portable"
-        ]
+        "scope": "Final GIL client/native references, GIA structure dependencies and portable artifact closure"
       }
     },
     "native": {
       "rules": {
         "implementation": "available",
-        "scope": "Calibrated ports, identities and resources; unknown forms rejected",
-        "cases": [
-          "test_native_ports.py::NativePortTests.test_explicit_builtin_ports_do_not_authorize_themselves",
-          "test_native_resources.py::NativeResourceTests.test_original_gia_structure_resources_and_identity_faults",
-          "test_native_variables.py::VariableTests.test_original_scopes_and_partial_dictionary_descriptors",
-          "test_native_variables.py::VariableTests.test_namespaced_defaults_inheritance_and_consumers",
-          "test_native_variables.py::VariableTests.test_declaration_default_and_deep_reference_faults",
-          "test_native_graph_variables.py::GraphVariableTests.test_original_all_types_and_empty_values",
-          "test_native_graph_variables.py::GraphVariableTests.test_namespaces_types_and_semantic_diff",
-          "test_native_graph_variables.py::GraphVariableTests.test_nested_container_and_structure_faults",
-          "test_native_graph_variables.py::GraphVariableTests.test_unknown_and_missing_declarations",
-          "test_native_graph_variables.py::GraphVariableTests.test_graph_access_contracts_and_consumers",
-          "test_native_graph_variables.py::GraphVariableTests.test_dynamic_names_serialization_sides_and_absent_reads",
-          "test_native_graph_variables.py::GraphVariableTests.test_access_structure_and_dictionary_types"
-        ]
+        "scope": "Calibrated ports, identities and resources; unknown forms rejected"
       },
       "generation": {
         "implementation": "available",
-        "scope": "Compiled graph replacement and explicitly bound storage graphs",
-        "cases": [
-          "test_v3_integration.py::Integration.test_real_graph_replacement",
-          "test_v3_integration.py::Integration.test_real_storage_compilation"
-        ]
+        "scope": "Compiled graph replacement and explicitly bound storage graphs"
       },
       "readback": {
         "implementation": "available",
-        "scope": "GIL/GIA graph and signal contracts",
-        "cases": [
-          "test_native_signals.py::NativeSignalTests.test_real_produce_signal_gia_and_corruption_rollback",
-          "test_native_variables.py::VariableTests.test_duplicate_groups_names_and_difference",
-          "test_native_variables.py::VariableTests.test_cli_and_portable_final_checks",
-          "test_native_graph_variables.py::GraphVariableTests.test_cli_production_portable_and_rollback",
-          "test_native_graph_variables.py::GraphVariableTests.test_real_access_compilation_production_and_portable"
-        ]
+        "scope": "GIL/GIA graph and signal contracts"
       },
       "native_graph_model": {
         "implementation": "available",
-        "scope": "Variable references, events and server signal subset; no composite execution",
-        "cases": [
-          "test_v3_integration.py::Integration.test_real_native_reference_and_variable_events",
-          "test_v3_integration.py::Integration.test_real_server_signal_broadcast"
-        ]
+        "scope": "Variable references, events and server signal subset; no composite execution"
       }
     },
     "storage": {
       "rules": {
         "implementation": "available",
-        "scope": "Schema 2/3 layout and compatibility boundaries",
-        "cases": [
-          "test_storage_v3.py::StorageV3Tests.test_contract_boundaries"
-        ]
+        "scope": "Schema 2/3 layout and compatibility boundaries"
       },
       "generation": {
         "implementation": "available",
-        "scope": "Integer/boolean/integer-list storage and separate achievements",
-        "cases": [
-          "test_v3_integration.py::Integration.test_real_storage_compilation",
-          "test_v3_integration.py::Integration.test_real_storage_lists_and_slots",
-          "test_v3_integration.py::Integration.test_real_storage_achievements"
-        ]
+        "scope": "Integer/boolean/integer-list storage and separate achievements"
       },
       "readback": {
         "implementation": "available",
-        "scope": "Compiled storage declarations and graph resources",
-        "cases": [
-          "test_v3_integration.py::Integration.test_real_storage_compilation",
-          "test_v3_integration.py::Integration.test_real_storage_lists_and_slots"
-        ]
+        "scope": "Compiled storage declarations and graph resources"
       },
       "lua_model": {
         "implementation": "available",
-        "scope": "Generated adapters, stale replies and timeout; Explicit QX record migration and schema-3 adapter tickets; outer native layout migration not implemented",
-        "cases": [
-          "test_storage_v3.py::StorageV3Tests.test_client_revision_old_reply_and_timeout",
-          "test_runtime_migration.py::MigrationTests.test_produce_two_configs_and_rejections",
-          "test_runtime_migration.py::MigrationTests.test_multistep_and_invalid_transforms",
-          "test_runtime_migration.py::MigrationTests.test_generated_schema3_commit_binding"
-        ]
+        "scope": "Generated adapters, stale replies and timeout; Explicit QX record migration and schema-3 adapter tickets; outer native layout migration not implemented"
       },
       "native_graph_model": {
         "implementation": "available",
-        "scope": "Session/revision writes in bounded persistent-layer model",
-        "cases": [
-          "test_storage_v3.py::StorageV3Tests.test_integer_guard_and_client",
-          "test_storage_v3.py::StorageV3Tests.test_list_guard_and_client"
-        ]
+        "scope": "Session/revision writes in bounded persistent-layer model"
       }
     },
     "protocol": {
       "rules": {
         "implementation": "available",
-        "scope": "18 API types and declared receive policies; Explicit client protocol directions and final native wire layout; runtime delivery unverified",
-        "cases": [
-          "test_v3.py::V3Tests.test_revision_and_protocol_types",
-          "test_client_protocol.py::ClientProtocolTests.test_directions_native_layout_and_unresolved",
-          "test_client_protocol.py::ClientProtocolTests.test_produce_contract_binding_and_rollback"
-        ]
+        "scope": "18 API types and declared receive policies; Explicit client protocol directions and final native wire layout; runtime delivery unverified"
       },
       "generation": {
         "implementation": "available",
-        "scope": "Native declarations and Lua bridge",
-        "cases": [
-          "test_v3_integration.py::Integration.test_real_complex_signal_roundtrip"
-        ]
+        "scope": "Native declarations and Lua bridge"
       },
       "readback": {
         "implementation": "available",
-        "scope": "18 types through final native output",
-        "cases": [
-          "test_v3_integration.py::Integration.test_real_complex_signal_roundtrip"
-        ]
+        "scope": "18 types through final native output"
       },
       "lua_model": {
         "implementation": "available",
-        "scope": "Independent Lua clients using the generated protocol; Session membership, ordered commands, revision withdrawal and validated checkpoint recovery; native transport integration remains separate",
-        "cases": [
-          "test_v3_integration.py::Integration.test_real_complex_signal_roundtrip",
-          "test_runtime_sessions.py::SessionTests.test_session_membership_order_and_restore",
-          "test_runtime_sessions.py::SessionTests.test_assembly_production_two_configs"
-        ]
+        "scope": "Independent Lua clients using the generated protocol; Session membership, ordered commands, revision withdrawal and validated checkpoint recovery; native transport integration remains separate"
       },
       "native_graph_model": {
         "implementation": "available",
-        "scope": "Signal paths in final GIL",
-        "cases": [
-          "test_v3_integration.py::Integration.test_real_complex_signal_roundtrip"
-        ]
+        "scope": "Signal paths in final GIL"
       }
     },
     "ui": {
       "lua_model": {
         "implementation": "available",
-        "scope": "Queue, pool, cancellation, drag and budgets; no actual rendering",
-        "cases": [
-          "test_v3.py::V3Tests.test_ui_budgets_drag_and_overlay",
-          "test_v32_regressions.py::QueueMutationTests.test_callback_cancellation_and_handle_invalidation",
-          "test_v32_regressions.py::QueueMutationTests.test_replacement_and_new_task_wait_until_next_tick"
-        ]
+        "scope": "Queue, pool, cancellation, drag and budgets; no actual rendering"
       },
       "readback": {
         "implementation": "available",
-        "cases": [
-          "test_native_ui.py::NativeUITests.test_two_layouts_and_production",
-          "test_native_ui.py::NativeUITests.test_unknowns_drift_selection_and_geometry_rejected",
-          "test_native_ui.py::NativeUITests.test_scaled_rectangles_and_final_production",
-          "test_native_ui_parent.py::ParentFrameTests.test_parent_identity_size_cycles_and_final_state",
-          "test_native_ui_parent.py::ParentFrameTests.test_production_uses_final_parent_and_rolls_back"
-        ],
         "scope": "; Native fixed-anchor rectangles and explicit positive XY scale; parent geometry and host rendering not verified; Explicit final immediate-parent local size and acyclic parent identity; screen geometry unverified"
       }
     },
     "assembly": {
       "rules": {
         "implementation": "available",
-        "scope": "Ordered assembly, final Lua syntax and contract-bound lexical host API checks; dynamic and engineering references remain unverified; Explicit client protocol directions and final native wire layout; runtime delivery unverified",
-        "cases": [
-          "test_v3.py::V3Tests.test_assembly_and_mapping",
-          "test_client_check.py::ClientCheckTests.test_text_compilation_never_executes_and_requires_lua53",
-          "test_client_check.py::ClientCheckTests.test_every_embedded_mapping_and_exact_selection",
-          "test_client_check.py::ClientCheckTests.test_bound_line_mapping_and_rejection_of_stale_or_ambiguous_maps",
-          "test_client_check.py::ClientCheckTests.test_cli_reports_failure_and_preserves_existing_outputs",
-          "test_client_check.py::ClientCheckTests.test_malformed_embedded_body_is_not_an_empty_script",
-          "test_client_api.py::ClientApiTests.test_lexical_calls_permissions_types_and_nonexecution",
-          "test_client_api.py::ClientApiTests.test_lua_multireturn_parentheses_and_binary_strings",
-          "test_client_api.py::ClientApiTests.test_dynamic_bindings_enums_and_conservative_unknowns",
-          "test_client_api.py::ClientApiTests.test_digest_mapping_source_location_and_dependency_guards",
-          "test_client_protocol.py::ClientProtocolTests.test_directions_native_layout_and_unresolved",
-          "test_client_protocol.py::ClientProtocolTests.test_produce_contract_binding_and_rollback"
-        ]
+        "scope": "Ordered assembly, final Lua syntax and contract-bound lexical host API checks; dynamic and engineering references remain unverified; Explicit client protocol directions and final native wire layout; runtime delivery unverified"
       },
       "generation": {
         "implementation": "available",
-        "scope": "Inline Lua and source maps",
-        "cases": [
-          "test_v3.py::V3Tests.test_assembly_and_mapping"
-        ]
+        "scope": "Inline Lua and source maps"
       },
       "readback": {
         "implementation": "available",
-        "scope": "Final embedded Lua and independent rebuild; all final embedded mappings, source-only and no-script applicability; Final Lua, source maps, explicit template references and read-only generated alias tables; runtime control lifetime not verified; Explicit client variable owner contracts and local template inheritance; runtime identity unverified",
-        "cases": [
-          "test_v3_integration.py::Integration.test_produce_assembly_final_script_rebuild_and_failure",
-          "test_client_check.py::ClientCheckTests.test_final_production_portable_and_failure_rollback",
-          "test_client_check.py::ClientCheckTests.test_source_only_and_scriptless_production_status",
-          "test_client_check.py::ClientCheckTests.test_malformed_embedded_body_is_not_an_empty_script",
-          "test_client_api.py::ClientApiTests.test_cli_and_source_only_production",
-          "test_client_api.py::ClientApiTests.test_final_gil_production_portable_and_rollback",
-          "test_client_api.py::ClientApiTests.test_final_native_signal_name_references",
-          "test_client_api.py::ClientApiTests.test_signal_send_parameter_order_and_flow",
-          "test_client_api.py::ClientApiTests.test_final_control_template_references_and_production",
-          "test_client_api.py::ClientApiTests.test_readonly_literal_tables_and_mutation_boundaries",
-          "test_client_api.py::ClientApiTests.test_generated_template_alias_final_production",
-          "test_client_variables.py::ClientVariableTests.test_bound_owners_inheritance_and_faults",
-          "test_client_variables.py::ClientVariableTests.test_final_gil_and_production_gate"
-        ]
+        "scope": "Final embedded Lua and independent rebuild; all final embedded mappings, source-only and no-script applicability; Final Lua, source maps, explicit template references and read-only generated alias tables; runtime control lifetime not verified; Explicit client variable owner contracts and local template inheritance; runtime identity unverified"
       },
       "lua_model": {
         "implementation": "available",
-        "scope": "Assembled client execution in bounded Lua model",
-        "cases": [
-          "test_v3_integration.py::Integration.test_produce_assembly_final_script_rebuild_and_failure"
-        ]
+        "scope": "Assembled client execution in bounded Lua model"
       }
     },
     "simulation": {
       "rules": {
         "implementation": "available",
-        "scope": "Reject empty assertions, unexecuted required graphs, missing required timer events and unhit faults",
-        "cases": [
-          "test_native_timers.py::TimerTests.test_serialized_nodes_timer_event_and_controls",
-          "test_v32_regressions.py::SimulationCoverageTests.test_empty_assertions_and_unhit_fault_do_not_pass_acceptance",
-          "test_v32_regressions.py::SimulationCoverageTests.test_required_graph_must_execute_even_when_other_graph_passes"
-        ]
+        "scope": "Reject empty assertions, unexecuted required graphs, missing required timer events and unhit faults"
       },
       "lua_model": {
         "implementation": "available",
-        "scope": "Isolated clients and deterministic transport",
-        "cases": [
-          "test_v3.py::V3Tests.test_joint_final_graph_execution_and_transport"
-        ]
+        "scope": "Isolated clients and deterministic transport"
       },
       "native_graph_model": {
         "implementation": "available",
-        "scope": "Supported nodes only; unknown execution fails; Explicit entity creation on configured graph instances; no entity factory or destruction; Explicit level-scoped entity removal, GUID and timer/listener cleanup; no combat destruction snapshots; Explicit client variable owner snapshots and listener delivery; host replication timing unverified",
-        "cases": [
-          "test_native_timers.py::TimerTests.test_sequence_pause_resume_replace_and_isolation",
-          "test_native_timers.py::TimerTests.test_serialized_nodes_timer_event_and_controls",
-          "test_native_ports.py::NativePortTests.test_model_reads_output_only_and_mirrored_edges",
-          "test_native_ports.py::NativePortTests.test_model_query_with_implicit_connected_argument",
-          "test_v3.py::V3Tests.test_joint_final_graph_execution_and_transport",
-          "test_v3_integration.py::Integration.test_real_native_reference_and_variable_events",
-          "test_native_lifecycle.py::LifecycleTests.test_instances_once_and_unknown_operations",
-          "test_native_lifecycle.py::LifecycleTests.test_joint_creation_order_and_delayed_delivery",
-          "test_native_lifecycle.py::LifecycleTests.test_final_production_lifecycle_gate",
-          "test_native_removal.py::RemovalTests.test_level_event_guid_and_resource_cleanup",
-          "test_native_removal.py::RemovalTests.test_final_production_and_joint_removal",
-          "test_native_event_identity.py::EventIdentityTests.test_names_cannot_substitute_for_builtin_identity",
-          "test_native_event_identity.py::EventIdentityTests.test_calibrated_identity_and_wrong_concrete_reference",
-          "test_joint_variables.py::JointVariableTests.test_snapshot_listener_cleanup_and_faults",
-          "test_joint_variables.py::JointVariableTests.test_production_final_server_binding"
-        ]
+        "scope": "Supported nodes only; unknown execution fails; Explicit entity creation on configured graph instances; no entity factory or destruction; Explicit level-scoped entity removal, GUID and timer/listener cleanup; no combat destruction snapshots; Explicit client variable owner snapshots and listener delivery; host replication timing unverified"
       },
       "software_preview": {
         "implementation": "implemented",
-        "scope": "selected calibrated GIL controls, bundled Beyond software PNG; not host rendering",
-        "cases": [
-          "test_beyond_gil.py::BeyondGilTests.test_gil_render_and_guards",
-          "test_beyond_portable.py::BeyondPortableTests.test_two_final_gil_portable_rebuilds"
-        ]
+        "scope": "selected calibrated GIL controls, bundled Beyond software PNG; not host rendering"
       }
     },
     "algorithms": {
       "lua_model": {
         "implementation": "available",
-        "scope": "RNG, paths, geometry, reservations and parameterized algorithms",
-        "cases": [
-          "test_v3.py::V3Tests.test_algorithms_and_resource_lifetime",
-          "test_v3.py::V3Tests.test_experiment_pairing_and_holdout"
-        ]
+        "scope": "RNG, paths, geometry, reservations and parameterized algorithms"
       }
     },
     "native_assets": {
       "rules": {
         "implementation": "available",
-        "scope": "Calibrated coplanar rectangles only",
-        "cases": [
-          "test_v3.py::V3Tests.test_native_gia_import_and_faults"
-        ]
+        "scope": "Calibrated coplanar rectangles only"
       },
       "generation": {
         "implementation": "available",
-        "scope": "Asset JSON/Lua and software preview, not arbitrary native assets",
-        "cases": [
-          "test_v3.py::V3Tests.test_native_gia_import_and_faults"
-        ]
+        "scope": "Asset JSON/Lua and software preview, not arbitrary native assets"
       },
       "readback": {
         "implementation": "available",
-        "scope": "Calibrated GIA import and reconstruction; Exact grid geometry, explicit source depths and software alpha preview; host occlusion not verified",
-        "cases": [
-          "test_v3.py::V3Tests.test_native_gia_import_and_faults",
-          "test_native_asset_layers.py::LayerTests.test_two_orders_production_and_exact_preview",
-          "test_native_asset_layers.py::LayerTests.test_unknown_depth_and_budget_rejected",
-          "test_native_asset_layers.py::LayerTests.test_translucent_overlap_is_not_merged_within_layer"
-        ]
+        "scope": "Calibrated GIA import and reconstruction; Exact grid geometry, explicit source depths and software alpha preview; host occlusion not verified"
       },
       "lua_model": {
         "implementation": "available",
-        "scope": "Explicit catalogue, rectangle-weighted cache, identity leases and pinned eviction protection; no host object lifecycle",
-        "cases": [
-          "test_runtime_assets.py::AssetRuntimeTests.test_weighted_leases_and_failure_preservation",
-          "test_runtime_assets.py::AssetRuntimeTests.test_two_production_configurations"
-        ]
+        "scope": "Explicit catalogue, rectangle-weighted cache, identity leases and pinned eviction protection; no host object lifecycle"
       }
     },
     "production": {
       "rules": {
         "implementation": "available",
-        "scope": "Atomic output and declared stage acceptance",
-        "cases": [
-          "test_v32_regressions.py::SimulationCoverageTests.test_production_rejects_unchecked_simulation_without_output",
-          "test_client_check.py::ClientCheckTests.test_final_production_portable_and_failure_rollback",
-          "test_client_check.py::ClientCheckTests.test_source_only_and_scriptless_production_status",
-          "test_client_check.py::ClientCheckTests.test_malformed_embedded_body_is_not_an_empty_script"
-        ]
+        "scope": "Atomic output and declared stage acceptance"
       },
       "generation": {
         "implementation": "available",
-        "scope": "Two neutral relocated projects",
-        "cases": [
-          "test_delivery_portable.py::PortableTests.test_two_relocated_projects_and_json_deliverables"
-        ]
+        "scope": "Two neutral relocated projects"
       },
       "readback": {
         "implementation": "available",
-        "scope": "Portable rebuild and byte comparison by artifact role",
-        "cases": [
-          "test_delivery_portable.py::PortableTests.test_two_relocated_projects_and_json_deliverables",
-          "test_delivery_portable.py::PortableTests.test_roles_cover_nonstandard_payloads_and_detect_added_outputs",
-          "test_client_check.py::ClientCheckTests.test_final_production_portable_and_failure_rollback",
-          "test_client_check.py::ClientCheckTests.test_source_only_and_scriptless_production_status",
-          "test_client_check.py::ClientCheckTests.test_malformed_embedded_body_is_not_an_empty_script"
-        ]
+        "scope": "Portable rebuild and byte comparison by artifact role"
       }
     },
     "platform": {
       "rules": {
         "implementation": "available",
-        "scope": "Declared profile configuration and source provenance; not native artifact validation",
-        "cases": [
-          "test_platform_profiles.py::PlatformTests.test_versioned_rules_and_rejections",
-          "test_platform_profiles.py::PlatformTests.test_sources_cli_diff_and_integrity",
-          "test_platform_profiles.py::PlatformTests.test_multilevel_inheritance_and_rule_review",
-          "test_platform_profiles.py::PlatformTests.test_production_and_portable_profile",
-          "test_platform_profiles.py::PlatformTests.test_rules72_semantics_and_failures",
-          "test_platform_profiles.py::PlatformTests.test_rules72_production_binding"
-        ]
+        "scope": "Declared profile configuration and source provenance; not native artifact validation"
       },
       "readback": {
         "implementation": "available",
-        "scope": "Selected Start Timer constants and time-sequence edits bound to final GIL; whole platform artifact unverified",
-        "cases": [
-          "test_platform_native.py::PlatformNativeTests.test_bound_constants_drift_and_dynamic_inputs",
-          "test_platform_native.py::PlatformNativeTests.test_production_final_binding_and_rollback",
-          "test_platform_native.py::PlatformNativeTests.test_timer_patch_cli_produce_and_exact_target"
-        ]
+        "scope": "Selected Start Timer constants and time-sequence edits bound to final GIL; whole platform artifact unverified"
       }
     },
     "knowledge": {
       "rules": {
         "implementation": "implemented",
-        "scope": "source-bound read-only checks; editor, host and user acceptance separate",
-        "cases": [
-          "test_knowledge_diagnosis.py::ReliabilityTests.test_source_basis_and_stale_source",
-          "test_knowledge_diagnosis.py::ReliabilityTests.test_configured_stdio_launcher"
-        ]
+        "scope": "source-bound read-only checks; editor, host and user acceptance separate"
       }
     },
     "diagnosis": {
       "rules": {
         "implementation": "implemented",
-        "scope": "source-bound read-only checks; editor, host and user acceptance separate",
-        "cases": [
-          "test_knowledge_diagnosis.py::ReliabilityTests.test_two_asset_and_diagnostic_configs",
-          "test_knowledge_diagnosis.py::ReliabilityTests.test_manual_evidence_binding",
-          "test_knowledge_diagnosis.py::ReliabilityTests.test_impact_and_new_mcp_operations",
-          "test_knowledge_diagnosis.py::ReliabilityTests.test_configured_stdio_launcher"
-        ]
+        "scope": "source-bound read-only checks; editor, host and user acceptance separate"
       }
     },
     "asset_inspection": {
       "rules": {
         "implementation": "implemented",
-        "scope": "source-bound read-only checks; editor, host and user acceptance separate",
-        "cases": [
-          "test_knowledge_diagnosis.py::ReliabilityTests.test_two_asset_and_diagnostic_configs"
-        ]
+        "scope": "source-bound read-only checks; editor, host and user acceptance separate"
       }
     },
     "asset_fit": {
       "rules": {
         "implementation": "implemented",
-        "scope": "fit parameters, budget, resume and region guards",
-        "cases": [
-          "test_audit_remediation.py::AuditTests.test_fitting_transparency_layers_resume_and_roundtrip",
-          "test_audit_remediation.py::AuditTests.test_region_refinement_and_empty_input"
-        ]
+        "scope": "fit parameters, budget, resume and region guards"
       },
       "generation": {
         "implementation": "implemented",
-        "scope": "deterministic premultiplied RGBA search",
-        "cases": [
-          "test_audit_remediation.py::AuditTests.test_fitting_transparency_layers_resume_and_roundtrip",
-          "test_audit_remediation.py::AuditTests.test_region_refinement_and_empty_input"
-        ]
+        "scope": "deterministic premultiplied RGBA search"
       },
       "readback": {
         "implementation": "implemented",
-        "scope": "calibrated rectangle GIA and exact rectangle lowering",
-        "cases": [
-          "test_audit_remediation.py::AuditTests.test_fitting_transparency_layers_resume_and_roundtrip",
-          "test_audit_remediation.py::AuditTests.test_region_refinement_and_empty_input"
-        ]
+        "scope": "calibrated rectangle GIA and exact rectangle lowering"
       },
       "software_preview": {
         "implementation": "implemented",
-        "scope": "Pillow reconstruction; no visual acceptance",
-        "cases": [
-          "test_audit_remediation.py::AuditTests.test_fitting_transparency_layers_resume_and_roundtrip",
-          "test_audit_remediation.py::AuditTests.test_region_refinement_and_empty_input"
-        ]
+        "scope": "Pillow reconstruction; no visual acceptance"
       }
     }
   }

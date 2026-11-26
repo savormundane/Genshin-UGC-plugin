@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import json
 import re
@@ -56,6 +57,7 @@ LINK_RE = re.compile(r'(?<!\\)\]\(\s*' + DESTINATION + r'''(?:\s+(?:"[^"]*"|'[^'
 REFERENCE_RE = re.compile(r'^ {0,3}\[[^]\n]+\]:\s*' + DESTINATION, re.M)
 FENCE_RE = re.compile(r'^ {0,3}(`{3,}|~{3,})(.*)$')
 CODE_RE = re.compile(r'(?<!`)(`+)(?!`).*?(?<!`)\1(?!`)')
+PUBLIC_CASE = re.compile(r"(test_\w+\.py)::([A-Za-z_]\w*)\.(test_\w+)", re.ASCII)
 
 
 def markdown_destinations(text):
@@ -80,9 +82,72 @@ def markdown_destinations(text):
 
 
 
+def check_public_regressions(root: Path) -> list[str]:
+    from capability_index import OWNERS
+
+    registry = root / "scripts/validation-contract.json"
+    try:
+        contract = json.loads(registry.read_text(encoding="utf-8-sig"))
+        checks = contract["public_checks"]
+        if contract["schema"] != 1 or not isinstance(checks, dict) or not checks:
+            raise ValueError("expected public regression catalogue")
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        return [f"{registry.name}: {exc}"]
+
+    errors = []
+    references = set()
+    for capability, entry in checks.items():
+        if capability not in OWNERS or not isinstance(entry, dict):
+            errors.append(f"{registry.name}: invalid capability {capability}")
+            continue
+        gap = entry.get("gap")
+        if not isinstance(gap, str) or not gap.strip():
+            errors.append(f"{registry.name}: missing coverage scope for {capability}")
+        cases = entry.get("cases", [])
+        if not isinstance(cases, list) or not all(isinstance(case, str) for case in cases):
+            errors.append(f"{registry.name}: invalid cases for {capability}")
+            continue
+        if len(cases) != len(set(cases)):
+            errors.append(f"{registry.name}: duplicate cases for {capability}")
+        references.update(cases)
+
+    modules = {}
+    for reference in sorted(references):
+        selector = PUBLIC_CASE.fullmatch(reference)
+        if selector is None:
+            errors.append(f"{registry.name}: invalid case selector {reference}")
+            continue
+        filename, cls, method = selector.groups()
+        if filename not in modules:
+            path = registry.with_name(filename)
+            try:
+                if not path.resolve().is_relative_to(root):
+                    raise ValueError("test file outside the repository")
+                tree = ast.parse(path.read_text(encoding="utf-8-sig"), filename=filename)
+            except (OSError, SyntaxError, ValueError) as exc:
+                errors.append(f"{registry.name}: cannot read {filename}: {exc}")
+                modules[filename] = None
+            else:
+                modules[filename] = {
+                    (decl.name, case.name)
+                    for decl in tree.body if isinstance(decl, ast.ClassDef)
+                    and any(
+                        isinstance(base, ast.Name) and base.id == "TestCase"
+                        or isinstance(base, ast.Attribute) and base.attr == "TestCase"
+                        for base in decl.bases
+                    )
+                    for case in decl.body if isinstance(case, ast.FunctionDef)
+                }
+        if modules[filename] is not None and (cls, method) not in modules[filename]:
+            errors.append(f"{registry.name}: missing case {reference}")
+    return errors
+
+
 def check(root: Path = ROOT) -> list[str]:
     root = root.resolve()
     errors: list[str] = []
+    if (root / "scripts/knowledge.py").is_file() or (root / "scripts/validation-contract.json").exists():
+        errors.extend(check_public_regressions(root))
     manifests: dict[str, dict] = {}
     for relative in MANIFESTS:
         path = root / relative
@@ -225,4 +290,4 @@ if __name__ == "__main__":
         print(f"FAIL: {failure}", file=sys.stderr)
     if failures:
         sys.exit(1)
-    print("PASS: manifests, installer, changelog, documentation versions and local links")
+    print("PASS: manifests, installer, changelog, documentation, local links and public regression cases")

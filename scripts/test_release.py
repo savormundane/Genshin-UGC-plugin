@@ -67,6 +67,27 @@ class ReleaseTests(unittest.TestCase):
         self.git("commit", "--quiet", "-m", "fixture")
         self.write(".venv/private.txt", "must never be packaged")
 
+    def test_public_regression_references_need_real_test_files_and_methods(self):
+        self.fixture()
+        self.write("scripts/test_available.py", "import unittest\nclass Example(unittest.TestCase):\n    def test_working(self):\n        pass\n")
+        registry = {
+            "schema": 1,
+            "public_checks": {"knowledge": {"cases": ["test_available.py::Example.test_working"], "gap": "scope"}},
+        }
+        self.write("scripts/validation-contract.json", json.dumps(registry))
+        self.assertEqual(check(self.root), [])
+
+        registry["public_checks"]["knowledge"]["cases"] += [
+            "test_available.py::Example.test_missing",
+            "test_missing.py::Example.test_case",
+            "../test_available.py::Example.test_working",
+        ]
+        self.write("scripts/validation-contract.json", json.dumps(registry))
+        failures = check(self.root)
+        self.assertTrue(any("missing case test_available.py::Example.test_missing" in error for error in failures))
+        self.assertTrue(any("cannot read test_missing.py" in error for error in failures))
+        self.assertTrue(any("invalid case selector ../test_available.py" in error for error in failures))
+
     def test_complete_deterministic_assets(self):
         for version in ("1.2.3", "4.5.6"):
             with self.subTest(version=version):

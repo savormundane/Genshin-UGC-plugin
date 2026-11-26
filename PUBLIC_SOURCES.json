@@ -1928,7 +1928,7 @@
       "path": "vendor/beyond/bundle.json",
       "source_sha256": "8d5d370a30096a7f621ad5109c85c94b3fe738607d88f0289d76fde90c718520",
       "sha256": "e2790c4bc81b695aa3b171dff3d6c248ba4ae957d75bd78e5efea6e14ac64cee",
-      "reason": "Separate third-party demo and test files from the Beyond runtime inventory used by the Windows ZIP and Cordis packages. These files remain in the Git source tree.",
+      "reason": "Exclude third-party demos and tests from the Beyond runtime inventory, Windows ZIP, Cordis package, and current Git checkout. The original files remain in Git history.",
       "excluded_files_sha256": {
         "vendor/beyond/node_modules/fengari/test/defs.test.js": "dbcb38762fe3835858f12e963e804de9e88c580362e08e741b9f80e2c836c20e",
         "vendor/beyond/node_modules/fengari/test/lapi.test.js": "fa8189e18ec2793329ebdcd4190e7a130f23418842abc7642bda54c99b3161c0",

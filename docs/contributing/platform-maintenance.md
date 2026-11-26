@@ -10,8 +10,8 @@ Skill 维护任务入口与领域约束，平台事实以[原文和校准记录]
 2. 按需取得新资料，保存到独立位置后对照原文。平台正文用 `docs diff --from VERSION --to VERSION` 对比。流程不会自动联网抓取资料。
 3. 审查签名、权限、生命周期、适用模式和行为约束。文档冲突同时保留依据；新文档不自动覆盖已确认的不同运行环境。
 4. 确认依据后，更新原文、来源目录和摘要。路径或链接变化与内容变化分别记录。核对原文后再更新摘要。
-5. 再保存一份快照，用 `knowledge diff BEFORE.json AFTER.json` 列出来源和 API 合同的变化、受影响的功能及建议运行的检查。差异报告供审查使用，测试需另行运行。API 删除或变更时，应核对兼容性。宿主版本的兼容情况仍需验证。
-6. 按建议和实际源码依赖执行定向回归。无法判断语义影响时扩大检查范围；普通说明改动只核对结构与链接。
+5. 再保存一份快照，用 `knowledge diff BEFORE.json AFTER.json` 列出来源、API 合同变化和受影响的能力。API 删除或变更时，应核对兼容性。
+6. 从 `scripts/` 目录用 `python -B -m unittest MODULE.CLASS.METHOD` 单独运行 `suggested_cases` 中的用例。例如 `test_chinese_lookup.py::ChineseLookupTests.test_formal_symbols_catalogue_and_digest_stay_compatible` 对应 `test_chinese_lookup.ChineseLookupTests.test_formal_symbols_catalogue_and_digest_stay_compatible`。按 `coverage_gaps` 补查未覆盖的内容。公开回归登记在[验证清单](../../scripts/validation-contract.json)，仓库检查会核对文件和用例名。
 
 ## 合同与迁移
 
