@@ -47,13 +47,20 @@ DOC_VERSIONS = {
 RELEASE_TAG = rf"https://github\.com/{REPO}/releases/tag/v({SEMVER})\b"
 SOURCE_ARCHIVE_TAG = rf"https://github\.com/{REPO}/archive/refs/tags/v({SEMVER})\.(?:zip|tar\.gz)\b"
 SOURCE_DOC_VERSIONS = {
-    "README.md": {"current version": DOC_VERSIONS["README.md"]["current version"], "release tag": RELEASE_TAG},
-    "docs/installation.md": {"release tag": RELEASE_TAG,
-                             "source archive tag": SOURCE_ARCHIVE_TAG,
-                             "local ZIP filename": ZIP_VERSION},
+    "README.md": {
+        "current version": DOC_VERSIONS["README.md"]["current version"],
+        "release tag": RELEASE_TAG,
+    },
+    "docs/installation.md": {
+        "release tag": RELEASE_TAG,
+        "source archive tag": SOURCE_ARCHIVE_TAG,
+        "local ZIP filename": ZIP_VERSION,
+    },
 }
 DESTINATION = r'(<[^\n<>]+>|(?:[^()\s]|\([^()\n]*\))+)'
-LINK_RE = re.compile(r'(?<!\\)\]\(\s*' + DESTINATION + r'''(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*\)''')
+LINK_RE = re.compile(
+    r'(?<!\\)\]\(\s*' + DESTINATION + r'''(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*\)'''
+)
 REFERENCE_RE = re.compile(r'^ {0,3}\[[^]\n]+\]:\s*' + DESTINATION, re.M)
 FENCE_RE = re.compile(r'^ {0,3}(`{3,}|~{3,})(.*)$')
 CODE_RE = re.compile(r'(?<!`)(`+)(?!`).*?(?<!`)\1(?!`)')
@@ -66,7 +73,12 @@ def markdown_destinations(text):
     for line in re.sub(r'<!--[\s\S]*?(?:-->|$)', '', text).splitlines():
         delimiter = FENCE_RE.match(line)
         if fence is not None:
-            if delimiter and delimiter[1][0] == fence[0] and len(delimiter[1]) >= len(fence) and not delimiter[2].strip():
+            if (
+                delimiter
+                and delimiter[1][0] == fence[0]
+                and len(delimiter[1]) >= len(fence)
+                and not delimiter[2].strip()
+            ):
                 fence = None
             continue
         if delimiter:
@@ -79,7 +91,6 @@ def markdown_destinations(text):
     for pattern in (LINK_RE, REFERENCE_RE):
         for match in pattern.finditer(text):
             yield match[1]
-
 
 
 def check_public_regressions(root: Path) -> list[str]:
@@ -130,13 +141,17 @@ def check_public_regressions(root: Path) -> list[str]:
             else:
                 modules[filename] = {
                     (decl.name, case.name)
-                    for decl in tree.body if isinstance(decl, ast.ClassDef)
+                    for decl in tree.body
+                    if isinstance(decl, ast.ClassDef)
                     and any(
-                        isinstance(base, ast.Name) and base.id == "TestCase"
-                        or isinstance(base, ast.Attribute) and base.attr == "TestCase"
+                        isinstance(base, ast.Name)
+                        and base.id == "TestCase"
+                        or isinstance(base, ast.Attribute)
+                        and base.attr == "TestCase"
                         for base in decl.bases
                     )
-                    for case in decl.body if isinstance(case, ast.FunctionDef)
+                    for case in decl.body
+                    if isinstance(case, ast.FunctionDef)
                 }
         if modules[filename] is not None and (cls, method) not in modules[filename]:
             errors.append(f"{registry.name}: missing case {reference}")
@@ -146,7 +161,9 @@ def check_public_regressions(root: Path) -> list[str]:
 def check(root: Path = ROOT) -> list[str]:
     root = root.resolve()
     errors: list[str] = []
-    if (root / "scripts/knowledge.py").is_file() or (root / "scripts/validation-contract.json").exists():
+    if (root / "scripts/knowledge.py").is_file() or (
+        root / "scripts/validation-contract.json"
+    ).exists():
         errors.extend(check_public_regressions(root))
     manifests: dict[str, dict] = {}
     for relative in MANIFESTS:
@@ -160,39 +177,61 @@ def check(root: Path = ROOT) -> list[str]:
             errors.append(f"{relative}: cannot parse manifest: {exc}")
 
     versions = {path: data.get("version") for path, data in manifests.items()}
-    if any(not isinstance(value, str) or not re.fullmatch(SEMVER, value) for value in versions.values()):
+    if any(
+        not isinstance(value, str) or not re.fullmatch(SEMVER, value) for value in versions.values()
+    ):
         errors.append(f"Invalid plugin versions: {versions}")
     elif len(set(versions.values())) != 1:
         errors.append(f"Plugin manifest versions differ: {versions}")
     version = versions.get("plugin.json")
     identities = {path: data.get("name") for path, data in manifests.items()}
-    if any(not isinstance(name, str) or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name)
-           for name in identities.values()) or len(set(identities.values())) > 1:
+    if (
+        any(
+            not isinstance(name, str) or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name)
+            for name in identities.values()
+        )
+        or len(set(identities.values())) > 1
+    ):
         errors.append(f"Invalid Miliastra Wonderland plugin identity: {identities}")
 
     if isinstance(version, str) and re.fullmatch(SEMVER, version):
         readme = root / "README.md"
         source_release = readme.is_file() and not re.search(
-            DOC_VERSIONS["README.md"]["download tag"], readme.read_text(encoding="utf-8-sig"))
+            DOC_VERSIONS["README.md"]["download tag"], readme.read_text(encoding="utf-8-sig")
+        )
         for relative, patterns in (SOURCE_DOC_VERSIONS if source_release else DOC_VERSIONS).items():
             path = root / relative
             if not path.is_file():
                 continue
             text = path.read_text(encoding="utf-8-sig")
-            if source_release and (re.search(DOC_VERSIONS["README.md"]["download tag"], text) or re.search(INSTALL_TAG, text)):
+            if source_release and (
+                re.search(DOC_VERSIONS["README.md"]["download tag"], text)
+                or re.search(INSTALL_TAG, text)
+            ):
                 errors.append(f"{relative}: source release must use local ZIP packaging")
             for label, pattern in patterns.items():
                 found = set(re.findall(pattern, text))
                 if not found and label in {"source archive tag", "local ZIP filename"}:
                     continue
-                if source_release and label == "release tag" and not found and SOURCE_ARCHIVE in text:
+                if (
+                    source_release
+                    and label == "release tag"
+                    and not found
+                    and SOURCE_ARCHIVE in text
+                ):
                     continue
                 if found != {version}:
                     details = ", ".join(sorted(found)) if found else "missing"
-                    errors.append(f"{relative}: {label} must match plugin.json ({version}); found {details}")
+                    errors.append(
+                        f"{relative}: {label} must match plugin.json ({version}); found {details}"
+                    )
 
     installer = root / "install.ps1"
-    defaults = re.findall(INSTALLER_VERSION, installer.read_text(encoding="utf-8-sig")) if installer.is_file() else []
+    defaults = (
+        re.findall(INSTALLER_VERSION, installer.read_text(encoding="utf-8-sig"))
+        if installer.is_file()
+        else []
+    )
     if defaults != [version]:
         errors.append("install.ps1 default version must match plugin.json")
 
@@ -239,43 +278,70 @@ def check(root: Path = ROOT) -> list[str]:
             rows = registry["permission_unverified_files"]
             licensed = registry.get("licensed_files", [])
             groups = registry["groups"]
-            if not isinstance(rows, list) or not isinstance(licensed, list) or not isinstance(groups, dict):
+            if (
+                not isinstance(rows, list)
+                or not isinstance(licensed, list)
+                or not isinstance(groups, dict)
+            ):
                 raise ValueError("invalid source groups or permission records")
             records = [(row, "redistribution_permission_unverified") for row in rows]
             records.extend((row, "redistribution_permission_granted") for row in licensed)
             for row, expected_status in records:
                 relative = row["path"]
-                if (not isinstance(relative, str) or not relative or "\\" in relative or ":" in relative
-                        or relative.startswith("/") or ".." in PurePosixPath(relative).parts
-                        or PurePosixPath(relative).as_posix() != relative or relative in raw_paths):
+                if (
+                    not isinstance(relative, str)
+                    or not relative
+                    or "\\" in relative
+                    or ":" in relative
+                    or relative.startswith("/")
+                    or ".." in PurePosixPath(relative).parts
+                    or PurePosixPath(relative).as_posix() != relative
+                    or relative in raw_paths
+                ):
                     raise ValueError(f"invalid or duplicate recorded path {relative!r}")
                 raw_paths.add(relative)
                 digest = row["sha256"]
                 group = groups.get(row.get("group"))
-                if (not isinstance(group, dict)
-                        or not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest)):
+                if (
+                    not isinstance(group, dict)
+                    or not isinstance(digest, str)
+                    or not re.fullmatch(r"[0-9a-f]{64}", digest)
+                ):
                     errors.append(f"{relative}: incomplete source or permission record")
                     continue
                 granted = expected_status == "redistribution_permission_granted"
                 if row.get("status") != expected_status or bool(group.get("license")) != granted:
                     errors.append(f"{relative}: source group and permission record disagree")
                 target = root / relative
-                if (not target.resolve().is_relative_to(root) or not target.is_file()
-                        or hashlib.sha256(target.read_bytes()).hexdigest() != digest):
-                    errors.append(f"{relative}: file missing or differs from recorded source digest")
+                if (
+                    not target.resolve().is_relative_to(root)
+                    or not target.is_file()
+                    or hashlib.sha256(target.read_bytes()).hexdigest() != digest
+                ):
+                    errors.append(
+                        f"{relative}: file missing or differs from recorded source digest"
+                    )
         except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
             errors.append(f"PUBLIC_SOURCES.json: {exc}")
     for path in sorted(set(docs)):
         relative = path.relative_to(root).as_posix()
-        if (relative in raw_paths or relative.startswith(("references/platform/official/", "references/platform/7.2/"))
-                or "vendor" in path.relative_to(root).parts or not path.is_file()):
+        if (
+            relative in raw_paths
+            or relative.startswith(("references/platform/official/", "references/platform/7.2/"))
+            or "vendor" in path.relative_to(root).parts
+            or not path.is_file()
+        ):
             continue
         for raw in markdown_destinations(path.read_text(encoding="utf-8-sig")):
             target = unquote(raw.strip().strip("<>").split("#", 1)[0].split("?", 1)[0])
             if re.match(r"^(?:file:|[a-z]:[\\/])", target, re.I):
                 errors.append(f"{path.relative_to(root)}: machine-local link {raw}")
                 continue
-            if not target or re.match(r"^[a-z][a-z0-9+.-]*:", target, re.I) or target.startswith("//"):
+            if (
+                not target
+                or re.match(r"^[a-z][a-z0-9+.-]*:", target, re.I)
+                or target.startswith("//")
+            ):
                 continue
             resolved = (path.parent / target).resolve()
             if not resolved.is_relative_to(root) or not resolved.exists():
@@ -290,4 +356,6 @@ if __name__ == "__main__":
         print(f"FAIL: {failure}", file=sys.stderr)
     if failures:
         sys.exit(1)
-    print("PASS: manifests, installer, changelog, documentation, local links and public regression cases")
+    print(
+        "PASS: manifests, installer, changelog, documentation, local links and public regression cases"
+    )

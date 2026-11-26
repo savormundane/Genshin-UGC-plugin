@@ -1,4 +1,5 @@
 """Focused release tests using small temporary Git repositories."""
+
 import hashlib
 import json
 from pathlib import Path
@@ -24,7 +25,9 @@ class ReleaseTests(unittest.TestCase):
         self.notes.write_text("Synthetic release. Host not checked.\n", encoding="utf-8")
 
     def git(self, *args):
-        return subprocess.check_output(["git", "-C", str(self.root), *args], stderr=subprocess.STDOUT)
+        return subprocess.check_output(
+            ["git", "-C", str(self.root), *args], stderr=subprocess.STDOUT
+        )
 
     def write(self, name, text):
         path = self.root / name
@@ -40,11 +43,17 @@ class ReleaseTests(unittest.TestCase):
         asset = f"Miliastra-Wonderland-{version}-windows-x64.zip"
         install = f"https://raw.githubusercontent.com/{REPO}/v{version}/install.ps1"
         releases = f"https://github.com/{REPO}/releases"
-        self.write("README.md", f"**当前版本 `{version}`**\n[ZIP]({releases}/download/v{version}/{asset})\n"
-                               f"```powershell\nInstall from {install}\n```\n")
-        self.write("docs/installation.md", f"[Release]({releases}/tag/v{version})\n"
-                                           f"```powershell\nInstall from {install}\n"
-                                           f"Install from {asset}\nRollback -Version 0.1.0\n```\n")
+        self.write(
+            "README.md",
+            f"**当前版本 `{version}`**\n[ZIP]({releases}/download/v{version}/{asset})\n"
+            f"```powershell\nInstall from {install}\n```\n",
+        )
+        self.write(
+            "docs/installation.md",
+            f"[Release]({releases}/tag/v{version})\n"
+            f"```powershell\nInstall from {install}\n"
+            f"Install from {asset}\nRollback -Version 0.1.0\n```\n",
+        )
         self.write("CHANGELOG.md", f"# Fixture\n\n## {version}\n")
         for name in MANIFESTS:
             metadata = {"name": "fixture", "version": version}
@@ -53,12 +62,19 @@ class ReleaseTests(unittest.TestCase):
             else:
                 metadata["skills"] = "./skills/"
             self.write(name, json.dumps(metadata))
-        self.write("mcp.json", json.dumps({
-            "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
-            "mcpServers": {"fixture": {"type": "stdio", "command": "node"}},
-        }))
+        self.write(
+            "mcp.json",
+            json.dumps(
+                {
+                    "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+                    "mcpServers": {"fixture": {"type": "stdio", "command": "node"}},
+                }
+            ),
+        )
         self.write("install.ps1", f"param([string]$Version = '{version}')\n")
-        self.write("skills/fixture/SKILL.md", "---\nname: fixture\ndescription: Neutral fixture\n---\n")
+        self.write(
+            "skills/fixture/SKILL.md", "---\nname: fixture\ndescription: Neutral fixture\n---\n"
+        )
         self.write("vendor/beyond/node_modules/fixture/index.js", "export const value = 1;\n")
         self.write("runtime/fixture.bin", "neutral binary input\n")
         self.write("references/中文 文件.txt", "Unicode fixture\n")
@@ -69,10 +85,15 @@ class ReleaseTests(unittest.TestCase):
 
     def test_public_regression_references_need_real_test_files_and_methods(self):
         self.fixture()
-        self.write("scripts/test_available.py", "import unittest\nclass Example(unittest.TestCase):\n    def test_working(self):\n        pass\n")
+        self.write(
+            "scripts/test_available.py",
+            "import unittest\nclass Example(unittest.TestCase):\n    def test_working(self):\n        pass\n",
+        )
         registry = {
             "schema": 1,
-            "public_checks": {"knowledge": {"cases": ["test_available.py::Example.test_working"], "gap": "scope"}},
+            "public_checks": {
+                "knowledge": {"cases": ["test_available.py::Example.test_working"], "gap": "scope"}
+            },
         }
         self.write("scripts/validation-contract.json", json.dumps(registry))
         self.assertEqual(check(self.root), [])
@@ -84,9 +105,16 @@ class ReleaseTests(unittest.TestCase):
         ]
         self.write("scripts/validation-contract.json", json.dumps(registry))
         failures = check(self.root)
-        self.assertTrue(any("missing case test_available.py::Example.test_missing" in error for error in failures))
+        self.assertTrue(
+            any(
+                "missing case test_available.py::Example.test_missing" in error
+                for error in failures
+            )
+        )
         self.assertTrue(any("cannot read test_missing.py" in error for error in failures))
-        self.assertTrue(any("invalid case selector ../test_available.py" in error for error in failures))
+        self.assertTrue(
+            any("invalid case selector ../test_available.py" in error for error in failures)
+        )
 
     def test_complete_deterministic_assets(self):
         for version in ("1.2.3", "4.5.6"):
@@ -98,29 +126,48 @@ class ReleaseTests(unittest.TestCase):
                 again = prepare(self.root, second, self.notes)
                 self.assertEqual(report, again)
                 self.assertFalse(report["published"])
-                self.assertEqual(report["source_commit"], self.git("rev-parse", "HEAD").decode().strip())
+                self.assertEqual(
+                    report["source_commit"], self.git("rev-parse", "HEAD").decode().strip()
+                )
                 for name, sha in report["assets"].items():
                     self.assertEqual(hashlib.sha256((first / name).read_bytes()).hexdigest(), sha)
                     self.assertEqual((first / name).read_bytes(), (second / name).read_bytes())
                 filename = f"Miliastra-Wonderland-{version}-agent-plugins-windows-x64.zip"
                 self.assertEqual(set(report["assets"]), {filename})
                 self.assertEqual(report["package"]["layout"], "agent-plugins")
-                self.assertEqual({p.name for p in first.iterdir()}, {filename, "release-notes.md", "release-review.json"})
+                self.assertEqual(
+                    {p.name for p in first.iterdir()},
+                    {filename, "release-notes.md", "release-review.json"},
+                )
                 with zipfile.ZipFile(first / filename) as archive:
                     names = archive.namelist()
-                    expected = {"plugin.json", "mcp.json", "skills/fixture/SKILL.md", "runtime/fixture.bin",
-                                "vendor/beyond/node_modules/fixture/index.js", "references/中文 文件.txt"}
+                    expected = {
+                        "plugin.json",
+                        "mcp.json",
+                        "skills/fixture/SKILL.md",
+                        "runtime/fixture.bin",
+                        "vendor/beyond/node_modules/fixture/index.js",
+                        "references/中文 文件.txt",
+                    }
                     self.assertTrue(expected.issubset(names))
                     self.assertFalse(any("/.git/" in n or "/.venv/" in n for n in names))
-                    self.assertEqual(archive.read("install.ps1"), (self.root / "install.ps1").read_bytes())
+                    self.assertEqual(
+                        archive.read("install.ps1"), (self.root / "install.ps1").read_bytes()
+                    )
                 with self.assertRaisesRegex(ValueError, "new directory"):
                     prepare(self.root, first, self.notes)
 
-
     def test_direct_package_excludes_local_settings(self):
         self.fixture()
-        excluded = {'.codex/config.toml', '.claude/settings.local.json', 'AGENTS.override.md',
-                    'CLAUDE.local.md', '.git-credentials', '.env', 'assets/.env.production'}
+        excluded = {
+            '.codex/config.toml',
+            '.claude/settings.local.json',
+            'AGENTS.override.md',
+            'CLAUDE.local.md',
+            '.git-credentials',
+            '.env',
+            'assets/.env.production',
+        }
         for name in excluded | {'.env.example', 'assets/.env.sample'}:
             self.write(name, 'Synthetic fixture')
         output = self.base / 'direct.zip'
@@ -146,34 +193,54 @@ class ReleaseTests(unittest.TestCase):
     def test_link_checks_cover_first_party_and_skip_code_and_snapshots(self):
         self.fixture()
         self.write('references/中文 文件(例).md', '# Fixture')
-        self.write('skills/fixture/reference.md',
-                   '[valid](<../../references/中文 文件(例).md> "title")\n'
-                   '~~~md\n[example](absent.md)\n~~~\n'
-                   '```md\n[example](absent.md)\n```\n'
-                   '    [indented example](absent.md)\n'
-                   '[bad]: missing.md\n')
+        self.write(
+            'skills/fixture/reference.md',
+            '[valid](<../../references/中文 文件(例).md> "title")\n'
+            '~~~md\n[example](absent.md)\n~~~\n'
+            '```md\n[example](absent.md)\n```\n'
+            '    [indented example](absent.md)\n'
+            '[bad]: missing.md\n',
+        )
         self.write('references/platform/official/raw.md', '[raw](absent.md)')
         self.write('references/platform/7.2/raw.md', '[raw](absent.md)')
         self.write('references/platform/README.md', '[bad](absent.md)')
         self.write('references/registered.md', '[raw](absent.md)')
-        self.write('PUBLIC_SOURCES.json', json.dumps({
-            'groups': {'fixture': {}},
-            'permission_unverified_files': [{
-                'path': 'references/registered.md', 'group': 'fixture',
-                'sha256': hashlib.sha256((self.root / 'references/registered.md').read_bytes()).hexdigest(),
-                'status': 'redistribution_permission_unverified',
-            }],
-        }))
+        self.write(
+            'PUBLIC_SOURCES.json',
+            json.dumps(
+                {
+                    'groups': {'fixture': {}},
+                    'permission_unverified_files': [
+                        {
+                            'path': 'references/registered.md',
+                            'group': 'fixture',
+                            'sha256': hashlib.sha256(
+                                (self.root / 'references/registered.md').read_bytes()
+                            ).hexdigest(),
+                            'status': 'redistribution_permission_unverified',
+                        }
+                    ],
+                }
+            ),
+        )
         self.write("ROADMAP.md", "[bad](file:///C:/work/notes.md)")
         self.write("scripts/README.md", "[bad](C:/work/notes.md)")
         self.write(".github/PULL_REQUEST_TEMPLATE.md", "[bad](../missing.md)")
         errors = check(self.root)
         self.assertEqual(len(errors), 5, errors)
-        for path in ("skills/fixture/reference.md", "references/platform/README.md", "ROADMAP.md",
-                     "scripts/README.md", ".github/PULL_REQUEST_TEMPLATE.md"):
+        for path in (
+            "skills/fixture/reference.md",
+            "references/platform/README.md",
+            "ROADMAP.md",
+            "scripts/README.md",
+            ".github/PULL_REQUEST_TEMPLATE.md",
+        ):
             self.assertTrue(any(error.startswith(f"{Path(path)}:") for error in errors), errors)
         self.write('references/registered.md', '# Changed source')
-        self.assertIn('references/registered.md: file missing or differs from recorded source digest', check(self.root))
+        self.assertIn(
+            'references/registered.md: file missing or differs from recorded source digest',
+            check(self.root),
+        )
 
     def test_active_install_documentation_versions(self):
         self.fixture()
@@ -184,8 +251,20 @@ class ReleaseTests(unittest.TestCase):
             ("README.md", readme, "当前版本 `1.2.3`", "当前版本 `1.2.2`", "current version"),
             ("README.md", readme, "download/v1.2.3", "download/v1.2.2", "download tag"),
             ("docs/installation.md", install, "/tag/v1.2.3", "/tag/v1.2.2", "release tag"),
-            ("docs/installation.md", install, "/v1.2.3/install.ps1", "/v1.2.2/install.ps1", "install command tag"),
-            ("docs/installation.md", install, "Miliastra-Wonderland-1.2.3-", "Miliastra-Wonderland-1.2.2-", "ZIP filename"),
+            (
+                "docs/installation.md",
+                install,
+                "/v1.2.3/install.ps1",
+                "/v1.2.2/install.ps1",
+                "install command tag",
+            ),
+            (
+                "docs/installation.md",
+                install,
+                "Miliastra-Wonderland-1.2.3-",
+                "Miliastra-Wonderland-1.2.2-",
+                "ZIP filename",
+            ),
         ):
             with self.subTest(file=file, label=label):
                 self.write(file, text.replace(old, new))
@@ -200,20 +279,35 @@ class ReleaseTests(unittest.TestCase):
         for source in (SOURCE_ARCHIVE, release):
             with self.subTest(source=source):
                 self.write('README.md', f'**当前版本 `1.0.0`**\n[Source]({source})\n')
-                self.write('docs/installation.md', f'[Source]({source})\n`Miliastra-Wonderland-1.0.0-windows-x64.zip`\n')
+                self.write(
+                    'docs/installation.md',
+                    f'[Source]({source})\n`Miliastra-Wonderland-1.0.0-windows-x64.zip`\n',
+                )
                 self.assertEqual(check(self.root), [])
-                self.write('docs/installation.md', f'[Source]({source})\n`miliastra-wonderland-windows-x64.zip`\n')
+                self.write(
+                    'docs/installation.md',
+                    f'[Source]({source})\n`miliastra-wonderland-windows-x64.zip`\n',
+                )
                 self.assertEqual(check(self.root), [])
-                self.write('docs/installation.md', f'[Source]({source})\n`Miliastra-Wonderland-1.0.0-agent-plugins-windows-x64.zip`\n')
+                self.write(
+                    'docs/installation.md',
+                    f'[Source]({source})\n`Miliastra-Wonderland-1.0.0-agent-plugins-windows-x64.zip`\n',
+                )
                 self.assertEqual(check(self.root), [])
-        self.write('docs/installation.md', f'[Source]({release})\n`Miliastra-Wonderland-4.1.2-agent-plugins-windows-x64.zip`\n')
+        self.write(
+            'docs/installation.md',
+            f'[Source]({release})\n`Miliastra-Wonderland-4.1.2-agent-plugins-windows-x64.zip`\n',
+        )
         self.assertTrue(any('local ZIP filename' in error for error in check(self.root)))
         for extension in ('zip', 'tar.gz'):
             with self.subTest(extension=extension):
                 archive = f'https://github.com/{REPO}/archive/refs/tags/v4.1.2.{extension}'
                 self.write('docs/installation.md', f'[Release]({release})\n[Source]({archive})\n')
                 self.assertTrue(any('source archive tag' in error for error in check(self.root)))
-                self.write('docs/installation.md', f'[Release]({release})\n[Source]({archive.replace("v4.1.2", "v1.0.0")})\n')
+                self.write(
+                    'docs/installation.md',
+                    f'[Release]({release})\n[Source]({archive.replace("v4.1.2", "v1.0.0")})\n',
+                )
                 self.assertEqual(check(self.root), [])
 
     def test_dirty_input_rejected_without_output(self):

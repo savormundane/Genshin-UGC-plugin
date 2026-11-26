@@ -1,218 +1,945 @@
 """Actual execution prerequisites and source-bound capability evidence."""
-import importlib.util,importlib.metadata,json,os,shutil,sys,subprocess
+
+import importlib.util, importlib.metadata, json, os, shutil, sys, subprocess
 from pathlib import Path
 from authoring_io import PLUGIN, canonical, inventory, read_json, sha, sha_file
-from miliastra.mcp.bridge import BUILTIN_OPERATIONS,OPERATIONS,project_context
-from runtime_policy import REQUIREMENTS,supported_python
-from validation_evidence import execution_inventory,validation_dependencies,backend_inventory,case_coverage,maintenance_contract
-CAPABILITIES={
- 'knowledge':('knowledge.py','references/platform/knowledge-reliability.md'),'diagnosis':('project_diagnosis.py','references/workflows/project-diagnosis.md'),'asset_inspection':('miliastra/assets/inspection.py','references/assets/asset-inspection.md'),
- 'mcp':('miliastra/mcp/service.py','docs/mcp.md'), 'asset_batch':('miliastra/assets/batch.py','references/assets/image-to-primitives.md'),
- 'native':('miliastra/native/core.py','references/gil/native-maintenance.md'), 'storage':('miliastra/storage.py','references/workflows/storage-authoring.md'),
- 'protocol':('protocol_codegen.py','references/workflows/protocol-v2.md'), 'ui':('runtime_ui.lua','references/editor/lua/runtime-ui.md'),
- 'assembly':('miliastra/client/assembly.py','references/editor/lua/client-assembly.md'), 'simulation':('joint_simulator.py','references/workflows/joint-simulation.md'),
- 'algorithms':('runtime_algorithms.lua','references/workflows/algorithms-experiments.md'), 'asset_fit':('miliastra/assets/fit.py','references/assets/asset-fit.md'),
- 'native_assets':('miliastra/native/assets.py','references/assets/native-assets.md'),
- 'production':('miliastra/production.py','references/workflows/produce.md'),'platform':('platform_profiles.py','references/platform/platform-profiles.md'),
- 'project':('project_index.py','references/editor/project-index.md'),'native_changes':('miliastra/native/changes.py','references/gil/native-changes.md'),
- 'scene':('scene_authoring.py','references/editor/native-scene.md')}
-SUPPORT={
- 'knowledge':{'operations':['api_lookup','source_integrity','declared_derived_unknown','conflict_notes','versioned_document_selection'],'authority':'bundled document provenance; no inferred host success'},
- 'diagnosis':{'operations':['explicit_readonly_checks','JSON_or_text_report','artifact_bound_manual_records','AST_update_cost_hints'],'performance':'risk indications, not device measurement'},
- 'asset_inspection':{'operations':['check','diff','RGBA_statistics','rectangle_reconstruction','text_cost_statistics'],'formats':['image','shape_schema1','miliastra-wonderland-assets_schema1'],'host_rendering':'not_checked'},
- 'asset_batch':{'operations':['preview','generate','weighted_shared_control_budget','produce'],'host_rendering':'not_checked'},
- 'mcp':{'operations':list(OPERATIONS),'builtin_queries':list(BUILTIN_OPERATIONS),
-        'transport':'local_stdio','workspace':'explicit_or_session_roots_or_runtime_config','sdk':'mcp==2.3.0','runtime_control':False,'trusted_project_sources_required':True},
- 'scene':{'operations':['native_model_catalogue','static_gia','place_static_scene','duplicate_entities','arrange_instances','create_object_templates','instantiate_object_templates','place_model_instances',
-                        'add_scene_points','add_respawn_points','add_native_movers','set_native_preset_state','add_point_light','inspect','scene_scope','set_entity_transform','whitebox_preview','whole_scene_preview','world_layout_comparison','export_whitebox','gil_plan_apply','produce'],
-          'static_gia_target':{'version':'7.2','mode':'beyond'},'editor':'not_checked','host':'not_checked'},
- 'native_changes':{'operations':['diff','plan','apply_plan','source_content_binding','expected_result_binding','protected_bytes','locatable_write_diagnostics','produce','portable'],'diff_formats':['gil','gia'],'plan_baseline':'gil','complete_semantic_diff':False,'scope':'calibrated objects/references/ports and complete top-level byte change detection'},
- 'project':{'operations':['inspect','search','scene_scope','check','direct_consumers','transitive_consumers','required_references','custom_variable_declarations','graph_variable_declarations_and_defaults','static_graph_variable_accesses','variable_inheritance_and_structure_references','final_production_check','portable_artifacts'],'scope':'calibrated native and client object references','complete_reference_index':False,'unindexed':['arbitrary_component_payloads','custom_variable_access_and_literal_targets','graph_variable_dynamic_access_and_overrides','implicit_graph_structure_identity','untyped_numeric_constants','dynamic_Lua_identifiers','platform_resource_catalogue']},
- 'platform':{'operations':['docs_search','docs_show','docs_diff','profile','configuration_check','selected_native_timer_binding','final_timer_constant_readback','set_timer_sequence','disturbance_semantics','push_collision_prerequisites','filter_semantics','camera_takeover_restore','velocity_force_distinction','declared_translation_coverage','zero_arrival_radius'],'modes':['classic','beyond'],'scope':'declared_configuration','native_artifact_verified':False},
- 'native':{'operations':['inspect','audit','append_graph','replace_graph','rewire','mount_instance','mount_template','section_from','optimize_read_expression','set_custom_variable_default','set_timer_sequence','set_object_transform','set_entity_transform','set_decoration','append_decorations','add_box_trigger','set_linear_motion',
-                       'place_static_scene','duplicate_entities','arrange_instances','add_scene_points','set_scene_camera','set_scene_point','set_terrain_cells','set_fixed_environment_hour','set_point_light',
-                       'set_native_class','native_skill','native_creature_graph','set_creature_skill_set','native_combat','native_unit_status','set_native_faction_relations','add_native_variables',
-                       'set_native_player_group','add_respawn_points','set_native_revive','economy_config','native_economy_binding','create_native_drop','add_native_global_timer','native_hud','set_native_hud_control','append_client_ui'],
-           'gameplay_guide':'references/editor/native-gameplay.md','graph_kinds':['ordinary','composite'],'guard':['base_sha256','unique_target','allowed_fields','protected_bytes','types','struct_identity','structure_declarations_and_defaults','dictionary_structure_references_and_defaults','custom_variable_declarations_and_defaults','graph_variable_declarations_and_defaults','static_graph_variable_accesses','storage_slot_references','dynamic_ports','flow_and_data_port_contracts','versions','mount_library','declaration_signature_references','composite_interfaces','GIA_dependencies','GIA_signal_roles_and_descriptors','GIA_signal_compilation_readback','composite_compilation_readback'],'composite_kernel_indices':'equal ordinals and calibrated structure update mappings','composite_execution':'not_implemented','optimizer_default':'disabled'},
- 'storage':{'schema':[2,3],'fields':['integer','boolean','integer_list'],'operations':['native_declarations','slots','signals','Graph_Code','client_adapter','server_transport','read','write','readback','retry','exit_intent','record_version_guard','explicit_QX_migration_chain','migration_candidate_readback','schema3_migration_ticket_commit','logical_capacity_guard','codec','append_dictionary','achievement_request_and_confirmation','diagnose'],'schema3_operations':['open_session','expected_revision_guard','stale_session_guard','exact_duplicate_idempotency','stored_capacity_guard','session_slot_log_correlation','compatible_record_version_upgrade'],'host_quota':'not_checked'},
- 'protocol':{'operations':['native_definitions','Lua_bridge','typed_readback','ordered_contiguous','snapshot_monotonic','revision','confirmation_set','roster_snapshot','barrier','checkpoint','session_isolation','membership_revision','withdraw_revision','validated_checkpoint_restore','final_client_direction_contract','final_native_protocol_layout'],'arbitrary_struct_transport':False},
- 'ui':{'operations':['identity_pool','property_cache','cancel_queue','create_and_write_budget','foreground_priority','position_owner','drag_cancel','listener_scope','overlay_restore','pause_clock','keyed_list','native_fixed_anchor_layout','native_positive_xy_scale','final_layout_readback','final_parent_local_size_check'],'rendering':'host_required'},
- 'assembly':{'operations':['ordered_manifest','dependency_check','local_module_inline','per_file_digest','line_map','embedded_source_check','final_lua53_compilation','all_embedded_mappings','digest_bound_syntax_diagnostics','contract_bound_lexical_API_check','declaration_type_bindings','bound_integer_literals','final_control_template_references','readonly_literal_table_fields','explicit_client_variable_owner_contract','custom_variable_inheritance_check'],'host_require_required':False,'api_and_reference_crosscheck':False,'api_scope':'lexical host members, permissions, call convention, arity and resolved types; dynamic containers and engineering references incomplete'},
- 'simulation':{'optional_external_backend':{'entry':'beyond','commit':'02a5ea2cd38bb5bcf7a7ce6dd745be3bb1ae655c','dependency':'bundled Windows x64 runtime; Node 22+','gil_controls':['container','text','area','button'],'rendering':'software PNG','production_binding':'@level final GIL and SHA256','portable':'bundled backend input closure and isolated rebuild','evidence':'not_checked','native_equivalence':False},
-               'operations':['independent_Lua_clients','final_GIL_graph_read','deterministic_queue','delay','drop','duplicate','reorder','failure_trace','failure_replay','network_timer_deadline_clock','required_timer_event_acceptance','bidirectional_serialized_data_edges','explicit_client_variable_snapshots','client_variable_listener_cleanup','native_only_mounted_graphs','model_visibility_assertions','world_position_observations','axis_aligned_character_route','local_template_mounts','entity_variable_assertions'],
-               'native_nodes':['signal_event','server_signal_broadcast','targeted_signal_send','custom_variable_read_write','list_assembly_index_length','container_reference_read_write','list_clear_insert_remove_modify_concatenate','custom_variable_change_event','receiver_sender_and_GUID_identity','structure_assembly_split','local_variable','branch','multiple_branches','finite_loop_inclusive_with_break','comparison','arithmetic_add_subtract_multiply','logical_boolean','print','achievement_tally_query','start_pause_resume_stop_timer','entity_timer_event','explicit_entity_creation_event','mounted_collision_entry_event','level_scoped_entity_removal','removed_entity_timer_listener_cleanup','activate_disable_model_display','uniform_basic_linear_motion'],
-               'timer_scope':'entity-local sequences and explicit index base','motion_scope':'one active world-space uniform linear motion per dynamic placed entity','unknown_node':'fails_when_executed','persistence':'explicit_settlement_copy_model'},
- 'algorithms':{'operations':['independent_rng_restore','stable_heap','Dijkstra','grid4','geometry_query','reservation_expiry','state_machine','pause_clock','event_replay','LRU','development_holdout','paired_compare','failure_trace'],'policy_and_score':'project_supplied'},
- 'asset_fit':{'entry':'assets fit','schemas':[1,2],'schema2_algorithm':'residual-budget-2','delivery_budget':'per-layer and batch rectangle limits; not a platform limit','shapes':['circle','ellipse','axis_aligned_line','rect'],'error':'premultiplied RGBA MSE','operations':['seeded_progressive_fit','regional_refinement','digest_bound_resume','layer_batch','lossless_rectangle_lowering','Lua','calibrated_rectangle_GIA'],'editor':'not_checked','host':'not_checked'},
- 'native_assets':{'projection':'xy_x90','template_id':10009001,'operations':['dependencies','position_rotation_scale_color','single_depth_layer','explicit_depth_layers','alpha_composited_software_preview','anchor','lossless_grid_merge','JSON_Lua_preview_catalogue','bounded_LRU','weighted_rectangle_cache','identity_asset_leases','explicit_catalogue_loader'],'unsupported':'reject'},
- 'production':{'schema':[1,2],'operations':['produce','atomic_output','active_gil_baseline','typed_native_bindings','rebase_native_bindings','summary','final_audit','declared_models_experiments','dependency_manifest','independent_rebuild','artifact_byte_compare','artifact_role_comparison','portable_input_closure','portable_rebuild','impact_selection','doctor','capabilities'],'portable':'explicit production portable configuration; recorded Python/Node/package dependencies required','editor_host':'not_checked'}}
+from miliastra.mcp.bridge import BUILTIN_OPERATIONS, OPERATIONS, project_context
+from runtime_policy import REQUIREMENTS, supported_python
+from validation_evidence import (
+    execution_inventory,
+    validation_dependencies,
+    backend_inventory,
+    case_coverage,
+    maintenance_contract,
+)
+
+CAPABILITIES = {
+    'knowledge': ('knowledge.py', 'references/platform/knowledge-reliability.md'),
+    'diagnosis': ('project_diagnosis.py', 'references/workflows/project-diagnosis.md'),
+    'asset_inspection': ('miliastra/assets/inspection.py', 'references/assets/asset-inspection.md'),
+    'mcp': ('miliastra/mcp/service.py', 'docs/mcp.md'),
+    'asset_batch': ('miliastra/assets/batch.py', 'references/assets/image-to-primitives.md'),
+    'native': ('miliastra/native/core.py', 'references/gil/native-maintenance.md'),
+    'storage': ('miliastra/storage.py', 'references/workflows/storage-authoring.md'),
+    'protocol': ('protocol_codegen.py', 'references/workflows/protocol-v2.md'),
+    'ui': ('runtime_ui.lua', 'references/editor/lua/runtime-ui.md'),
+    'assembly': ('miliastra/client/assembly.py', 'references/editor/lua/client-assembly.md'),
+    'simulation': ('joint_simulator.py', 'references/workflows/joint-simulation.md'),
+    'algorithms': ('runtime_algorithms.lua', 'references/workflows/algorithms-experiments.md'),
+    'asset_fit': ('miliastra/assets/fit.py', 'references/assets/asset-fit.md'),
+    'native_assets': ('miliastra/native/assets.py', 'references/assets/native-assets.md'),
+    'production': ('miliastra/production.py', 'references/workflows/produce.md'),
+    'platform': ('platform_profiles.py', 'references/platform/platform-profiles.md'),
+    'project': ('project_index.py', 'references/editor/project-index.md'),
+    'native_changes': ('miliastra/native/changes.py', 'references/gil/native-changes.md'),
+    'scene': ('scene_authoring.py', 'references/editor/native-scene.md'),
+}
+SUPPORT = {
+    'knowledge': {
+        'operations': [
+            'api_lookup',
+            'source_integrity',
+            'declared_derived_unknown',
+            'conflict_notes',
+            'versioned_document_selection',
+        ],
+        'authority': 'bundled document provenance; no inferred host success',
+    },
+    'diagnosis': {
+        'operations': [
+            'explicit_readonly_checks',
+            'JSON_or_text_report',
+            'artifact_bound_manual_records',
+            'AST_update_cost_hints',
+        ],
+        'performance': 'risk indications, not device measurement',
+    },
+    'asset_inspection': {
+        'operations': [
+            'check',
+            'diff',
+            'RGBA_statistics',
+            'rectangle_reconstruction',
+            'text_cost_statistics',
+        ],
+        'formats': ['image', 'shape_schema1', 'miliastra-wonderland-assets_schema1'],
+        'host_rendering': 'not_checked',
+    },
+    'asset_batch': {
+        'operations': ['preview', 'generate', 'weighted_shared_control_budget', 'produce'],
+        'host_rendering': 'not_checked',
+    },
+    'mcp': {
+        'operations': list(OPERATIONS),
+        'builtin_queries': list(BUILTIN_OPERATIONS),
+        'transport': 'local_stdio',
+        'workspace': 'explicit_or_session_roots_or_runtime_config',
+        'sdk': 'mcp==2.3.0',
+        'runtime_control': False,
+        'trusted_project_sources_required': True,
+    },
+    'scene': {
+        'operations': [
+            'native_model_catalogue',
+            'static_gia',
+            'place_static_scene',
+            'duplicate_entities',
+            'arrange_instances',
+            'create_object_templates',
+            'instantiate_object_templates',
+            'place_model_instances',
+            'add_scene_points',
+            'add_respawn_points',
+            'add_native_movers',
+            'set_native_preset_state',
+            'add_point_light',
+            'inspect',
+            'scene_scope',
+            'set_entity_transform',
+            'whitebox_preview',
+            'whole_scene_preview',
+            'world_layout_comparison',
+            'export_whitebox',
+            'gil_plan_apply',
+            'produce',
+        ],
+        'static_gia_target': {'version': '7.2', 'mode': 'beyond'},
+        'editor': 'not_checked',
+        'host': 'not_checked',
+    },
+    'native_changes': {
+        'operations': [
+            'diff',
+            'plan',
+            'apply_plan',
+            'source_content_binding',
+            'expected_result_binding',
+            'protected_bytes',
+            'locatable_write_diagnostics',
+            'produce',
+            'portable',
+        ],
+        'diff_formats': ['gil', 'gia'],
+        'plan_baseline': 'gil',
+        'complete_semantic_diff': False,
+        'scope': 'calibrated objects/references/ports and complete top-level byte change detection',
+    },
+    'project': {
+        'operations': [
+            'inspect',
+            'search',
+            'scene_scope',
+            'check',
+            'direct_consumers',
+            'transitive_consumers',
+            'required_references',
+            'custom_variable_declarations',
+            'graph_variable_declarations_and_defaults',
+            'static_graph_variable_accesses',
+            'variable_inheritance_and_structure_references',
+            'final_production_check',
+            'portable_artifacts',
+        ],
+        'scope': 'calibrated native and client object references',
+        'complete_reference_index': False,
+        'unindexed': [
+            'arbitrary_component_payloads',
+            'custom_variable_access_and_literal_targets',
+            'graph_variable_dynamic_access_and_overrides',
+            'implicit_graph_structure_identity',
+            'untyped_numeric_constants',
+            'dynamic_Lua_identifiers',
+            'platform_resource_catalogue',
+        ],
+    },
+    'platform': {
+        'operations': [
+            'docs_search',
+            'docs_show',
+            'docs_diff',
+            'profile',
+            'configuration_check',
+            'selected_native_timer_binding',
+            'final_timer_constant_readback',
+            'set_timer_sequence',
+            'disturbance_semantics',
+            'push_collision_prerequisites',
+            'filter_semantics',
+            'camera_takeover_restore',
+            'velocity_force_distinction',
+            'declared_translation_coverage',
+            'zero_arrival_radius',
+        ],
+        'modes': ['classic', 'beyond'],
+        'scope': 'declared_configuration',
+        'native_artifact_verified': False,
+    },
+    'native': {
+        'operations': [
+            'inspect',
+            'audit',
+            'append_graph',
+            'replace_graph',
+            'rewire',
+            'mount_instance',
+            'mount_template',
+            'section_from',
+            'optimize_read_expression',
+            'set_custom_variable_default',
+            'set_timer_sequence',
+            'set_object_transform',
+            'set_entity_transform',
+            'set_decoration',
+            'append_decorations',
+            'add_box_trigger',
+            'set_linear_motion',
+            'place_static_scene',
+            'duplicate_entities',
+            'arrange_instances',
+            'add_scene_points',
+            'set_scene_camera',
+            'set_scene_point',
+            'set_terrain_cells',
+            'set_fixed_environment_hour',
+            'set_point_light',
+            'set_native_class',
+            'native_skill',
+            'native_creature_graph',
+            'set_creature_skill_set',
+            'native_combat',
+            'native_unit_status',
+            'set_native_faction_relations',
+            'add_native_variables',
+            'set_native_player_group',
+            'add_respawn_points',
+            'set_native_revive',
+            'economy_config',
+            'native_economy_binding',
+            'create_native_drop',
+            'add_native_global_timer',
+            'native_hud',
+            'set_native_hud_control',
+            'append_client_ui',
+        ],
+        'gameplay_guide': 'references/editor/native-gameplay.md',
+        'graph_kinds': ['ordinary', 'composite'],
+        'guard': [
+            'base_sha256',
+            'unique_target',
+            'allowed_fields',
+            'protected_bytes',
+            'types',
+            'struct_identity',
+            'structure_declarations_and_defaults',
+            'dictionary_structure_references_and_defaults',
+            'custom_variable_declarations_and_defaults',
+            'graph_variable_declarations_and_defaults',
+            'static_graph_variable_accesses',
+            'storage_slot_references',
+            'dynamic_ports',
+            'flow_and_data_port_contracts',
+            'versions',
+            'mount_library',
+            'declaration_signature_references',
+            'composite_interfaces',
+            'GIA_dependencies',
+            'GIA_signal_roles_and_descriptors',
+            'GIA_signal_compilation_readback',
+            'composite_compilation_readback',
+        ],
+        'composite_kernel_indices': 'equal ordinals and calibrated structure update mappings',
+        'composite_execution': 'not_implemented',
+        'optimizer_default': 'disabled',
+    },
+    'storage': {
+        'schema': [2, 3],
+        'fields': ['integer', 'boolean', 'integer_list'],
+        'operations': [
+            'native_declarations',
+            'slots',
+            'signals',
+            'Graph_Code',
+            'client_adapter',
+            'server_transport',
+            'read',
+            'write',
+            'readback',
+            'retry',
+            'exit_intent',
+            'record_version_guard',
+            'explicit_QX_migration_chain',
+            'migration_candidate_readback',
+            'schema3_migration_ticket_commit',
+            'logical_capacity_guard',
+            'codec',
+            'append_dictionary',
+            'achievement_request_and_confirmation',
+            'diagnose',
+        ],
+        'schema3_operations': [
+            'open_session',
+            'expected_revision_guard',
+            'stale_session_guard',
+            'exact_duplicate_idempotency',
+            'stored_capacity_guard',
+            'session_slot_log_correlation',
+            'compatible_record_version_upgrade',
+        ],
+        'host_quota': 'not_checked',
+    },
+    'protocol': {
+        'operations': [
+            'native_definitions',
+            'Lua_bridge',
+            'typed_readback',
+            'ordered_contiguous',
+            'snapshot_monotonic',
+            'revision',
+            'confirmation_set',
+            'roster_snapshot',
+            'barrier',
+            'checkpoint',
+            'session_isolation',
+            'membership_revision',
+            'withdraw_revision',
+            'validated_checkpoint_restore',
+            'final_client_direction_contract',
+            'final_native_protocol_layout',
+        ],
+        'arbitrary_struct_transport': False,
+    },
+    'ui': {
+        'operations': [
+            'identity_pool',
+            'property_cache',
+            'cancel_queue',
+            'create_and_write_budget',
+            'foreground_priority',
+            'position_owner',
+            'drag_cancel',
+            'listener_scope',
+            'overlay_restore',
+            'pause_clock',
+            'keyed_list',
+            'native_fixed_anchor_layout',
+            'native_positive_xy_scale',
+            'final_layout_readback',
+            'final_parent_local_size_check',
+        ],
+        'rendering': 'host_required',
+    },
+    'assembly': {
+        'operations': [
+            'ordered_manifest',
+            'dependency_check',
+            'local_module_inline',
+            'per_file_digest',
+            'line_map',
+            'embedded_source_check',
+            'final_lua53_compilation',
+            'all_embedded_mappings',
+            'digest_bound_syntax_diagnostics',
+            'contract_bound_lexical_API_check',
+            'declaration_type_bindings',
+            'bound_integer_literals',
+            'final_control_template_references',
+            'readonly_literal_table_fields',
+            'explicit_client_variable_owner_contract',
+            'custom_variable_inheritance_check',
+        ],
+        'host_require_required': False,
+        'api_and_reference_crosscheck': False,
+        'api_scope': 'lexical host members, permissions, call convention, arity and resolved types; dynamic containers and engineering references incomplete',
+    },
+    'simulation': {
+        'optional_external_backend': {
+            'entry': 'beyond',
+            'commit': '02a5ea2cd38bb5bcf7a7ce6dd745be3bb1ae655c',
+            'dependency': 'bundled Windows x64 runtime; Node 22+',
+            'gil_controls': ['container', 'text', 'area', 'button'],
+            'rendering': 'software PNG',
+            'production_binding': '@level final GIL and SHA256',
+            'portable': 'bundled backend input closure and isolated rebuild',
+            'evidence': 'not_checked',
+            'native_equivalence': False,
+        },
+        'operations': [
+            'independent_Lua_clients',
+            'final_GIL_graph_read',
+            'deterministic_queue',
+            'delay',
+            'drop',
+            'duplicate',
+            'reorder',
+            'failure_trace',
+            'failure_replay',
+            'network_timer_deadline_clock',
+            'required_timer_event_acceptance',
+            'bidirectional_serialized_data_edges',
+            'explicit_client_variable_snapshots',
+            'client_variable_listener_cleanup',
+            'native_only_mounted_graphs',
+            'model_visibility_assertions',
+            'world_position_observations',
+            'axis_aligned_character_route',
+            'local_template_mounts',
+            'entity_variable_assertions',
+        ],
+        'native_nodes': [
+            'signal_event',
+            'server_signal_broadcast',
+            'targeted_signal_send',
+            'custom_variable_read_write',
+            'list_assembly_index_length',
+            'container_reference_read_write',
+            'list_clear_insert_remove_modify_concatenate',
+            'custom_variable_change_event',
+            'receiver_sender_and_GUID_identity',
+            'structure_assembly_split',
+            'local_variable',
+            'branch',
+            'multiple_branches',
+            'finite_loop_inclusive_with_break',
+            'comparison',
+            'arithmetic_add_subtract_multiply',
+            'logical_boolean',
+            'print',
+            'achievement_tally_query',
+            'start_pause_resume_stop_timer',
+            'entity_timer_event',
+            'explicit_entity_creation_event',
+            'mounted_collision_entry_event',
+            'level_scoped_entity_removal',
+            'removed_entity_timer_listener_cleanup',
+            'activate_disable_model_display',
+            'uniform_basic_linear_motion',
+        ],
+        'timer_scope': 'entity-local sequences and explicit index base',
+        'motion_scope': 'one active world-space uniform linear motion per dynamic placed entity',
+        'unknown_node': 'fails_when_executed',
+        'persistence': 'explicit_settlement_copy_model',
+    },
+    'algorithms': {
+        'operations': [
+            'independent_rng_restore',
+            'stable_heap',
+            'Dijkstra',
+            'grid4',
+            'geometry_query',
+            'reservation_expiry',
+            'state_machine',
+            'pause_clock',
+            'event_replay',
+            'LRU',
+            'development_holdout',
+            'paired_compare',
+            'failure_trace',
+        ],
+        'policy_and_score': 'project_supplied',
+    },
+    'asset_fit': {
+        'entry': 'assets fit',
+        'schemas': [1, 2],
+        'schema2_algorithm': 'residual-budget-2',
+        'delivery_budget': 'per-layer and batch rectangle limits; not a platform limit',
+        'shapes': ['circle', 'ellipse', 'axis_aligned_line', 'rect'],
+        'error': 'premultiplied RGBA MSE',
+        'operations': [
+            'seeded_progressive_fit',
+            'regional_refinement',
+            'digest_bound_resume',
+            'layer_batch',
+            'lossless_rectangle_lowering',
+            'Lua',
+            'calibrated_rectangle_GIA',
+        ],
+        'editor': 'not_checked',
+        'host': 'not_checked',
+    },
+    'native_assets': {
+        'projection': 'xy_x90',
+        'template_id': 10009001,
+        'operations': [
+            'dependencies',
+            'position_rotation_scale_color',
+            'single_depth_layer',
+            'explicit_depth_layers',
+            'alpha_composited_software_preview',
+            'anchor',
+            'lossless_grid_merge',
+            'JSON_Lua_preview_catalogue',
+            'bounded_LRU',
+            'weighted_rectangle_cache',
+            'identity_asset_leases',
+            'explicit_catalogue_loader',
+        ],
+        'unsupported': 'reject',
+    },
+    'production': {
+        'schema': [1, 2],
+        'operations': [
+            'produce',
+            'atomic_output',
+            'active_gil_baseline',
+            'typed_native_bindings',
+            'rebase_native_bindings',
+            'summary',
+            'final_audit',
+            'declared_models_experiments',
+            'dependency_manifest',
+            'independent_rebuild',
+            'artifact_byte_compare',
+            'artifact_role_comparison',
+            'portable_input_closure',
+            'portable_rebuild',
+            'impact_selection',
+            'doctor',
+            'capabilities',
+        ],
+        'portable': 'explicit production portable configuration; recorded Python/Node/package dependencies required',
+        'editor_host': 'not_checked',
+    },
+}
 CAPABILITY_GROUPS = {
     'entrypoints': (
-        'plugin.json', '.codex-plugin/plugin.json', 'mcp.json',
-        'scripts/qianxing.py', 'scripts/mcp_launcher.cjs', 'scripts/miliastra/mcp/service.py', 'scripts/miliastra/mcp/bridge.py', 'scripts/miliastra/mcp/workspace.py',
-        'scripts/mcp_worker.py', 'scripts/capability_index.py', 'scripts/capability-layers.json', 'scripts/capabilities.py',
-        'pyproject.toml', 'uv.lock', 'scripts/runtime_policy.py',
+        'plugin.json',
+        '.codex-plugin/plugin.json',
+        'mcp.json',
+        'scripts/qianxing.py',
+        'scripts/mcp_launcher.cjs',
+        'scripts/miliastra/mcp/service.py',
+        'scripts/miliastra/mcp/bridge.py',
+        'scripts/miliastra/mcp/workspace.py',
+        'scripts/mcp_worker.py',
+        'scripts/capability_index.py',
+        'scripts/capability-layers.json',
+        'scripts/capabilities.py',
+        'pyproject.toml',
+        'uv.lock',
+        'scripts/runtime_policy.py',
     ),
     'editor': (
-        'scripts/platform-sources.json', 'scripts/platform_profiles.py', 'scripts/platform_rules72.py',
-        'scripts/platform_schema.py', 'scripts/platform_native.py', 'scripts/project_index.py',
-        'scripts/miliastra/native/gameplay_index.py', 'scripts/miliastra/native/scene.py', 'scripts/miliastra/native/scene_edits.py',
+        'scripts/platform-sources.json',
+        'scripts/platform_profiles.py',
+        'scripts/platform_rules72.py',
+        'scripts/platform_schema.py',
+        'scripts/platform_native.py',
+        'scripts/project_index.py',
+        'scripts/miliastra/native/gameplay_index.py',
+        'scripts/miliastra/native/scene.py',
+        'scripts/miliastra/native/scene_edits.py',
         'scripts/miliastra/native/scene_settings.py',
     ),
     'graph': (
-        'scripts/node_contracts.py', 'scripts/node-contracts.json', 'scripts/ayaya_bridge.py',
-        'scripts/node_build.py', 'scripts/graph_validation.py', 'scripts/graph_resources.py',
-        'scripts/miliastra/native/bindings.py', 'scripts/miliastra/native/build.py', 'scripts/protocol_codegen.py',
-        'scripts/miliastra/native/model.py', 'scripts/miliastra/native/timers.py', 'vendor/ayaya/VENDORED.json',
+        'scripts/node_contracts.py',
+        'scripts/node-contracts.json',
+        'scripts/ayaya_bridge.py',
+        'scripts/node_build.py',
+        'scripts/graph_validation.py',
+        'scripts/graph_resources.py',
+        'scripts/miliastra/native/bindings.py',
+        'scripts/miliastra/native/build.py',
+        'scripts/protocol_codegen.py',
+        'scripts/miliastra/native/model.py',
+        'scripts/miliastra/native/timers.py',
+        'vendor/ayaya/VENDORED.json',
     ),
     'client': (
-        'scripts/knowledge-sources.json', 'scripts/knowledge.py', 'scripts/miliastra/client/api_catalogue.py',
-        'scripts/miliastra/client/api.py', 'scripts/client_ast.cjs', 'scripts/miliastra/client/check.py', 'scripts/miliastra/client/references.py',
-        'scripts/miliastra/client/assembly.py', 'scripts/miliastra/client/variables.py', 'scripts/miliastra/client/signal_binding.py',
-        'references/platform/community/client-controls-api.md', 'scripts/client_simulator.py',
-        'scripts/client_simulator.lua', 'scripts/joint_simulator.py', 'scripts/beyond_backend.py',
-        'scripts/log_diagnostics.py', 'scripts/runtime_rectangle_mount.lua',
+        'scripts/knowledge-sources.json',
+        'scripts/knowledge.py',
+        'scripts/miliastra/client/api_catalogue.py',
+        'scripts/miliastra/client/api.py',
+        'scripts/client_ast.cjs',
+        'scripts/miliastra/client/check.py',
+        'scripts/miliastra/client/references.py',
+        'scripts/miliastra/client/assembly.py',
+        'scripts/miliastra/client/variables.py',
+        'scripts/miliastra/client/signal_binding.py',
+        'references/platform/community/client-controls-api.md',
+        'scripts/client_simulator.py',
+        'scripts/client_simulator.lua',
+        'scripts/joint_simulator.py',
+        'scripts/beyond_backend.py',
+        'scripts/log_diagnostics.py',
+        'scripts/runtime_rectangle_mount.lua',
         'scripts/beyond-revision.json',
-        'scripts/beyond_gil.py', 'scripts/beyond_worker.mjs', 'vendor/beyond/bundle.json',
+        'scripts/beyond_gil.py',
+        'scripts/beyond_worker.mjs',
+        'vendor/beyond/bundle.json',
     ),
     'gil': (
-        'scripts/level_inventory.py', 'scripts/level_authoring.py', 'scripts/miliastra/native/core.py', 'scripts/miliastra/native/changes.py',
-        'scripts/miliastra/native/ports.py', 'scripts/native-client-ports.json', 'scripts/miliastra/native/resources.py', 'scripts/miliastra/native/signals.py',
-        'scripts/miliastra/native/structures.py', 'scripts/miliastra/native/variables.py', 'scripts/miliastra/native/prefabs.py', 'scripts/miliastra/native/gameplay.py',
-        'scripts/miliastra/native/economy.py', 'scripts/miliastra/native/hud.py', 'scripts/miliastra/native/client_ui.py', 'scripts/miliastra/native/gia.py', 'scripts/miliastra/storage.py',
+        'scripts/level_inventory.py',
+        'scripts/level_authoring.py',
+        'scripts/miliastra/native/core.py',
+        'scripts/miliastra/native/changes.py',
+        'scripts/miliastra/native/ports.py',
+        'scripts/native-client-ports.json',
+        'scripts/miliastra/native/resources.py',
+        'scripts/miliastra/native/signals.py',
+        'scripts/miliastra/native/structures.py',
+        'scripts/miliastra/native/variables.py',
+        'scripts/miliastra/native/prefabs.py',
+        'scripts/miliastra/native/gameplay.py',
+        'scripts/miliastra/native/economy.py',
+        'scripts/miliastra/native/hud.py',
+        'scripts/miliastra/native/client_ui.py',
+        'scripts/miliastra/native/gia.py',
+        'scripts/miliastra/storage.py',
         'scripts/miliastra/native/client_lua.py',
-        'scripts/miliastra/storage_v3.py', 'scripts/authoring_io.py', 'scripts/production_core.py', 'scripts/miliastra/production.py',
-        'scripts/delivery_verify.py', 'scripts/portable_trust.py', 'scripts/portable_delivery.py',
+        'scripts/miliastra/storage_v3.py',
+        'scripts/authoring_io.py',
+        'scripts/production_core.py',
+        'scripts/miliastra/production.py',
+        'scripts/delivery_verify.py',
+        'scripts/portable_trust.py',
+        'scripts/portable_delivery.py',
     ),
     'assets': (
-        'scripts/resource_catalogue.py', 'scripts/scene-model-candidates.json', 'scripts/media-resource-observations.json',
-        'scripts/scene_authoring.py', 'scripts/scene_preview.py',
-        'scripts/miliastra/assets/pipeline.py', 'scripts/miliastra/assets/batch.py', 'scripts/miliastra/assets/core.py', 'scripts/miliastra/assets/inspection.py',
-        'scripts/miliastra/assets/fit.py', 'scripts/miliastra/assets/fit_residual.py',
-        'scripts/miliastra/assets/fit_mount.py', 'scripts/miliastra/native/assets.py',
+        'scripts/resource_catalogue.py',
+        'scripts/scene-model-candidates.json',
+        'scripts/media-resource-observations.json',
+        'scripts/scene_authoring.py',
+        'scripts/scene_preview.py',
+        'scripts/miliastra/assets/pipeline.py',
+        'scripts/miliastra/assets/batch.py',
+        'scripts/miliastra/assets/core.py',
+        'scripts/miliastra/assets/inspection.py',
+        'scripts/miliastra/assets/fit.py',
+        'scripts/miliastra/assets/fit_residual.py',
+        'scripts/miliastra/assets/fit_mount.py',
+        'scripts/miliastra/native/assets.py',
     ),
 }
 
 
 def capability_snapshot(legacy_files, compare):
-    names=set(legacy_files).union(*CAPABILITY_GROUPS.values())
-    current={name:sha_file(PLUGIN/name) if (PLUGIN/name).is_file() else None for name in sorted(names)}
-    legacy=sha(canonical({name:current[name] for name in legacy_files}).encode('utf-8'))
-    groups={key:{'sha256':sha(canonical({name:current[name] for name in files}).encode('utf-8')),
-                 'file_count':len(files),'missing':[name for name in files if current[name] is None]}
-            for key,files in CAPABILITY_GROUPS.items()}
-    result={'path':str(PLUGIN),'version':read_json(PLUGIN/'plugin.json')['version'],'capability_sha256':legacy,
-            'fingerprint_files':list(legacy_files),'capability_groups':groups}
+    names = set(legacy_files).union(*CAPABILITY_GROUPS.values())
+    current = {
+        name: sha_file(PLUGIN / name) if (PLUGIN / name).is_file() else None
+        for name in sorted(names)
+    }
+    legacy = sha(canonical({name: current[name] for name in legacy_files}).encode('utf-8'))
+    groups = {
+        key: {
+            'sha256': sha(canonical({name: current[name] for name in files}).encode('utf-8')),
+            'file_count': len(files),
+            'missing': [name for name in files if current[name] is None],
+        }
+        for key, files in CAPABILITY_GROUPS.items()
+    }
+    result = {
+        'path': str(PLUGIN),
+        'version': read_json(PLUGIN / 'plugin.json')['version'],
+        'capability_sha256': legacy,
+        'fingerprint_files': list(legacy_files),
+        'capability_groups': groups,
+    }
     if compare is not None:
-        target=Path(compare).resolve()
+        target = Path(compare).resolve()
         if not target.is_dir():
             raise ValueError('Compare path must be a plugin directory')
-        other={name:sha_file(target/name) if (target/name).is_file() else None for name in current}
-        differences={}
-        for group,files in CAPABILITY_GROUPS.items():
-            changed=[{'file':name,'current_sha256':current[name],'compare_sha256':other[name]} for name in files
-                     if current[name]!=other[name] and current[name] is not None and other[name] is not None]
-            missing_current=[name for name in files if current[name] is None]
-            missing_compare=[name for name in files if other[name] is None]
-            differences[group]={'status':'different' if changed or missing_current or missing_compare else 'same',
-                                'changes':changed,'missing_current':missing_current,'missing_compare':missing_compare}
-        result['comparison']={'path':str(target),'version':read_json(target/'plugin.json').get('version') if other['plugin.json'] else None,
-                              'status':'different' if any(group['status']=='different' for group in differences.values()) else 'same',
-                              'groups':differences}
+        other = {
+            name: sha_file(target / name) if (target / name).is_file() else None for name in current
+        }
+        differences = {}
+        for group, files in CAPABILITY_GROUPS.items():
+            changed = [
+                {'file': name, 'current_sha256': current[name], 'compare_sha256': other[name]}
+                for name in files
+                if current[name] != other[name]
+                and current[name] is not None
+                and other[name] is not None
+            ]
+            missing_current = [name for name in files if current[name] is None]
+            missing_compare = [name for name in files if other[name] is None]
+            differences[group] = {
+                'status': 'different' if changed or missing_current or missing_compare else 'same',
+                'changes': changed,
+                'missing_current': missing_current,
+                'missing_compare': missing_compare,
+            }
+        result['comparison'] = {
+            'path': str(target),
+            'version': read_json(target / 'plugin.json').get('version')
+            if other['plugin.json']
+            else None,
+            'status': 'different'
+            if any(group['status'] == 'different' for group in differences.values())
+            else 'same',
+            'groups': differences,
+        }
     return result
 
 
 def doctor(compare=None):
-    node=shutil.which('node');node_version=None
+    node = shutil.which('node')
+    node_version = None
     if node:
-        probe=subprocess.run([node,'--version'],capture_output=True,text=True)
-        if probe.returncode==0:node_version=probe.stdout.strip()
-    versions={d.metadata['Name'].lower():d.version for d in importlib.metadata.distributions() if d.metadata['Name']}
-    dependencies={name:{'required':required,'installed':versions.get(name),'status':'not_checked' if name not in versions else 'passed' if versions[name]==required else 'failed'} for name,required in REQUIREMENTS.items()}
-    imports=subprocess.run([sys.executable,'-B','-c','import mcp,lupa.lua53,PIL'],capture_output=True,text=True)
-    supported=sys.implementation.name=='cpython' and supported_python(sys.version_info)
-    node_supported=bool(node_version and node_version.lstrip('v').split('.')[0].isdigit() and int(node_version.lstrip('v').split('.')[0])>=22)
-    status='failed' if not supported or not node_supported or imports.returncode or any(r['status']=='failed' for r in dependencies.values()) else 'not_checked' if any(r['status']=='not_checked' for r in dependencies.values()) else 'passed'
-    fingerprint_files = (
-        'plugin.json', 'mcp.json', '.codex-plugin/plugin.json', 'scripts/qianxing.py',
-        'scripts/mcp_launcher.cjs', 'scripts/miliastra/mcp/service.py', 'scripts/miliastra/mcp/bridge.py', 'scripts/miliastra/mcp/workspace.py',
-        'scripts/mcp_worker.py', 'scripts/capability_index.py', 'scripts/capabilities.py',
-        'scripts/project_index.py', 'scripts/miliastra/native/gameplay_index.py', 'scripts/miliastra/native/bindings.py', 'scripts/authoring_io.py',
-        'scripts/miliastra/native/core.py', 'scripts/miliastra/native/changes.py', 'scripts/miliastra/native/ports.py',
-        'scripts/native-client-ports.json', 'scripts/miliastra/native/resources.py', 'scripts/miliastra/native/signals.py', 'scripts/miliastra/native/structures.py',
-        'scripts/miliastra/native/scene.py', 'scripts/miliastra/native/scene_edits.py', 'scripts/miliastra/native/scene_settings.py', 'scripts/scene_preview.py', 'scripts/level_inventory.py',
-        'scripts/miliastra/native/prefabs.py', 'scripts/miliastra/native/gameplay.py', 'scripts/miliastra/native/economy.py', 'scripts/miliastra/native/hud.py',
-        'scripts/miliastra/native/gia.py', 'scripts/miliastra/storage.py', 'scripts/miliastra/storage_v3.py',
-        'scripts/miliastra/assets/pipeline.py', 'scripts/miliastra/assets/core.py', 'scripts/miliastra/assets/fit.py', 'scripts/miliastra/assets/fit_residual.py',
-        'scripts/miliastra/client/check.py', 'scripts/client_simulator.py', 'scripts/client_simulator.lua',
-        'scripts/joint_simulator.py', 'scripts/miliastra/native/model.py', 'scripts/miliastra/native/timers.py', 'scripts/beyond_gil.py',
-        'scripts/beyond_backend.py', 'scripts/beyond_worker.mjs', 'scripts/node_build.py', 'scripts/graph_validation.py',
-        'scripts/miliastra/native/build.py', 'scripts/production_core.py', 'scripts/miliastra/production.py',
-        'vendor/ayaya/VENDORED.json', 'vendor/beyond/bundle.json',
+        probe = subprocess.run([node, '--version'], capture_output=True, text=True)
+        if probe.returncode == 0:
+            node_version = probe.stdout.strip()
+    versions = {
+        d.metadata['Name'].lower(): d.version
+        for d in importlib.metadata.distributions()
+        if d.metadata['Name']
+    }
+    dependencies = {
+        name: {
+            'required': required,
+            'installed': versions.get(name),
+            'status': 'not_checked'
+            if name not in versions
+            else 'passed'
+            if versions[name] == required
+            else 'failed',
+        }
+        for name, required in REQUIREMENTS.items()
+    }
+    imports = subprocess.run(
+        [sys.executable, '-B', '-c', 'import mcp,lupa.lua53,PIL'], capture_output=True, text=True
     )
-    return {'schema':2,'status':status,
-            'project_context':project_context(os.environ.get('MILIASTRA_WONDERLAND_PROJECT_ROOT'),os.environ.get('MILIASTRA_WONDERLAND_OUTPUT_ROOT')),
-            'plugin':capability_snapshot(fingerprint_files,compare),
-            'python':sys.version.split()[0],'python_executable':sys.executable,'python_supported':supported,'node':node,'node_version':node_version,'node_supported':node_supported,
-            'dependencies':dependencies,'dependency_imports':{'status':'passed' if imports.returncode==0 else 'failed','error':imports.stderr[-1500:] if imports.returncode else None},
-            'pillow':importlib.util.find_spec('PIL')is not None,'lua53':importlib.util.find_spec('lupa')is not None and importlib.util.find_spec('lupa.lua53')is not None,
-            'ayaya':(PLUGIN/'vendor/ayaya/private_extensions/run_ugc_file_tools.py').is_file(),'beyond':{'bundled':(PLUGIN/'vendor/beyond/bundle.json').is_file(),'platform':'Windows x64','requires':'Node 22+','integrity':'checked_on_run','runtime':'not_checked'},'mcp_host_loading':'not_checked','global_configuration_changed':False}
-def capabilities(evidence=None,tests_root=None,platform=None,mode=None):
-    proof=read_json(evidence)if evidence else None
-    current=inventory(PLUGIN/'scripts');verified=False
-    problems=[]
-    registration={}
+    supported = sys.implementation.name == 'cpython' and supported_python(sys.version_info)
+    node_supported = bool(
+        node_version
+        and node_version.lstrip('v').split('.')[0].isdigit()
+        and int(node_version.lstrip('v').split('.')[0]) >= 22
+    )
+    status = (
+        'failed'
+        if not supported
+        or not node_supported
+        or imports.returncode
+        or any(r['status'] == 'failed' for r in dependencies.values())
+        else 'not_checked'
+        if any(r['status'] == 'not_checked' for r in dependencies.values())
+        else 'passed'
+    )
+    fingerprint_files = (
+        'plugin.json',
+        'mcp.json',
+        '.codex-plugin/plugin.json',
+        'scripts/qianxing.py',
+        'scripts/mcp_launcher.cjs',
+        'scripts/miliastra/mcp/service.py',
+        'scripts/miliastra/mcp/bridge.py',
+        'scripts/miliastra/mcp/workspace.py',
+        'scripts/mcp_worker.py',
+        'scripts/capability_index.py',
+        'scripts/capabilities.py',
+        'scripts/project_index.py',
+        'scripts/miliastra/native/gameplay_index.py',
+        'scripts/miliastra/native/bindings.py',
+        'scripts/authoring_io.py',
+        'scripts/miliastra/native/core.py',
+        'scripts/miliastra/native/changes.py',
+        'scripts/miliastra/native/ports.py',
+        'scripts/native-client-ports.json',
+        'scripts/miliastra/native/resources.py',
+        'scripts/miliastra/native/signals.py',
+        'scripts/miliastra/native/structures.py',
+        'scripts/miliastra/native/scene.py',
+        'scripts/miliastra/native/scene_edits.py',
+        'scripts/miliastra/native/scene_settings.py',
+        'scripts/scene_preview.py',
+        'scripts/level_inventory.py',
+        'scripts/miliastra/native/prefabs.py',
+        'scripts/miliastra/native/gameplay.py',
+        'scripts/miliastra/native/economy.py',
+        'scripts/miliastra/native/hud.py',
+        'scripts/miliastra/native/gia.py',
+        'scripts/miliastra/storage.py',
+        'scripts/miliastra/storage_v3.py',
+        'scripts/miliastra/assets/pipeline.py',
+        'scripts/miliastra/assets/core.py',
+        'scripts/miliastra/assets/fit.py',
+        'scripts/miliastra/assets/fit_residual.py',
+        'scripts/miliastra/client/check.py',
+        'scripts/client_simulator.py',
+        'scripts/client_simulator.lua',
+        'scripts/joint_simulator.py',
+        'scripts/miliastra/native/model.py',
+        'scripts/miliastra/native/timers.py',
+        'scripts/beyond_gil.py',
+        'scripts/beyond_backend.py',
+        'scripts/beyond_worker.mjs',
+        'scripts/node_build.py',
+        'scripts/graph_validation.py',
+        'scripts/miliastra/native/build.py',
+        'scripts/production_core.py',
+        'scripts/miliastra/production.py',
+        'vendor/ayaya/VENDORED.json',
+        'vendor/beyond/bundle.json',
+    )
+    return {
+        'schema': 2,
+        'status': status,
+        'project_context': project_context(
+            os.environ.get('MILIASTRA_WONDERLAND_PROJECT_ROOT'),
+            os.environ.get('MILIASTRA_WONDERLAND_OUTPUT_ROOT'),
+        ),
+        'plugin': capability_snapshot(fingerprint_files, compare),
+        'python': sys.version.split()[0],
+        'python_executable': sys.executable,
+        'python_supported': supported,
+        'node': node,
+        'node_version': node_version,
+        'node_supported': node_supported,
+        'dependencies': dependencies,
+        'dependency_imports': {
+            'status': 'passed' if imports.returncode == 0 else 'failed',
+            'error': imports.stderr[-1500:] if imports.returncode else None,
+        },
+        'pillow': importlib.util.find_spec('PIL') is not None,
+        'lua53': importlib.util.find_spec('lupa') is not None
+        and importlib.util.find_spec('lupa.lua53') is not None,
+        'ayaya': (PLUGIN / 'vendor/ayaya/private_extensions/run_ugc_file_tools.py').is_file(),
+        'beyond': {
+            'bundled': (PLUGIN / 'vendor/beyond/bundle.json').is_file(),
+            'platform': 'Windows x64',
+            'requires': 'Node 22+',
+            'integrity': 'checked_on_run',
+            'runtime': 'not_checked',
+        },
+        'mcp_host_loading': 'not_checked',
+        'global_configuration_changed': False,
+    }
+
+
+def capabilities(evidence=None, tests_root=None, platform=None, mode=None):
+    proof = read_json(evidence) if evidence else None
+    current = inventory(PLUGIN / 'scripts')
+    verified = False
+    problems = []
+    registration = {}
     if proof:
-        test_directory=Path(tests_root)if tests_root else PLUGIN.parent/'development'
-        registration=maintenance_contract(test_directory) or {}
-        if not registration:problems.append('maintenance validation contract missing beside the development suites')
-        if proof.get('schema')!=3:problems.append('validation evidence schema 3 required')
-        if proof.get('validation_dependencies')!=validation_dependencies(test_directory):problems.append('validation helpers, fixtures or rules changed')
-        if proof.get('backends')!=backend_inventory():problems.append('execution backend changed or unavailable')
-        if proof.get('structural_files')!=inventory(PLUGIN):problems.append('structural validation inputs changed')
-        structural=Path(evidence).parent/'source-validation.json'
-        if not structural.is_file()or sha(structural.read_bytes())!=proof.get('structural_sha256'):
+        test_directory = Path(tests_root) if tests_root else PLUGIN.parent / 'development'
+        registration = maintenance_contract(test_directory) or {}
+        if not registration:
+            problems.append('maintenance validation contract missing beside the development suites')
+        if proof.get('schema') != 3:
+            problems.append('validation evidence schema 3 required')
+        if proof.get('validation_dependencies') != validation_dependencies(test_directory):
+            problems.append('validation helpers, fixtures or rules changed')
+        if proof.get('backends') != backend_inventory():
+            problems.append('execution backend changed or unavailable')
+        if proof.get('structural_files') != inventory(PLUGIN):
+            problems.append('structural validation inputs changed')
+        structural = Path(evidence).parent / 'source-validation.json'
+        if not structural.is_file() or sha(structural.read_bytes()) != proof.get(
+            'structural_sha256'
+        ):
             problems.append('structural evidence missing or changed')
-        elif read_json(structural).get('checks_passed')is not True:problems.append('structural validation did not pass')
-        selected=proof.get('selected',[]);results=proof.get('results',[])
-        names=[r.get('test')for r in results]
-        if not selected or len(selected)!=len(set(selected))or len(names)!=len(set(names))or set(names)!=set(selected):problems.append('test selection/results mismatch or empty')
-        if proof.get('source_unchanged')is not True:problems.append('source changed during validation or guard absent')
-        if proof.get('scope')!='public':problems.append('evidence scope is not public')
+        elif read_json(structural).get('checks_passed') is not True:
+            problems.append('structural validation did not pass')
+        selected = proof.get('selected', [])
+        results = proof.get('results', [])
+        names = [r.get('test') for r in results]
+        if (
+            not selected
+            or len(selected) != len(set(selected))
+            or len(names) != len(set(names))
+            or set(names) != set(selected)
+        ):
+            problems.append('test selection/results mismatch or empty')
+        if proof.get('source_unchanged') is not True:
+            problems.append('source changed during validation or guard absent')
+        if proof.get('scope') != 'public':
+            problems.append('evidence scope is not public')
         for r in results:
-            name=r.get('test','')
-            if not isinstance(name,str)or Path(name).name!=name or not name.startswith('test_')or not name.endswith('.py'):
-                problems.append('invalid test identity');continue
-            p=test_directory/name
-            if not p.is_file()or sha(p.read_bytes())!=r.get('test_sha256'):problems.append('test missing or changed: '+name)
-            if r.get('passed')is not True or r.get('exit_code')!=0:problems.append('test did not pass: '+name)
-            cases=r.get('cases',[]);ids=[c.get('id')for c in cases]
-            if not cases or len(ids)!=len(set(ids))or any(c.get('status')!='passed'for c in cases):problems.append('test cases missing, duplicated, skipped or failed: '+name)
-            case_path=Path(evidence).parent/(name+'.cases.json')
-            if r.get('case_report')!=case_path.name or not case_path.is_file()or sha(case_path.read_bytes())!=r.get('case_sha256'):
-                problems.append('case evidence missing or changed: '+name)
+            name = r.get('test', '')
+            if (
+                not isinstance(name, str)
+                or Path(name).name != name
+                or not name.startswith('test_')
+                or not name.endswith('.py')
+            ):
+                problems.append('invalid test identity')
+                continue
+            p = test_directory / name
+            if not p.is_file() or sha(p.read_bytes()) != r.get('test_sha256'):
+                problems.append('test missing or changed: ' + name)
+            if r.get('passed') is not True or r.get('exit_code') != 0:
+                problems.append('test did not pass: ' + name)
+            cases = r.get('cases', [])
+            ids = [c.get('id') for c in cases]
+            if (
+                not cases
+                or len(ids) != len(set(ids))
+                or any(c.get('status') != 'passed' for c in cases)
+            ):
+                problems.append('test cases missing, duplicated, skipped or failed: ' + name)
+            case_path = Path(evidence).parent / (name + '.cases.json')
+            if (
+                r.get('case_report') != case_path.name
+                or not case_path.is_file()
+                or sha(case_path.read_bytes()) != r.get('case_sha256')
+            ):
+                problems.append('case evidence missing or changed: ' + name)
             else:
-                actual=read_json(case_path)
-                if actual.get('schema')!=1 or actual.get('test')!=name or actual.get('exit_code')!=0 or actual.get('cases')!=cases:problems.append('case evidence disagrees: '+name)
-        if proof.get('source_files')!=current or proof.get('execution_files')!=execution_inventory():problems.append('execution source changed')
-        if proof.get('passed')is not True:problems.append('validation did not pass')
-        verified=not problems
-    coverage=case_coverage(proof or{},registration.get('coverage', {}))
+                actual = read_json(case_path)
+                if (
+                    actual.get('schema') != 1
+                    or actual.get('test') != name
+                    or actual.get('exit_code') != 0
+                    or actual.get('cases') != cases
+                ):
+                    problems.append('case evidence disagrees: ' + name)
+        if (
+            proof.get('source_files') != current
+            or proof.get('execution_files') != execution_inventory()
+        ):
+            problems.append('execution source changed')
+        if proof.get('passed') is not True:
+            problems.append('validation did not pass')
+        verified = not problems
+    coverage = case_coverage(proof or {}, registration.get('coverage', {}))
     if not verified:
-        for item in coverage.values():item['status']='not_checked'
-    executed={r['test']for r in(proof or{}).get('results',[])if r.get('passed')}
-    required=registration.get('required_suites', {})
-    default_suites=registration.get('default_suites', [])
-    unchecked={'required':[],'missing':[],'status':'not_checked'}
+        for item in coverage.values():
+            item['status'] = 'not_checked'
+    executed = {r['test'] for r in (proof or {}).get('results', []) if r.get('passed')}
+    required = registration.get('required_suites', {})
+    default_suites = registration.get('default_suites', [])
+    unchecked = {'required': [], 'missing': [], 'status': 'not_checked'}
     from capability_layers import describe
-    layers=describe(proof,verified,registration.get('layer_cases'))
-    from platform_profiles import CATALOGUE,profile
-    supported={**SUPPORT,'platform':{**SUPPORT['platform'],'profiles':list(read_json(CATALOGUE)['profiles'])}}
-    context=profile(platform,mode)if platform is not None or mode is not None else None
+
+    layers = describe(proof, verified, registration.get('layer_cases'))
+    from platform_profiles import CATALOGUE, profile
+
+    supported = {
+        **SUPPORT,
+        'platform': {**SUPPORT['platform'], 'profiles': list(read_json(CATALOGUE)['profiles'])},
+    }
+    context = profile(platform, mode) if platform is not None or mode is not None else None
     from capability_index import describe as architecture
-    return {'schema':2,'version':read_json(PLUGIN/'plugin.json')['version'],'architecture':architecture(),'platform':context,'platform_version_verified':False,
-            'capabilities':{name:{'entry':file,'source_present':(PLUGIN/'scripts'/file).is_file(),'guide':guide,'supported':supported[name],
-                                 'layers':layers[name],'offline_evidence':'passed'if verified and set(required.get(name, default_suites))<=executed and coverage.get(name, unchecked)['status']=='passed'else'not_checked',
-                                 'coverage':coverage.get(name, unchecked),'editor':'not_checked','host':'not_checked'}for name,(file,guide)in CAPABILITIES.items()},
-            'protocol_types':list(__import__('protocol_types').TYPES),'model':'bounded Lua/API and native graph subset; unsupported operations fail',
-            'evidence_current':verified,'evidence_problems':problems,'evidence_file':str(Path(evidence).resolve())if evidence else None,'executed_suites':sorted(executed)if verified else[]}
+
+    return {
+        'schema': 2,
+        'version': read_json(PLUGIN / 'plugin.json')['version'],
+        'architecture': architecture(),
+        'platform': context,
+        'platform_version_verified': False,
+        'capabilities': {
+            name: {
+                'entry': file,
+                'source_present': (PLUGIN / 'scripts' / file).is_file(),
+                'guide': guide,
+                'supported': supported[name],
+                'layers': layers[name],
+                'offline_evidence': 'passed'
+                if verified
+                and set(required.get(name, default_suites)) <= executed
+                and coverage.get(name, unchecked)['status'] == 'passed'
+                else 'not_checked',
+                'coverage': coverage.get(name, unchecked),
+                'editor': 'not_checked',
+                'host': 'not_checked',
+            }
+            for name, (file, guide) in CAPABILITIES.items()
+        },
+        'protocol_types': list(__import__('protocol_types').TYPES),
+        'model': 'bounded Lua/API and native graph subset; unsupported operations fail',
+        'evidence_current': verified,
+        'evidence_problems': problems,
+        'evidence_file': str(Path(evidence).resolve()) if evidence else None,
+        'executed_suites': sorted(executed) if verified else [],
+    }
