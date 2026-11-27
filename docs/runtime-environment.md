@@ -14,6 +14,8 @@ CLI 和插件 MCP 使用同一套本地工具。可复用已有 Python 或使用
 4. 此锁文件对应的已准备环境。
 5. PATH 上的 `python.exe`，再查 Windows 的 `py.exe`。
 
+启动器给直接指定或在运行绑定中填写的 Python 最多 15 秒检查版本和导入依赖，自动查找时每次探测最多 5 秒。如果自检报告 `ETIMEDOUT`，可在系统负载降低后重跑自检。如果自检报告具体的依赖版本或导入错误，请核对指定的解释器和依赖。
+
 均不可用时，启动器通过 PATH 上的 uv 在安装根目录内准备锁定环境。默认根目录为 `%LOCALAPPDATA%\Miliastra Wonderland`，可通过 `MILIASTRA_WONDERLAND_INSTALL_ROOT` 改为其他绝对路径。缺少本地依赖缓存时需要联网。 [安装自检](installation.md#安装自检) · [uv 安装说明](https://docs.astral.sh/uv/getting-started/installation/)
 
 ## 提前准备 Python 环境

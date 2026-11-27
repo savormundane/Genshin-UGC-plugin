@@ -182,6 +182,9 @@ def check_git(revision: str):
                 failures.extend(f"{kind}: {shown_name(entry.name)}" for kind in content_kinds(
                     archive.extractfile(entry).read(), excluded_hashes=blocked_hashes
                 ))
+        # tarfile can stop at the end marker while git is still writing padding.
+        while process.stdout.read(64 * 1024):
+            pass
         if process.wait() or seen != names:
             failures.append("Git archive does not match the approved public tree")
     return failures

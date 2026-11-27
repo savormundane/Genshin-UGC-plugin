@@ -40,12 +40,15 @@ function pathExecutables(name) {
   return found;
 }
 
-function probePython(executable, args, env, failures, label = executable) {
+function probePython(executable, args, env, failures, {label = executable, timeout = 5000} = {}) {
   const result = spawnSync(executable, args, {
-    cwd: plugin, env, encoding: 'utf8', timeout: 5000, windowsHide: true,
+    cwd: plugin, env, encoding: 'utf8', timeout, windowsHide: true,
   });
   if (result.status !== 0) {
-    failures.push(label + ' · ' + probeDetail(result));
+    const detail = result.error?.code === 'ETIMEDOUT'
+      ? `Python 环境探测在 ${timeout / 1000} 秒内未完成（ETIMEDOUT）。`
+      : probeDetail(result);
+    failures.push(label + ' · ' + detail);
     return null;
   }
   try {
@@ -83,7 +86,7 @@ function findLauncherPython(env, checkPython, failures) {
     for (let minor = max - 1; minor >= min; minor--) {
       const selector = '-3.' + minor;
       const candidate = probePython(launcher, [selector, ...pythonProbeFlags, '-c',
-        'import json, sys; print(json.dumps(sys.executable))'], launcherEnv, failures, launcher + ' ' + selector);
+        'import json, sys; print(json.dumps(sys.executable))'], launcherEnv, failures, {label: launcher + ' ' + selector});
       const command = candidate && checkPython(candidate);
       if (command) return command;
     }
@@ -208,6 +211,7 @@ function start() {
   }
   const prepared = uvReady && fs.existsSync(uvReady) && fs.existsSync(uvPython) ? uvPython : null;
   const pathPythons = chosen ? [] : pathExecutables('python.exe');
+  const configuredPython = chosen || explicit?.python;
   const candidates = chosen ? [chosen] : [explicit?.python, active, ...installed, prepared, ...pathPythons];
   const failures = [];
   const checked = new Set();
@@ -215,7 +219,8 @@ function start() {
     const key = path.normalize(candidate).toLowerCase();
     if (checked.has(key)) return null;
     checked.add(key);
-    return probePython(candidate, [...pythonProbeFlags, probe], env, failures);
+    return probePython(candidate, [...pythonProbeFlags, probe], env, failures,
+      candidate === configuredPython ? {timeout: 15000} : undefined);
   };
   let command;
   for (const candidate of candidates.filter(Boolean)) {
@@ -223,7 +228,7 @@ function start() {
     if (command) break;
   }
   if (chosen && !command) {
-    throw startupError('runtime.python', '指定的 Python 环境不可用或缺少所需依赖。', pythonRecovery, failures.join('\n'));
+    throw startupError('runtime.python', '指定的 Python 环境未通过启动检查。', pythonRecovery, failures.join('\n'));
   }
   if (!command) {
     if (!pathPythons.length) failures.push('PATH 上未找到可探测的 python.exe。');

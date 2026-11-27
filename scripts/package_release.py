@@ -89,10 +89,12 @@ def build_release(source, output, layout='auto', archive_root=None, *, beyond_na
             raise ValueError('Invalid archive root')
         prefix = archive_root + '/'
     files = []
-    for f in sorted(source.rglob('*')):
+    candidates = (
+        sorted(source.rglob('*')) if approved is None
+        else (source / path for path in sorted(approved))
+    )
+    for f in candidates:
         relative = f.relative_to(source).as_posix()
-        if approved is not None and relative not in approved:
-            continue
         if f.is_symlink() or (approved is not None and not f.resolve().is_relative_to(source)):
             raise ValueError('Symlinks are not packaged: ' + str(f))
         parts = f.relative_to(source).parts
@@ -104,13 +106,18 @@ def build_release(source, output, layout='auto', archive_root=None, *, beyond_na
         if (f.name in ('AGENTS.md', 'AGENTS.override.md', 'CLAUDE.local.md', '.git-credentials', '.env')
                 or f.name.startswith('.env.') and f.name not in ('.env.example', '.env.sample', '.env.template')):
             continue
-        if f.is_file() and f.suffix not in ('.pyc', '.pyo'):
-            if approved is not None and (
-                private_name(relative) or relative in unlicensed
-                or content_kinds(f.read_bytes(), excluded_hashes=blocked_hashes)
-            ):
-                raise ValueError('Restricted package content: ' + shown_name(relative))
-            files.append(f)
+        if f.suffix in ('.pyc', '.pyo'):
+            continue
+        if not f.is_file():
+            if approved is not None:
+                raise ValueError('Approved package input missing or not a file: ' + shown_name(relative))
+            continue
+        if approved is not None and (
+            private_name(relative) or relative in unlicensed
+            or content_kinds(f.read_bytes(), excluded_hashes=blocked_hashes)
+        ):
+            raise ValueError('Restricted package content: ' + shown_name(relative))
+        files.append(f)
     if not files:
         raise ValueError('No package files')
     entries = [f for f in files if f.name.lower() == 'skill.md']

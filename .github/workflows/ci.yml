@@ -23,6 +23,8 @@ jobs:
     name: Repository and workflows
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    outputs:
+      distribution_allowed: ${{ steps.distribution.outputs.allowed }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -50,6 +52,15 @@ jobs:
             python -B scripts/check_public_scope.py --outgoing "$PRIVACY_BASE" HEAD --redact-paths
           fi
       - run: python -B scripts/check_repository.py
+      - name: Check whether packages may be uploaded
+        id: distribution
+        shell: bash
+        run: |
+          if python -B scripts/check_public_scope.py --require-distribution; then
+            echo "allowed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "allowed=false" >> "$GITHUB_OUTPUT"
+          fi
       - run: python -m compileall -q scripts
       - run: node scripts/test_gil.mjs
       - name: Verify both Python locks represent the same dependencies
@@ -155,18 +166,8 @@ jobs:
           foreach ($adapter in @('agent-plugins', 'codex', 'claude-code')) {
             python -B "$unpacked/scripts/install_smoke.py" --config $config --node (Get-Command node).Source --adapter $adapter --require-render
           }
-      - name: Check whether distribution may be uploaded
-        if: matrix.full
-        id: distribution
-        shell: pwsh
-        run: |
-          $PSNativeCommandUseErrorActionPreference = $false
-          python -B scripts/check_public_scope.py --require-distribution
-          $allowed = if ($LASTEXITCODE -eq 0) { 'true' } else { 'false' }
-          "allowed=$allowed" >> $env:GITHUB_OUTPUT
-          exit 0
       - name: Save checked release packages
-        if: matrix.full && steps.distribution.outputs.allowed == 'true'
+        if: matrix.full && needs.repository.outputs.distribution_allowed == 'true'
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: release-candidate
@@ -176,7 +177,8 @@ jobs:
 
   deepseek-harness:
     name: DSH ${{ matrix.dsh }} native host
-    needs: windows
+    needs: [repository, windows]
+    if: needs.repository.outputs.distribution_allowed == 'true'
     runs-on: windows-2025
     timeout-minutes: 20
     strategy:
@@ -203,6 +205,11 @@ jobs:
         with:
           node-version: '24.22.3'
           package-manager-cache: false
+      - name: Download the same candidate used for release
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: release-candidate
+          path: ${{ runner.temp }}/release
       - name: Install temporary host and its test runtime
         env:
           DSH_VERSION: ${{ matrix.dsh }}
@@ -217,9 +224,16 @@ jobs:
         shell: pwsh
         run: |
           $PSNativeCommandUseErrorActionPreference = $true
-          $scratch = New-Item -ItemType Directory "$env:RUNNER_TEMP/dsh-candidate"
-          python -B scripts/check_public_scope.py --commit HEAD --redact-paths
-          python -B -c "import json,sys; from pathlib import Path; sys.path.insert(0,'scripts'); from prepare_release import package_npm; root=Path.cwd(); package_npm(root, Path(sys.argv[1]), json.loads((root/'plugin.json').read_bytes())['version'])" $scratch.FullName
-          $archive = (Get-ChildItem -LiteralPath $scratch.FullName -Filter '*.tgz').FullName
+          $version = (Get-Content -LiteralPath 'plugin.json' -Raw -Encoding UTF8 | ConvertFrom-Json).version
+          $name = "dsh-miliastra-wonderland-$version.tgz"
+          $release = Join-Path $env:RUNNER_TEMP 'release'
+          $archive = Join-Path $release $name
+          $review = Get-Content -LiteralPath (Join-Path $release 'release-review.json') -Raw -Encoding UTF8 | ConvertFrom-Json -AsHashtable
+          $hash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          $checksum = (Get-Content -LiteralPath "$archive.sha256" -Raw -Encoding UTF8).Trim()
+          if ($review.source_commit -ne $env:GITHUB_SHA -or $review.version -ne $version -or
+              $review.npm.filename -ne $name -or $review.assets[$name] -ne $hash -or $checksum -cne "$hash  $name") {
+            throw 'DSH test package does not match the checked release candidate.'
+          }
           $dsh = "$env:RUNNER_TEMP/dsh/node_modules/@deepseek-ai/dsh/lib/bin.js"
           python -B scripts/test_dsh_host.py --archive $archive --dsh $dsh

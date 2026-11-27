@@ -154,7 +154,9 @@ def main():
     if manifest['name'] != 'dsh-miliastra-wonderland':
         parser.error('Expected the dsh-miliastra-wonderland npm archive')
 
-    with tempfile.TemporaryDirectory(prefix='mw-dsh-') as temp:
+    # Windows can keep a profile handle open briefly after the host exits.
+    # A locked temporary file must not replace the host's actual smoke result.
+    with tempfile.TemporaryDirectory(prefix='mw-dsh-', ignore_cleanup_errors=True) as temp:
         stage = Path(temp).resolve()
         home = stage / 'home'
         store = stage / 'store'

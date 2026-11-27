@@ -308,6 +308,56 @@ runpy.run_path({str(ROOT / 'scripts/install_smoke.py')!r}, run_name='__main__')
 
 class ProtocolTests(unittest.TestCase):
     @unittest.skipUnless(sys.platform == 'win32' and shutil.which('node'), 'Windows Node.js required')
+    def test_bound_python_probe_can_be_slow_without_extending_discovery(self):
+        with tempfile.TemporaryDirectory(prefix='miliastra-python-probe-') as temporary:
+            folder = Path(temporary)
+            python = folder / 'python.exe'
+            python.touch()
+            binding = folder / 'runtime.json'
+            binding.write_text(json.dumps({'schema': 1, 'python': str(python)}), encoding='utf-8')
+            preload = folder / 'probe.cjs'
+            preload.write_text(
+                """
+const child = require('node:child_process');
+child.spawnSync = (file, args, options) => {
+  if (file !== process.env.MW_FIXTURE_PYTHON) return {status: null, error: new Error('missing')};
+  if (process.env.MW_FIXTURE_DELAY === 'error') return {status: 1, stderr: 'fixture version conflict'};
+  if (options.timeout < Number(process.env.MW_FIXTURE_DELAY)) {
+    return {status: null, error: Object.assign(new Error('fixture timeout'), {code: 'ETIMEDOUT'})};
+  }
+  return {status: 0, stdout: JSON.stringify(file)};
+};
+""", encoding='utf-8',
+            )
+            node = shutil.which('node')
+            env = {key: value for key, value in os.environ.items()
+                   if not key.upper().startswith(('MILIASTRA_WONDERLAND_', 'UGC_'))
+                   and key.upper() not in ('PATH', 'VIRTUAL_ENV', 'NODE_OPTIONS')}
+            env.update(PATH=temporary, MILIASTRA_WONDERLAND_INSTALL_ROOT=temporary,
+                       MW_FIXTURE_PYTHON=str(python))
+            selected = {'MILIASTRA_WONDERLAND_PYTHON': str(python)}
+            configured = {'MILIASTRA_WONDERLAND_RUNTIME_CONFIG': str(binding)}
+            cases = [
+                ('explicit path', selected, '6000', ''),
+                ('runtime binding', configured, '6000', ''),
+                ('discovery', {}, '6000', '5 秒内未完成（ETIMEDOUT）'),
+                ('configured timeout', selected, '16000', '15 秒内未完成（ETIMEDOUT）'),
+                ('dependency error', selected, 'error', 'fixture version conflict'),
+            ]
+            command = [node, '--require', str(preload), str(ROOT / 'scripts/mcp_launcher.cjs'), '--check']
+            for name, config, delay, failure in cases:
+                with self.subTest(name=name):
+                    result = subprocess.run(command, env={**env, **config, 'MW_FIXTURE_DELAY': delay},
+                                            capture_output=True, encoding='utf-8', timeout=10)
+                    if failure:
+                        self.assertEqual(result.returncode, 2, result.stderr)
+                        self.assertIn('[runtime.python]', result.stderr)
+                        self.assertIn(failure, result.stderr)
+                    else:
+                        self.assertEqual(result.returncode, 0, result.stderr)
+                        self.assertIn('Python 环境通过版本、依赖和导入检查', result.stdout)
+
+    @unittest.skipUnless(sys.platform == 'win32' and shutil.which('node'), 'Windows Node.js required')
     def test_launcher_rejects_invalid_explicit_python(self):
         with tempfile.TemporaryDirectory(prefix='ugc launcher ') as temporary:
             env = {**os.environ, 'MILIASTRA_WONDERLAND_INSTALL_ROOT': temporary, 'MILIASTRA_WONDERLAND_PYTHON': 'relative.exe'}

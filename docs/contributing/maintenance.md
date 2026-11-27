@@ -31,11 +31,11 @@ python -B scripts/prepare_beyond_revision.py studio/play/session.js --reason "�
 
 提交中的文件名必须与 [公开文件清单](../../public-files.txt)一致。清单只登记经审查的路径。检查器同时拦截凭据和本机路径的常见形态，人工负责核对用途、隐私与许可。仅用已验证的提交准备正式分发。 [提交前检查](../../CONTRIBUTING.md)
 
-随包资料存在许可待核项时，CI 在运行器内完成打包和安装测试，暂停公开工件上传及正式发布。已移出新版的原文记录在 `excluded_unverified_files`，公开树和归档核对路径及校验值。
+许可待核时，CI 仍在 Windows 运行器内构建候选并检查 ZIP。公开工件上传、依赖该工件的 DSH 验收，以及正式发布暂停。已移出新版的原文记录在 `excluded_unverified_files`，公开树和归档核对路径及校验值。
 
 - **可移植 Windows ZIP 和 Cordis 包**。共有排除规则来自 [distribution.json](../../distribution.json)。规则变化后运行 `python -B scripts/marketplace_release.py` 同步生成的文件，再核对 `package.json` 与实际 npm 文件清单。 [npm 收录规则](https://docs.npmjs.com/files/package.json/#files)
 - **Windows ZIP**。从候选产出，核对完整性、根目录清单、四个 Skill、许可证及锁定的 Canvas 模块和 ICU 数据。在空目录解包，用成品做启动自检、MCP 节点查询和 Beyond 软件预览。用户的安装入口见安装指南。 [本地安装](../installation.md#本地安装)
-- **Git 市场与 Cordis**。以对应提交的文件或实际包核对客户端声明和依赖。安装后调用 MCP。变更 Canvas 或下载链路时，另测首次获取、校验与离线缓存复用。 [运行环境](../runtime-environment.md)
+- **Git 市场与 Cordis**。以对应提交的文件核对市场声明和依赖。DSH 验收从发行候选下载同一份 TGZ，核对提交、版本和 SHA-256 后安装并调用 MCP。变更 Canvas 或下载链路时，另测首次获取、校验与离线缓存复用。 [运行环境](../runtime-environment.md)
 - **来源记录**。被移出的上游文件、保留的依赖及许可证以机器清单为准。发行材料核对实际分发内容。 [来源清单](../../PUBLIC_SOURCES.json) · [第三方声明](../../THIRD_PARTY_NOTICES.md)
 
 ## 定版与发行

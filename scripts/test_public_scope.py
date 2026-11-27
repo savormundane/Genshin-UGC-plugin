@@ -1,15 +1,43 @@
 import hashlib
+import io
 import json
 from pathlib import Path
+import tarfile
 import tempfile
 import unittest
+from unittest.mock import MagicMock, patch
 import zipfile
 
-from check_public_scope import check_entries, check_npm_metadata, check_tree, require_distributable
+from check_public_scope import check_entries, check_git, check_npm_metadata, check_tree, require_distributable
 from package_release import build_release
 
 
 class PublicScopeTests(unittest.TestCase):
+    def test_git_archive_drains_padding_before_waiting_for_exit(self):
+        policy = b"public-files.txt\n"
+        stream = io.BytesIO()
+        with tarfile.open(fileobj=stream, mode="w") as archive:
+            member = tarfile.TarInfo("public-files.txt")
+            member.size = len(policy)
+            archive.addfile(member, io.BytesIO(policy))
+        stream.write(b"\0" * 64 * 1024)
+        expected_end = stream.tell()
+        stream.seek(0)
+        process = MagicMock()
+        process.__enter__.return_value = process
+        process.stdout = stream
+
+        def wait():
+            self.assertEqual(stream.tell(), expected_end)
+            return 0
+
+        process.wait.side_effect = wait
+        git_results = (b"fixture-tree\n", policy, b"100644 blob fixture\tpublic-files.txt\0")
+        with patch("check_public_scope.subprocess.check_output", side_effect=git_results), \
+             patch("check_public_scope.subprocess.Popen", return_value=process):
+            self.assertEqual(check_git("HEAD"), [])
+        process.wait.assert_called_once()
+
     def test_unlisted_file_and_private_path_are_rejected(self):
         allowed = {"docs/public.md", "public-files.txt", "notes/AGENTS.md"}
         findings = check_entries({"docs/public.md", "docs/draft.md", "notes/AGENTS.md"}, allowed)
@@ -109,6 +137,43 @@ class PublicScopeTests(unittest.TestCase):
             with zipfile.ZipFile(output) as archive:
                 self.assertIn("skill/SKILL.md", archive.namelist())
                 self.assertNotIn("skill/draft.md", archive.namelist())
+
+    def test_zip_requires_approved_inputs_after_distribution_exclusions(self):
+        with tempfile.TemporaryDirectory() as temp:
+            source = Path(temp) / "skill"
+            source.mkdir()
+            (source / "SKILL.md").write_text(
+                "---\nname: fixture\ndescription: Fixture\n---\n", encoding="utf-8"
+            )
+            (source / "public-files.txt").write_text(
+                "SKILL.md\ndistribution.json\nignored/demo.md\npublic-files.txt\nruntime.json\ntool.py\n",
+                encoding="utf-8",
+            )
+            (source / "distribution.json").write_text(
+                json.dumps({
+                    "schema": 1,
+                    "exclude_prefixes": ["ignored/"],
+                    "exclude_files": ["public-files.txt", "runtime.json"],
+                }),
+                encoding="utf-8",
+            )
+            output = Path(temp) / "fixture.zip"
+            tool = source / "tool.py"
+            for wrong_input in ("absent", "directory"):
+                with self.subTest(wrong_input=wrong_input):
+                    if wrong_input == "directory":
+                        tool.mkdir()
+                    with self.assertRaisesRegex(ValueError, "Approved package input.*tool[.]py"):
+                        build_release(source, output, "skill")
+                    self.assertFalse(output.exists())
+            tool.rmdir()
+            tool.write_text("value = 1\n", encoding="utf-8")
+            build_release(source, output, "skill")
+            with zipfile.ZipFile(output) as archive:
+                self.assertEqual(
+                    set(archive.namelist()),
+                    {"skill/SKILL.md", "skill/distribution.json", "skill/tool.py"},
+                )
 
 
 if __name__ == "__main__":
