@@ -48,8 +48,10 @@ python -B scripts/prepare_release.py --set-version 1.3.2
 
 1. 审阅定版差异并按分支规则合入 `main`。日常 push 和 PR 运行 CI，检查仓库、Windows 运行边界、成品 MCP 和原生 DSH，构建产物由 Actions 短期保存。 [CI 工作流](../../.github/workflows/ci.yml) · [本地检查](development.md)
 2. 在 GitHub 的 Actions 打开 **Release → Run workflow**，选择 `main`，填入已同步的版本。默认关闭 `publish` 时预检同一提交并构建 ZIP、Cordis 包和校验记录，可审阅产物。
-3. 获得正式发布授权后，从同一提交运行 Release 并打开 `publish`。工作流为选定提交创建 `v版本`、验证草稿中的 Windows ZIP 与 SHA-256，再公开 GitHub Release。之后 npm 阶段先校验公开联系方式，通过后以可信发布上传本次验过的 Cordis 包，再从 Registry 下载比对。
+3. 获得正式发布授权后，从同一提交运行 Release 并打开 `publish`。工作流为选定提交创建 `v版本`、验证草稿中的 Windows ZIP 与 SHA-256，再公开 GitHub Release。之后 npm 阶段以可信发布上传本次验过的 Cordis 包，再从 Registry 下载比对。
 4. 查看 Git 标签、GitHub 下载件和 npm 公开版本。从正式安装入口分别记录客户端验收；CI 的 MCP 和软件预览范围不含编辑器导入、游戏内运行或桌面图形界面。上传中断时复用同次工作流的产物重跑失败 job。已有标签必须指向同一提交，已公开成品的字节必须匹配。 [Release 工作流](../../.github/workflows/release.yml) · [回退与卸载](../installation.md#回退与卸载)
+
+若 GitHub Release 已公开，且需以更新后的工作流补发 npm，在 `main` 运行 **Release**，开启 `publish` 并将 `npm_candidate_run` 填为原 Release 的运行 ID。工作流用版本标签和公开 ZIP 的 SHA-256 核对原验收产物，随后发布同一份 Cordis 包。原运行的产物须仍在保留期内。
 
 ### 首次连接 npm 可信发布
 
@@ -65,7 +67,7 @@ python -B scripts/prepare_release.py --set-version 1.3.2
 
 GitHub **Settings → Environments** 中的 `npm` 环境将部署分支限定为 `main`。工作流通过 OIDC 取短期授权，无需配置 npm token。npm 包已存在，首次绑定还需在两天内完成一次成功的正式发布，宜在下一版即将发布时配置。预检无需 npm 绑定。 [npm 可信发布](https://docs.npmjs.com/trusted-publishers/)
 
-npm 会将账户邮箱写入公开 Registry 元数据。用专门供项目公开的地址维护 npm 账户。如果包仍列有维护者邮箱，在 GitHub **Settings → Secrets and variables → Actions → Secrets** 中新建仓库级 Secret `NPM_PUBLIC_CONTACT_EMAIL`，填入经维护者批准公开的邮箱。这样可以让 Actions 遮盖设置值。正式发布校验包当前的公开联系方式，新版本公开后再确认来源字段、可信发布者和证明信息。 [npm 账户资料](https://docs.npmjs.com/managing-your-profile-settings/)
+npm 会将账户邮箱写入公开 Registry 元数据。用专门供项目公开的地址维护 npm 账户。在 GitHub **Settings → Secrets and variables → Actions → Secrets** 中设置仓库级 Secret `NPM_PUBLIC_CONTACT_EMAIL`，填入维护者批准公开的邮箱。新版本公开后核对来源字段、可信发布证明和维护者联系信息。历史版本中同一维护者已公开的地址按继承处理，新增地址须与批准值一致。 [npm 账户资料](https://docs.npmjs.com/managing-your-profile-settings/) · [历史元数据说明](https://docs.npmjs.com/threats-and-mitigations/#by-registering-an-expired-email-domain)
 
 更新依赖锁时，在仓库根运行以下命令。
 

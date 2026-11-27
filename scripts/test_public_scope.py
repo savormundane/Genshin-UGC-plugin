@@ -57,12 +57,26 @@ class PublicScopeTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Restricted package content"):
                 build_release(root, root.parent / (root.name + ".zip"))
 
-    def test_npm_preflight_checks_the_current_public_contact(self):
-        metadata = {"maintainers": [{"email": "private@example.test"}]}
-        with self.assertRaisesRegex(ValueError, "outside the approved public contact"):
-            check_npm_metadata(metadata, "", None)
-        check_npm_metadata(metadata, "private@example.test", None)
-        check_npm_metadata({"maintainers": [{"name": "fixture"}]}, "", None)
+    def test_npm_version_allows_inherited_contacts_and_rejects_new_ones(self):
+        archive = Path("fixture-1.0.1.tgz")
+        prior = {"name": "maintainer", "email": "historical@example.test"}
+        metadata = {
+            "name": "fixture", "version": "1.0.1", "maintainers": [prior],
+            "_npmUser": {"trustedPublisher": {"id": "github"}, "email": "npm-oidc-no-reply@github.com"},
+            "dist": {"attestations": {"provenance": {"predicateType": "fixture"}}},
+        }
+        history = {"name": "fixture", "versions": {"1.0.0": {"maintainers": [prior]}}}
+        approved = "approved@example.test"
+        check_npm_metadata(metadata, approved, archive, history=history)
+        metadata["maintainers"] = [prior, {"name": "new", "email": approved.upper()}]
+        check_npm_metadata(metadata, approved, archive, history=history)
+        for record in ({"name": "new", "email": prior["email"]},
+                       {"name": prior["name"], "email": "unapproved@example.test"}):
+            with self.subTest(record=record):
+                metadata["maintainers"] = [record]
+                history["versions"]["1.0.1"] = metadata
+                with self.assertRaisesRegex(ValueError, "outside the approved public contact"):
+                    check_npm_metadata(metadata, approved, archive, history=history)
 
     def test_npm_version_checks_publisher_and_registry_source(self):
         archive = Path("fixture-1.0.0.tgz")

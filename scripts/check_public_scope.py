@@ -101,12 +101,22 @@ def source_exclusions(root: Path) -> dict[str, str]:
     return excluded_sources(registry.read_bytes()) if registry.is_file() else {}
 
 
-def check_npm_metadata(metadata: dict, approved_contact: str, archive: Path | None) -> None:
-    if any(owner.get("email") and owner["email"].casefold() != approved_contact.casefold()
-           for owner in metadata.get("maintainers", [])):
-        raise ValueError("npm registry lists a maintainer email outside the approved public contact")
-    if archive is None:
-        return
+def check_npm_metadata(metadata: dict, approved_contact: str, archive: Path, *, history: dict | None = None) -> None:
+    def contacts(record):
+        return {(owner["name"].casefold(), owner["email"].casefold())
+                for owner in record.get("maintainers", []) if owner.get("email")}
+
+    inherited = set()
+    if history is not None:
+        if history["name"] != metadata["name"]:
+            raise ValueError("npm Registry history does not belong to this package")
+        # The version endpoint can repeat package maintainers. Only contacts from
+        # other published versions count as inherited, even after a retry.
+        for version, record in history["versions"].items():
+            if version != metadata["version"]:
+                inherited.update(contacts(record))
+    if any(email != approved_contact.casefold() for _, email in contacts(metadata) - inherited):
+        raise ValueError("npm version adds a maintainer email outside the approved public contact")
 
     publisher = metadata.get("_npmUser", {})
     if (publisher.get("trustedPublisher", {}).get("id") != "github"
@@ -187,16 +197,20 @@ def main() -> int:
     modes.add_argument("--index", action="store_true")
     modes.add_argument("--outgoing", nargs=2, metavar=("BASE", "HEAD"))
     modes.add_argument("--require-distribution", action="store_true")
-    modes.add_argument("--npm-metadata", type=Path, help="Verify Registry maintainer metadata without displaying it")
-    parser.add_argument("--npm-archive", type=Path, help="Also verify version publication with the supplied archive path")
+    modes.add_argument("--npm-metadata", type=Path, help="Verify published version metadata without displaying it")
+    parser.add_argument("--npm-archive", type=Path, help="Archive path for the published version check")
+    parser.add_argument("--npm-history", type=Path, help="Allow contacts inherited from older Registry versions")
     args = parser.parse_args()
+    if args.npm_metadata and not args.npm_archive:
+        parser.error("--npm-metadata requires --npm-archive")
     try:
         if args.require_distribution:
             require_distributable(json.loads((ROOT / "PUBLIC_SOURCES.json").read_bytes()))
             failures = []
         elif args.npm_metadata:
             check_npm_metadata(json.loads(args.npm_metadata.read_bytes()),
-                               os.environ.get("NPM_PUBLIC_CONTACT_EMAIL", ""), args.npm_archive)
+                               os.environ.get("NPM_PUBLIC_CONTACT_EMAIL", ""), args.npm_archive,
+                               history=json.loads(args.npm_history.read_bytes()) if args.npm_history else None)
             failures = []
         elif args.tree is not None:
             failures = check_tree(args.tree.resolve())

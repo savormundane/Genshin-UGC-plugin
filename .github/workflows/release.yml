@@ -11,6 +11,10 @@ on:
         description: Publish the checked build to GitHub and npm
         type: boolean
         default: false
+      npm_candidate_run:
+        description: Original Release run ID for an npm-only retry after GitHub publication
+        type: string
+        required: false
 
 permissions:
   contents: read
@@ -23,6 +27,11 @@ jobs:
   plan:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      source_commit: ${{ steps.candidate.outputs.source_commit }}
     steps:
       - name: Validate release scope
         env:
@@ -41,9 +50,13 @@ jobs:
         with:
           persist-credentials: false
       - name: Verify the selected candidate
+        id: candidate
         env:
           VERSION: ${{ inputs.version }}
           PUBLISH: ${{ inputs.publish }}
+          NPM_CANDIDATE_RUN: ${{ inputs.npm_candidate_run }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         shell: bash
         run: |
           if [[ "$(jq -er .version plugin.json)" != "$VERSION" ]]; then
@@ -55,20 +68,38 @@ jobs:
             tag="refs/tags/v$VERSION"
             refs=$(git ls-remote origin "$tag" "$tag^{}")
             target=$(awk 'END { print $1 }' <<< "$refs")
+            if [[ -n "$NPM_CANDIDATE_RUN" ]]; then
+              if [[ ! "$NPM_CANDIDATE_RUN" =~ ^[1-9][0-9]*$ || -z "$target" ]]; then
+                echo "::error::An npm-only retry needs a numeric Release run ID and an existing version tag."
+                exit 1
+              fi
+              run="repos/$GH_REPO/actions/runs/$NPM_CANDIDATE_RUN"
+              gh api "$run" | jq -e --arg commit "$target" \
+                '.event == "workflow_dispatch" and .path == ".github/workflows/release.yml" and .head_branch == "main" and .head_sha == $commit' >/dev/null
+              gh api "$run/jobs" | jq -e \
+                'any(.jobs[]; .name == "github-release" and .conclusion == "success")' >/dev/null
+              printf 'source_commit=%s\n' "$target" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
             if [[ -n "$target" && "$target" != "$GITHUB_SHA" ]]; then
               echo "::error::$tag already points to another commit."
               exit 1
             fi
+          elif [[ -n "$NPM_CANDIDATE_RUN" ]]; then
+            echo "::error::An npm-only retry requires publish to be enabled."
+            exit 1
           fi
+          printf 'source_commit=%s\n' "$GITHUB_SHA" >> "$GITHUB_OUTPUT"
 
   check:
+    if: inputs.npm_candidate_run == ''
     needs: plan
     uses: ./.github/workflows/ci.yml
     with:
       expected_version: ${{ inputs.version }}
 
   github-release:
-    if: inputs.publish
+    if: inputs.publish && inputs.npm_candidate_run == ''
     needs: check
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -131,12 +162,13 @@ jobs:
           test "$(gh api "repos/$GH_REPO/commits/$tag" --jq .sha)" = "$GITHUB_SHA"
 
   npm:
-    if: inputs.publish
-    needs: github-release
+    if: ${{ !cancelled() && inputs.publish && needs.plan.result == 'success' && (needs.github-release.result == 'success' || (inputs.npm_candidate_run != '' && needs.github-release.result == 'skipped')) }}
+    needs: [plan, github-release]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     environment: npm
     permissions:
+      actions: read
       contents: read
       id-token: write
     steps:
@@ -151,22 +183,41 @@ jobs:
         with:
           name: release-candidate
           path: candidate
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.npm_candidate_run || github.run_id }}
       - name: Install the pinned npm client
         run: npm install --global --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org npm@12.2.3
       - name: Publish the tested archive and confirm public availability
         env:
           VERSION: ${{ inputs.version }}
+          SOURCE_COMMIT: ${{ needs.plan.outputs.source_commit }}
+          NPM_CANDIDATE_RUN: ${{ inputs.npm_candidate_run }}
           NPM_PUBLIC_CONTACT_EMAIL: ${{ secrets.NPM_PUBLIC_CONTACT_EMAIL }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         working-directory: candidate
         shell: bash
         run: |
           package=dsh-miliastra-wonderland
+          if [[ -z "$NPM_PUBLIC_CONTACT_EMAIL" ]]; then
+            echo "::error::Set the approved npm contact in NPM_PUBLIC_CONTACT_EMAIL."
+            exit 1
+          fi
           archive="$package-$VERSION.tgz"
           actual=$(sha256sum "$archive" | cut -d ' ' -f 1)
           printf '%s  %s\n' "$actual" "$archive" | cmp - "$archive.sha256"
-          jq --exit-status --arg version "$VERSION" --arg commit "$GITHUB_SHA" --arg archive "$archive" --arg actual "$actual" \
-            '.version == $version and .source_commit == $commit and .npm.filename == $archive and .assets[$archive] == $actual' release-review.json >/dev/null
+          jq --exit-status --arg version "$VERSION" --arg commit "$SOURCE_COMMIT" --arg archive "$archive" --arg actual "$actual" \
+            '.version == $version and .tag == ("v" + $version) and .source_commit == $commit and .npm.filename == $archive and .assets[$archive] == $actual' release-review.json >/dev/null
+          if [[ -n "$NPM_CANDIDATE_RUN" ]]; then
+            zip="Miliastra-Wonderland-$VERSION-agent-plugins-windows-x64.zip"
+            zip_sha=$(jq -er --arg zip "$zip" '.assets[$zip]' release-review.json)
+            gh api "repos/$GH_REPO/releases/tags/v$VERSION" | jq -e --arg zip "$zip" --arg digest "sha256:$zip_sha" \
+              '(.draft == false and .prerelease == false) and any(.assets[]; .name == $zip and .state == "uploaded" and .digest == $digest)' >/dev/null
+          fi
           tarball="https://registry.npmjs.org/$package/-/$archive"
+          curl -fsS --retry 2 --max-time 30 -H 'Cache-Control: no-cache' \
+            -o "$RUNNER_TEMP/npm-package.json" "https://registry.npmjs.org/$package"
+          jq -e --arg package "$package" '.name == $package and (.versions | type == "object")' "$RUNNER_TEMP/npm-package.json" >/dev/null
           verify_registry() {
             local status
             status=$(curl -sS --retry 2 --max-time 30 -H 'Cache-Control: no-cache' \
@@ -178,7 +229,8 @@ jobs:
             fi
             jq --exit-status --arg name "$package" --arg version "$VERSION" --arg tarball "$tarball" \
               '.name == $name and .version == $version and .dist.tarball == $tarball' "$RUNNER_TEMP/npm-version.json" >/dev/null || exit 1
-            python3 -B "$GITHUB_WORKSPACE/scripts/check_public_scope.py" --npm-metadata "$RUNNER_TEMP/npm-version.json" --npm-archive "$archive" || exit 1
+            python3 -B "$GITHUB_WORKSPACE/scripts/check_public_scope.py" --npm-metadata "$RUNNER_TEMP/npm-version.json" \
+              --npm-history "$RUNNER_TEMP/npm-package.json" --npm-archive "$archive" || exit 1
             curl -fsSL --retry 2 --max-time 60 -o "$RUNNER_TEMP/$archive" "$tarball" || exit 1
             if ! cmp "$archive" "$RUNNER_TEMP/$archive"; then
               echo "::error::$package@$VERSION already exists with different archive bytes."
@@ -193,9 +245,6 @@ jobs:
             echo "$package@$VERSION is public and matches the tested archive."
           }
           if verify_registry; then exit 0; fi
-          curl -fsS --retry 2 --max-time 30 -H 'Cache-Control: no-cache' \
-            -o "$RUNNER_TEMP/npm-package.json" https://registry.npmjs.org/dsh-miliastra-wonderland
-          python3 -B "$GITHUB_WORKSPACE/scripts/check_public_scope.py" --npm-metadata "$RUNNER_TEMP/npm-package.json"
           unset NODE_AUTH_TOKEN NPM_TOKEN
           npm publish "./$archive" --registry=https://registry.npmjs.org/ --access public --tag latest --ignore-scripts --loglevel=warn
           for attempt in {1..36}; do
