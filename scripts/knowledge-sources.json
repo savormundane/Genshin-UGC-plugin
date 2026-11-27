@@ -2,9 +2,9 @@
   "schema": 1,
   "sources": {
     "client_api": {
-      "path": "references/platform/community/client-controls-api.md",
-      "kind": "provided_api_document",
-      "sha256": "0a74b932020d11696c8bf68d963cee8a20c7969e2ad7d481808d33b26a6dd887",
+      "path": "references/platform/client-api.md",
+      "kind": "maintainer_api_index",
+      "sha256": "323df312a9e9bcba60a29b01808f501a28e8d0e7ab93bdcfade07d2b1dab04e3",
       "version": null,
       "updated_at": null,
       "original_url": null,
@@ -17,12 +17,13 @@
         "official_url": "https://act.mihoyo.com/ys/ugc/tutorial/detail/mhtakr07vej4",
         "announced_in_guide_on": "2026-09-23",
         "announcement_url": "https://act.mihoyo.com/ys/ugc/tutorial/detail/mhiufi00ceh4"
-      }
+      },
+      "prior_source_sha256": "0a74b932020d11696c8bf68d963cee8a20c7969e2ad7d481808d33b26a6dd887"
     },
     "conflicts": {
       "path": "references/platform/sources-and-conflicts.md",
       "kind": "maintainer_analysis",
-      "sha256": "763d77efae4ec00f972b5272715f83d7181d40f5f7fa0492e474c7ad3e64fe5f",
+      "sha256": "f1b603ab06409900185199d313aa380632c0da49b6515094a25bda2ba7a8c725",
       "version": null,
       "updated_at": null,
       "original_url": null,
@@ -41,8 +42,8 @@
     },
     "platform_catalogue": {
       "path": "scripts/platform-sources.json",
-      "kind": "official_mirror_catalogue",
-      "sha256": "6aa27cc265e5ff341b8893a8c95f3b015e87c1e49d1a18f3119de5639e0cd4a1",
+      "kind": "maintainer_platform_index",
+      "sha256": "646c9efc288ccbc241cb74d7c7599c3b52d6199f76b76a778fa21cfdfa30171b",
       "version": null,
       "updated_at": null,
       "original_url": null,

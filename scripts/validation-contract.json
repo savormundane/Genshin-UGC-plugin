@@ -1,9 +1,8 @@
 {
   "schema": 1,
   "runtime_rules": [
-    "references/platform/7.2/*.md",
-    "references/platform/community/client-controls-api.md",
-    "references/platform/official/*.md",
+    "scripts/platform-sources.json",
+    "references/platform/client-api.md",
     "skills/miliastra-assets/SKILL.md"
   ],
   "development_inputs": [

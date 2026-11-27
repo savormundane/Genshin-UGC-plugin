@@ -74,9 +74,11 @@ def build_release(source, output, layout='auto', archive_root=None, *, beyond_na
     if output.is_relative_to(source):
         raise ValueError('Output must be outside the source directory')
     excluded, excluded_files = distribution_exclusions(source)
-    from check_public_scope import POLICY, content_kinds, private_name, read_policy, shown_name
+    from check_public_scope import POLICY, content_kinds, private_name, read_policy, shown_name, source_exclusions
     policy = source / POLICY
     approved = read_policy(policy.read_bytes()) if policy.is_file() else None
+    unlicensed = source_exclusions(source)
+    blocked_hashes = set(unlicensed.values())
     prefix = ''
     if layout == 'agent-plugins':
         if archive_root is not None:
@@ -103,7 +105,10 @@ def build_release(source, output, layout='auto', archive_root=None, *, beyond_na
                 or f.name.startswith('.env.') and f.name not in ('.env.example', '.env.sample', '.env.template')):
             continue
         if f.is_file() and f.suffix not in ('.pyc', '.pyo'):
-            if approved is not None and (private_name(relative) or content_kinds(f.read_bytes())):
+            if approved is not None and (
+                private_name(relative) or relative in unlicensed
+                or content_kinds(f.read_bytes(), excluded_hashes=blocked_hashes)
+            ):
                 raise ValueError('Restricted package content: ' + shown_name(relative))
             files.append(f)
     if not files:

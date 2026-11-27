@@ -1,6 +1,6 @@
 {
   "name": "dsh-miliastra-wonderland",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "Look up nodes and Lua APIs, inspect levels, and create node graphs and assets for Genshin Impact's Miliastra Wonderland.",
   "icon": "./assets/icon.png",
   "license": "GPL-3.0-only",

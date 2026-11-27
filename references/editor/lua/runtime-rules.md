@@ -1,6 +1,6 @@
 # 客户端控件 Lua
 
-接口用法先通过 `knowledge api <类型或方法>` 查询签名、来源行和推导标记，再按需查看[客户端 API 整理稿](../../platform/community/client-controls-api.md)的对应章节。未知接口、推导类型和冲突按[知识可信度](../../platform/knowledge-reliability.md)处理；查询成功不代表编辑器或宿主验证。
+用 `knowledge api <类型或方法>` 查询签名、索引行号和推导标记。未知接口、推导类型和冲突按知识可信度说明处理，编辑器或客户端行为以实际运行验证为准。 [客户端 API 索引](../../platform/client-api.md) · [知识可信度](../../platform/knowledge-reliability.md)
 
 ## 查阅与实现
 

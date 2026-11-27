@@ -41,7 +41,7 @@ python scripts/qianxing.py native diff BEFORE.gil AFTER.gil
 
 字符串端口收到非字符串常量时，检查失败。即使声明与默认值一致，静态访问的具体类型与声明不符仍会失败。未知的字典访问子类型无法通过严格检查。结构体身份以显式保存的记录为准。动态名称、向未声明变量写入和名称缺失都会列入访问记录，并标明未覆盖范围。局部审计的 `passed` 只覆盖已检查的规则。完整引用和 ID 迁移安全需单独验证。
 
-依据为包内官方[查询节点](../platform/official/节点介绍/查询节点__mhwbqlrw655q.md)、[执行节点](../platform/official/节点介绍/执行节点__mhw66orrrfkm.md)和[节点图变量](../platform/official/附录/节点图变量__mhtshailzs7w.md)。名字只在当前普通/复合图命名空间解析，不跨图查找同名变量。
+名字只在当前普通图或复合图的命名空间解析，不跨图查找同名变量。 [官方《查询节点》](https://act.mihoyo.com/ys/ugc/tutorial/detail/mhwbqlrw655q) · [官方《执行节点》](https://act.mihoyo.com/ys/ugc/tutorial/detail/mhw66orrrfkm) · [官方《节点图变量》](https://act.mihoyo.com/ys/ugc/tutorial/detail/mhtshailzs7w)
 
 ## 参数化使用与反例
 

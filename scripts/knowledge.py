@@ -74,8 +74,14 @@ def client_catalogue(source=None, *, include_search_details=False):
     return parsed, source
 
 
+def client_enum_symbols():
+    catalogue, _ = client_catalogue()
+    return {kind.removeprefix('Enum.'): {name: name for name in names}
+            for kind, names in catalogue['enums'].items()}
+
+
 def search_api_text(query, limit=20):
-    """Search source lines for the original text-only API command."""
+    """Search the bundled API index for the text-only API command."""
     if type(limit) != int or not 1 <= limit <= 100:
         raise ValueError('limit must be 1..100')
     terms = query.casefold().split()
@@ -205,7 +211,10 @@ def api(symbol):
                 )
             )
 
-    ranked.sort(key=lambda item: (item[0], item[1]['symbol'] if han else ''))
+    ranked.sort(key=lambda item: (
+        item[0], item[1]['symbol'].casefold().rsplit('.', 1)[-1] != query,
+        item[1]['symbol'] if han else '',
+    ))
     exact = [row for rank, row in ranked if rank[0] == 0]
     matches = exact or [row for _, row in ranked[:20]]
     matched_names = {

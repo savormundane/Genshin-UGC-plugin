@@ -63,7 +63,7 @@ claude plugin install miliastra-wonderland@miliastra-wonderland
 
 ### 从本地目录导入
 
-在[本版发行页](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/v1.3.1)下载 **Agent Plugins Windows x64 ZIP**。客户端支持导入 ZIP 时直接上传，支持目录导入时解压到独立目录并选择包含 `plugin.json` 的目录。 [Agent Plugins 规范](https://agent-plugins.org/specification)
+在[本版发行页](https://github.com/savormundane/miliastra-wonderland-plugin/releases/tag/v1.3.2)下载 **Agent Plugins Windows x64 ZIP**。客户端支持导入 ZIP 时直接上传，支持目录导入时解压到独立目录并选择包含 `plugin.json` 的目录。 [Agent Plugins 规范](https://agent-plugins.org/specification)
 
 ### 用 PowerShell 安装本地 ZIP
 
@@ -86,7 +86,7 @@ claude plugin install miliastra-wonderland@miliastra-wonderland
 - 输入为「流程入」「目标GUID（GUID）」和「单位标签索引列表（整数列表）」。
 - 输出为「流程出」。
 
-该节点按 GUID 创建场景中预先布设的实体。`source` 指向随包编译器定义，`port_evidence` 对应 7.1 版官方文档的两项值输入。 [官方《执行节点》](../references/platform/official/节点介绍/执行节点__mhw66orrrfkm.md#2-创建实体)
+该节点按 GUID 创建场景中预先布设的实体。`source` 指向随包编译器定义，`port_evidence` 记录插件按 7.1 版资料校准的两项值输入。 [官方《执行节点》](https://act.mihoyo.com/ys/ugc/tutorial/detail/mhw66orrrfkm)
 
 接下来可跟做[创作者教程](../samples/creator-demos/README.md)。处理关卡或素材时，先[授权工程目录](runtime-environment.md#连接-mcp-或切换工程)。
 

@@ -17,7 +17,7 @@ from miliastra.client.api import analyze
 import knowledge
 from miliastra.native.scene import OBJECT_ID_START, read_gia, static_gia
 from node_build import catalog
-from platform_profiles import search, show
+from platform_profiles import difference, documents, search, show
 from resource_catalogue import catalogue, check as check_resources, search as search_resources
 from scene_authoring import build as build_scene, capture_catalogue
 
@@ -213,6 +213,7 @@ class ChineseLookupTests(unittest.TestCase):
                 self.assertEqual(selected['requested_version'], '7.2')
                 self.assertEqual(selected['source_version'], source_version)
                 self.assertEqual(selected['inherited'], source_version != '7.2')
+                self.assertEqual(selected['content_kind'], 'bundled_index')
                 self.assertTrue(selected['excerpts'] and selected['official_url'])
 
     def test_document_questions_keep_relevant_passages_and_version_evidence(self):
@@ -239,9 +240,12 @@ class ChineseLookupTests(unittest.TestCase):
                 self.assertEqual(record['source_version'], source_version)
                 self.assertEqual(record['inherited'], source_version != '7.2')
                 self.assertTrue(record['official_url'])
-                source = show('7.2', document_id)['content']
+                source = show('7.2', document_id)
+                self.assertEqual(source['content_kind'], 'bundled_index')
+                self.assertEqual(source['sha256'], sha((PLUGIN / source['path']).read_bytes()))
+                self.assertNotEqual(source['source_sha256'], source['sha256'])
                 self.assertIn(excerpt, '\n'.join(record['excerpts']))
-                self.assertTrue(all(line in source for line in record['excerpts']))
+                self.assertTrue(all(line in source['content'].splitlines() for line in record['excerpts']))
 
         for question in (
             '怎么用',
@@ -269,7 +273,7 @@ class ChineseLookupTests(unittest.TestCase):
         }
         with (
             patch('platform_profiles.documents', return_value=documents),
-            patch('platform_profiles._content', side_effect=dict),
+            patch('platform_profiles._content', side_effect=lambda record, _: dict(record)),
         ):
             for query in ('PNG', 'PNG 图片', '我想问一下怎么用 PNG 图片'):
                 with self.subTest(query=query):
@@ -278,6 +282,33 @@ class ChineseLookupTests(unittest.TestCase):
                     selected, = result['documents']
                     self.assertEqual(selected['id'], 'visible')
                     self.assertEqual(selected['excerpts'], [caption, plain])
+
+    def test_optional_local_original_is_digest_verified_and_never_required(self):
+        raw = '本地全文包含独立测试短语。'.encode('utf-8')
+        doc_id = 'fixture'
+        original = {
+            'id': doc_id, 'title': '样本', 'notes': ['索引说明'],
+            'source_path': 'sources/fixture.md', 'source_sha256': sha(raw),
+        }
+        with (
+            tempfile.TemporaryDirectory(prefix='miliastra docs ') as scratch,
+            patch('platform_profiles.documents', return_value={doc_id: original}),
+        ):
+            root = Path(scratch)
+            self.assertEqual(show('7.1', doc_id, source_root=root)['content_kind'], 'bundled_index')
+            path = root / original['source_path']
+            path.parent.mkdir()
+            path.write_bytes(raw)
+            self.assertEqual(search('7.1', '独立测试短语')['matches'], 0)
+            local, = search('7.1', '独立测试短语', source_root=root)['documents']
+            self.assertEqual(local['content_kind'], 'local_original')
+            path.write_bytes(b'different')
+            with self.assertRaisesRegex(ValueError, 'digest changed'):
+                show('7.1', doc_id, source_root=root)
+        changed, = difference('7.1', '7.2', 'mhnmcmipncrg')['documents']
+        self.assertEqual(changed['status'], 'changed')
+        self.assertEqual(changed['diff_scope'], 'available_content')
+        self.assertNotEqual(changed['before']['source_sha256'], changed['after']['source_sha256'])
 
     def test_chinese_node_questions_keep_the_selected_scope(self):
         for question, term, scope, expected in NODE_CASES:
@@ -318,10 +349,12 @@ class ChineseLookupTests(unittest.TestCase):
         )
         self.assertIsNone(create['platform_version'])
         self.assertTrue(all(port[1] == '流程' for port in create['outputs']))
-        document = show('7.1', 'mhw66orrrfkm')
-        content = document['content'].replace('| 目标GUID | GUID |', '| 目标GUID | 实体 |')
-        self.assertNotEqual(content, document['content'])
-        with patch('platform_profiles.show', return_value={**document, 'content': content}):
+        documents71 = documents('7.1')
+        document = documents71['mhw66orrrfkm']
+        self.assertEqual(ports['source_sha256'], document['source_sha256'])
+        self.assertGreater(ports['source_line'], 0)
+        documents71[document['id']] = {**document, 'source_sha256': '0' * 64}
+        with patch('platform_profiles.documents', return_value=documents71):
             with self.assertRaisesRegex(ValueError, 'port evidence differs'):
                 catalog('创建实体', 'server', 1)
             self.assertEqual(catalog('启动定时器', 'server', 1)['nodes'][0]['name'], '启动定时器')

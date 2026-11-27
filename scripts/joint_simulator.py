@@ -11,9 +11,8 @@ class Client:
         from lupa.lua53 import LuaRuntime
         self.lua=LuaRuntime(unpack_returned_tuples=True,register_eval=False,register_builtins=False,max_memory=64*1024*1024)
         self.h=self.lua.execute((PLUGIN/'scripts/client_simulator.lua').read_text(encoding='utf-8'));self.limit=self.lua.eval('function()debug.sethook(function()error("instruction budget")end,"",2000000)end')
-        enums={}
-        doc=(PLUGIN/'references/platform/community/client-controls-api.md').read_text(encoding='utf-8')
-        for category,name in re.findall(r'\|\s*`Enum\.(\w+)`\s*\|\s*`(\w+)`',doc):enums.setdefault(category,{})[name]=name
+        from knowledge import client_enum_symbols
+        enums=client_enum_symbols()
         templates={t['template_guid']:{'name':t['name'],'kind':t.get('kind','container')}for t in(bindings or{}).get('templates',[])}
         self.h.setup(self.to_lua(enums),self.to_lua({'width':canvas[0],'height':canvas[1],'mapping':mapping,'scriptId':0x40000001,'templates':templates,'params':params or{},'variables':variables or{}}))
         self.call(self.h.load,source);self.call(self.h.boot)

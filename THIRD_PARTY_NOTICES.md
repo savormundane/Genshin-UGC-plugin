@@ -20,14 +20,14 @@
 
 没空放肆授权以 MIT 许可分发随包的 GEIMG 手册、知识快照及拟 L2D 案例中由作者提供的正文、脚本和模板。授权由插件维护者取得，适用文件以 [PUBLIC_SOURCES.json](PUBLIC_SOURCES.json) 的 `licensed_files` 为准。拟 L2D 的文件名与章节对应上游案例，随包文件以本地摘要标识。 [GEIMG Wiki](https://docs.lumkfs.cn/GEIMG-WIKI/) · [拟 L2D 案例](https://docs.lumkfs.cn/GEIMG-WIKI/EG-L2D/) · [MIT 许可全文](references/assets/geimg/LICENSE.txt)
 
-## 原始资料与授权待核项
+## 平台资料来源
 
 | 内容 | 已知来源 | 当前状态 |
 | --- | --- | --- |
-| 客户端API整理文档 | [相关官方页面](https://act.mihoyo.com/ys/ugc/tutorial/detail/mhtakr07vej4) | 本地整理稿来源与再分发许可待核 |
-| 官方正文及版本镜像 | 米哈游；[Miliastra-knowledge](https://github.com/1475505/Miliastra-knowledge) | 平台资料权利与工具代码许可分开；未确认镜像正文的再分发许可 |
+| 客户端控件 API | [相关官方页面](https://act.mihoyo.com/ys/ugc/tutorial/detail/mhtakr07vej4) | 随包索引记录接口签名、权限和枚举。原整理稿的再分发许可待核，已从新版移出。 |
+| 奇匠学院平台资料 | 米哈游；[Miliastra-knowledge](https://github.com/1475505/Miliastra-knowledge) | 随包记录版本、原始链接、校验值、常用规则说明与必要的结构化数据。原文和版本镜像已从新版移出。 |
 
-本节表格对应 [PUBLIC_SOURCES.json](PUBLIC_SOURCES.json) 中的 `permission_unverified_files`。第三方资料中的实测数字仅适用于原作者对应的环境和样本。
+移出的文件和原校验值见 `excluded_unverified_files`。对第三方资料的许可声明以对应来源为准。 [来源清单](PUBLIC_SOURCES.json)
 
 ## 参考研究
 

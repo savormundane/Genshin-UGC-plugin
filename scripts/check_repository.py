@@ -277,15 +277,19 @@ def check(root: Path = ROOT) -> list[str]:
             registry = json.loads(provenance.read_text(encoding="utf-8-sig"))
             rows = registry["permission_unverified_files"]
             licensed = registry.get("licensed_files", [])
+            excluded = registry.get("excluded_unverified_files", [])
             groups = registry["groups"]
             if (
                 not isinstance(rows, list)
                 or not isinstance(licensed, list)
+                or not isinstance(excluded, list)
                 or not isinstance(groups, dict)
             ):
                 raise ValueError("invalid source groups or permission records")
             records = [(row, "redistribution_permission_unverified") for row in rows]
             records.extend((row, "redistribution_permission_granted") for row in licensed)
+            records.extend((row, "redistribution_permission_unverified") for row in excluded)
+            excluded_paths = {row["path"] for row in excluded}
             for row, expected_status in records:
                 relative = row["path"]
                 if (
@@ -313,6 +317,10 @@ def check(root: Path = ROOT) -> list[str]:
                 if row.get("status") != expected_status or bool(group.get("license")) != granted:
                     errors.append(f"{relative}: source group and permission record disagree")
                 target = root / relative
+                if relative in excluded_paths:
+                    if target.exists() or target.is_symlink():
+                        errors.append(f"{relative}: excluded source must stay outside the distribution")
+                    continue
                 if (
                     not target.resolve().is_relative_to(root)
                     or not target.is_file()

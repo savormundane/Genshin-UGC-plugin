@@ -555,7 +555,7 @@ CAPABILITY_GROUPS = {
         'scripts/miliastra/client/assembly.py',
         'scripts/miliastra/client/variables.py',
         'scripts/miliastra/client/signal_binding.py',
-        'references/platform/community/client-controls-api.md',
+        'references/platform/client-api.md',
         'scripts/client_simulator.py',
         'scripts/client_simulator.lua',
         'scripts/joint_simulator.py',

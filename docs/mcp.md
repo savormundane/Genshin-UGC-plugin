@@ -20,9 +20,9 @@ python scripts/qianxing.py mcp serve --project PATH_TO_PROJECT --output-root PAT
 | --- | --- |
 | doctor | 返回依赖状态、当前加载路径、版本和 `plugin.capability_groups` 的分组校验值。用 CLI `doctor --compare PLUGIN_ROOT` 定位同版本的文件差异 |
 | capabilities | 返回插件版本、可用任务和对应工具。用 CLI `capabilities` 查看完整清单，可加 `--evidence REPORT` 核对本地验证记录 |
-| api_lookup | symbol。接受客户端 Lua 的正式符号、英文片段或中文用途。返回正式符号、原文说明、来源与推导状态 |
+| api_lookup | symbol。接受客户端 Lua 的正式符号、英文片段或中文用途。返回正式符号、索引中的说明、来源与推导状态 |
 | diagnose | spec、sha256。按配置执行只读的环境、Lua、GIL 和素材检查 |
-| docs_search | version、query。接受中文问题或关键词，返回匹配资料的原文片段和来源版本 |
+| docs_search | version、query。接受中文问题或关键词，返回匹配条目、随包说明、来源版本和官方链接 |
 | nodes_lookup | query、scope、limit 均可选。查询 Graph Code 调用、作用域、签名和端口。scope 为 all、client 或 server，limit 默认 20，范围 1 到 100 |
 | graph_check | input 指向一张 Graph Code 源文件。可给 job 载入制作任务，或给 bindings 提供具名绑定。sha256、job_sha256、bindings_sha256 可选，工具返回直接输入和实际读取的项目依赖的校验值 |
 | graph_build | spec、output，可选 sha256。使用 schema 1 配置编译独立 GIA，并返回产物及 SHA-256 校验值。用于已有 GIL 时，把 GIA 交给 native_plan 审阅，再用 native_apply 另存 |

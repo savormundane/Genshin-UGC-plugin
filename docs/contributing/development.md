@@ -54,7 +54,7 @@ $miliastraPython = (Resolve-Path .\.venv\Scripts\python.exe).Path
 | --- | --- |
 | 安装入口、更新与排障 | [安装指南](../installation.md)。版本和依赖要求集中在 [兼容性](../compatibility.md)，解释器和目录绑定集中在 [运行环境](../runtime-environment.md)。 |
 | 调用参数和结果 | [MCP 工具](../mcp.md) 和各领域参考，核对工具定义、CLI 帮助和回归。样例展示完成任务的方法。 |
-| 平台原文、版本、许可与样本依据 | 原文按供应版本保留，[平台资料维护](platform-maintenance.md) 负责更新流程，来源清单以内容和路径绑定证据。 |
+| 平台原文、版本、许可与样本依据 | 随包索引以原文校验值、版本和对应链接绑定依据，按平台资料维护流程更新。 [平台资料维护](platform-maintenance.md) |
 | 工具边界、开发协作和历史决策 | [工程架构](architecture.md)、[参与贡献](../../CONTRIBUTING.md)、本页的退出计划及 [CHANGELOG](../../CHANGELOG.md)。 |
 | 更新上游与发布 | [维护与发行](maintenance.md)。各次发布与本机安装的结果随对应候选和版本留证。 |
 

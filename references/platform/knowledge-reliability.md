@@ -1,12 +1,12 @@
 # 知识可信度
 
-入口为 `python scripts/qianxing.py knowledge api QUERY`、`knowledge sources` 和 MCP `api_lookup`。后者沿用 `symbol` 参数，可传正式符号、英文片段或中文用途。输出包含正式符号、原文说明和行号、来源文件的 SHA-256 校验值、推导标记及冲突说明。非精确匹配最多返回 20 项。
+入口为 `python scripts/qianxing.py knowledge api QUERY`、`knowledge sources` 和 MCP `api_lookup`。后者沿用 `symbol` 参数，可传正式符号、英文片段或中文用途。输出包含正式符号、随包索引的说明和行号、SHA-256 校验值、推导标记及冲突说明。非精确匹配最多返回 20 项。
 
-`match_basis` 说明候选为何匹配。枚举结果保留正式枚举名，匹配的成员及其原文行号见 `matched_values`。查不到匹配项时，`retry_hint` 提供重新查询的建议。
+`match_basis` 说明候选为何匹配。枚举结果保留正式枚举名，匹配的成员及其索引行号见 `matched_values`。查不到匹配项时，`retry_hint` 提供重新查询的建议。
 
 ## 中文查询
 
-- 查平台规则用 `docs_search`。指定目标版本后，可直接查「怎么暂停定时器」这类中文问题。结果不够具体时，用「定时器 暂停」这类短词重查。核对原文片段、请求版本、来源版本及是否沿用旧资料。结论取决于版本时，先确认目标版本。
+- 查平台规则用 `docs_search`。指定目标版本后，可直接查「怎么暂停定时器」这类中文问题。结果不够具体时，用「定时器 暂停」重查。核对随包说明、请求版本、来源版本及继承状态，需要全文时打开官方链接。
 - 查 Lua API 用 `api_lookup`。先查用途或已知的正式符号。一句里有多个动作时，可拆成「按钮点击」和「隐藏控件」分别查。采用候选前，核对正式符号、说明和适用范围。中文短语只用于检索。
 - 查 Graph Code 节点用 `nodes_lookup`。先按客户端或服务端作用域查「启动定时器」「创建实体」等节点，再核对端口。查看 PNG 转图元的效果和控件数时，用 [`asset_preview`](../../docs/mcp.md)。
 - 首次无匹配时，换用更短的平台术语、已知别名或正式名称再查。仍无匹配时说明这次未在所选资料中找到，并指出可补充的版本、作用域或正式名称。对平台能力的判断以有依据的资料为准。
@@ -23,6 +23,6 @@
 
 图片资源 ID 用于标识资源。本地 PNG 能否加载，应以目标版本的加载接口说明和实测为依据。官方数量上限、工程预算与设备性能各有对应依据。编辑器导入、游戏内运行和用户验收按人工记录确认，写明产物的 SHA-256 校验值、实际环境和覆盖范围。
 
-查询使用随包提供的 API 资料和来源索引。静态 Lua 检查还需要 Node 和 luaparse。`knowledge api game.GetUICanvasSize` 返回原文声明，`knowledge api game.LoadAnyLocalPNG` 返回未确认。原文的 SHA-256 校验值与登记值不符时，工具会拒绝查询。查询为只读操作。
+查询使用随包 API 索引。静态 Lua 检查还需要 Node 和 luaparse。`knowledge api game.GetUICanvasSize` 返回登记的签名，`knowledge api game.LoadAnyLocalPNG` 返回未确认。索引的 SHA-256 校验值与登记值不符时，工具拒绝查询。
 
 兼容入口 `python scripts/qianxing.py api QUERY` 返回文本匹配位置和来源完整性；按符号核对正式签名和参数时用 `knowledge api`。

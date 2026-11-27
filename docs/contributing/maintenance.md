@@ -31,7 +31,7 @@ python -B scripts/prepare_beyond_revision.py studio/play/session.js --reason "�
 
 提交中的文件名必须与 [公开文件清单](../../public-files.txt)一致。清单只登记经审查的路径。检查器同时拦截凭据和本机路径的常见形态，人工负责核对用途、隐私与许可。仅用已验证的提交准备正式分发。 [提交前检查](../../CONTRIBUTING.md)
 
-来源清单还有再分发许可待核项时，CI 在运行器内完成打包和安装测试。公开工件上传与正式发布须等来源清单完成核实。
+随包资料存在许可待核项时，CI 在运行器内完成打包和安装测试，暂停公开工件上传及正式发布。已移出新版的原文记录在 `excluded_unverified_files`，公开树和归档核对路径及校验值。
 
 - **可移植 Windows ZIP 和 Cordis 包**。共有排除规则来自 [distribution.json](../../distribution.json)。规则变化后运行 `python -B scripts/marketplace_release.py` 同步生成的文件，再核对 `package.json` 与实际 npm 文件清单。 [npm 收录规则](https://docs.npmjs.com/files/package.json/#files)
 - **Windows ZIP**。从候选产出，核对完整性、根目录清单、四个 Skill、许可证及锁定的 Canvas 模块和 ICU 数据。在空目录解包，用成品做启动自检、MCP 节点查询和 Beyond 软件预览。用户的安装入口见安装指南。 [本地安装](../installation.md#本地安装)
@@ -48,7 +48,7 @@ python -B scripts/prepare_release.py --set-version 1.3.2
 
 1. 审阅定版差异并按分支规则合入 `main`。日常 push 和 PR 运行 CI，检查仓库、Windows 运行边界、成品 MCP 和原生 DSH，构建产物由 Actions 短期保存。 [CI 工作流](../../.github/workflows/ci.yml) · [本地检查](development.md)
 2. 在 GitHub 的 Actions 打开 **Release → Run workflow**，选择 `main`，填入已同步的版本。默认关闭 `publish` 时预检同一提交并构建 ZIP、Cordis 包和校验记录，可审阅产物。
-3. 获得正式发布授权后，从同一提交运行 Release 并打开 `publish`。工作流在检查通过后为选定提交创建 `v版本`，验证草稿中的 Windows ZIP 和 SHA-256，再公开 GitHub Release。GitHub 公开成品核对通过后，用 npm 可信发布上传本次验过的 Cordis 包，等待注册表公开并下载比对。
+3. 获得正式发布授权后，从同一提交运行 Release 并打开 `publish`。工作流为选定提交创建 `v版本`、验证草稿中的 Windows ZIP 与 SHA-256，再公开 GitHub Release。之后 npm 阶段先校验公开联系方式，通过后以可信发布上传本次验过的 Cordis 包，再从 Registry 下载比对。
 4. 查看 Git 标签、GitHub 下载件和 npm 公开版本。从正式安装入口分别记录客户端验收；CI 的 MCP 和软件预览范围不含编辑器导入、游戏内运行或桌面图形界面。上传中断时复用同次工作流的产物重跑失败 job。已有标签必须指向同一提交，已公开成品的字节必须匹配。 [Release 工作流](../../.github/workflows/release.yml) · [回退与卸载](../installation.md#回退与卸载)
 
 ### 首次连接 npm 可信发布

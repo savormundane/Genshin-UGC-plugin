@@ -12,9 +12,11 @@ python scripts/qianxing.py docs diff --from 7.1 --to 7.2 --id mhnmcmipncrg
 python scripts/qianxing.py platform profile --version 7.2 --mode classic
 ```
 
-显式选择已登记的平台版本，目前有 7.1 和 7.2。模式为 `classic`（经典）或 `beyond`（超限）。`search` 先在标题和正文可见文本中匹配全部空格分隔词，未命中再按中文词片、标题匹配和相关度排序查找。`--limit` 接受 1 至 100。无结果时可按 `retry_hint` 换短词或正式名称。`show` 返回正文。`diff` 按文档 ID 和内容校验值比较，指定 `--id` 时附全文差异。
+显式选择已登记的平台版本，目前有 7.1 和 7.2。模式为 `classic`（经典）或 `beyond`（超限）。`search` 先匹配空格分隔的词，未命中再按中文词片、标题匹配和相关度查找。`--limit` 接受 1 至 100。`show` 返回索引条目与可用的随包说明。`diff` 比较原文校验值，指定 `--id` 时也可查看两侧可读文本的差异。
 
-scripts/platform-sources.json 将文档 ID 映射到包内原文、来源类型、官方链接和摘要。资料沿 `base` 逐级回溯，取最近版本的声明。结果提供 requested_version、source_version 和 inherited。读取已选正文时检查文件和摘要，父级缺失或循环直接报错。diff 两侧保留来源，正文摘要相同时仍为 unchanged。正文差异包括排版变化。
+`scripts/platform-sources.json` 记录文档 ID、来源类型、官方链接、原文校验值及所需技术事实。资料沿 `base` 逐级回溯，取最近版本的声明；结果提供 `requested_version`、`source_version` 和 `inherited`。`path` 和 `sha256` 对应随包索引，`source_sha256` 对应登记的原文。
+
+如持有按 `source_path` 布置的本地原文副本，可向 `docs search/show/diff` 传 `--source-root 资料目录`。文件校验值匹配时显示 `content_kind=local_original`。缺少本地文件时该条目使用随包索引；校验值不匹配会报错。MCP 使用随包索引，需阅读全文时可打开结果中的 `official_url`。
 
 新版本通过 `limits`、`mode_limits` 和 `conflicts` 记录规则差异，默认沿用已有规则。若更新了某项规则的依据，用 `rules` 中的 `true` 登记已确认的沿用或修订，用 `false` 停用规则。缺少审定记录时，该规则在新版本返回 `not_checked`。
 
@@ -94,7 +96,7 @@ python scripts/qianxing.py platform check platform.json
 }
 ```
 
-level.json使用[原生结构生成](../gil/native-authoring.md)的合同。platform在资源生成之前检查；failed或not_checked阻止正式输出提交。通过后输出platform-configuration.json和platform-report.json，记录配置、资料目录及所用原文依赖。配置正文属于交付产物并逐字节比较；检查报告属于证据。portable收纳配置、规则和资料，支持原输入目录不可用后的独立重建。
+level.json 使用原生结构生成的合同。platform 在资源生成之前检查，failed 或 not_checked 阻止正式输出提交。通过后输出 platform-configuration.json 和 platform-report.json，记录配置、平台索引和对应的资料来源。portable 收纳可重建所需的配置、规则和索引。 [原生结构生成](../gil/native-authoring.md)
 
 该阶段负责检查规则和已选绑定。对象写入及原生 GUID 分配交由制作中的相应阶段。其余字段是否写入以及引用是否正确，由最终 GIL 的原生审计核对。
 

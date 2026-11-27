@@ -120,11 +120,13 @@ def package_npm(tree: Path, output: Path, version: str) -> dict:
     prefixes, excluded = distribution_exclusions(tree, required=True)
     native_lock = json.loads((tree / "vendor/beyond/native-canvas.json").read_text(encoding="utf-8"))
     excluded.extend(f"vendor/beyond/{path}" for path in native_lock["files"])
-    from check_public_scope import POLICY, check_entries, content_kinds, read_policy, shown_name
+    from check_public_scope import POLICY, check_entries, content_kinds, read_policy, shown_name, source_exclusions
     policy = tree / POLICY
     if tree.resolve() == ROOT and not policy.is_file():
         raise ValueError("Missing approved public file list")
     approved = read_policy(policy.read_bytes()) if policy.is_file() else None
+    unlicensed = source_exclusions(tree)
+    blocked_hashes = set(unlicensed.values())
     required = {
         "package.json", "cordis.patch.yml", "plugin.json", "README.md", "LICENSE",
         "THIRD_PARTY_NOTICES.md", "PUBLIC_SOURCES.json", "pyproject.toml", "uv.lock",
@@ -138,7 +140,7 @@ def package_npm(tree: Path, output: Path, version: str) -> dict:
         names = [entry.name.removeprefix("package/") for entry in entries]
         validate_windows_names(names)
         if approved is not None:
-            problems = check_entries(names, approved)
+            problems = check_entries(names, approved, excluded=unlicensed)
             if problems:
                 raise ValueError("\n".join(problems))
         for entry, relative in zip(entries, names, strict=True):
@@ -153,7 +155,7 @@ def package_npm(tree: Path, output: Path, version: str) -> dict:
             data = archived.read()
             if data != source.read_bytes():
                 raise ValueError(f"npm member differs from source snapshot: {relative}")
-            if approved is not None and content_kinds(data):
+            if approved is not None and content_kinds(data, excluded_hashes=blocked_hashes):
                 raise ValueError("Restricted npm file content: " + shown_name(relative))
         missing = required.difference(names)
         if missing:

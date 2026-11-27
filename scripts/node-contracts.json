@@ -8,11 +8,19 @@
       "document_id": "mhw66orrrfkm",
       "section": "## **2. 创建实体**",
       "inputs": [
-        ["目标GUID", "GUID"],
-        ["单位标签索引列表", "整数列表"]
+        [
+          "目标GUID",
+          "GUID"
+        ],
+        [
+          "单位标签索引列表",
+          "整数列表"
+        ]
       ],
       "outputs": [],
-      "value_output_diagnostic": "graph_entity_create_output"
+      "value_output_diagnostic": "graph_entity_create_output",
+      "source_line": 262,
+      "source_sha256": "f236a87a0d7f07e8e11a0204c522b6ed69cd34ab3087ae13631b4846ba140977"
     }
   ]
 }

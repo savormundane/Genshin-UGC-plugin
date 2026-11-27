@@ -44,7 +44,6 @@ jobs:
         env:
           VERSION: ${{ inputs.version }}
           PUBLISH: ${{ inputs.publish }}
-          NPM_PUBLIC_CONTACT_EMAIL: ${{ secrets.NPM_PUBLIC_CONTACT_EMAIL }}
         shell: bash
         run: |
           if [[ "$(jq -er .version plugin.json)" != "$VERSION" ]]; then
@@ -53,9 +52,6 @@ jobs:
           fi
           if [[ "$PUBLISH" == true ]]; then
             python3 -B scripts/check_public_scope.py --require-distribution
-            curl -fsS --retry 2 --max-time 30 -H 'Cache-Control: no-cache' \
-              -o "$RUNNER_TEMP/npm-package.json" https://registry.npmjs.org/dsh-miliastra-wonderland
-            python3 -B scripts/check_public_scope.py --npm-metadata "$RUNNER_TEMP/npm-package.json"
             tag="refs/tags/v$VERSION"
             refs=$(git ls-remote origin "$tag" "$tag^{}")
             target=$(awk 'END { print $1 }' <<< "$refs")

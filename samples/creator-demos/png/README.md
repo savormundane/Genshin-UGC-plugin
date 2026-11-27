@@ -65,7 +65,7 @@ python -X utf8 -B scripts/qianxing.py assets generate --from-preview "$markerOut
 
 1. 在「界面控件组管理 → 界面布局」添加**客户端控件容器**，保持它激活且可见。选中它，从「画布设置 → 前往编辑」进入详情。添加一个客户端**容器节点**，命名为 `CheckpointMarker`，居中放置，宽高各填 **144**。
 2. 在「界面控件组库 → 客户端控件模板」添加一个**图片**，将它作为根控件存为模板 `MarkerRect`。图片源选「静态引用」，选一张可着色、白色实心、直角的单图。把尺寸临时调成长方形，确认图片能铺满矩形，然后关闭遮罩、边缘羽化和进度填充。
-3. 在模板库点选 `MarkerRect` 的图片根控件，抄下本关卡显示的**控件模板索引**。在下载的 Lua 中查找 `RECT_TEMPLATE_INDEX`，把 `0` 换成这个整数。 [官方控件设置](../../../references/platform/official/概念介绍/客户端控件和客户端脚本__mhbgxf0nynww.md) · [图片设置](../../../references/platform/official/概念介绍/图片控件__mh2oih9jou22.md)
+3. 在模板库点选 `MarkerRect` 的图片根控件，抄下本关卡显示的**控件模板索引**。在下载的 Lua 中查找 `RECT_TEMPLATE_INDEX`，把 `0` 换成这个整数。 [官方控件设置](https://act.mihoyo.com/ys/ugc/tutorial/detail/mhbgxf0nynww) · [图片设置](https://act.mihoyo.com/ys/ugc/tutorial/detail/mh2oih9jou22)
 
 ### 挂载并试玩
 

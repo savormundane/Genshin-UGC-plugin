@@ -2,7 +2,7 @@
 from pathlib import Path
 import argparse,json,re
 from authoring_io import schema,sha,read_json,resolve
-from platform_profiles import selection,show,CATALOGUE
+from platform_profiles import selection,CATALOGUE
 
 
 MODEL_SELECTIONS = ('native_verified', 'preview_only', 'whitebox_recipe')
@@ -130,16 +130,20 @@ def model_row(row, directory, version, inputs, samples):
 
 def catalogue(version, extensions=(), *, include_model_candidates=False):
     samples = {}
-    document=show(version,'mh4imrrhzdzi');rows=[];inputs={str((Path(__file__).resolve().parents[1]/document['path']).resolve()):document['sha256'],str(CATALOGUE.resolve()):sha(CATALOGUE.read_bytes())}
-    for number,line in enumerate(document['content'].splitlines(),1):
-        match=re.fullmatch(r'\|\s*(\d+)\s*\|\s*([^|]+?)\s*\|',line)
-        if match:
-            rows.append({'type':'character','id':int(match[1]),'name':match[2],'version':version,'mode':'classic',
-                         'dimensions':None,'dependencies':None,'evidence':'documented',
-                         'source':{**{k:document[k] for k in ('path','sha256','source_kind','source_version',
-                                                            'inherited','applicability','mirror_url','commit') if k in document},
-                                   'line':number,'url':document['official_url']}})
-    if not rows:raise ValueError('Character catalogue source table absent')
+    index, _, documents, digest = selection(version)
+    document = documents['mh4imrrhzdzi']
+    characters = index['character_ids'][document['source_version']]
+    if characters['source_sha256'] != document['source_sha256'] or not characters['rows']:
+        raise ValueError('Character IDs differ from the recorded document source')
+    inputs = {str(CATALOGUE.resolve()): digest}
+    provenance = {k: document[k] for k in ('path', 'sha256', 'source_kind', 'source_version',
+                   'source_sha256', 'inherited', 'applicability', 'mirror_url', 'commit') if k in document}
+    rows = [
+        {'type':'character','id':ident,'name':name,'version':version,'mode':'classic',
+         'dimensions':None,'dependencies':None,'evidence':'documented',
+         'source':{**provenance, 'source_line':line, 'url':document['official_url']}}
+        for ident, name, line in characters['rows']
+    ]
     for filename in extensions:
         path=Path(filename).resolve();raw=path.read_bytes();spec=json.loads(raw.decode('utf-8-sig'));inputs[str(path)]=sha(raw)
         schema(spec,('schema','version','resources'),('version','resources'))

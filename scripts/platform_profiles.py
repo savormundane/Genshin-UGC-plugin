@@ -28,7 +28,8 @@ MARKDOWN_HEADING = re.compile(r'^\s*#{1,6}\s+\**\s*(?:\d+[.、]\s*)?')
 def selection(version):
     raw=CATALOGUE.read_bytes()
     index=json.loads(raw.decode('utf-8-sig'))
-    if index['schema']!=1:raise ValueError('Unknown platform source catalogue schema')
+    if index['schema']!=2:raise ValueError('Unknown platform source catalogue schema')
+    catalogue_evidence = {'path': CATALOGUE.relative_to(PLUGIN).as_posix(), 'sha256': sha(raw)}
     profiles=index['profiles']
     if not isinstance(version,str) or version not in profiles:
         raise DiagnosticError('platform.version_unknown',
@@ -48,31 +49,40 @@ def selection(version):
         selected=next((v for v in lineage if v in row['versions']),None)
         if selected is None:continue
         source=row['versions'][selected]
-        result[ident]={**{k:row[k]for k in('id','title','official_url')},**source,
+        result[ident]={**{k:row[k]for k in('id','title','official_url')},**source,**catalogue_evidence,
                        'requested_version':version,'source_version':selected,
                        'knowledge_status':'documented','editor':'not_checked','host':'not_checked',
                        'applicability':'inherited_source_not_revalidated' if selected!=version else 'selected_document_profile',
                        'inherited':selected!=version,'update_entry':ident in index['update_documents']}
-    return index,lineage,result,sha(raw)
+    return index,lineage,result,catalogue_evidence['sha256']
 
 
 def documents(version):
     return selection(version)[2]
 
 
-def _content(record):
-    path=(PLUGIN/record['path']).resolve()
-    if not path.is_relative_to(PLUGIN.resolve())or path.is_symlink():raise ValueError('Invalid platform document path')
-    if not path.is_file():raise ValueError('Selected platform document file missing: '+record['id'])
-    raw=path.read_bytes()
-    if sha(raw)!=record['sha256']:raise ValueError('Platform source digest changed: '+record['id'])
-    return {**record,'content':raw.decode('utf-8-sig')}
+def _content(record, source_root=None):
+    result = dict(record)
+    notes = result.pop('notes', ())
+    labels = result.pop('section_labels', ())
+    if source_root is not None:
+        original = source_root / record['source_path']
+        path = original.resolve()
+        if not path.is_relative_to(source_root) or original.is_symlink():
+            raise ValueError('Invalid local platform document path')
+        if path.is_file():
+            raw = path.read_bytes()
+            if sha(raw) != record['source_sha256']:
+                raise ValueError('Local platform source digest changed: ' + record['id'])
+            return {**result, 'content_kind': 'local_original', 'content': raw.decode('utf-8-sig')}
+    body = '\n'.join([f"# {record['title']}", *notes, *(f"## {name}" for name in labels)])
+    return {**result, 'content_kind': 'bundled_index', 'content': body}
 
 
-def show(version,ident):
+def show(version,ident,*,source_root=None):
     records=documents(version)
     if ident not in records:raise ValueError('Document absent in selected profile: '+str(ident))
-    return _content(records[ident])
+    return _content(records[ident], Path(source_root).resolve(strict=True) if source_root else None)
 
 
 def _chinese_matches(records, query, version):
@@ -132,18 +142,19 @@ def _chinese_matches(records, query, version):
     return [record for _, record in ranked]
 
 
-def search(version, query, limit=20):
+def search(version, query, limit=20, *, source_root=None):
     if type(limit) is not int or not 1 <= limit <= 100:
         raise ValueError('Document limit must be 1..100')
     if not isinstance(query, str) or not query.strip():
         raise ValueError('Document query required')
     folded = query.casefold()
+    source_root = Path(source_root).resolve(strict=True) if source_root else None
     terms = folded.split()
     records, matches = [], []
     for source in documents(version).values():
-        record = _content(source)
+        record = _content(source, source_root)
         body = record.pop('content')
-        # Match visible text and keep the corresponding original lines for excerpts.
+        # Search visible index lines or explicitly supplied, digest-verified source lines.
         lines = [(line, LINK_URL.sub('', line.casefold())) for line in body.splitlines()]
         text = record['title'].casefold() + ' ' + '\n'.join(line for _, line in lines)
         records.append((record, text, lines))
@@ -158,23 +169,27 @@ def search(version, query, limit=20):
     result = {'schema': 2, 'version': version, 'query': query, 'matches': len(matches),
               'documents': matches[:limit]}
     if not matches:
-        result['retry_hint'] = '当前版本的随包资料未找到匹配项。请拆成短关键词，或改用平台术语和正式名称重查。'
+        result['retry_hint'] = '当前版本的离线资料未找到匹配项。请用短关键词、平台术语或正式名称重查，也可查看奇匠学院。'
     return result
 
 
-def difference(before,after,ident=None):
+def difference(before,after,ident=None,*,source_root=None):
     left=documents(before);right=documents(after)
     if ident is not None and ident not in left and ident not in right:raise ValueError('Unknown document ID')
     rows=[]
+    source_root = Path(source_root).resolve(strict=True) if source_root else None
     for key in([ident]if ident else sorted(left.keys()|right.keys())):
-        a=_content(left[key])if key in left else None;b=_content(right[key])if key in right else None
-        status='added'if a is None else'removed'if b is None else'unchanged'if a['sha256']==b['sha256']else'changed'
+        a=_content(left[key], source_root)if key in left else None;b=_content(right[key], source_root)if key in right else None
+        status='added'if a is None else'removed'if b is None else'unchanged'if a['source_sha256']==b['source_sha256']else'changed'
         row={'id':key,'title':(b or a)['title'],'status':status,'before':None if a is None else{k:v for k,v in a.items()if k!='content'},
              'after':None if b is None else{k:v for k,v in b.items()if k!='content'}}
         if ident:
             row['text_diff']='\n'.join(difflib.unified_diff((a or{}).get('content','').splitlines(),(b or{}).get('content','').splitlines(),fromfile=before,tofile=after,lineterm=''))
+            row['diff_scope'] = 'local_originals' if all(
+                d['content_kind'] == 'local_original' for d in (a, b) if d
+            ) else 'available_content'
         rows.append(row)
-    return {'schema':2,'from':before,'to':after,'comparison':'source text; changes include formatting, not inferred API changes',
+    return {'schema':2,'from':before,'to':after,'comparison':'source digests; text diffs use the available content',
             'counts':{s:sum(r['status']==s for r in rows)for s in('added','removed','changed','unchanged')},'documents':rows}
 
 
@@ -235,7 +250,7 @@ def check(spec):
         for ident in dependencies[kind]:
             if ident not in docs:raise ValueError('Platform rule source absent: '+ident)
             if ident not in sources:
-                _content(docs[ident]);sources[ident]=docs[ident]
+                sources[ident] = {k: v for k, v in docs[ident].items() if k not in ('notes', 'section_labels')}
         if kind in FIELDS:
             checks.extend(check72(obj,context['mode']))
             continue
@@ -314,14 +329,17 @@ def check(spec):
 def main(argv=None):
     p=argparse.ArgumentParser();sub=p.add_subparsers(dest='operation',required=True)
     s=sub.add_parser('search');s.add_argument('query');s.add_argument('--version',required=True);s.add_argument('--limit',type=int,default=20)
+    s.add_argument('--source-root', type=Path)
     s=sub.add_parser('show');s.add_argument('id');s.add_argument('--version',required=True)
+    s.add_argument('--source-root', type=Path)
     s=sub.add_parser('diff');s.add_argument('--from',dest='before',required=True);s.add_argument('--to',dest='after',required=True);s.add_argument('--id')
+    s.add_argument('--source-root', type=Path)
     s=sub.add_parser('profile');s.add_argument('--version',required=True);s.add_argument('--mode',choices=['classic','beyond'],required=True)
     s=sub.add_parser('check');s.add_argument('spec');s.add_argument('--gil')
     a=p.parse_args(argv)
-    if a.operation=='search':value=search(a.version,a.query,a.limit)
-    elif a.operation=='show':value=show(a.version,a.id)
-    elif a.operation=='diff':value=difference(a.before,a.after,a.id)
+    if a.operation=='search':value=search(a.version,a.query,a.limit,source_root=a.source_root)
+    elif a.operation=='show':value=show(a.version,a.id,source_root=a.source_root)
+    elif a.operation=='diff':value=difference(a.before,a.after,a.id,source_root=a.source_root)
     elif a.operation=='profile':value=profile(a.version,a.mode)
     else:
         spec=read_json(a.spec);value=check(spec)

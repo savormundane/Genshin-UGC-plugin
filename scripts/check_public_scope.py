@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -34,8 +35,10 @@ HOME_PATH = re.compile(
 PATH_EXAMPLES = {b"abcde", b"example", b"username", b"user", b"runneradmin", b"runner~1"}
 
 
-def content_kinds(data: bytes) -> list[str]:
+def content_kinds(data: bytes, *, excluded_hashes=()) -> list[str]:
     findings = [kind for kind, pattern in SECRETS.items() if pattern.search(data)]
+    if excluded_hashes and hashlib.sha256(data).hexdigest() in excluded_hashes:
+        findings.append("Excluded redistribution bytes")
     normal = data.replace(b"\x00", b"").replace(b"\\", b"/")
     if any(match[1].lower() not in PATH_EXAMPLES for match in HOME_PATH.finditer(normal)):
         findings.append("personal absolute path")
@@ -66,9 +69,10 @@ def read_policy(body: bytes) -> set[str]:
     return set(names)
 
 
-def check_entries(names, allowed, *, exact=False):
+def check_entries(names, allowed, *, exact=False, excluded=()):
     names = set(names)
     errors = [f"Private path: {shown_name(name)}" for name in sorted(names) if private_name(name)]
+    errors.extend(f"Excluded redistribution path: {shown_name(name)}" for name in sorted(names.intersection(excluded)))
     errors.extend(f"Path outside public allowlist: {shown_name(name)}"
                   for name in sorted(names - allowed))
     if exact:
@@ -83,6 +87,18 @@ def require_distributable(source: dict) -> None:
         raise ValueError("Missing redistribution review in PUBLIC_SOURCES.json")
     if pending:
         raise ValueError(f"Public artifact publication is on hold for {len(pending)} unresolved redistribution entries")
+
+
+def excluded_sources(registry: bytes) -> dict[str, str]:
+    data = json.loads(registry)
+    return {row["path"]: row["sha256"] for row in data.get("excluded_unverified_files", [])}
+
+
+def source_exclusions(root: Path) -> dict[str, str]:
+    registry = root / "PUBLIC_SOURCES.json"
+    if registry.is_symlink():
+        raise ValueError("Linked redistribution registry")
+    return excluded_sources(registry.read_bytes()) if registry.is_file() else {}
 
 
 def check_npm_metadata(metadata: dict, approved_contact: str, archive: Path | None) -> None:
@@ -110,13 +126,16 @@ def check_tree(root: Path) -> list[str]:
     allowed = read_policy((root / POLICY).read_bytes())
     files = {item.relative_to(root).as_posix(): item for item in root.rglob("*")
              if item.is_file() or item.is_symlink()}
-    failures = check_entries(files, allowed, exact=True)
+    excluded = source_exclusions(root)
+    blocked_hashes = set(excluded.values())
+    failures = check_entries(files, allowed, exact=True, excluded=excluded)
     for name in sorted(files.keys() & allowed):
         path = files[name]
         if path.is_symlink() or not path.resolve().is_relative_to(root.resolve()):
             failures.append(f"Linked public file: {shown_name(name)}")
             continue
-        failures.extend(f"{kind}: {shown_name(name)}" for kind in content_kinds(path.read_bytes()))
+        failures.extend(f"{kind}: {shown_name(name)}"
+                        for kind in content_kinds(path.read_bytes(), excluded_hashes=blocked_hashes))
     return failures
 
 
@@ -135,7 +154,10 @@ def check_git(revision: str):
         names.add(name)
         if not metadata.startswith((b"100644 blob ", b"100755 blob ")):
             failures.append(f"Non-regular public file: {shown_name(name)}")
-    failures.extend(check_entries(names, allowed, exact=True))
+    excluded = (excluded_sources(git("show", f"{object_id}:PUBLIC_SOURCES.json"))
+                if "PUBLIC_SOURCES.json" in names else {})
+    blocked_hashes = set(excluded.values())
+    failures.extend(check_entries(names, allowed, exact=True, excluded=excluded))
     if failures:
         return failures
 
@@ -147,8 +169,9 @@ def check_git(revision: str):
                 if not entry.isfile():
                     continue
                 seen.add(entry.name)
-                failures.extend(f"{kind}: {shown_name(entry.name)}"
-                                for kind in content_kinds(archive.extractfile(entry).read()))
+                failures.extend(f"{kind}: {shown_name(entry.name)}" for kind in content_kinds(
+                    archive.extractfile(entry).read(), excluded_hashes=blocked_hashes
+                ))
         if process.wait() or seen != names:
             failures.append("Git archive does not match the approved public tree")
     return failures

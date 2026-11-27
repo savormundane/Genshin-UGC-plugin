@@ -103,7 +103,7 @@ def server(bridge):
         query: Annotated[str, Field(description='中文提问、术语或关键词。')],
         ctx: Context,
     ) -> dict[str, Any]:
-        """在随包平台资料中检索，返回相关原文片段、来源版本和链接。"""
+        """离线查询平台资料目录，返回匹配条目、随包说明、来源版本和官方链接。"""
         return await call('docs_search',ctx,version=version,query=query)
     @app.tool(structured_output=True, annotations=READ_ONLY)
     async def nodes_lookup(

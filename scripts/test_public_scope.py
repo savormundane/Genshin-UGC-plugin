@@ -1,3 +1,5 @@
+import hashlib
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -32,6 +34,28 @@ class PublicScopeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "1 unresolved redistribution"):
             require_distributable({"permission_unverified_files": [{"path": "fixture.md"}]})
         require_distributable({"permission_unverified_files": []})
+
+    def test_excluded_originals_stay_out_even_if_renamed_in_allowlist(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            original = b"an original kept outside this distribution"
+            (root / "public-files.txt").write_text(
+                "PUBLIC_SOURCES.json\nSKILL.md\ncopy.md\noriginal.md\npublic-files.txt\n", encoding="utf-8"
+            )
+            (root / "PUBLIC_SOURCES.json").write_text(json.dumps({
+                "permission_unverified_files": [],
+                "excluded_unverified_files": [
+                    {"path": "original.md", "sha256": hashlib.sha256(original).hexdigest()}
+                ],
+            }), encoding="utf-8")
+            (root / "SKILL.md").write_text("---\nname: fixture\ndescription: Fixture\n---\n", encoding="utf-8")
+            (root / "original.md").write_text("Path is still excluded.", encoding="utf-8")
+            (root / "copy.md").write_bytes(original)
+            failures = check_tree(root)
+            self.assertIn("Excluded redistribution path: 'original.md'", failures)
+            self.assertIn("Excluded redistribution bytes: 'copy.md'", failures)
+            with self.assertRaisesRegex(ValueError, "Restricted package content"):
+                build_release(root, root.parent / (root.name + ".zip"))
 
     def test_npm_preflight_checks_the_current_public_contact(self):
         metadata = {"maintainers": [{"email": "private@example.test"}]}

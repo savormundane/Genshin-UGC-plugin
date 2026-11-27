@@ -33,9 +33,8 @@ def _run_in_process(source,scenario,bindings=None,mapping='main.lua'):
   if isinstance(v,dict):return lua.table_from({k:convert(x) for k,x in v.items()})
   if isinstance(v,list):return lua.table_from([convert(x) for x in v])
   return v
- enums={}
- doc=PLUGIN/'references/platform/community/client-controls-api.md'
- for category,name in re.findall(r'\|\s*`Enum\.(\w+)`\s*\|\s*`(\w+)`',doc.read_text(encoding='utf-8')):enums.setdefault(category,{})[name]=name
+ from knowledge import client_enum_symbols
+ enums=client_enum_symbols()
  # Symbolic enum values are model inputs, not the host's numerical ABI.
  h=lua.execute((PLUGIN/'scripts/client_simulator.lua').read_text(encoding='utf-8'))
  h.setup(convert(enums),convert({'width':size[0],'height':size[1],'mapping':mapping,'scriptId':script_id,'templates':templates,'params':params}))

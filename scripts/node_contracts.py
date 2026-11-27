@@ -1,7 +1,6 @@
 """The plugin's evidence-bound value port contracts."""
 from functools import lru_cache
 import json
-import re
 
 from authoring_io import PLUGIN, sha
 
@@ -23,35 +22,21 @@ def node_contracts():
 
 
 def port_evidence(scope, call):
-    from platform_profiles import show
+    from platform_profiles import documents
 
     contract = node_contracts()[(scope, call)]
-    document = show(contract['platform_version'], contract['document_id'])
-    lines = document['content'].splitlines()
-    try:
-        section = lines.index(contract['section'])
-    except ValueError as exc:
-        raise ValueError(f'Node evidence heading missing for {scope}/{call}') from exc
-    end = next(
-        (index for index in range(section + 1, len(lines)) if lines[index].startswith('## ')),
-        len(lines),
-    )
-    ports = re.findall(
-        r'^\|\s*(入参|出参)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|',
-        '\n'.join(lines[section:end]),
-        re.M,
-    )
-    inputs = [[name, kind] for direction, name, kind in ports if direction == '入参']
-    outputs = [[name, kind] for direction, name, kind in ports if direction == '出参']
-    if (inputs, outputs) != (contract['inputs'], contract['outputs']):
+    document = documents(contract['platform_version'])[contract['document_id']]
+    if document['source_sha256'] != contract['source_sha256'] or document['inherited']:
         raise ValueError(f'{document["source_version"]} {call} port evidence differs from its contract')
     return {
-        **{key: document[key] for key in ('id', 'path', 'sha256', 'source_kind', 'official_url', 'source_version')},
-        'line': section + 1,
+        **{key: document[key] for key in ('id', 'path', 'sha256', 'source_kind', 'official_url',
+                                         'source_version', 'source_sha256')},
+        'source_section': contract['section'],
+        'source_line': contract['source_line'],
         'scope': 'documented_value_ports',
         'contract': dict(contract['contract']),
-        'documented_inputs': [{'name': name, 'type': kind} for name, kind in inputs],
-        'documented_outputs': [{'name': name, 'type': kind} for name, kind in outputs],
+        'documented_inputs': [{'name': name, 'type': kind} for name, kind in contract['inputs']],
+        'documented_outputs': [{'name': name, 'type': kind} for name, kind in contract['outputs']],
     }
 
 
