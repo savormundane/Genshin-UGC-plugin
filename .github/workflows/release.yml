@@ -97,11 +97,12 @@ jobs:
           notes=$(sha256sum release-notes.md | cut -d ' ' -f 1)
           jq --exit-status --arg notes "$notes" '.notes_sha256 == $notes' release-review.json >/dev/null
 
-          target=$(gh api "repos/$GH_REPO/commits/$tag" --jq .sha 2>/dev/null || true)
-          if [[ -z "$target" ]]; then
-            gh api --method POST "repos/$GH_REPO/git/refs" -f "ref=refs/tags/$tag" -f "sha=$GITHUB_SHA" --silent
-            target=$(gh api "repos/$GH_REPO/commits/$tag" --jq .sha)
+          tag_ref="refs/tags/$tag"
+          refs=$(git ls-remote "https://github.com/$GH_REPO.git" "$tag_ref")
+          if [[ -z "$refs" ]]; then
+            gh api --method POST "repos/$GH_REPO/git/refs" -f "ref=$tag_ref" -f "sha=$GITHUB_SHA" --silent
           fi
+          target=$(gh api "repos/$GH_REPO/commits/$tag" --jq .sha)
           if [[ "$target" != "$GITHUB_SHA" ]]; then
             echo "::error::$tag belongs to $target; selected commit is $GITHUB_SHA."
             exit 1
