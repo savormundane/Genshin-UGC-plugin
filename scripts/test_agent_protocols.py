@@ -433,20 +433,50 @@ child.spawnSync = (file, args, options) => {
             self.assertIn('pyproject.toml', result.stderr)
 
     @unittest.skipUnless(sys.platform == 'win32' and shutil.which('powershell.exe'), 'Windows PowerShell required')
-    def test_standalone_check_without_node(self):
-        with tempfile.TemporaryDirectory(prefix='ugc 无 Node ') as temporary:
-            env = {key: value for key, value in os.environ.items() if key.upper() != 'PATH'}
-            env['PATH'] = temporary
+    def test_standalone_check_resolves_node_without_module_autoload(self):
+        with tempfile.TemporaryDirectory(prefix='ugc 自检 PATH ') as temporary:
+            root = Path(temporary)
+            binaries = root / 'bin'
+            binaries.mkdir()
+            module = root / 'modules' / 'LookupFixture'
+            module.mkdir(parents=True)
+            marker = root / 'module-imported'
+            (module / 'LookupFixture.psm1').write_text(
+                "[IO.File]::WriteAllText($env:MILIASTRA_LOOKUP_MARKER, 'imported')\n"
+                "function node { }\nExport-ModuleMember -Function node\n",
+                encoding='ascii',
+            )
+            powershell = shutil.which('powershell.exe')
+            env = isolated_windows_path(binaries, root / 'install')
+            env.update(
+                PSMODULEPATH=os.pathsep.join((str(module.parent), str(Path(powershell).parent / 'Modules'))),
+                PSMODULEANALYSISCACHEPATH=str(root / 'module-cache'),
+                PATHEXT='.COM;.EXE;.BAT;.CMD',
+                MILIASTRA_LOOKUP_MARKER=str(marker),
+            )
             script = str(ROOT / 'scripts/check-install.ps1').replace("'", "''")
             check = ("[Console]::OutputEncoding = [Text.Encoding]::GetEncoding(437)\n"
                      f"& '{script}'\nexit $LASTEXITCODE")
-            command = [shutil.which('powershell.exe'), '-NoProfile', '-ExecutionPolicy', 'Bypass',
+            command = [powershell, '-NoProfile', '-ExecutionPolicy', 'Bypass',
                        '-Command', check]
-            result = subprocess.run(command, env=env, capture_output=True, encoding='utf-8',
-                                    creationflags=subprocess.CREATE_NO_WINDOW, timeout=15)
-            self.assertEqual(result.returncode, 2)
-            self.assertIn('[runtime.node] 当前 PowerShell 的 PATH 找不到 Node.js', result.stdout)
-            self.assertIn('node --version', result.stdout)
+            shim = ('@echo off\r\nif not "%~2"=="--check" exit /b 3\r\n'
+                    'echo Node shim received --check\r\nexit /b 17\r\n')
+            missing = ('[runtime.node] 当前 PowerShell 的 PATH 找不到 Node.js', 'node --version')
+            cases = (
+                ('missing', None, 2, missing),
+                ('node.cmd', shim, 17, ('Node shim received --check',)),
+            )
+            for name, wrapper, exit_code, messages in cases:
+                with self.subTest(node_on_path=name):
+                    marker.unlink(missing_ok=True)
+                    if wrapper:
+                        (binaries / 'node.cmd').write_bytes(wrapper.encode('ascii'))
+                    result = subprocess.run(command, env=env, capture_output=True, encoding='utf-8',
+                                            creationflags=subprocess.CREATE_NO_WINDOW, timeout=15)
+                    self.assertEqual(result.returncode, exit_code, result.stderr)
+                    for message in messages:
+                        self.assertIn(message, result.stdout)
+                    self.assertFalse(marker.exists(), 'Node lookup imported an unrelated PowerShell module')
 
     def test_release_descriptors(self):
         core = installer.read_json(ROOT / 'plugin.json')

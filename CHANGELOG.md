@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- PowerShell 安装自检在 PATH 中找不到 Node.js 时直接提示，避免加载同名模块造成等待。
+
 ## 1.3.3
 
 - Windows 上显式绑定的 Python 获得更长的启动检查时间，超时与缺少依赖分别提示。

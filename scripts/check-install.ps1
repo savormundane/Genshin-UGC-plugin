@@ -9,7 +9,10 @@ try {
         exit 2
     }
 
-    $node = Get-Command node -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    # Enumerate applications directly so a missing Node does not trigger module autoload.
+    $node = $ExecutionContext.InvokeCommand.GetCommands(
+        'node', [System.Management.Automation.CommandTypes]::Application, $false
+    ) | Select-Object -First 1
     if (!$node) {
         Write-Host '[runtime.node] 当前 PowerShell 的 PATH 找不到 Node.js。'
         Write-Host '下一步 安装 Windows x64 版 Node.js 22 或更高版本（DeepSeek Harness 需要 24.9+）。重新打开终端，确认 node --version 能运行，然后重试。'
