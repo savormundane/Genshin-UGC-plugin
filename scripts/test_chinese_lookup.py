@@ -247,6 +247,33 @@ class ChineseLookupTests(unittest.TestCase):
                 self.assertIn(excerpt, '\n'.join(record['excerpts']))
                 self.assertTrue(all(line in source['content'].splitlines() for line in record['excerpts']))
 
+        for question, document_id, detail in (
+            ('动画', 'mh57xz9afh7e', '技能释放'),
+            ('存档', 'mhzcw29qjjma', '尾部元素'),
+            ('数据复制粘贴', 'mh6fj30p2cmo', '标识码保留'),
+            ('全局计时器', 'mhawd6rl5kpy', '分别计时'),
+            ('交互按钮界面控件', 'mhwkfsitckrw', '界面控件组触发时'),
+            ('复合节点', 'mhty17iqeht0', '虚拟引脚'),
+            ('结构体', 'mh3fmi0t99ns', '自定义变量变化时'),
+            ('节点图变量', 'mhtshailzs7w', '覆写值'),
+        ):
+            with self.subTest(question=question):
+                record, = search('7.2', question, limit=1)['documents']
+                self.assertEqual(record['id'], document_id)
+                self.assertEqual(record['content_scope'], 'rule_notes')
+                self.assertEqual(record['source_version'], '7.1')
+                self.assertTrue(record['inherited'])
+                self.assertIn(detail, '\n'.join(record['notes']))
+
+        for document_id in ('mhdbkf04v6y8', 'mh6rh59iil2i'):
+            with self.subTest(index_only=document_id):
+                record = show('7.2', document_id)
+                self.assertEqual(record['content_scope'], 'index_only')
+                self.assertNotIn('notes', record)
+                self.assertIn('official_url', record['content_hint'])
+                self.assertIn('未查到规则依据', record['content_hint'])
+                self.assertTrue(record['official_url'])
+
         for question in (
             '怎么用',
             '定时器量子火星密码怎么用',
@@ -302,6 +329,8 @@ class ChineseLookupTests(unittest.TestCase):
             self.assertEqual(search('7.1', '独立测试短语')['matches'], 0)
             local, = search('7.1', '独立测试短语', source_root=root)['documents']
             self.assertEqual(local['content_kind'], 'local_original')
+            self.assertEqual(local['content_scope'], 'original')
+            self.assertNotIn('content_hint', local)
             path.write_bytes(b'different')
             with self.assertRaisesRegex(ValueError, 'digest changed'):
                 show('7.1', doc_id, source_root=root)
@@ -564,13 +593,19 @@ class ChineseLookupTests(unittest.TestCase):
                         response.structured_content['result'], cli('knowledge', 'api', question)
                     )
                 missing_query = '无匹配内容的测试词zzz'
-                for query in ('控件 可见性', '我想问一下怎么暂停定时器', missing_query):
+                for query in ('控件 可见性', '我想问一下怎么暂停定时器', '存档', '预设按钮控件', missing_query):
                     response = await client.call_tool(
                         'docs_search', {'version': '7.2', 'query': query}
                     )
                     self.assertFalse(response.is_error, response)
                     docs = response.structured_content['result']['matches']
                     self.assertEqual(docs, cli('docs', 'search', query, '--version', '7.2'))
+                    if query == '存档':
+                        self.assertEqual(docs['documents'][0]['content_scope'], 'rule_notes')
+                        self.assertIn('尾部元素', '\n'.join(docs['documents'][0]['notes']))
+                    if query == '预设按钮控件':
+                        self.assertEqual(docs['documents'][0]['content_scope'], 'index_only')
+                        self.assertIn('未查到规则依据', docs['documents'][0]['content_hint'])
                     if query == missing_query:
                         self.assertEqual(docs['matches'], 0)
                         self.assertEqual(docs['documents'], [])

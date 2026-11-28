@@ -139,7 +139,10 @@
         "7.1": {
           "source_kind": "official_document_record",
           "source_path": "references/platform/official/概念介绍/交互按钮界面控件__mhwkfsitckrw.md",
-          "source_sha256": "ce57ca383a1d5e663b18c6a07be18b80eabccdb61a3c00ea49bf00d9c9bb2e8d"
+          "source_sha256": "ce57ca383a1d5e663b18c6a07be18b80eabccdb61a3c00ea49bf00d9c9bb2e8d",
+          "notes": [
+            "交互按钮选用「交互事件」类型时，点击或映射输入可触发「界面控件组触发时」。在触发交互的玩家节点图中接收该事件。"
+          ]
         }
       }
     },
@@ -233,7 +236,11 @@
         "7.1": {
           "source_kind": "official_document_record",
           "source_path": "references/platform/official/概念介绍/全局计时器__mhawd6rl5kpy.md",
-          "source_sha256": "4a97342ea54dc030c9fa7ba7fd589650bb364f3cd08b4d6907d3d1201479d467"
+          "source_sha256": "4a97342ea54dc030c9fa7ba7fd589650bb364f3cd08b4d6907d3d1201479d467",
+          "notes": [
+            "先在管理工具里定义全局计时器。实体可通过组件在创建时启动，也可由节点图在运行中启动。多个实体引用同一个定义时，分别计时。",
+            "界面显示计时值需要指定来源实体及其全局计时器。该计时器尚未生效时，控件显示 00:00。"
+          ]
         }
       }
     },
@@ -777,7 +784,11 @@
         "7.1": {
           "source_kind": "official_document_record",
           "source_path": "references/platform/official/概念介绍/局内存档__mhzcw29qjjma.md",
-          "source_sha256": "caad96715efd8c011cf72628a19e6df38e4ff4338bb38b11d42af342fd588a30"
+          "source_sha256": "caad96715efd8c011cf72628a19e6df38e4ff4338bb38b11d42af342fd588a30",
+          "notes": [
+            "一个关卡可以定义多个局内存档模板，同一时间只启用一个。启用后，每个玩家实体会获得由模板定义的同名变量，节点图可用自定义变量节点读写。",
+            "玩家进场时恢复局内存档，玩家实体创建时即可读取。离场时保存，列表超出配置长度的尾部元素会被截掉。"
+          ]
         }
       }
     },
@@ -902,7 +913,10 @@
         "7.1": {
           "source_kind": "official_document_record",
           "source_path": "references/platform/official/概念介绍/技能动画__mh57xz9afh7e.md",
-          "source_sha256": "3cea7184734dc5b48a5315aa0940e61bba07e2e0911f05173802a7959631c4fd"
+          "source_sha256": "3cea7184734dc5b48a5315aa0940e61bba07e2e0911f05173802a7959631c4fd",
+          "notes": [
+            "在自定义技能编辑中引用技能动画，技能释放时由对应的角色或造物实体播放。动画没有播放时，先核对技能是否释放，以及所选动画与实体类型是否对应。"
+          ]
         }
       }
     },
@@ -1041,7 +1055,11 @@
         "7.1": {
           "source_kind": "official_document_record",
           "source_path": "references/platform/official/概念介绍/数据复制粘贴__mh6fj30p2cmo.md",
-          "source_sha256": "f68b5a2027ead1026c158fc0b3b57d32e128f56f7d138491324ac2e5e795097f"
+          "source_sha256": "f68b5a2027ead1026c158fc0b3b57d32e128f56f7d138491324ac2e5e795097f",
+          "notes": [
+            "数据复制粘贴可用同类型的物件或造物覆盖目标的功能数据。元件只对元件粘贴，实体只对实体粘贴。",
+            "粘贴后目标的标识码保留，节点图原有引用仍指向目标。粘贴元件数据还会覆盖附属实体的数据。"
+          ]
         }
       }
     },
@@ -4207,7 +4225,10 @@
         "7.1": {
           "source_kind": "official_document_record",
           "source_path": "references/platform/official/附录/复合节点__mhty17iqeht0.md",
-          "source_sha256": "5fe4ddf774844b8c137be896fb054f982105571fb3c6a523e1a3ace3c711abdc"
+          "source_sha256": "5fe4ddf774844b8c137be896fb054f982105571fb3c6a523e1a3ace3c711abdc",
+          "notes": [
+            "在服务端节点图中，可将重复逻辑做成复合节点。用虚拟引脚选择要对外暴露的参数和流程端口，外部按普通节点方式连线。"
+          ]
         }
       }
     },
@@ -4307,7 +4328,11 @@
         "7.1": {
           "source_kind": "official_document_record",
           "source_path": "references/platform/official/附录/结构体__mh3fmi0t99ns.md",
-          "source_sha256": "97776ab04b6ae51af6585be981fcab03f9ae11baf0883ee21470a67fbdd64f50"
+          "source_sha256": "97776ab04b6ae51af6585be981fcab03f9ae11baf0883ee21470a67fbdd64f50",
+          "notes": [
+            "服务端节点图按结构体名称区分类型。两个结构体即使字段完全一样，名称不同也无法直接连线。",
+            "修改结构体节点直接更新引用的数据，变量里的值也会变动。需要监听变化时，注意这种操作不会触发「自定义变量变化时」。"
+          ]
         }
       }
     },
@@ -4358,7 +4383,7 @@
           "source_path": "references/platform/official/附录/节点图变量__mhtshailzs7w.md",
           "source_sha256": "bb0b0d44a86b0c338fc5a3cbb41dd8679f65693c9754be8b28c14195bdb9916c",
           "notes": [
-            "节点图变量的作用域限定于所在图；通过节点查询区分读写和具体类型。"
+            "节点图变量随服务端节点图存在，读写和监听限于该图。需要在布设关卡时调整初值，可在节点图里暴露该变量，再为相应实体填写覆写值。"
           ]
         }
       }

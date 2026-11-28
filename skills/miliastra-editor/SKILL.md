@@ -10,7 +10,7 @@ description: 查原神千星奇域（UGC）的奇匠学院资料和平台规则�
 | 任务 | 入口 |
 | --- | --- |
 | 找出生点、变量、模板或引用 | `project_inspect` 传 `query`。同名候选先列出，再按所选对象键追引用。 |
-| 查奇匠学院资料、平台规则或资源 | 用 `docs_search` 按目标版本离线定位资料和官方链接，用 `resources_lookup` 查模型或模板。 [平台规则](../../references/platform/platform-profiles.md) · [资源目录](../../references/platform/resource-catalogue.md) |
+| 查奇匠学院资料、平台规则或资源 | 用 `docs_search` 查规则要点。仅有索引时打开官方链接，打不开就说明未查到规则依据。模型和模板用 `resources_lookup`。 [资料范围](../../references/platform/platform-profiles.md#资料查询和版本选择) · [资源目录](../../references/platform/resource-catalogue.md) |
 | 查 Lua API、检查或修复 Lua | `api_lookup` 查正式符号与来源，`client_check` 定位并复检。已有 GIL 可按 `mapping` 检查其中一个脚本。 |
 | 装配多段 Lua | CLI `client assemble` 输出合并后的脚本和源码映射。 [装配方法](../../references/editor/lua/client-assembly.md) |
 | 布设或核对场景、原生界面 | `project_inspect` 查实体和挂载。用 `scene_catalogue` 从样本提取布景模板，`scene_preview` 看草案，审阅后用 `scene_build` 另存静态场景 GIA。 [原生场景](../../references/editor/native-scene.md) · [UI 矩形布局](../../references/editor/native-ui-layout.md) |

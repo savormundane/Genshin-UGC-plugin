@@ -660,6 +660,8 @@ class NativeWorkflowTests(unittest.TestCase):
 
     @unittest.skipUnless(sys.platform == "win32" and shutil.which("node"), "Windows Node.js required")
     def test_junction_diagnostic_keeps_the_link_component(self):
+        from portable_delivery import collect
+
         child = self.project / "actual"
         child.mkdir()
         (child / "entrance.gil").write_bytes(self.raw)
@@ -674,6 +676,11 @@ class NativeWorkflowTests(unittest.TestCase):
                 str(target), str(link),
             ], check=True, capture_output=True, timeout=10)
             self.addCleanup(link.rmdir)
+
+        job = self.project / "portable.json"
+        write_json(job, {"schema": 2})
+        with self.assertRaisesRegex(ValueError, "Linked portable input: .*子目录联接"):
+            collect(job, {"dependencies": [f"{child_link.name}/entrance.gil"]})
 
         async def check_link(client, tool, args, link):
             outcome = await client.call_tool(tool, args)
@@ -1019,10 +1026,27 @@ class NativeWorkflowTests(unittest.TestCase):
                          sha_file(log))
 
         job = self.project / "job.json"
-        write_json(job, {"schema": 2})
-        resolved_job, roots, files, *_ = collect(job, {}, snapshot_root=short_root)
+        source = self.project / "client.lua"
+        source.write_text("function OnInit() end\n", encoding="utf-8")
+        dependency = self.project / "Extra input.data"
+        dependency.write_bytes(b"portable fixture\n")
+        short_source = short_project / source.name
+        options = {"dependencies": [str(short_project / dependency.name)]}
+        write_json(job, {"schema": 2, "client": {"source": str(short_source)}, "portable": options})
+        resolved_job, roots, files, _, bindings, _ = collect(job, options, snapshot_root=short_root)
         self.assertEqual(roots["project"], self.project.resolve())
-        self.assertEqual(files[resolved_job], "project/job.json")
+        self.assertEqual(files, {
+            resolved_job: "project/job.json",
+            source.resolve(): "project/client.lua",
+            dependency.resolve(): "project/Extra input.data",
+        })
+        (config, client, key, bound), = bindings
+        self.assertEqual((config, client[key], bound), (resolved_job, str(short_source), source.resolve()))
+
+        outside = actual_root / "Extra outside.data"
+        outside.write_bytes(b"outside fixture\n")
+        with self.assertRaisesRegex(ValueError, "Input outside declared portable roots"):
+            collect(job, {"dependencies": [str(short_root / outside.name)]}, snapshot_root=short_root)
 
     def test_unsupported_session_roots_preserve_runtime_config_results(self):
         async def unsupported_roots(_):

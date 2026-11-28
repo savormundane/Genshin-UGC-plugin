@@ -74,9 +74,15 @@ def _content(record, source_root=None):
             raw = path.read_bytes()
             if sha(raw) != record['source_sha256']:
                 raise ValueError('Local platform source digest changed: ' + record['id'])
-            return {**result, 'content_kind': 'local_original', 'content': raw.decode('utf-8-sig')}
+            return {**result, 'content_kind': 'local_original', 'content_scope': 'original',
+                    'content': raw.decode('utf-8-sig')}
     body = '\n'.join([f"# {record['title']}", *notes, *(f"## {name}" for name in labels)])
-    return {**result, 'content_kind': 'bundled_index', 'content': body}
+    if notes:
+        result['notes'] = notes
+    else:
+        result['content_hint'] = '此条仅提供索引。请打开 official_url 查阅原文，无法访问时请说明未查到规则依据。'
+    return {**result, 'content_kind': 'bundled_index', 'content_scope': 'rule_notes' if notes else 'index_only',
+            'content': body}
 
 
 def show(version,ident,*,source_root=None):

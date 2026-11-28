@@ -43,7 +43,7 @@
     "platform_catalogue": {
       "path": "scripts/platform-sources.json",
       "kind": "maintainer_platform_index",
-      "sha256": "646c9efc288ccbc241cb74d7c7599c3b52d6199f76b76a778fa21cfdfa30171b",
+      "sha256": "ac6c09c79e5787e1b5c4c0f0fdb5fcd85b58f96259ceba709f9ff98c3e49d4ae",
       "version": null,
       "updated_at": null,
       "original_url": null,

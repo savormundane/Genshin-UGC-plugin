@@ -16,7 +16,9 @@ python scripts/qianxing.py platform profile --version 7.2 --mode classic
 
 `scripts/platform-sources.json` 记录文档 ID、来源类型、官方链接、原文校验值及所需技术事实。资料沿 `base` 逐级回溯，取最近版本的声明；结果提供 `requested_version`、`source_version` 和 `inherited`。`path` 和 `sha256` 对应随包索引，`source_sha256` 对应登记的原文。
 
-如持有按 `source_path` 布置的本地原文副本，可向 `docs search/show/diff` 传 `--source-root 资料目录`。文件校验值匹配时显示 `content_kind=local_original`。缺少本地文件时该条目使用随包索引；校验值不匹配会报错。MCP 使用随包索引，需阅读全文时可打开结果中的 `official_url`。
+CLI 和 MCP 的随包结果均标为 `content_kind=bundled_index`。`content_scope=rule_notes` 表示可读 `notes` 中的规则要点，回答时仍需核对来源版本。`index_only` 表示只有标题或章节索引，按 `content_hint` 打开 `official_url` 确认细节。访问失败时，说明本次未查到规则依据。
+
+如持有可在本地使用的原文副本，按 `source_path` 布置后，可向 `docs search/show/diff` 传 `--source-root 资料目录`。校验值匹配时显示 `content_kind=local_original` 和 `content_scope=original`。缺少本地文件时使用随包索引，校验值不匹配时会报错。
 
 新版本通过 `limits`、`mode_limits` 和 `conflicts` 记录规则差异，默认沿用已有规则。若更新了某项规则的依据，用 `rules` 中的 `true` 登记已确认的沿用或修订，用 `false` 停用规则。缺少审定记录时，该规则在新版本返回 `not_checked`。
 

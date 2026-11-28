@@ -17,6 +17,8 @@
 
 从制作配置所在目录解析路径。空的 `portable` 对象以配置所在目录为 `project` 根。外部工程输入要归属到 `roots` 中声明的某个根；`project` 和 `toolchain` 是保留名称。配置引用的脚本、图、GIL/GIA、素材、模拟、实验及图资源目录自动收集。将其他外部数据列在 `dependencies` 中，目录依赖收集非缓存文件。输入缺失、经过链接或超出声明范围时拒绝制作。
 
+Windows 配置里的现有 8.3 短路径按文件的实际位置归入输入根，交付副本使用相对路径。新配置可以直接填写相对路径。
+
 ```text
 python scripts/qianxing.py produce JOB.json --out NEW_DIRECTORY
 python scripts/qianxing.py verify MOVED_DIRECTORY --portable --out NEW_REPORT.json

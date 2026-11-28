@@ -1,6 +1,6 @@
 """Explicit input closure, immutable originals and isolated portable production."""
 from pathlib import Path
-import importlib.util,json,os,re,shutil,subprocess,sys,tempfile
+import importlib.util,json,os,re,shutil,stat,subprocess,sys,tempfile
 from authoring_io import PLUGIN,ProductionInputs,read_json,sha,sha_file,inventory,write_json,output_directory,finish,schema
 from validation_evidence import backend_inventory
 
@@ -35,12 +35,20 @@ def collect(path,options,*,snapshot_root=None,inputs=None):
         roots[name]=(base/value).resolve()
     files={};configs={};bindings=[];directories={}
     def add(source,digest=None):
-        source=Path(os.path.abspath(source))
+        source = Path(source).absolute()
+        # Check the spelling supplied by the job before resolving aliases or links.
+        for part in (source, *source.parents):
+            try:
+                info = part.lstat()
+            except (FileNotFoundError, NotADirectoryError):
+                continue
+            if (stat.S_ISLNK(info.st_mode)
+                    or getattr(info, 'st_file_attributes', 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT):
+                raise ValueError('Linked portable input: ' + str(part))
+        source = source.resolve()
         owners=[(name,root)for name,root in roots.items()if source.is_relative_to(root)]
         if not owners:raise ValueError('Input outside declared portable roots: '+str(source))
         name,root=max(owners,key=lambda item:len(item[1].parts))
-        if any(p.is_symlink()for p in (source,*source.parents)if p.is_relative_to(root)):
-            raise ValueError('Linked portable input: '+str(source))
         if source.is_dir():
             listing=inventory(source);directories[source]=(name+'/'+source.relative_to(root).as_posix(),listing)
             for relative,bound_digest in listing.items():add(source/relative,bound_digest)
