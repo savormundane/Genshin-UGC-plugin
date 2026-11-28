@@ -454,11 +454,23 @@ child.spawnSync = (file, args, options) => {
                 PATHEXT='.COM;.EXE;.BAT;.CMD',
                 MILIASTRA_LOOKUP_MARKER=str(marker),
             )
-            script = str(ROOT / 'scripts/check-install.ps1').replace("'", "''")
-            check = ("[Console]::OutputEncoding = [Text.Encoding]::GetEncoding(437)\n"
-                     f"& '{script}'\nexit $LASTEXITCODE")
-            command = [powershell, '-NoProfile', '-ExecutionPolicy', 'Bypass',
-                       '-Command', check]
+            phase = root / 'powershell-phase'
+            harness = root / 'check.ps1'
+            harness.write_text(
+                "param([string]$SelfCheck, [string]$PhaseFile)\n"
+                "[IO.File]::WriteAllText($PhaseFile, 'setting up console encoding')\n"
+                "[Console]::OutputEncoding = [Text.Encoding]::GetEncoding(437)\n"
+                "[IO.File]::WriteAllText($PhaseFile, 'running check-install.ps1')\n"
+                "& $SelfCheck\n"
+                "$exitCode = $LASTEXITCODE\n"
+                "[IO.File]::WriteAllText($PhaseFile, 'self-check returned, waiting for PowerShell to exit')\n"
+                "exit $exitCode\n",
+                encoding='ascii',
+            )
+            command = [
+                powershell, '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File',
+                str(harness), str(ROOT / 'scripts/check-install.ps1'), str(phase),
+            ]
             shim = ('@echo off\r\nif not "%~2"=="--check" exit /b 3\r\n'
                     'echo Node shim received --check\r\nexit /b 17\r\n')
             missing = ('[runtime.node] 当前 PowerShell 的 PATH 找不到 Node.js', 'node --version')
@@ -469,13 +481,37 @@ child.spawnSync = (file, args, options) => {
             for name, wrapper, exit_code, messages in cases:
                 with self.subTest(node_on_path=name):
                     marker.unlink(missing_ok=True)
+                    phase.unlink(missing_ok=True)
                     if wrapper:
                         (binaries / 'node.cmd').write_bytes(wrapper.encode('ascii'))
-                    result = subprocess.run(command, env=env, capture_output=True, encoding='utf-8',
-                                            creationflags=subprocess.CREATE_NO_WINDOW, timeout=15)
-                    self.assertEqual(result.returncode, exit_code, result.stderr)
+                    # File output lets us wait for PowerShell's exit without waiting for pipe EOF.
+                    # TemporaryFile also defers deletion until inherited handles are closed.
+                    timed_out = None
+                    with tempfile.TemporaryFile() as stdout, tempfile.TemporaryFile() as stderr:
+                        try:
+                            result = subprocess.run(
+                                command, env=env, stdin=subprocess.DEVNULL,
+                                stdout=stdout, stderr=stderr, timeout=15,
+                            )
+                        except subprocess.TimeoutExpired as exc:
+                            timed_out = exc.timeout
+                        stdout.seek(0)
+                        stderr.seek(0)
+                        output = stdout.read()
+                        errors = stderr.read()
+                    if timed_out is not None:
+                        stage = phase.read_text(encoding='ascii') if phase.exists() else 'starting PowerShell'
+                        self.fail(
+                            f'PowerShell self-check timed out after {timed_out}s while {stage}.\n'
+                            f'Stdout: {output.decode("utf-8", errors="replace")}\n'
+                            f'Stderr: {errors.decode("utf-8", errors="replace")}'
+                        )
+                    self.assertEqual(result.returncode, exit_code, errors.decode('utf-8'))
+                    self.assertEqual(phase.read_text(encoding='ascii'),
+                                     'self-check returned, waiting for PowerShell to exit')
+                    text = output.decode('utf-8')
                     for message in messages:
-                        self.assertIn(message, result.stdout)
+                        self.assertIn(message, text)
                     self.assertFalse(marker.exists(), 'Node lookup imported an unrelated PowerShell module')
 
     def test_release_descriptors(self):

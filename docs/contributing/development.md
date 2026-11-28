@@ -38,6 +38,8 @@ $miliastraPython = (Resolve-Path .\.venv\Scripts\python.exe).Path
 
 `$miliastraPython` 为有锁定依赖的解释器绝对路径。完整公开 Python 用例可使用 `& $miliastraPython -B -m unittest discover -s scripts -v`。Beyond 测试可通过 `MILIASTRA_TEST_BEYOND_ARCHIVE` 指向已锁定的本地 Canvas ZIP。运行分发测试前按打包条件准备资产。测试输入用公开样例或由测试生成。 [Canvas 锁](../../vendor/beyond/native-canvas.json) · [公开验证清单](../../scripts/validation-contract.json) · [验证层级](../compatibility.md#验证分层)
 
+PowerShell 自检用例以非交互方式运行，输出写到临时文件，超时直接按 PowerShell 进程是否退出判断。超时报告包含最后到达的阶段及已有输出，可定位到启动、包装脚本准备、自检执行或退出阶段。
+
 ### 复现已有工程的修改流程
 
 运行上述 MCP 测试。用例经真实 stdio 把模板参数 `ActivationDelay` 改为 `12`，核对相关引用和保护字段，并检查过期输入会被拒绝。 [输入与断言](../../scripts/test_mcp_native_workflow.py) · [工具调用顺序](../../references/gil/native-changes.md#审阅并另存已有工程)
